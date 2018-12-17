@@ -21,7 +21,7 @@
 
 &lt;p&gt;So, here&amp;rsquo;s a collection of tricks I use with Docker and Docker Compose that might be useful, particularly for those working with Apache Kafka and Confluent Platform.&lt;/p&gt;
 
-&lt;h2 id=&#34;wait-for-an-http-endpoint-to-be-available&#34;&gt;Wait for an HTTP endpoint to be available&lt;/h2&gt;
+&lt;h3 id=&#34;wait-for-an-http-endpoint-to-be-available&#34;&gt;Wait for an HTTP endpoint to be available&lt;/h3&gt;
 
 &lt;p&gt;Often a container will be &amp;lsquo;up&amp;rsquo; before it&amp;rsquo;s &lt;em&gt;actually&lt;/em&gt; up. So Docker Compose&amp;rsquo;s &lt;code&gt;depends_on&lt;/code&gt; dependencies don&amp;rsquo;t do everything we need here. For a service that exposes an HTTP endpoint (e.g. Kafka Connect, KSQL Server, etc) you can use this bash snippet to force a script to wait before continuing execution of something that requires the service to actually be ready and available:&lt;/p&gt;
 
@@ -38,7 +38,7 @@
 
 &lt;p&gt;You can also build it into a Docker Compose file as shown below.&lt;/p&gt;
 
-&lt;h2 id=&#34;wait-for-a-particular-message-in-a-container-s-log&#34;&gt;Wait for a particular message in a container&amp;rsquo;s log&lt;/h2&gt;
+&lt;h3 id=&#34;wait-for-a-particular-message-in-a-container-s-log&#34;&gt;Wait for a particular message in a container&amp;rsquo;s log&lt;/h3&gt;
 
 &lt;p&gt;For the same reason as above—waiting for a service to be ready—you can use this trick built around &lt;code&gt;grep&lt;/code&gt; and bash&amp;rsquo;s &lt;a href=&#34;http://tldp.org/LDP/abs/html/process-sub.html&#34;&gt;&lt;em&gt;process substitution&lt;/em&gt;&lt;/a&gt;, which will make the script wait until the given phrase is found in the logs from Docker Compose:&lt;/p&gt;
 
@@ -46,7 +46,7 @@
 echo -e &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;\n--\n\nWaiting for Kafka Connect to start on &lt;/span&gt;$CONNECT_HOST&lt;span style=&#34;color:#e6db74&#34;&gt; … ⏳&amp;#34;&lt;/span&gt;
 grep -q &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Kafka Connect started&amp;#34;&lt;/span&gt; &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;docker-compose logs -f $CONNECT_HOST&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;h2 id=&#34;run-custom-code-before-launching-a-container-s-program&#34;&gt;Run custom code before launching a container&amp;rsquo;s program&lt;/h2&gt;
+&lt;h3 id=&#34;run-custom-code-before-launching-a-container-s-program&#34;&gt;Run custom code before launching a container&amp;rsquo;s program&lt;/h3&gt;
 
 &lt;p&gt;Maybe you want to download a dependency, or move some files around, or do something. You could build a new &lt;code&gt;Dockerfile&lt;/code&gt;, but often you want to overlay on an existing standard image a slight tweak for a demo. With Docker Compose this is easy enough to do. First you need to figure out what command the container is going to run when it launches, which will either be through &lt;code&gt;Entrypoint&lt;/code&gt; or &lt;code&gt;Cmd&lt;/code&gt;:&lt;/p&gt;
 
@@ -78,7 +78,7 @@ $ docker inspect --format&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt
 
 &lt;p&gt;The &lt;code&gt;- |&lt;/code&gt; is some YAML magic; we&amp;rsquo;re passing in three arguments to &lt;code&gt;command&lt;/code&gt;, and the &lt;code&gt;|&lt;/code&gt; tells YAML that the following lines are all part of the same entry. It makes for a much neater and easier to read file than trying to put everything into a single line as is sometimes done with &lt;code&gt;command&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;deploy-a-kafka-connect-connector-automatically&#34;&gt;Deploy a Kafka Connect connector automatically&lt;/h2&gt;
+&lt;h3 id=&#34;deploy-a-kafka-connect-connector-automatically&#34;&gt;Deploy a Kafka Connect connector automatically&lt;/h3&gt;
 
 &lt;p&gt;In the above example, we run some code &lt;em&gt;before&lt;/em&gt; the container&amp;rsquo;s payload (the KSQL Server) starts because of a dependency on it. In the next example we&amp;rsquo;ll do it the other way around; launch the service and wait for it to start, and then run some more code. This is the pattern we need for deploying a Kafka Connect connector.&lt;/p&gt;
 
@@ -119,7 +119,7 @@ $ docker inspect --format&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt
 &lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;execute-a-ksql-script-through-ksql-cli&#34;&gt;Execute a KSQL script through ksql-cli&lt;/h2&gt;
+&lt;h3 id=&#34;execute-a-ksql-script-through-ksql-cli&#34;&gt;Execute a KSQL script through ksql-cli&lt;/h3&gt;
 
 &lt;p&gt;This Docker Compose snippet will run KSQL CLI and pass in a KSQL script for execution to it. The manual &lt;code&gt;EXIT&lt;/code&gt; is required because of a &lt;a href=&#34;https://github.com/confluentinc/ksql/issues/1327&#34;&gt;NPE bug&lt;/a&gt;. The advantage of this method vs running KSQL Server headless with a queries file passed to it is that you can still interact with KSQL this way, but can pre-build the environment to a certain state.&lt;/p&gt;
 
@@ -158,7 +158,7 @@ $ docker inspect --format&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt
 
 &lt;p&gt;&lt;em&gt;This is a short summary discussing what the options are for integrating Oracle RDBMS into Kafka, as of December 2018. For a more detailed background to why and how at a broader level for all databases (not just Oracle) see &lt;a href=&#34;http://cnfl.io/kafka-cdc&#34;&gt;this blog&lt;/a&gt; and &lt;a href=&#34;https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka&#34;&gt;these slides&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;what-techniques-tools-are-there&#34;&gt;What techniques &amp;amp; tools are there?&lt;/h2&gt;
+&lt;h3 id=&#34;what-techniques-tools-are-there&#34;&gt;What techniques &amp;amp; tools are there?&lt;/h3&gt;
 
 &lt;p&gt;As of December 2018, this is what the line-up looks like:&lt;/p&gt;
 
@@ -201,7 +201,7 @@ $ docker inspect --format&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt
 &lt;li&gt;&lt;p&gt;&lt;strong&gt;Flashback&lt;/strong&gt; to show all changes to a given table between two points in time. &lt;a href=&#34;https://blog.pythian.com/streaming-oracle-kafka-stories-message-bus-stop/&#34;&gt;Implemented as a PoC by Stewart Bryson and Björn Rost&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;what-do-they-look-like-in-action&#34;&gt;What do they look like in action?&lt;/h2&gt;
+&lt;h3 id=&#34;what-do-they-look-like-in-action&#34;&gt;What do they look like in action?&lt;/h3&gt;
 
 &lt;p&gt;I did a recent talk at UK Oracle User Group TECH18 conference, presenting my talk &amp;ldquo;&lt;a href=&#34;https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka&#34;&gt;No More Silos: Integrating Databases and Apache Kafka&lt;/a&gt;&amp;rdquo;. As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the new Debezium/XStream option (log-based CDC). Here I&amp;rsquo;ll try and replicate the discussion and examples. You can also see previous articles that I&amp;rsquo;ve written showing &lt;a href=&#34;https://rmoff.net/tag/goldengate/&#34;&gt;GoldenGate in action&lt;/a&gt;.&lt;/p&gt;
 
@@ -213,7 +213,7 @@ $ docker inspect --format&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt
 
 &lt;p&gt;The setup script does all of the rest, including bringing up Confluent Platform, and configuring the connectors. &lt;em&gt;You do have to &lt;a href=&#34;https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md&#34;&gt;build the Oracle database docker image&lt;/a&gt; first&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h3 id=&#34;setup&#34;&gt;Setup&lt;/h3&gt;
+&lt;h4 id=&#34;setup&#34;&gt;Setup&lt;/h4&gt;
 
 &lt;p&gt;Some notes on setup of each option:&lt;/p&gt;
 
@@ -249,7 +249,7 @@ $ curl -s &amp;quot;http://localhost:8083/connectors&amp;quot;| jq &#39;.[]&#39;
 ora-source-debezium-xstream  |  RUNNING  |  RUNNING
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;initial-data-load&#34;&gt;Initial data load&lt;/h3&gt;
+&lt;h4 id=&#34;initial-data-load&#34;&gt;Initial data load&lt;/h4&gt;
 
 &lt;p&gt;In Oracle, check the source data:&lt;/p&gt;
 
@@ -341,7 +341,7 @@ CREATE STREAM CUSTOMERS_STREAM_JDBC_SRC WITH (KAFKA_TOPIC=&#39;ora-CUSTOMERS-jdb
 
 &lt;p&gt;The schema for both topics come from the Schema Registry, in which Kafka Connect automatically stores the schema for the data coming from Oracle and serialises the data into Avro. The great thing about this is in a consuming application, such as KSQL, the schema is already available and doesn&amp;rsquo;t have to be manually entered.&lt;/p&gt;
 
-&lt;h3 id=&#34;insert&#34;&gt;INSERT&lt;/h3&gt;
+&lt;h4 id=&#34;insert&#34;&gt;INSERT&lt;/h4&gt;
 
 &lt;p&gt;Insert a row in the Oracle database:&lt;/p&gt;
 
@@ -382,7 +382,7 @@ Commit complete.
 
 &lt;p&gt;So far, so same. Each captures an insert. Debezium from XStream and the database&amp;rsquo;s redo log, JDBC by polling the database for any rows with a newer &lt;code&gt;UPDATE_TS&lt;/code&gt; or higher &lt;code&gt;ID&lt;/code&gt; than the previous request.&lt;/p&gt;
 
-&lt;h3 id=&#34;update&#34;&gt;UPDATE&lt;/h3&gt;
+&lt;h4 id=&#34;update&#34;&gt;UPDATE&lt;/h4&gt;
 
 &lt;p&gt;This is where things get interesting. Let&amp;rsquo;s update the row in Oracle that we just created:&lt;/p&gt;
 
@@ -467,7 +467,7 @@ u | 42 | Bronze | Platinum
 &lt;p&gt;So each time a change is made in the database, you get a full before/after snapshot of the record, plus a bunch of other metadata. This is great for applications processing inbound changes that need to know not just that something changed (&lt;em&gt;here&amp;rsquo;s the new record&lt;/em&gt;) but also exactly &lt;em&gt;what&lt;/em&gt; changed (before/after payloads) as well as &lt;em&gt;how&lt;/em&gt; (insert/update/etc.)&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;delete&#34;&gt;DELETE&lt;/h3&gt;
+&lt;h4 id=&#34;delete&#34;&gt;DELETE&lt;/h4&gt;
 
 &lt;p&gt;Delete a record from the source system&lt;/p&gt;
 
@@ -567,7 +567,7 @@ d | null | Platinum | null
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;ecosystem&#34;&gt;Ecosystem&lt;/h2&gt;
+&lt;h3 id=&#34;ecosystem&#34;&gt;Ecosystem&lt;/h3&gt;
 
 &lt;p&gt;When you&amp;rsquo;re bringing data into Kafka, you need to remember the bigger picture. Dumping it into a topic alone is not enough. Well, it is, but your wider community of developers won&amp;rsquo;t thank you.&lt;/p&gt;
 
@@ -577,7 +577,7 @@ d | null | Platinum | null
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;overview-of-the-pros-and-cons-of-each-technique&#34;&gt;Overview of the Pros and Cons of each technique&lt;/h2&gt;
+&lt;h3 id=&#34;overview-of-the-pros-and-cons-of-each-technique&#34;&gt;Overview of the Pros and Cons of each technique&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections in the comment function below welcomed!&lt;/em&gt;&lt;/p&gt;
 
@@ -726,7 +726,7 @@ d | null | Platinum | null
 &lt;p&gt;&lt;blockquote class=&#34;twitter-tweet&#34; data-conversation=&#34;none&#34; data-lang=&#34;en&#34;&gt;&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;There are 2 flashback features:&lt;br&gt;Flashback transaction query shows transactions from redo, similar to log miner.&lt;br&gt;Flashback version query shows previous versions, from undo, within undo_retention. Allowed in all editions. I think this is the one you mention.&lt;/p&gt;&amp;mdash; Franck Pachot (@FranckPachot) &lt;a href=&#34;https://twitter.com/FranckPachot/status/1073323013750317056?ref_src=twsrc%5Etfw&#34;&gt;December 13, 2018&lt;/a&gt;&lt;/blockquote&gt;
 &lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
+&lt;h3 id=&#34;references&#34;&gt;References&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;Oracle GoldenGate for Big Data&lt;/p&gt;
@@ -752,11 +752,11 @@ d | null | Platinum | null
 &lt;/ul&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;try-it-out&#34;&gt;Try it out!&lt;/h2&gt;
+&lt;h3 id=&#34;try-it-out&#34;&gt;Try it out!&lt;/h3&gt;
 
 &lt;p&gt;You can find all of the code used in this article &lt;a href=&#34;https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/&#34;&gt;on github here&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;feedback&#34;&gt;Feedback?&lt;/h2&gt;
+&lt;h3 id=&#34;feedback&#34;&gt;Feedback?&lt;/h3&gt;
 
 &lt;p&gt;Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections in the comment function below welcomed!&lt;/p&gt;
 
@@ -774,7 +774,7 @@ d | null | Platinum | null
 &lt;li&gt;Gitter: &lt;a href=&#34;https://gitter.im/debezium/user&#34;&gt;https://gitter.im/debezium/user&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;updates-comments&#34;&gt;Updates &amp;amp; Comments&lt;/h2&gt;
+&lt;h3 id=&#34;updates-comments&#34;&gt;Updates &amp;amp; Comments&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;Adam Leszczyński has built a (non-Kafka Connect) source: &lt;a href=&#34;https://www.bersler.com/blog/openlogreplicator-first-log-based-open-source-oracle-to-kafka-replication/&#34;&gt;https://www.bersler.com/blog/openlogreplicator-first-log-based-open-source-oracle-to-kafka-replication/&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
@@ -797,7 +797,7 @@ d | null | Platinum | null
 
 &lt;p&gt;I&amp;rsquo;ve written recently about &lt;a href=&#34;https://rmoff.net/2018/12/10/so-how-do-you-make-those-cool-diagrams/&#34;&gt;how I create the diagrams in my blog posts and talks&lt;/a&gt;, and from discussions around that, a couple of people were interested more broadly in how I use my iPad Pro. So, on the basis that if two people are interested maybe others are (and if no-one else is, I have a copy-and-paste answer to give to those two people) here we go.&lt;/p&gt;
 
-&lt;p&gt;## Kit&lt;/p&gt;
+&lt;p&gt;### Kit&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;iPad Pro 10.5&amp;rdquo; (2018)
@@ -811,7 +811,7 @@ d | null | Platinum | null
 &lt;li&gt;&lt;a href=&#34;https://www.amazon.co.uk/gp/product/B073X5BML2&#34;&gt;Matte screen protector&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;background&#34;&gt;Background&lt;/h2&gt;
+&lt;h3 id=&#34;background&#34;&gt;Background&lt;/h3&gt;
 
 &lt;p&gt;I travel quite a lot for work, so want something with a decent battery life for stuff like:&lt;/p&gt;
 
@@ -827,7 +827,7 @@ d | null | Platinum | null
 
 &lt;p&gt;This is always going to be in addition to my laptop, as I usually need stuff like Docker for building my demos and blogs. But, it&amp;rsquo;s nice not always needing to get the laptop out, nor have to worry quite so much where the next power socket is going to come from.&lt;/p&gt;
 
-&lt;h2 id=&#34;the-keyboard&#34;&gt;The keyboard&lt;/h2&gt;
+&lt;h3 id=&#34;the-keyboard&#34;&gt;The keyboard&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;Previously I had an iPad mini with the fantastic &lt;a href=&#34;https://images-na.ssl-images-amazon.com/images/I/41KJMg6MWGL.jpg&#34;&gt;4mm slim Anker keyboard&lt;/a&gt;, which sadly I broke and is no longer in production (the &lt;a href=&#34;https://www.amazon.co.uk/gp/product/B00PIMRCFG&#34;&gt;new version&lt;/a&gt; was not nearly as good). I replaced it with the Logitech keyboard which was big and clunky and made the iPad anything but Mini. So, perhaps I was biased in choosing a keyboard for my iPad Pro.&lt;/em&gt;&lt;/p&gt;
 
@@ -839,7 +839,7 @@ d | null | Platinum | null
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/12/emoji-keyboard.png.JPG&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;the-pencil&#34;&gt;The pencil&lt;/h2&gt;
+&lt;h3 id=&#34;the-pencil&#34;&gt;The pencil&lt;/h3&gt;
 
 &lt;p&gt;I used a bog standard stylus with my iPad Mini previously, and so from that my expectations for the Apple Pencil were pretty low. I thought I&amp;rsquo;d be able to write on the screen but only at a low resolution, kind of fun but ultimately useless. The Apple Pencil is anything but useless. It&amp;rsquo;s amazingly high resolution, responsive, and a pleasure to use. It integrates with Notes for note taking (duh!), and you can pretty credibly leave your notebook behind and use this instead (or pair it with the keyboard for written notes and the pencil for sketching diagrams etc).&lt;/p&gt;
 
@@ -850,31 +850,31 @@ A colleague recommended putting a matte screen protector on the iPad to make it 
 
 &lt;p&gt;Drawing apps: &lt;strong&gt;Paper&lt;/strong&gt;, &lt;strong&gt;Notes&lt;/strong&gt;, &lt;strong&gt;Grafio 3&lt;/strong&gt;, &lt;strong&gt;Adobe Draw&lt;/strong&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;writing-articles&#34;&gt;Writing articles&lt;/h2&gt;
+&lt;h3 id=&#34;writing-articles&#34;&gt;Writing articles&lt;/h3&gt;
 
 &lt;p&gt;The Google Docs iPad app is fairly good for offline reviewing of articles. The review functionality (suggested edits &amp;amp; comments) is pretty clunky but passable if you have to. Given the choice, I&amp;rsquo;ll still tend to use my Mac for this.&lt;/p&gt;
 
 &lt;p&gt;For writing articles from scratch (like this one) I use &lt;strong&gt;Working Copy&lt;/strong&gt; and asciidoc or markdown. It integrates with git (which I use for my own version control of docs) and supports previewing and editing of both languages (plus a ton of others). &lt;strong&gt;Textastic&lt;/strong&gt; is also a good option, and previously I&amp;rsquo;ve used &lt;strong&gt;Editorial&lt;/strong&gt; a lot (although IIRC that doesn&amp;rsquo;t support asciidoc).&lt;/p&gt;
 
-&lt;h2 id=&#34;films-and-music&#34;&gt;Films and Music&lt;/h2&gt;
+&lt;h3 id=&#34;films-and-music&#34;&gt;Films and Music&lt;/h3&gt;
 
 &lt;p&gt;I use Plex for taking content from my home server with me on the move. You have to pay a subscription for offline use, but it works great. For example, you set how many unwatched episodes of a series you want at any time, and it tracks when you&amp;rsquo;ve watched something and downloads the next one ready for you. With the 256GB iPad, I&amp;rsquo;m not anywhere near filling it yet but it&amp;rsquo;s useful if space is tight.&lt;/p&gt;
 
-&lt;h2 id=&#34;photos&#34;&gt;Photos&lt;/h2&gt;
+&lt;h3 id=&#34;photos&#34;&gt;Photos&lt;/h3&gt;
 
 &lt;p&gt;The Apple Photos app is fine for importing and organising photos, and then I use Snapseed for editing and applying effects. I am very much an amateur here but it works for me :)&lt;/p&gt;
 
-&lt;h2 id=&#34;email&#34;&gt;Email&lt;/h2&gt;
+&lt;h3 id=&#34;email&#34;&gt;Email&lt;/h3&gt;
 
 &lt;p&gt;Gmail app, works fine offline too.&lt;/p&gt;
 
-&lt;h2 id=&#34;presentations&#34;&gt;Presentations&lt;/h2&gt;
+&lt;h3 id=&#34;presentations&#34;&gt;Presentations&lt;/h3&gt;
 
 &lt;p&gt;I am Keynote through-and-through, and the iPad is great for that. With &amp;ldquo;handoff&amp;rdquo; I can even have a presentation open on my Mac, modify a slide, open my iPad and modify the same slide (perhaps using the Apple Pencil to mark it up in some way) and then continue on my Mac.
 The Keynote app keeps getting better and better, and I can quite happily put together a set of slides using the iPad Pro alone. Here I think the keyboard makes the real difference. Without it, it becomes more of a &amp;ldquo;because I can&amp;rdquo; than a &amp;ldquo;because why wouldn&amp;rsquo;t I&amp;rdquo; task to use the iPad.
 I&amp;rsquo;ve yet present from the iPad but do have the connector for the time when the opportunity presents itself (i.e. I don&amp;rsquo;t need to do a live demo and I pluck up the courage ;-) )&lt;/p&gt;
 
-&lt;h2 id=&#34;twitters&#34;&gt;Twitters&lt;/h2&gt;
+&lt;h3 id=&#34;twitters&#34;&gt;Twitters&lt;/h3&gt;
 
 &lt;p&gt;Tweetdeck, same as on my Mac and iPhone. Keeps track of where I&amp;rsquo;ve read up to in my timeline across devices. Doesn&amp;rsquo;t pollute my timeline with promoted crap, tweets from people I don&amp;rsquo;t follow, or out-of-order tweets.&lt;/p&gt;
 
@@ -885,11 +885,11 @@ I&amp;rsquo;ve yet present from the iPad but do have the connector for the time 
 &lt;li&gt;Scheduling tweets to promote my talks at a conference (&amp;ldquo;starting in an hour in room 42…&amp;rdquo; etc)&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;reading-articles&#34;&gt;Reading articles&lt;/h2&gt;
+&lt;h3 id=&#34;reading-articles&#34;&gt;Reading articles&lt;/h3&gt;
 
 &lt;p&gt;Long-time Pocket user. Well, collector of unread articles anyway. Not very good at actually reading them. But they&amp;rsquo;re all there, offline and ready for me when I do actually get to reading some.&lt;/p&gt;
 
-&lt;h2 id=&#34;questions&#34;&gt;Questions?&lt;/h2&gt;
+&lt;h3 id=&#34;questions&#34;&gt;Questions?&lt;/h3&gt;
 
 &lt;p&gt;Leave a comment below, or &lt;a href=&#34;https://twitter.com/rmoff/&#34;&gt;tweet me&lt;/a&gt; and I&amp;rsquo;ll update the article :)&lt;/p&gt;
 </description>
@@ -911,19 +911,19 @@ I&amp;rsquo;ve yet present from the iPad but do have the connector for the time 
 
 &lt;p&gt;So here&amp;rsquo;s a short, and longer, answer!&lt;/p&gt;
 
-&lt;p&gt;## tl;dr&lt;/p&gt;
+&lt;p&gt;### tl;dr&lt;/p&gt;
 
 &lt;p&gt;An iOS app called &lt;a href=&#34;https://paper.bywetransfer.com/&#34;&gt;Paper, from a company called FiftyThree&lt;/a&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;so-how-do-you-make-those-cool-diagrams&#34;&gt;So, how DO you make those cool diagrams?&lt;/h2&gt;
+&lt;h3 id=&#34;so-how-do-you-make-those-cool-diagrams&#34;&gt;So, how DO you make those cool diagrams?&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;Disclaimer: This is a style that I have copied straight from my esteemed colleagues at Confluent, including Neha Narkhede and Ben Stopford, as well as others including Martin Kleppmann.&lt;/em&gt;&lt;/p&gt;
 
-&lt;h3 id=&#34;equipment&#34;&gt;Equipment&lt;/h3&gt;
+&lt;h4 id=&#34;equipment&#34;&gt;Equipment&lt;/h4&gt;
 
 &lt;p&gt;I use an iPad Pro (10.5&amp;rdquo;), with Apple Pencil, and &lt;a href=&#34;https://paper.bywetransfer.com/&#34;&gt;Paper from FiftyThree/WeTransfer&lt;/a&gt;. I also have a &lt;a href=&#34;https://www.amazon.co.uk/gp/product/B073X5BML2&#34;&gt;matte screen protector&lt;/a&gt; on the iPad which makes it feel nicer to draw on (less &amp;ldquo;skiddy&amp;rdquo;). I previously used an iPad mini with a cheapy stylus which did the job but was no use for detailed diagrams (and certainly not for actual writing)&lt;/p&gt;
 
-&lt;h3 id=&#34;process&#34;&gt;Process&lt;/h3&gt;
+&lt;h4 id=&#34;process&#34;&gt;Process&lt;/h4&gt;
 
 &lt;ol&gt;
 &lt;li&gt;&lt;p&gt;Sketch out the diagram in Paper, leaving space for text.
@@ -942,7 +942,7 @@ I rarely try to do actual handwriting in Paper, because (a) my handwriting is pr
 
 &lt;p&gt;Paper is not vector-based, and editing existing diagrams gets pretty clunky.&lt;/p&gt;
 
-&lt;h3 id=&#34;other-tools&#34;&gt;Other tools&lt;/h3&gt;
+&lt;h4 id=&#34;other-tools&#34;&gt;Other tools&lt;/h4&gt;
 
 &lt;p&gt;Since getting the iPad Pro with Pencil, I&amp;rsquo;ve tried:&lt;/p&gt;
 
@@ -975,7 +975,7 @@ I rarely try to do actual handwriting in Paper, because (a) my handwriting is pr
 			<guid>https://rmoff.github.io/2018/12/08/get-mtr-working-on-the-mac/</guid>
 			<description>
 
-&lt;h2 id=&#34;install&#34;&gt;Install&lt;/h2&gt;
+&lt;h3 id=&#34;install&#34;&gt;Install&lt;/h3&gt;
 
 &lt;p&gt;Not sure why the &lt;code&gt;brew&lt;/code&gt; doesn&amp;rsquo;t work as it used to, but here&amp;rsquo;s how to get it working:&lt;/p&gt;
 
@@ -986,7 +986,7 @@ sudo ln /usr/local/Cellar/mtr/0.92/sbin/mtr-packet /usr/local/bin/mtr-packet
 
 &lt;p&gt;&lt;em&gt;(If you don&amp;rsquo;t do the two symbolic links (&lt;code&gt;ln&lt;/code&gt;) you&amp;rsquo;ll get &lt;code&gt;mtr: command not found&lt;/code&gt; or &lt;code&gt;mtr: Failure to start mtr-packet: Invalid argument&lt;/code&gt;)&lt;/em&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;run&#34;&gt;Run&lt;/h2&gt;
+&lt;h3 id=&#34;run&#34;&gt;Run&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;sudo mtr google.com
 &lt;/code&gt;&lt;/pre&gt;
@@ -1007,7 +1007,7 @@ sudo ln /usr/local/Cellar/mtr/0.92/sbin/mtr-packet /usr/local/bin/mtr-packet
 
 &lt;script id=&#34;asciicast-jYF38DsTB4PQbdoittTz1QARn&#34; src=&#34;https://asciinema.org/a/jYF38DsTB4PQbdoittTz1QARn.js&#34; async&gt;&lt;/script&gt;
 
-&lt;h2 id=&#34;list-all-running-connectors&#34;&gt;List all running connectors:&lt;/h2&gt;
+&lt;h3 id=&#34;list-all-running-connectors&#34;&gt;List all running connectors:&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;curl -s &amp;quot;http://localhost:8083/connectors&amp;quot;| \
 jq &#39;.[]&#39;| \
@@ -1017,7 +1017,7 @@ sed &#39;s/\&amp;quot;//g&#39;| \
 sort
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;selectively-delete-a-connector&#34;&gt;Selectively delete a connector&lt;/h2&gt;
+&lt;h3 id=&#34;selectively-delete-a-connector&#34;&gt;Selectively delete a connector&lt;/h3&gt;
 
 &lt;p&gt;(h/t to &lt;a href=&#34;https://twitter.com/madewithtea/status/1068467440202514432&#34;&gt;@madewithtea&lt;/a&gt; for the idea of using &lt;code&gt;peco&lt;/code&gt;)&lt;/p&gt;
 
@@ -1028,7 +1028,7 @@ xargs -I{connector_name} curl -s -XDELETE &amp;quot;http://loc
 alhost:8083/connectors/&amp;quot;{connector_name}
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;delete-all-connectors&#34;&gt;Delete all connectors&lt;/h2&gt;
+&lt;h3 id=&#34;delete-all-connectors&#34;&gt;Delete all connectors&lt;/h3&gt;
 
 &lt;p&gt;&lt;strong&gt;CAUTION&lt;/strong&gt; with this one, as it will delete all your connectors!&lt;/p&gt;
 
@@ -1161,7 +1161,7 @@ do awk &#39;{print $0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.js
 			<guid>https://rmoff.github.io/2018/10/11/flatten-cdc-records-in-ksql/</guid>
 			<description>
 
-&lt;h2 id=&#34;the-problem-nested-messages-in-kafka&#34;&gt;The problem - nested messages in Kafka&lt;/h2&gt;
+&lt;h3 id=&#34;the-problem-nested-messages-in-kafka&#34;&gt;The problem - nested messages in Kafka&lt;/h3&gt;
 
 &lt;p&gt;Data comes into Kafka in many shapes and sizes. Sometimes it&amp;rsquo;s from CDC tools, and may be nested like this:&lt;/p&gt;
 
@@ -1194,7 +1194,7 @@ do awk &#39;{print $0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.js
 
 &lt;p&gt;The key(!) thing here is &lt;code&gt;record value schema does not contain field ID&lt;/code&gt;. The connector cannot find the field &lt;code&gt;ID&lt;/code&gt; in the source message—because it&amp;rsquo;s nested.&lt;/p&gt;
 
-&lt;h2 id=&#34;the-solution-ksql-to-flatten-messages&#34;&gt;The solution - KSQL to flatten messages&lt;/h2&gt;
+&lt;h3 id=&#34;the-solution-ksql-to-flatten-messages&#34;&gt;The solution - KSQL to flatten messages&lt;/h3&gt;
 
 &lt;p&gt;You can use &lt;a href=&#34;https://www.confluent.io/ksql&#34;&gt;KSQL&lt;/a&gt; to transform every record on the source topic as it arrives, writing to a new topic and using &lt;em&gt;that&lt;/em&gt; topic as the source for the JDBC Sink.&lt;/p&gt;
 
@@ -1858,28 +1858,28 @@ open $INPUT_ADOC.docx
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;september&#34;&gt;September&lt;/h2&gt;
+&lt;h3 id=&#34;september&#34;&gt;September&lt;/h3&gt;
 
-&lt;h3 id=&#34;madrid-spain&#34;&gt;🇪🇸 Madrid, Spain&lt;/h3&gt;
+&lt;h4 id=&#34;madrid-spain&#34;&gt;🇪🇸 Madrid, Spain&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;6th Sept: &lt;a href=&#34;https://www.meetup.com/apachekafkamadrid/events/251264347/&#34;&gt;Madrid Kafka Meetup&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;oslo-norway&#34;&gt;🇳🇴 Oslo, Norway&lt;/h3&gt;
+&lt;h4 id=&#34;oslo-norway&#34;&gt;🇳🇴 Oslo, Norway&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;10th Sept: &lt;a href=&#34;https://www.meetup.com/Oslo-Kafka/events/&#34;&gt;Oslo Kafka Meetup&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;11th Sept: &lt;a href=&#34;https://2018.javazone.no/program/73fa52a7-661c-47a0-b4f3-55aaf5b10f6b&#34;&gt;JavaZone&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;antwerp-brussels-belgium&#34;&gt;🇧🇪 Antwerp/Brussels, Belgium&lt;/h3&gt;
+&lt;h4 id=&#34;antwerp-brussels-belgium&#34;&gt;🇧🇪 Antwerp/Brussels, Belgium&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;25th Sept: &lt;a href=&#34;https://www.meetup.com/Brussels-Apache-Kafka-Meetup-by-Confluent/events/253855467/&#34;&gt;Brussels Kafka Meetup&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;barcelona-spain&#34;&gt;🇪🇸 Barcelona, Spain&lt;/h3&gt;
+&lt;h4 id=&#34;barcelona-spain&#34;&gt;🇪🇸 Barcelona, Spain&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;26th Sept: &lt;a href=&#34;https://www.meetup.com/Barcelona-Kafka-Meetup/events/254252957/&#34;&gt;Barcelona Kafka Meetup&lt;/a&gt;&lt;/li&gt;
@@ -1887,15 +1887,15 @@ open $INPUT_ADOC.docx
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;october&#34;&gt;October&lt;/h2&gt;
+&lt;h3 id=&#34;october&#34;&gt;October&lt;/h3&gt;
 
-&lt;h3 id=&#34;leeds-uk&#34;&gt;🇬🇧 Leeds, UK&lt;/h3&gt;
+&lt;h4 id=&#34;leeds-uk&#34;&gt;🇬🇧 Leeds, UK&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;4th Oct: &lt;a href=&#34;https://www.meetup.com/Leeds-JVMThing/events/&#34;&gt;The JVM Thing meetup&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;nashville-tn-usa&#34;&gt;🇺🇸 Nashville (TN), USA&lt;/h3&gt;
+&lt;h4 id=&#34;nashville-tn-usa&#34;&gt;🇺🇸 Nashville (TN), USA&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;31st Oct: &lt;a href=&#34;https://www.usenix.org/conference/lisa18/conference-program&#34;&gt;LISA18&lt;/a&gt;&lt;/li&gt;
@@ -1903,21 +1903,21 @@ open $INPUT_ADOC.docx
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;november&#34;&gt;November&lt;/h2&gt;
+&lt;h3 id=&#34;november&#34;&gt;November&lt;/h3&gt;
 
-&lt;h3 id=&#34;münich-germany&#34;&gt;🇩🇪 Münich, Germany&lt;/h3&gt;
+&lt;h4 id=&#34;münich-germany&#34;&gt;🇩🇪 Münich, Germany&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;7th Nov: &lt;a href=&#34;https://jax.de/&#34;&gt;W-JAX&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;antwerp-belgium&#34;&gt;🇧🇪 Antwerp, Belgium&lt;/h3&gt;
+&lt;h4 id=&#34;antwerp-belgium&#34;&gt;🇧🇪 Antwerp, Belgium&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;13th Nov: &lt;a href=&#34;https://devoxx.be/&#34;&gt;Devoxx Belgium&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;krakow-poland&#34;&gt;🇵🇱 Krakow, Poland&lt;/h3&gt;
+&lt;h4 id=&#34;krakow-poland&#34;&gt;🇵🇱 Krakow, Poland&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;26th Nov: &lt;a href=&#34;http://coredump.events/2018/&#34;&gt;CoreDump&lt;/a&gt;&lt;/li&gt;
@@ -1925,15 +1925,15 @@ open $INPUT_ADOC.docx
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;december&#34;&gt;December&lt;/h2&gt;
+&lt;h3 id=&#34;december&#34;&gt;December&lt;/h3&gt;
 
-&lt;h3 id=&#34;liverpool-uk&#34;&gt;🇬🇧 Liverpool, UK&lt;/h3&gt;
+&lt;h4 id=&#34;liverpool-uk&#34;&gt;🇬🇧 Liverpool, UK&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;4th Dec: &lt;a href=&#34;https://www.ukougconferences.org.uk/ukoug/frontend/reg/tAgendaWebsite.csp?pageID=306&amp;amp;eventID=2&amp;amp;language=1&amp;amp;mainFramePage=dailyagenda.csp&amp;amp;mode=&#34;&gt;UKOUG TECH 18&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;frankfurt-germany&#34;&gt;🇩🇪 Frankfurt, Germany&lt;/h3&gt;
+&lt;h4 id=&#34;frankfurt-germany&#34;&gt;🇩🇪 Frankfurt, Germany&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;10th Dec: &lt;a href=&#34;https://www.meetup.com/Frankfurt-Apache-Kafka-Meetup-by-Confluent/events/256599175/&#34;&gt;Apache Kafka Meetup&lt;/a&gt;&lt;/li&gt;
@@ -1958,7 +1958,7 @@ open $INPUT_ADOC.docx
 
 &lt;p&gt;In this post I&amp;rsquo;ll talk about &lt;em&gt;why&lt;/em&gt; this is necessary, and then show &lt;em&gt;how&lt;/em&gt; to do it, based on a couple of scenarios - Docker, and AWS.&lt;/p&gt;
 
-&lt;h2 id=&#34;is-anyone-listening&#34;&gt;Is anyone listening?&lt;/h2&gt;
+&lt;h3 id=&#34;is-anyone-listening&#34;&gt;Is anyone listening?&lt;/h3&gt;
 
 &lt;p&gt;Kafka is a distributed system. Data is read from &amp;amp; written to the &lt;em&gt;Leader&lt;/em&gt; for a given partition, which could be on any of the brokers in a cluster. When a client (producer/consumer) starts, it will request metadata about which broker is the leader for a partition—and it can do this from &lt;em&gt;any&lt;/em&gt; broker. The metadata returned will include the endpoints available for the Leader broker for that partition, and the client will then use those endpoints to connect to the broker to read/write data as required.&lt;/p&gt;
 
@@ -2044,7 +2044,7 @@ Metadata for all topics (from broker 0: kafka0:29092/0):
 
 &lt;p&gt;You can also use &lt;code&gt;tcpdump&lt;/code&gt; to examine the traffic from a client connecting to the broker, and spot the hostname that&amp;rsquo;s returned from the broker.&lt;/p&gt;
 
-&lt;h2 id=&#34;why-can-i-connect-to-the-broker-but-the-client-still-fails&#34;&gt;Why can I connect to the broker, but the client still fails?&lt;/h2&gt;
+&lt;h3 id=&#34;why-can-i-connect-to-the-broker-but-the-client-still-fails&#34;&gt;Why can I connect to the broker, but the client still fails?&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;tl;dr&lt;/em&gt; Even if you can make the initial connection to the broker, the address returned in the metadata may still be for a hostname that is not accessible from your client.&lt;/p&gt;
 
@@ -2111,7 +2111,7 @@ Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.ama
 &lt;p&gt;Here we&amp;rsquo;re using &lt;code&gt;kafkacat&lt;/code&gt; in producer mode (&lt;code&gt;-C&lt;/code&gt;) from our local machine to try and read from the topic. As before, because we&amp;rsquo;re getting the &lt;em&gt;internal&lt;/em&gt; listener hostname back from the broker in the metadata, the client cannot resolve that hostname to read/write from.&lt;/p&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h2 id=&#34;i-saw-a-stackoverflow-answer-suggesting-to-just-update-my-hosts-file-isn-t-that-easier&#34;&gt;I saw a StackOverflow answer suggesting to just update my hosts file…isn&amp;rsquo;t that easier?&lt;/h2&gt;
+&lt;h3 id=&#34;i-saw-a-stackoverflow-answer-suggesting-to-just-update-my-hosts-file-isn-t-that-easier&#34;&gt;I saw a StackOverflow answer suggesting to just update my hosts file…isn&amp;rsquo;t that easier?&lt;/h3&gt;
 
 &lt;p&gt;This is nothing more than a hack to workaround a mis-configuration, instead of actually fixing it.&lt;/p&gt;
 
@@ -2119,7 +2119,7 @@ Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.ama
 
 &lt;p&gt;Much better is to understand and actually fix the &lt;code&gt;advertised.listeners&lt;/code&gt; setting for your network.&lt;/p&gt;
 
-&lt;h2 id=&#34;howto-connecting-to-kafka-on-docker&#34;&gt;HOWTO: Connecting to Kafka on Docker&lt;/h2&gt;
+&lt;h3 id=&#34;howto-connecting-to-kafka-on-docker&#34;&gt;HOWTO: Connecting to Kafka on Docker&lt;/h3&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/docker01.png&#34; alt=&#34;images/docker01.png&#34; /&gt;&lt;/p&gt;
 
@@ -2153,7 +2153,7 @@ Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.ama
 &lt;li&gt;The above configuration would &lt;em&gt;not&lt;/em&gt; handle the scenario in which a client external to Docker &lt;em&gt;and&lt;/em&gt; external to the host machine wants to connect. This is because neither &lt;code&gt;kafka0&lt;/code&gt; (the internal Docker hostname) &lt;em&gt;or&lt;/em&gt; &lt;code&gt;localhost&lt;/code&gt; (the loopback address for the Docker host machine) would be resolvable.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;howto-connecting-to-kafka-on-aws-iaas&#34;&gt;HOWTO: Connecting to Kafka on AWS/IaaS&lt;/h2&gt;
+&lt;h3 id=&#34;howto-connecting-to-kafka-on-aws-iaas&#34;&gt;HOWTO: Connecting to Kafka on AWS/IaaS&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;I&amp;rsquo;m naming AWS because it&amp;rsquo;s what the majority of people use, but this applies to any IaaS/Cloud solution.&lt;/em&gt;&lt;/p&gt;
 
@@ -2163,7 +2163,7 @@ Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.ama
 
 &lt;p&gt;There are two approaches, depending on whether the external address through which you&amp;rsquo;re going to connect to the broker is also resolvable locally to all of the brokers on the network (e.g VPC).&lt;/p&gt;
 
-&lt;h3 id=&#34;option-1-external-address-is-resolvable-locally&#34;&gt;Option 1 - external address IS resolvable locally&lt;/h3&gt;
+&lt;h4 id=&#34;option-1-external-address-is-resolvable-locally&#34;&gt;Option 1 - external address IS resolvable locally&lt;/h4&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/aws01-1.png&#34; alt=&#34;images/aws01.png&#34; /&gt;&lt;/p&gt;
 
@@ -2174,7 +2174,7 @@ Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.ama
 
 &lt;p&gt;Now connections both internally and externally will use &lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt; for connecting. Because &lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt; can be resolved both locally and externally, things work fine.&lt;/p&gt;
 
-&lt;h3 id=&#34;option-2-external-address-is-not-resolvable-locally&#34;&gt;Option 2 - external address is NOT resolvable locally&lt;/h3&gt;
+&lt;h4 id=&#34;option-2-external-address-is-not-resolvable-locally&#34;&gt;Option 2 - external address is NOT resolvable locally&lt;/h4&gt;
 
 &lt;p&gt;You will need to configure two listeners for Kafka:&lt;/p&gt;
 
@@ -2196,7 +2196,7 @@ advertised.listeners=INTERNAL://ip-172-31-18-160.us-west-2.compute.internal:1909
 inter.broker.listener.name=INTERNAL
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;exploring-listeners-with-docker&#34;&gt;Exploring listeners with Docker&lt;/h2&gt;
+&lt;h3 id=&#34;exploring-listeners-with-docker&#34;&gt;Exploring listeners with Docker&lt;/h3&gt;
 
 &lt;p&gt;Take a look at &lt;a href=&#34;https://github.com/rmoff/kafka-listeners&#34;&gt;https://github.com/rmoff/kafka-listeners&lt;/a&gt;. This includes a docker-compose to bring up a Zookeeper instance along with Kafka broker configured with several listeners.&lt;/p&gt;
 
@@ -2235,11 +2235,11 @@ Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
 &lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;redux&#34;&gt;Redux&lt;/h2&gt;
+&lt;h3 id=&#34;redux&#34;&gt;Redux&lt;/h3&gt;
 
 &lt;p&gt;I recently referenced this post in &lt;a href=&#34;https://stackoverflow.com/questions/52438822/docker-kafka-dockerized-python-application/52440056#52440056&#34;&gt;a StackOverflow answer I gave&lt;/a&gt;, and re-articulated the solution. If you&amp;rsquo;re still not quite following, check it out and maybe second time around I&amp;rsquo;ll have explained it better:)&lt;/p&gt;
 
-&lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
+&lt;h3 id=&#34;references&#34;&gt;References&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;https://kafka.apache.org/documentation/#brokerconfigs&#34;&gt;https://kafka.apache.org/documentation/#brokerconfigs&lt;/a&gt;&lt;/li&gt;
@@ -2249,7 +2249,320 @@ Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
 &lt;li&gt;&lt;a href=&#34;https://stackoverflow.com/questions/42998859/kafka-server-configuration-listeners-vs-advertised-listeners&#34;&gt;https://stackoverflow.com/questions/42998859/kafka-server-configuration-listeners-vs-advertised-listeners&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;still-not-sure&#34;&gt;Still not sure?&lt;/h2&gt;
+&lt;h3 id=&#34;still-not-sure&#34;&gt;Still not sure?&lt;/h3&gt;
+
+&lt;p&gt;Check out the &lt;a href=&#34;http://cnfl.io/slack&#34;&gt;Confluent Community Slack group&lt;/a&gt; or &lt;a href=&#34;https://lists.apache.org/list.html?users@kafka.apache.org&#34;&gt;Apache Kafka user mailing list&lt;/a&gt; for more help.&lt;/p&gt;
+</description>
+		</item>
+		
+		<item>
+			<title>Kafka Listeners - Explained</title>
+			<link>https://rmoff.github.io/2018/08/02/kafka-listeners-explained/</link>
+			<pubDate>Thu, 02 Aug 2018 19:38:00 UTC</pubDate>
+			<author>Robin Moffatt</author>
+			<guid>https://rmoff.github.io/2018/08/02/kafka-listeners-explained/</guid>
+			<description>
+
+&lt;p&gt;This question comes up on StackOverflow and such places a &lt;strong&gt;lot&lt;/strong&gt;, so here&amp;rsquo;s something to try and help.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;tl;dr&lt;/strong&gt; : You need to set &lt;code&gt;advertised.listeners&lt;/code&gt; (or &lt;code&gt;KAFKA_ADVERTISED_LISTENERS&lt;/code&gt; if you&amp;rsquo;re using Docker images) to the external address (host/IP) so that clients can correctly connect to it. Otherwise they&amp;rsquo;ll try to connect to the internal host address–and if that&amp;rsquo;s not reachable then problems ensue.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/docker01.png&#34; alt=&#34;images/docker01.png&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In this post I&amp;rsquo;ll talk about &lt;em&gt;why&lt;/em&gt; this is necessary, and then show &lt;em&gt;how&lt;/em&gt; to do it, based on a couple of scenarios - Docker, and AWS.&lt;/p&gt;
+
+&lt;h4 id=&#34;is-anyone-listening&#34;&gt;Is anyone listening?&lt;/h4&gt;
+
+&lt;p&gt;Kafka is a distributed system. Data is read from &amp;amp; written to the &lt;em&gt;Leader&lt;/em&gt; for a given partition, which could be on any of the brokers in a cluster. When a client (producer/consumer) starts, it will request metadata about which broker is the leader for a partition—and it can do this from &lt;em&gt;any&lt;/em&gt; broker. The metadata returned will include the endpoints available for the Leader broker for that partition, and the client will then use those endpoints to connect to the broker to read/write data as required.&lt;/p&gt;
+
+&lt;p&gt;It&amp;rsquo;s these endpoints that cause people trouble. On a &lt;em&gt;single machine, running &amp;lsquo;bare metal&amp;rsquo;&lt;/em&gt; (no VMs, no Docker), everything might be the hostname (or just &lt;em&gt;&lt;code&gt;localhost&lt;/code&gt;&lt;/em&gt;) and it&amp;rsquo;s easy. But once you move into more complex networking setups, and multiple nodes, you have to pay more attention to it.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s assume you have more than one network. This could be things like:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Docker internal network(s) plus host machine&lt;/li&gt;
+&lt;li&gt;Brokers in the cloud (eg. AWS EC2), and on-premises machines locally (or even in another cloud)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;You need to tell Kafka how the brokers can reach each other, but also make sure that external clients (producers/consumers) can reach the broker they need to.&lt;/p&gt;
+
+&lt;p&gt;The key thing is that when you run a client, &lt;strong&gt;the broker you pass to it is &lt;em&gt;just where it&amp;rsquo;s going to go and get the metadata about brokers in the cluster from&lt;/em&gt;&lt;/strong&gt;. The actual host &amp;amp; IP that it will connect to for reading/writing data is based on &lt;strong&gt;&lt;em&gt;the data that the broker passes back in that initial connection&lt;/em&gt;&lt;/strong&gt;—even if it&amp;rsquo;s just a single node and the broker returned is the same as the one connected to.&lt;/p&gt;
+
+&lt;p&gt;For configuring this correctly, you need to understand that Kafka brokers can have multiple &lt;em&gt;listeners&lt;/em&gt;. A listener is a combination of&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Host/IP&lt;/li&gt;
+&lt;li&gt;Port&lt;/li&gt;
+&lt;li&gt;Protocol&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Let&amp;rsquo;s check out some config. Often the protocol is used for the listener name too, but here let&amp;rsquo;s make it nice and clear by using abstract names for the listeners:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;KAFKA_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://localhost:9092
+KAFKA_ADVERTISED_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://localhost:9092
+KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_BOB:PLAINTEXT,LISTENER_FRED:PLAINTEXT
+KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_BOB
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;em&gt;I&amp;rsquo;m using the Docker config names—the equivalents if you&amp;rsquo;re configuring &lt;code&gt;server.properties&lt;/code&gt; directly (e.g. on AWS etc) are shown indented in the following list&lt;/em&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;KAFKA_LISTENERS&lt;/code&gt; is a comma-separated list of listeners, and the host/ip and port to which Kafka binds to on which to listen. For more complex networking this might be an IP address associated with a given network interface on a machine. The default is 0.0.0.0, which means listening on all interfaces.
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;listeners&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;KAFKA_ADVERTISED_LISTENERS&lt;/code&gt; is a comma-separated list of listeners with their the host/ip and port. This is the metadata that&amp;rsquo;s passed back to clients.
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;advertised.listeners&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;KAFKA_LISTENER_SECURITY_PROTOCOL_MAP&lt;/code&gt; defines key/value pairs for the security protocol to use, per listener name.
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;listener.security.protocol.map&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;em&gt;Kafka brokers communicate between themselves&lt;/em&gt;, usually on the internal network (e.g. Docker network, AWS VPC, etc). To define which listener to use, specify &lt;code&gt;KAFKA_INTER_BROKER_LISTENER_NAME&lt;/code&gt; (&lt;code&gt;inter.broker.listener.name&lt;/code&gt;). The host/IP used must be accessible from the broker machine to others.&lt;/p&gt;
+
+&lt;p&gt;Kafka &lt;em&gt;clients&lt;/em&gt; may well not be local to the broker&amp;rsquo;s network, and this is where the additional listeners come in.&lt;/p&gt;
+
+&lt;p&gt;Each listener will, when connected to, report back the address on which it can be reached. &lt;em&gt;The address on which you reach a broker depends on the network used&lt;/em&gt;. If you&amp;rsquo;re connecting to the broker from an internal network it&amp;rsquo;s going to be a different host/IP than when connecting externally.&lt;/p&gt;
+
+&lt;p&gt;When connecting to a broker, the listener that will be returned to the client will be the listener to which you connected (based on the port).&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;kafkacat&lt;/code&gt; is a useful tool for exploring this. Using &lt;code&gt;-L&lt;/code&gt; you can see the metadata for the listener to which you connected.
+Based on the same listener config as above (&lt;code&gt;LISTENER_BOB&lt;/code&gt; / &lt;code&gt;LISTENER_FRED&lt;/code&gt;), check out the respective entries for &lt;strong&gt;&lt;code&gt;broker 0 at&lt;/code&gt;&lt;/strong&gt;: -&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Connecting on port 9092 (which we map as &lt;code&gt;LISTENER_FRED&lt;/code&gt;), the broker&amp;rsquo;s address is given back as &lt;code&gt;localhost&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ kafkacat -b kafka0:9092 \
+           -L
+Metadata for all topics (from broker -1: kafka0:9092/bootstrap):
+1 brokers:
+  broker 0 at localhost:9092
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Connecting on port 29092 (which we map as &lt;code&gt;LISTENER_BOB&lt;/code&gt;), the broker&amp;rsquo;s address is given back as &lt;code&gt;kafka0&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ kafkacat -b kafka0:29092 \
+           -L
+Metadata for all topics (from broker 0: kafka0:29092/0):
+1 brokers:
+  broker 0 at kafka0:29092
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;You can also use &lt;code&gt;tcpdump&lt;/code&gt; to examine the traffic from a client connecting to the broker, and spot the hostname that&amp;rsquo;s returned from the broker.&lt;/p&gt;
+
+&lt;h4 id=&#34;why-can-i-connect-to-the-broker-but-the-client-still-fails&#34;&gt;Why can I connect to the broker, but the client still fails?&lt;/h4&gt;
+
+&lt;p&gt;&lt;em&gt;tl;dr&lt;/em&gt; Even if you can make the initial connection to the broker, the address returned in the metadata may still be for a hostname that is not accessible from your client.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s walk this through step by step.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;We&amp;rsquo;ve got a broker on AWS. We want to send a message to it from our laptop. We know the external hostname for the EC2 instance (&lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt;). We&amp;rsquo;ve created the necessary entry in the security group to open the broker&amp;rsquo;s port to our inbound traffic. We do smart things like checking that our local machine can connect to the port on the AWS instance:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ nc -vz ec2-54-191-84-122.us-west-2.compute.amazonaws.com 9092
+found 0 associations
+found 1 connections:
+    1:  flags=82&amp;lt;CONNECTED,PREFERRED&amp;gt;
+  outif utun5
+  src 172.27.230.23 port 53352
+  dst 54.191.84.122 port 9092
+  rank info not available
+  TCP aux info available
+
+Connection to ec2-54-191-84-122.us-west-2.compute.amazonaws.com port 9092 [tcp/XmlIpcRegSvc] succeeded!
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Things are looking good! We run:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;echo &amp;quot;test&amp;quot;|kafka-console-producer --broker-list ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 --topic test
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now…what happens next?&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Our laptop resolves &lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt; successfully (to the IP address 54.191.84.122), and connects to the AWS machine on port 9092&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;The broker receives the inbound connection on port 9092. &lt;em&gt;It returns the metadata to the client, with the hostname &lt;code&gt;ip-172-31-18-160.us-west-2.compute.internal&lt;/code&gt;&lt;/em&gt; because this is the host name of the broker and the default value for &lt;code&gt;listeners&lt;/code&gt;.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;The client the tries to send data to the broker using the metadata it was given. Since &lt;code&gt;ip-172-31-18-160.us-west-2.compute.internal&lt;/code&gt; is not resolvable from the internet, it fails.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ echo &amp;quot;test&amp;quot;|kafka-console-producer --broker-list ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 --topic test
+&amp;gt;&amp;gt;[2018-07-30 15:08:41,932] ERROR Error when sending message to topic test with key: null, value: 4 bytes with error: (org.apache.kafka.clients.producer.internals.ErrorLoggingCallback)
+org.apache.kafka.common.errors.TimeoutException: Expiring 1 record(s) for test-0: 1547 ms has passed since batch creation plus linger time
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Puzzled, we try the same thing from the broker machine itself:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ echo &amp;quot;foo&amp;quot;|kafka-console-producer --broker-list ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 --topic test
+&amp;gt;&amp;gt;
+$ kafka-console-consumer --bootstrap-server ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 --topic test --from-beginning
+foo
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It works fine! That&amp;rsquo;s because we are connecting to port 9092, which is configured as the &lt;em&gt;internal&lt;/em&gt; listener, and thus reports back its hostname as &lt;code&gt;ip-172-31-18-160.us-west-2.compute.internal&lt;/code&gt; which &lt;em&gt;is&lt;/em&gt; resolvable from the broker machine (since it&amp;rsquo;s its own hostname!)&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;We can make life even easier by using &lt;a href=&#34;https://docs.confluent.io/current/app-development/kafkacat-usage.html&#34;&gt;&lt;code&gt;kafkacat&lt;/code&gt;&lt;/a&gt;. Using the &lt;code&gt;-L&lt;/code&gt; flag we can see the metadata returned by the broker:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ kafkacat -b ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 -L
+Metadata for all topics (from broker -1: ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092/bootstrap):
+1 brokers:
+  broker 0 at ip-172-31-18-160.us-west-2.compute.internal:9092
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Clear as day, the &lt;em&gt;internal&lt;/em&gt; hostname is returned. This also makes this seemingly-confusing error make a lot more sense—connecting to one hostname, getting a lookup error on another:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ kafkacat -b ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 -C -t test
+% ERROR: Local: Host resolution failure: ip-172-31-18-160.us-west-2.compute.internal:9092/0: Failed to resolve &#39;ip-172-31-18-160.us-west-2.compute.internal:9092&#39;: nodename nor servname provided, or not known
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Here we&amp;rsquo;re using &lt;code&gt;kafkacat&lt;/code&gt; in producer mode (&lt;code&gt;-C&lt;/code&gt;) from our local machine to try and read from the topic. As before, because we&amp;rsquo;re getting the &lt;em&gt;internal&lt;/em&gt; listener hostname back from the broker in the metadata, the client cannot resolve that hostname to read/write from.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h4 id=&#34;i-saw-a-stackoverflow-answer-suggesting-to-just-update-my-hosts-file-isn-t-that-easier&#34;&gt;I saw a StackOverflow answer suggesting to just update my hosts file…isn&amp;rsquo;t that easier?&lt;/h4&gt;
+
+&lt;p&gt;This is nothing more than a hack to workaround a mis-configuration, instead of actually fixing it.&lt;/p&gt;
+
+&lt;p&gt;If the broker is reporting back a hostname to which the client cannot connect, then hardcoding the hostname/IP combo into the local &lt;code&gt;/etc/hosts&lt;/code&gt; may seem a nice fix. But this is a very brittle and manual solution. What happens when the IP changes, when you move hosts and forget to take the little hack with you, when other people want to do the same?&lt;/p&gt;
+
+&lt;p&gt;Much better is to understand and actually fix the &lt;code&gt;advertised.listeners&lt;/code&gt; setting for your network.&lt;/p&gt;
+
+&lt;h4 id=&#34;howto-connecting-to-kafka-on-docker&#34;&gt;HOWTO: Connecting to Kafka on Docker&lt;/h4&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/docker01.png&#34; alt=&#34;images/docker01.png&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Run within Docker, you will need to configure two listeners for Kafka:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;Communication &lt;em&gt;within the Docker network&lt;/em&gt;. This could be inter-broker communication (i.e. between brokers), and between other components running in Docker such as Kafka Connect, or third-party clients or producers.&lt;/p&gt;
+
+&lt;p&gt;For these comms, we need to use &lt;em&gt;the hostname of the Docker container(s)&lt;/em&gt;. Each Docker container on the same Docker network will use the hostname of the Kafka broker container to reach it&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Non-Docker network traffic. This could be clients running local on the Docker host machine, for example. The assumption is that they will connect on &lt;code&gt;localhost&lt;/code&gt;, to a port exposed from the Docker container.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s the docker-compose snippet:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;kafka0:
+    image: &amp;quot;confluentinc/cp-enterprise-kafka:5.0.0-rc3&amp;quot;
+    ports:
+    - &#39;9092:9092&#39;
+    depends_on:
+    - zookeeper
+    environment:
+    KAFKA_ADVERTISED_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://localhost:9092
+    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_BOB:PLAINTEXT,LISTENER_FRED:PLAINTEXT
+    […]
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Clients &lt;em&gt;within&lt;/em&gt; the Docker network connect using listener &amp;ldquo;BOB&amp;rdquo;, with port 29092 and hostname &lt;code&gt;kafka0&lt;/code&gt;. In doing so, they get back the hostname &lt;code&gt;kafka0&lt;/code&gt; to which to connect. Each docker container will resolve &lt;code&gt;kafka0&lt;/code&gt; using Docker&amp;rsquo;s internal network, and be able to reach the broker.&lt;/li&gt;
+&lt;li&gt;Clients &lt;em&gt;external&lt;/em&gt; to the Docker network connect using listener &amp;ldquo;FRED&amp;rdquo;, with port 9092 and hostname &lt;code&gt;localhost&lt;/code&gt;. Port 9092 is exposed by the Docker container and so available to connect to. When clients connect, they are given the hostname &lt;code&gt;localhost&lt;/code&gt; for the broker&amp;rsquo;s metadata, and so connect to this when reading/writing data.&lt;/li&gt;
+&lt;li&gt;The above configuration would &lt;em&gt;not&lt;/em&gt; handle the scenario in which a client external to Docker &lt;em&gt;and&lt;/em&gt; external to the host machine wants to connect. This is because neither &lt;code&gt;kafka0&lt;/code&gt; (the internal Docker hostname) &lt;em&gt;or&lt;/em&gt; &lt;code&gt;localhost&lt;/code&gt; (the loopback address for the Docker host machine) would be resolvable.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&#34;howto-connecting-to-kafka-on-aws-iaas&#34;&gt;HOWTO: Connecting to Kafka on AWS/IaaS&lt;/h4&gt;
+
+&lt;p&gt;&lt;em&gt;I&amp;rsquo;m naming AWS because it&amp;rsquo;s what the majority of people use, but this applies to any IaaS/Cloud solution.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Exactly the same concepts apply here as with Docker. The main difference is that whilst with Docker the external connections may well be just on localhost (as above), with Cloud-hosted Kafka (such as on AWS) the external connection will be from a machine not local to to the broker and which will need to be able to connect to the broker.&lt;/p&gt;
+
+&lt;p&gt;A further complication is that whilst Docker networks are heavily segregated from the host&amp;rsquo;s, on IaaS often the &lt;em&gt;external&lt;/em&gt; hostname is resolvable &lt;em&gt;internally&lt;/em&gt;, making it hit and miss when you may actually encounter these problems.&lt;/p&gt;
+
+&lt;p&gt;There are two approaches, depending on whether the external address through which you&amp;rsquo;re going to connect to the broker is also resolvable locally to all of the brokers on the network (e.g VPC).&lt;/p&gt;
+
+&lt;h5 id=&#34;option-1-external-address-is-resolvable-locally&#34;&gt;Option 1 - external address IS resolvable locally&lt;/h5&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/aws01-1.png&#34; alt=&#34;images/aws01.png&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;You can get by with one listener here. The existing listener, called &lt;code&gt;PLAINTEXT&lt;/code&gt;, just needs overriding to set the advertised hostname (i.e. the one that is passed to inbound clients)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;advertised.listeners=PLAINTEXT://ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now connections both internally and externally will use &lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt; for connecting. Because &lt;code&gt;ec2-54-191-84-122.us-west-2.compute.amazonaws.com&lt;/code&gt; can be resolved both locally and externally, things work fine.&lt;/p&gt;
+
+&lt;h5 id=&#34;option-2-external-address-is-not-resolvable-locally&#34;&gt;Option 2 - external address is NOT resolvable locally&lt;/h5&gt;
+
+&lt;p&gt;You will need to configure two listeners for Kafka:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;Communication &lt;em&gt;within the AWS network (VPC)&lt;/em&gt;. This could be inter-broker communication (i.e. between brokers), and between other components running in the VPC such as Kafka Connect, or third-party clients or producers.&lt;/p&gt;
+
+&lt;p&gt;For these comms, we need to use &lt;em&gt;the internal IP of the EC2 machine&lt;/em&gt; (or hostname, if DNS is configured).&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;External AWS traffic. This could be testing connectivity from a laptop, or simply from machines not hosted in Amazon. In both cases, the external IP of the instance needs to be used (or hostname, if DNS is configured).&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/08/aws02.png&#34; alt=&#34;images/aws02.png&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s an example configuration:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;listeners=INTERNAL://0.0.0.0:19092,EXTERNAL://0.0.0.0:9092
+listener.security.protocol.map=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+advertised.listeners=INTERNAL://ip-172-31-18-160.us-west-2.compute.internal:19092,EXTERNAL://ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092
+inter.broker.listener.name=INTERNAL
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;exploring-listeners-with-docker&#34;&gt;Exploring listeners with Docker&lt;/h4&gt;
+
+&lt;p&gt;Take a look at &lt;a href=&#34;https://github.com/rmoff/kafka-listeners&#34;&gt;https://github.com/rmoff/kafka-listeners&lt;/a&gt;. This includes a docker-compose to bring up a Zookeeper instance along with Kafka broker configured with several listeners.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Listener &lt;code&gt;BOB&lt;/code&gt; (port 29092) for internal traffic on the Docker network&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ docker run -t --network kafka-listeners_default \
+            confluentinc/cp-kafkacat \
+            kafkacat -b kafka0:29092 \
+                    -L
+Metadata for all topics (from broker 0: kafka0:29092/0):
+1 brokers:
+  broker 0 at kafka0:29092
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Listener &lt;code&gt;FRED&lt;/code&gt; (port 9092) for traffic from the Docker-host machine (&lt;code&gt;localhost&lt;/code&gt;)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ docker run -t --network kafka-listeners_default \
+            confluentinc/cp-kafkacat \
+            kafkacat -b kafka0:9092 \
+                    -L
+Metadata for all topics (from broker -1: kafka0:9092/bootstrap):
+1 brokers:
+  broker 0 at localhost:9092
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Listener &lt;code&gt;ALICE&lt;/code&gt; (port 29094) for traffic from outside, reaching the Docker host on the DNS name &lt;code&gt;never-gonna-give-you-up&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ docker run -t --network kafka-listeners_default \
+            confluentinc/cp-kafkacat \
+            kafkacat -b kafka0:29094 \
+                    -L
+Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
+1 brokers:
+  broker 0 at never-gonna-give-you-up:29094
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&#34;redux&#34;&gt;Redux&lt;/h4&gt;
+
+&lt;p&gt;I recently referenced this post in &lt;a href=&#34;https://stackoverflow.com/questions/52438822/docker-kafka-dockerized-python-application/52440056#52440056&#34;&gt;a StackOverflow answer I gave&lt;/a&gt;, and re-articulated the solution. If you&amp;rsquo;re still not quite following, check it out and maybe second time around I&amp;rsquo;ll have explained it better:)&lt;/p&gt;
+
+&lt;h4 id=&#34;references&#34;&gt;References&lt;/h4&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://kafka.apache.org/documentation/#brokerconfigs&#34;&gt;https://kafka.apache.org/documentation/#brokerconfigs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://cwiki.apache.org/confluence/display/KAFKA/KIP-103%3A+Separation+of+Internal+and+External+traffic&#34;&gt;https://cwiki.apache.org/confluence/display/KAFKA/KIP-103%3A+Separation+of+Internal+and+External+traffic&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://cwiki.apache.org/confluence/display/KAFKA/KIP-2+-+Refactor+brokers+to+allow+listening+on+multiple+ports+and+IPs&#34;&gt;https://cwiki.apache.org/confluence/display/KAFKA/KIP-2+-+Refactor+brokers+to+allow+listening+on+multiple+ports+and+IPs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://cwiki.apache.org/confluence/display/KAFKA/Multiple+Listeners+for+Kafka+Brokers&#34;&gt;https://cwiki.apache.org/confluence/display/KAFKA/Multiple+Listeners+for+Kafka+Brokers&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://stackoverflow.com/questions/42998859/kafka-server-configuration-listeners-vs-advertised-listeners&#34;&gt;https://stackoverflow.com/questions/42998859/kafka-server-configuration-listeners-vs-advertised-listeners&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&#34;still-not-sure&#34;&gt;Still not sure?&lt;/h4&gt;
 
 &lt;p&gt;Check out the &lt;a href=&#34;http://cnfl.io/slack&#34;&gt;Confluent Community Slack group&lt;/a&gt; or &lt;a href=&#34;https://lists.apache.org/list.html?users@kafka.apache.org&#34;&gt;Apache Kafka user mailing list&lt;/a&gt; for more help.&lt;/p&gt;
 </description>
@@ -2292,7 +2605,7 @@ Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/06/2018-06-20_17-28-31.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;getting-it-into-keynote-or-pptx-if-you-must&#34;&gt;Getting it into Keynote (or PPTX, if you must)&lt;/h2&gt;
+&lt;h3 id=&#34;getting-it-into-keynote-or-pptx-if-you-must&#34;&gt;Getting it into Keynote (or PPTX, if you must)&lt;/h3&gt;
 
 &lt;p&gt;If you&amp;rsquo;re using iTerm you can select the text and then use the &lt;strong&gt;Copy with Styles&lt;/strong&gt; option from the Edit menu (press Alt to access this option), and paste the results directly into Keynote with the formatting preserved.&lt;/p&gt;
 
@@ -2307,7 +2620,7 @@ Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2018/06/2018-06-20_20-09-22.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;output-to-html&#34;&gt;Output to HTML&lt;/h2&gt;
+&lt;h3 id=&#34;output-to-html&#34;&gt;Output to HTML&lt;/h3&gt;
 
 &lt;p&gt;As well as writing the highlighted code to the terminal, you can output to things like HTML, for nice embedding in…blogs!&lt;/p&gt;
 
@@ -2337,7 +2650,7 @@ Metadata for all topics (from broker -1: kafka0:29094/bootstrap):
 
 &lt;p&gt;&lt;em&gt;For images, run &lt;code&gt;pip install PILLOW&lt;/code&gt; for the required library first.&lt;/em&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;support-for-sql-and-more&#34;&gt;Support for SQL, and more!&lt;/h2&gt;
+&lt;h3 id=&#34;support-for-sql-and-more&#34;&gt;Support for SQL, and more!&lt;/h3&gt;
 
 &lt;p&gt;Pygments supports &lt;a href=&#34;http://pygments.org/languages/&#34;&gt;multiple languages&lt;/a&gt; too, and can do things like enforce upper-case for SQL. If you don&amp;rsquo;t pass a file to &lt;code&gt;pygmentize&lt;/code&gt; then it&amp;rsquo;ll read from &lt;code&gt;stdin&lt;/code&gt; - press Ctrl-D to end input and see the result:&lt;/p&gt;
 
@@ -2495,18 +2808,18 @@ confluent-4.1.1
 
 &lt;p&gt;Read more about &lt;code&gt;NUMBER&lt;/code&gt; data type in the &lt;a href=&#34;https://docs.oracle.com/database/121/SQLRF/sql_elements001.htm#SQLRF002220&#34;&gt;Oracle docs&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;tl-dr-how-do-i-make-it-work&#34;&gt;tl;dr : How do I make it work?&lt;/h2&gt;
+&lt;h3 id=&#34;tl-dr-how-do-i-make-it-work&#34;&gt;tl;dr : How do I make it work?&lt;/h3&gt;
 
 &lt;p&gt;There are several options:&lt;/p&gt;
 
-&lt;h3 id=&#34;new-in-confluent-platform-4-1-1-numeric-mapping&#34;&gt;New in Confluent Platform 4.1.1 : &lt;code&gt;numeric.mapping&lt;/code&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;new-in-confluent-platform-4-1-1-numeric-mapping&#34;&gt;New in Confluent Platform 4.1.1 : &lt;code&gt;numeric.mapping&lt;/code&gt;&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;In the connector configuration, set &lt;code&gt;&amp;quot;numeric.mapping&amp;quot;:&amp;quot;best_fit&amp;quot;&lt;/code&gt;&lt;/li&gt;
 &lt;li&gt;New in Confluent Platform 4.1.1 (&lt;a href=&#34;https://docs.confluent.io/current/connect/connect-jdbc/docs/source_config_options.html#database&#34;&gt;Doc&lt;/a&gt;)&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;avoid-the-problem-in-the-first-place&#34;&gt;Avoid the problem in the first place&lt;/h3&gt;
+&lt;h4 id=&#34;avoid-the-problem-in-the-first-place&#34;&gt;Avoid the problem in the first place&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;Change the DDL of the source object. For example:
@@ -2517,7 +2830,7 @@ confluent-4.1.1
 &lt;/ul&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;cast-the-datatypes-in-the-query&#34;&gt;CAST the datatypes in the &lt;code&gt;query&lt;/code&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;cast-the-datatypes-in-the-query&#34;&gt;CAST the datatypes in the &lt;code&gt;query&lt;/code&gt;&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;Pull from the object directly, and use &lt;code&gt;query&lt;/code&gt; in the JDBC connector (instead of &lt;code&gt;table.whitelist&lt;/code&gt;)—and cast the columns appropriately:&lt;/p&gt;
@@ -2560,7 +2873,7 @@ Processed a total of 1 messages
 &lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;use-a-view-in-the-source-database-to-cast-the-data-types&#34;&gt;Use a View in the source database to cast the data types&lt;/h3&gt;
+&lt;h4 id=&#34;use-a-view-in-the-source-database-to-cast-the-data-types&#34;&gt;Use a View in the source database to cast the data types&lt;/h4&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;Define a view in the source DB that casts the columns appropriately, and then use the connector against this instead (make sure to include &lt;code&gt;&amp;quot;table.types&amp;quot;:&amp;quot;VIEW&amp;quot;&lt;/code&gt;)&lt;/p&gt;
@@ -2606,7 +2919,7 @@ Processed a total of 1 messages
 &lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;what-happens&#34;&gt;What happens&lt;/h2&gt;
+&lt;h3 id=&#34;what-happens&#34;&gt;What happens&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;SQL&amp;gt; DESCRIBE LOGON;
  Name                                      Null?    Type
@@ -2697,7 +3010,7 @@ Processed a total of 1 messages
 Processed a total of 1 messages
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;why-does-it-happen&#34;&gt;Why does it happen?&lt;/h2&gt;
+&lt;h3 id=&#34;why-does-it-happen&#34;&gt;Why does it happen?&lt;/h3&gt;
 
 &lt;p&gt;The source data is defined as &lt;code&gt;NUMERIC&lt;/code&gt;:&lt;/p&gt;
 
@@ -2757,7 +3070,7 @@ Processed a total of 1 messages
 
 &lt;p&gt;&lt;strong&gt;tl;dr&lt;/strong&gt; When doing a stream-table join, your &lt;em&gt;table&lt;/em&gt; messages must already exist (and must be timestamped) &lt;em&gt;before&lt;/em&gt; the stream messages. If you re-emit your source stream messages, after the table topic is populated, the join will succeed.&lt;/p&gt;
 
-&lt;h2 id=&#34;example-data&#34;&gt;Example data&lt;/h2&gt;
+&lt;h3 id=&#34;example-data&#34;&gt;Example data&lt;/h3&gt;
 
 &lt;p&gt;Use &lt;code&gt;kafakcat&lt;/code&gt; to populate topics:&lt;/p&gt;
 
@@ -2785,7 +3098,7 @@ Robin@asgard02 ~&amp;gt; kafkacat -b localhost:9092 -C -t voipDetails
 {&amp;quot;SessionIdTime&amp;quot;:&amp;quot;2018-05-17 11:26:33 BST&amp;quot;,&amp;quot;SessionIdSeq&amp;quot;:2,&amp;quot;Details&amp;quot;:&amp;quot;Bar2&amp;quot;}
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;declare-source-streams&#34;&gt;Declare source streams&lt;/h2&gt;
+&lt;h3 id=&#34;declare-source-streams&#34;&gt;Declare source streams&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;ksql&amp;gt; CREATE STREAM session_details_stream \
       (Media varchar ,SessionIdTime varchar,SessionIdSeq long) \
@@ -2814,7 +3127,7 @@ ksql&amp;gt; select * from voip_details_stream;
 ^CQuery terminated
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;repartition-each-topic-on-sessionidtime-sessionidseq&#34;&gt;Repartition each topic on SessionIdTime+SessionIdSeq&lt;/h2&gt;
+&lt;h3 id=&#34;repartition-each-topic-on-sessionidtime-sessionidseq&#34;&gt;Repartition each topic on SessionIdTime+SessionIdSeq&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;ksql&amp;gt; CREATE STREAM SESSION AS \
       SELECT Media, CONCAT(SessionIdTime,SessionIdSeq) AS root \
@@ -2844,7 +3157,7 @@ ksql&amp;gt; CREATE STREAM VOIP AS \
 ksql&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;declare-table&#34;&gt;Declare table&lt;/h2&gt;
+&lt;h3 id=&#34;declare-table&#34;&gt;Declare table&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;ksql&amp;gt; CREATE TABLE VOIP_TABLE (root VARCHAR, details VARCHAR) \
       WITH (KAFKA_TOPIC=&#39;VOIP&#39;, VALUE_FORMAT=&#39;JSON&#39;, KEY=&#39;root&#39;);
@@ -2859,7 +3172,7 @@ ksql&amp;gt; SELECT ROWTIME, ROWKEY, root, details FROM VOIP;
 1526553143176 | 2018-05-17 11:25:33 BST1 | 2018-05-17 11:25:33 BST1 | Bar1b
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;join-session-stream-to-voip-table&#34;&gt;Join SESSION stream to VOIP table&lt;/h2&gt;
+&lt;h3 id=&#34;join-session-stream-to-voip-table&#34;&gt;Join SESSION stream to VOIP table&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;ksql&amp;gt; SELECT s.ROWTIME, s.root, s.media, v.details \
       FROM SESSION s \
@@ -3005,7 +3318,7 @@ kafka-console-producer \
 
 &lt;p&gt;&lt;em&gt;Disclaimer: I am not a MongoDB person. These steps may or may not be appropriate and proper. But they worked for me :) Feel free to post in comments if I&amp;rsquo;m doing something wrong&lt;/em&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;mongodb-config-enabling-replica-sets&#34;&gt;MongoDB config - enabling replica sets&lt;/h2&gt;
+&lt;h3 id=&#34;mongodb-config-enabling-replica-sets&#34;&gt;MongoDB config - enabling replica sets&lt;/h3&gt;
 
 &lt;p&gt;For Debezium to be able to stream changes from MongoDB, Mongo needs to have replication configured:&lt;/p&gt;
 
@@ -3064,11 +3377,11 @@ mongo01:PRIMARY&amp;gt;
 2018-03-07T13:12:26.048+0000 I REPL     [conn1] New replica set config in use: { _id: &amp;quot;mongo01&amp;quot;, version: 1, protocolVersion: 1, members: [ { _id: 0, host: &amp;quot;127.0.0.1:27017&amp;quot;, arbiterOnly: false, buildIndexes: true, hidden: false, priority: 1.0, tags: {}, slaveDelay: 0, votes: 1 } ], settings: { chainingAllowed: true, heartbeatIntervalMillis: 2000, heartbeatTimeoutSecs: 10, electionTimeoutMillis: 10000, catchUpTimeoutMillis: -1, catchUpTakeoverDelayMillis: 30000, getLastErrorModes: {}, getLastErrorDefaults: { w: 1, wtimeout: 0 }, replicaSetId: ObjectId(&#39;5a9fe53ac81eed28a3bf207a&#39;) } }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;setting-up-debezium-to-stream-changes-from-mongodb-into-apache-kafka&#34;&gt;Setting up Debezium to stream changes from MongoDB into Apache Kafka&lt;/h2&gt;
+&lt;h3 id=&#34;setting-up-debezium-to-stream-changes-from-mongodb-into-apache-kafka&#34;&gt;Setting up Debezium to stream changes from MongoDB into Apache Kafka&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a &lt;a href=&#34;http://debezium.io/docs/connectors/mongodb/&#34;&gt;detailed explanation of how Debezium CDC works with Debezium&lt;/a&gt; on the Debezium doc site.&lt;/p&gt;
 
-&lt;h3 id=&#34;install-debezium-mongo-plugin&#34;&gt;Install Debezium Mongo plugin&lt;/h3&gt;
+&lt;h4 id=&#34;install-debezium-mongo-plugin&#34;&gt;Install Debezium Mongo plugin&lt;/h4&gt;
 
 &lt;pre&gt;&lt;code&gt;mkdir ~/connect-jars
 cd ~/connect-jars/
@@ -3081,7 +3394,7 @@ tar -xf debezium-connector-mongodb-0.7.4-plugin.tar.gz
 &lt;pre&gt;&lt;code&gt;plugin.path=share/java,/home/rmoff/connect-jars
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;configure-debezium-mongodb-connector&#34;&gt;Configure Debezium MongoDB connector&lt;/h3&gt;
+&lt;h4 id=&#34;configure-debezium-mongodb-connector&#34;&gt;Configure Debezium MongoDB connector&lt;/h4&gt;
 
 &lt;p&gt;Config file (&lt;code&gt;/home/rmoff/connect-config/mongodb.json&lt;/code&gt;):&lt;/p&gt;
 
@@ -3179,7 +3492,7 @@ Unifi AP - Pantry | 192.168.10.71
 
 &lt;p&gt;For some work I&amp;rsquo;ve been doing I wanted to access the data in Ubiquiti&amp;rsquo;s Unifi controller which it stores in MongoDB. Because I didn&amp;rsquo;t want to risk my actual Unifi device by changing local settings to enable remote access, and also because the version of MongoDB on it is older than ideal, I wanted to clone the data elsewhere. This article shows you how.&lt;/p&gt;
 
-&lt;h2 id=&#34;dump-data-from-source-server-unifi&#34;&gt;Dump data from source server (unifi)&lt;/h2&gt;
+&lt;h3 id=&#34;dump-data-from-source-server-unifi&#34;&gt;Dump data from source server (unifi)&lt;/h3&gt;
 
 &lt;p&gt;To start with, SSH to the Unifi box (in my case, it&amp;rsquo;s a CloudKey). Username and password are the same as Unifi web GUI login.&lt;/p&gt;
 
@@ -3219,7 +3532,7 @@ Wed Mar  7 12:14:05.118 	ace.alarm to dump/ace/alarm.bson
 Wed Mar  7 12:14:05.124 		 152 objects
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;install-mongodb-locally&#34;&gt;Install MongoDB locally&lt;/h2&gt;
+&lt;h3 id=&#34;install-mongodb-locally&#34;&gt;Install MongoDB locally&lt;/h3&gt;
 
 &lt;p&gt;Ref: &lt;a href=&#34;https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/&#34;&gt;Install docs&lt;/a&gt;&lt;/p&gt;
 
@@ -3236,7 +3549,7 @@ MongoDB shell version v3.6.3
 connecting to: mongodb://127.0.0.1:27017/
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;restore-data-to-new-server&#34;&gt;Restore data to new server&lt;/h2&gt;
+&lt;h3 id=&#34;restore-data-to-new-server&#34;&gt;Restore data to new server&lt;/h3&gt;
 
 &lt;p&gt;Copy dump file from CloudKey to local server:&lt;/p&gt;
 
@@ -3286,7 +3599,7 @@ Wed Mar  7 12:17:31.932 unifi-mongodump/ace/radiusprofile.bson
 &lt;li&gt;MySQL 5.7.19 with &lt;a href=&#34;https://dev.mysql.com/doc/sakila/en/sakila-installation.html&#34;&gt;Sakila sample database&lt;/a&gt; installed&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;install-debezium&#34;&gt;Install Debezium&lt;/h2&gt;
+&lt;h3 id=&#34;install-debezium&#34;&gt;Install Debezium&lt;/h3&gt;
 
 &lt;p&gt;To use it, you need the relevant JAR for the source system (e.g. MySQL), and make that JAR available to Kafka Connect. Here we&amp;rsquo;ll set it up for MySQL.&lt;/p&gt;
 
@@ -3310,7 +3623,7 @@ Wed Mar  7 12:17:31.932 unifi-mongodump/ace/radiusprofile.bson
 
 &lt;p&gt;&lt;code&gt;plugin.path&lt;/code&gt; is based on this expected structure: &lt;img src=&#34;https://rmoff.github.io/content/images/2018/03/KafkaConnect_pluginpath.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;mysql-config&#34;&gt;MySQL config&lt;/h2&gt;
+&lt;h3 id=&#34;mysql-config&#34;&gt;MySQL config&lt;/h3&gt;
 
 &lt;p&gt;Debezium uses MySQL&amp;rsquo;s binlog facility to extract events, and you need to configure MySQL to enable it. Here is the bare-basics necessary to get this working - fine for demo purposes, but not a substitute for an actual MySQL DBA doing this properly :)&lt;/p&gt;
 
@@ -3352,7 +3665,7 @@ expire_logs_days  = 10
 mysql&amp;gt; GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO &#39;debezium&#39; IDENTIFIED BY &#39;dbz&#39;;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;kafka-connect-setup&#34;&gt;Kafka Connect setup&lt;/h2&gt;
+&lt;h3 id=&#34;kafka-connect-setup&#34;&gt;Kafka Connect setup&lt;/h3&gt;
 
 &lt;p&gt;Load the connector configuration into Kafka Connect using the REST API:&lt;/p&gt;
 
@@ -3396,7 +3709,7 @@ mysql-connector  |  RUNNING  |  RUNNING
 [2018-02-09 15:27:57,299] INFO Completed snapshot in 00:00:17.032 (io.debezium.connector.mysql.SnapshotReader:661)
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;inspect-the-mysql-data-in-kafka&#34;&gt;Inspect the MySQL data in Kafka&lt;/h2&gt;
+&lt;h3 id=&#34;inspect-the-mysql-data-in-kafka&#34;&gt;Inspect the MySQL data in Kafka&lt;/h3&gt;
 
 &lt;p&gt;Use &lt;code&gt;kafka-topics&lt;/code&gt; to see all the topics created by Debezium:&lt;/p&gt;
 
@@ -3476,7 +3789,7 @@ fullfillment.sakila.category
 
 &lt;p&gt;Note the structure of the messages - you get an &lt;code&gt;before&lt;/code&gt; and &lt;code&gt;after&lt;/code&gt; view of the record, plus a bunch of metadata (&lt;code&gt;source&lt;/code&gt;, &lt;code&gt;op&lt;/code&gt;, &lt;code&gt;ts_ms&lt;/code&gt;). Depending on what you&amp;rsquo;re using the CDC events for, you&amp;rsquo;ll want to retain some or all of this structure.&lt;/p&gt;
 
-&lt;h2 id=&#34;event-message-flattening-with-single-message-transform&#34;&gt;Event Message Flattening with Single Message Transform&lt;/h2&gt;
+&lt;h3 id=&#34;event-message-flattening-with-single-message-transform&#34;&gt;Event Message Flattening with Single Message Transform&lt;/h3&gt;
 
 &lt;p&gt;For simply streaming into Kafka the &lt;em&gt;current&lt;/em&gt; state of the record, it can be useful to take just the &lt;code&gt;after&lt;/code&gt; section of the message. Kafka Connect includes functionality called Single Message Transform (SMT). As the name suggests, it enables you to transform single messages! You can read more about it and examples of its usage &lt;a href=&#34;https://www.confluent.io/blog/simplest-useful-kafka-connect-data-pipeline-world-thereabouts-part-3/&#34;&gt;here&lt;/a&gt;. As well as the &lt;a href=&#34;http://kafka.apache.org/documentation.html#connect_transforms&#34;&gt;Transforms that ship with Apache Kafka&lt;/a&gt;, you can write your own using the &lt;a href=&#34;https://kafka.apache.org/10/javadoc/org/apache/kafka/connect/transforms/Transformation.html&#34;&gt;documented API&lt;/a&gt;. This is exactly what the Debezium project have done, shipping their own SMT as part of it, providing an easy way to &lt;a href=&#34;http://debezium.io/docs/configuration/event-flattening/&#34;&gt;flatten the events that Debezium emits&lt;/a&gt;.&lt;/p&gt;
 
@@ -3895,7 +4208,7 @@ Cleaning up...
 
 &lt;p&gt;From this point, I&amp;rsquo;ll now walk through configuring OGG-BD with the Kafka Connect handler&lt;/p&gt;
 
-&lt;h2 id=&#34;configuring-the-kafka-connect-replicat&#34;&gt;Configuring the Kafka Connect replicat&lt;/h2&gt;
+&lt;h3 id=&#34;configuring-the-kafka-connect-replicat&#34;&gt;Configuring the Kafka Connect replicat&lt;/h3&gt;
 
 &lt;p&gt;The OGG-BD replicat takes the trail file of events written by the &lt;code&gt;extract&lt;/code&gt; job, and replays those events to the target. In our case, the target is the Kafka Connect handler.&lt;/p&gt;
 
@@ -3913,7 +4226,7 @@ Cleaning up...
 
 &lt;p&gt;&lt;strong&gt;Be very careful with copying &amp;amp; pasting these configuration files, as trailing whitespace can cause problems, &lt;a href=&#34;https://rmoff.net/2017/09/12/oracle-goldengate-kafka-connect-handler-troubleshooting/&#34;&gt;detailed here&lt;/a&gt;.&lt;/strong&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;starting-the-replicat&#34;&gt;Starting the replicat&lt;/h2&gt;
+&lt;h3 id=&#34;starting-the-replicat&#34;&gt;Starting the replicat&lt;/h3&gt;
 
 &lt;p&gt;From the bash shell, start the OGG-BD &lt;code&gt;ggsci&lt;/code&gt; tool:&lt;/p&gt;
 
@@ -4210,7 +4523,7 @@ Manager is running (IP port localhost.localdomain.7809, Process ID 23231).
 GGSCI (localhost.localdomain) 2&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;configure-db-for-ogg&#34;&gt;Configure DB for OGG&lt;/h2&gt;
+&lt;h3 id=&#34;configure-db-for-ogg&#34;&gt;Configure DB for OGG&lt;/h3&gt;
 
 &lt;p&gt;Since the DB is multitenant, &lt;a href=&#34;http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-1A6D7483-BF6D-4354-904D-E9BBD0E7DD59.htm#GIORA558&#34;&gt;need to use&lt;/a&gt; &lt;a href=&#34;http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-6C0E8B93-FA67-4700-AC33-6E57F4DBF9B2.htm#GIORA212&#34;&gt;integrated capture mode&lt;/a&gt;.&lt;/p&gt;
 
@@ -4243,7 +4556,7 @@ ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION=TRUE SCOPE=BOTH;
 EXIT
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;configure-ogg-extract&#34;&gt;Configure OGG Extract&lt;/h3&gt;
+&lt;h4 id=&#34;configure-ogg-extract&#34;&gt;Configure OGG Extract&lt;/h4&gt;
 
 &lt;p&gt;Launch OGG command line:&lt;/p&gt;
 
@@ -4331,7 +4644,7 @@ Log Read Checkpoint  Oracle Integrated Redo Logs
 
 &lt;p&gt;If it doesn&amp;rsquo;t start successfully then check &lt;code&gt;/u01/app/ogg/ggserr.log&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h3 id=&#34;smoketest&#34;&gt;Smoketest&lt;/h3&gt;
+&lt;h4 id=&#34;smoketest&#34;&gt;Smoketest&lt;/h4&gt;
 
 &lt;p&gt;Log into SQL*Plus&lt;/p&gt;
 
@@ -4372,7 +4685,7 @@ Logdump 15 &amp;gt;
 
 &lt;script src=&#34;https://gist.github.com/rmoff/db86d4b12a295aea51b55f3c5abf5236.js&#34;&gt;&lt;/script&gt;
 
-&lt;h2 id=&#34;install-ogg-bd&#34;&gt;Install OGG-BD&lt;/h2&gt;
+&lt;h3 id=&#34;install-ogg-bd&#34;&gt;Install OGG-BD&lt;/h3&gt;
 
 &lt;p&gt;Doc: &lt;a href=&#34;http://docs.oracle.com/goldengate/bd123110/gg-bd/GBDIG/toc.htm&#34;&gt;Installing Oracle GoldenGate for Big Data&lt;/a&gt;&lt;/p&gt;
 
@@ -4488,7 +4801,7 @@ sudo yum install confluent-platform-2.11
 
 &lt;h1 id=&#34;configure-smoke-test-ogg-kafka-connect-kafka&#34;&gt;Configure &amp;amp; Smoke Test OGG-Kafka Connect → Kafka&lt;/h1&gt;
 
-&lt;h2 id=&#34;configure-for-ogg-bd-kafka-connect-handler&#34;&gt;Configure for OGG-BD Kafka Connect handler&lt;/h2&gt;
+&lt;h3 id=&#34;configure-for-ogg-bd-kafka-connect-handler&#34;&gt;Configure for OGG-BD Kafka Connect handler&lt;/h3&gt;
 
 &lt;p&gt;(&lt;a href=&#34;http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GADBD-GUID-81730248-AC12-438E-AF82-48C7002178EC&#34;&gt;Doc&lt;/a&gt;)&lt;/p&gt;
 
@@ -4542,7 +4855,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/lt000000002
 
 &lt;p&gt;Check logfile &lt;code&gt;/u01/app/ogg-bd/ggserr.log&lt;/code&gt; and &lt;code&gt;/u01/app/ogg-bd/dirrpt/*&lt;/code&gt; for any errors.&lt;/p&gt;
 
-&lt;h2 id=&#34;smoke-test-ogg-kafka-connect-kafka&#34;&gt;Smoke test OGG &amp;ndash; Kafka Connect &amp;ndash;&amp;gt; Kafka&lt;/h2&gt;
+&lt;h3 id=&#34;smoke-test-ogg-kafka-connect-kafka&#34;&gt;Smoke test OGG &amp;ndash; Kafka Connect &amp;ndash;&amp;gt; Kafka&lt;/h3&gt;
 
 &lt;p&gt;Insert a row in Oracle (as done already above)&lt;/p&gt;
 
@@ -4944,7 +5257,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 
 &lt;p&gt;I&amp;rsquo;ve used Markdown for years now, after being introduced to it at my previous company. When I worked as a consultant I would be delivering client reports, and I wrote all of them in Markdown. The final delivered copy was in DOCX or maybe HTML - but the master copy remained as Markdown.&lt;/p&gt;
 
-&lt;h2 id=&#34;how-do-i-write-markdown&#34;&gt;How Do I Write Markdown?&lt;/h2&gt;
+&lt;h3 id=&#34;how-do-i-write-markdown&#34;&gt;How Do I Write Markdown?&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a &lt;a href=&#34;https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet&#34;&gt;comprehensive reference guide here&lt;/a&gt;.&lt;/p&gt;
 
@@ -4966,7 +5279,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 
 &lt;p&gt;But, there are other tools that can make your Markdown life even better, such as previewers.&lt;/p&gt;
 
-&lt;h2 id=&#34;markdown-previewers&#34;&gt;Markdown Previewers&lt;/h2&gt;
+&lt;h3 id=&#34;markdown-previewers&#34;&gt;Markdown Previewers&lt;/h3&gt;
 
 &lt;p&gt;The best of these by a mile on the Mac is &lt;a href=&#34;http://marked2app.com/&#34;&gt;Marked2&lt;/a&gt;. It gives you a nice rendering of any markdown document that you&amp;rsquo;re working on. Used with the El Capitan split-screen it&amp;rsquo;s pretty-near perfect way to write Markdown.&lt;/p&gt;
 
@@ -4974,7 +5287,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 
 &lt;p&gt;Marked2 can also export to DOCX, PDF, HTML, etc.&lt;/p&gt;
 
-&lt;h2 id=&#34;other-useful-tools&#34;&gt;Other Useful Tools&lt;/h2&gt;
+&lt;h3 id=&#34;other-useful-tools&#34;&gt;Other Useful Tools&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://omz-software.com/editorial/&#34;&gt;Editorial&lt;/a&gt; is a good iOS Markdown editor &amp;amp; previewer&lt;/li&gt;
@@ -5010,7 +5323,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 
 &lt;p&gt;If you&amp;rsquo;re at any of these, please do come and say hi :)&lt;/p&gt;
 
-&lt;h2 id=&#34;apache-kafka-meetup-london&#34;&gt;Apache Kafka Meetup - London&lt;/h2&gt;
+&lt;h3 id=&#34;apache-kafka-meetup-london&#34;&gt;Apache Kafka Meetup - London&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;My first time talking at the London Apache Kafka Meetup - always a sold-out crowd, this will be fun!&lt;/em&gt;&lt;/p&gt;
 
@@ -5022,7 +5335,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 &lt;/ul&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;oracle-openworld-san-francisco&#34;&gt;Oracle OpenWorld - San Francisco&lt;/h2&gt;
+&lt;h3 id=&#34;oracle-openworld-san-francisco&#34;&gt;Oracle OpenWorld - San Francisco&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;This will be my second time at OOW - I &lt;a href=&#34;https://www.rittmanmead.com/blog/2014/10/first-timer-tips-for-oracle-open-world/&#34;&gt;wrote up my previous trip here&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
 
@@ -5034,7 +5347,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 &lt;li&gt;&lt;p&gt;Oct 4th, 15:30 &lt;a href=&#34;https://events.rainfocus.com/catalog/oracle/oow17/catalogoow17?search=CON6895&amp;amp;showEnrolled=false&#34;&gt;&lt;strong&gt;An Enterprise Databus: Oracle GoldenGate in the Cloud Working with Kafka and Spark&lt;/strong&gt; (CON6895)&lt;/a&gt; (Moscone West - Room 3003)&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;oak-table-world-san-francisco&#34;&gt;Oak Table World - San Francisco&lt;/h2&gt;
+&lt;h3 id=&#34;oak-table-world-san-francisco&#34;&gt;Oak Table World - San Francisco&lt;/h3&gt;
 
 &lt;p&gt;*Oak Table World is &lt;strong&gt;awesome&lt;/strong&gt;–go along if you can make it, as it is literally just next door to OOW itself. I&amp;rsquo;m really honoured to speaking here with my colleague Gwen Shapira.*&lt;/p&gt;
 
@@ -5042,13 +5355,13 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 &lt;li&gt;Oct 2nd - 14:30 &lt;a href=&#34;http://www.oaktable.net/blog/oak-table-world-2017-oracle-open-world&#34;&gt;&lt;strong&gt;What&amp;rsquo;s this stream processing thing anyway?&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;hadoop-user-group-dublin&#34;&gt;Hadoop User Group - Dublin&lt;/h2&gt;
+&lt;h3 id=&#34;hadoop-user-group-dublin&#34;&gt;Hadoop User Group - Dublin&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;October 19th, 18:00: &lt;strong&gt;&lt;a href=&#34;https://www.meetup.com/hadoop-user-group-ireland/events/243387159/&#34;&gt;Look Ma, no Code! Building Streaming Data Pipelines with Apache Kafka&lt;/a&gt;&lt;/strong&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;doag-nuremberg&#34;&gt;DOAG - Nuremberg&lt;/h2&gt;
+&lt;h3 id=&#34;doag-nuremberg&#34;&gt;DOAG - Nuremberg&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;My first time presenting in Germany - looking forward to this!&lt;/em&gt;&lt;/p&gt;
 
@@ -5058,7 +5371,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/oe000000001
 &lt;li&gt;November 23rd, 16:00 &lt;a href=&#34;https://www.doag.org/konferenz/konferenzplaner/konferenzplaner_details.php?locS=1&amp;amp;id=535509&amp;amp;vid=545631&#34;&gt;&lt;strong&gt;Building a Real-Time Streaming Platform with Oracle, Apache Kafka, and KSQL&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;ukoug-birmingham&#34;&gt;UKOUG - Birmingham&lt;/h2&gt;
+&lt;h3 id=&#34;ukoug-birmingham&#34;&gt;UKOUG - Birmingham&lt;/h3&gt;
 
 &lt;p&gt;&lt;em&gt;There was lots of interest in Kafka last year - I&amp;rsquo;ve got my fingers crossed for a room with &lt;a href=&#34;https://twitter.com/lasjen/status/805768105578401792&#34;&gt;bigger capacity&lt;/a&gt; ;)&lt;/em&gt;&lt;/p&gt;
 
@@ -5144,14 +5457,14 @@ Which is pretty much verbatim what the error says 😁), like this:&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://docs.grafana.org/http_api/data_source/&#34;&gt;Grafana API Reference&lt;/a&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;export-all-grafana-data-sources-to-data-sources-folder&#34;&gt;Export all Grafana data sources to data_sources folder&lt;/h2&gt;
+&lt;h3 id=&#34;export-all-grafana-data-sources-to-data-sources-folder&#34;&gt;Export all Grafana data sources to data_sources folder&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;mkdir -p data_sources &amp;amp;&amp;amp; curl -s &amp;quot;http://localhost:3000/api/datasources&amp;quot;  -u admin:admin|jq -c -M &#39;.[]&#39;|split -l 1 - data_sources/
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This exports each data source to a separate JSON file in the &lt;code&gt;data_sources&lt;/code&gt; folder.&lt;/p&gt;
 
-&lt;h2 id=&#34;load-data-sources-back-in-from-folder&#34;&gt;Load data sources back in from folder&lt;/h2&gt;
+&lt;h3 id=&#34;load-data-sources-back-in-from-folder&#34;&gt;Load data sources back in from folder&lt;/h3&gt;
 
 &lt;p&gt;This submits every file that exists in the &lt;code&gt;data_sources&lt;/code&gt; folder to Grafana as a new data source definition.&lt;/p&gt;
 
@@ -5461,7 +5774,7 @@ The technical books that I do read I get as &lt;code&gt;epub&lt;/code&gt; to con
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;your-turn&#34;&gt;Your Turn!&lt;/h2&gt;
+&lt;h3 id=&#34;your-turn&#34;&gt;Your Turn!&lt;/h3&gt;
 
 &lt;p&gt;What&amp;rsquo;s your system for trying to capture, consume, and comprehend the deluge of information out there? Let me know in the comments section below :)&lt;/p&gt;
 
@@ -5661,7 +5974,7 @@ sys     3m25.332s
 			<guid>https://rmoff.github.io/2017/03/11/little-technology-wins/</guid>
 			<description>
 
-&lt;h2 id=&#34;wireless-headset-for-voip-with-no-30-minute-dalek-timebomb&#34;&gt;Wireless Headset for VOIP With No 30-Minute Dalek Timebomb&lt;/h2&gt;
+&lt;h3 id=&#34;wireless-headset-for-voip-with-no-30-minute-dalek-timebomb&#34;&gt;Wireless Headset for VOIP With No 30-Minute Dalek Timebomb&lt;/h3&gt;
 
 &lt;p&gt;A lot of my work is done remotely, with colleagues and customers. Five years ago I bought a &lt;a href=&#34;https://www.amazon.co.uk/Microsoft-JUG-00014-LifeChat-LX-3000-Headset&#34;&gt;Microsoft LifeChat LX-3000&lt;/a&gt; which plugged into the USB port on my Mac. It did the job kinda fine, with two gripes:&lt;/p&gt;
 
@@ -5673,7 +5986,7 @@ This happened regardless of platform (Hangouts / Zoom / Skype / etc). I figured 
 
 &lt;p&gt;So I switched, on a colleague&amp;rsquo;s recommendation, to the &lt;a href=&#34;https://www.amazon.co.uk/Logitech-H600-Wireless-Headset-Mac/&#34;&gt;Logitech H600&lt;/a&gt;. I love it. The wireless works flawlessly, and no dalek effect. Gripes? Well there&amp;rsquo;s no pleasing some people. The audio quality is great for calls, but for music I switch back to my wireless &lt;a href=&#34;https://www.amazon.co.uk/Avantree-Comfortable-Bluetooth-Headphones-Lightweight&#34;&gt;Avantree Auditions&lt;/a&gt;. The Logitech headset also feels a bit plastic, which I don&amp;rsquo;t care about unless I&amp;rsquo;m back here in six months complaining that it&amp;rsquo;s broken&amp;hellip;.&lt;/p&gt;
 
-&lt;h2 id=&#34;apple-watch-2-plus-bluetooth-headphones&#34;&gt;Apple Watch 2 plus Bluetooth Headphones&lt;/h2&gt;
+&lt;h3 id=&#34;apple-watch-2-plus-bluetooth-headphones&#34;&gt;Apple Watch 2 plus Bluetooth Headphones&lt;/h3&gt;
 
 &lt;p&gt;Eighteen months ago I took up running, since for the past 37 years I&amp;rsquo;d done all I could to avoid exercise, and with my fondness for [beer]() and [fryups](), it was time to do something to try and influence the statistics of health problems back in my favour&amp;hellip;&lt;/p&gt;
 
@@ -6007,7 +6320,7 @@ Exception in thread &amp;quot;main&amp;quot; java.lang.IncompatibleClassChangeEr
 
 &lt;p&gt;Presented without comment, warranty, or context -  other than these might help a wandering code hacker.&lt;/p&gt;
 
-&lt;h2 id=&#34;when-using-sigv4-you-must-specify-a-host-parameter&#34;&gt;When using SigV4, you must specify a &amp;lsquo;host&amp;rsquo; parameter&lt;/h2&gt;
+&lt;h3 id=&#34;when-using-sigv4-you-must-specify-a-host-parameter&#34;&gt;When using SigV4, you must specify a &amp;lsquo;host&amp;rsquo; parameter&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code&gt;boto.s3.connection.HostRequiredError: BotoClientError: When using SigV4, you must specify a &#39;host&#39; parameter.
 &lt;/code&gt;&lt;/pre&gt;
@@ -6024,7 +6337,7 @@ Exception in thread &amp;quot;main&amp;quot; java.lang.IncompatibleClassChangeEr
 
 &lt;p&gt;You can see a list of endpoints &lt;a href=&#34;http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;boto-exception-s3responseerror-s3responseerror-400-bad-request&#34;&gt;boto.exception.S3ResponseError: S3ResponseError: 400 Bad Request&lt;/h2&gt;
+&lt;h3 id=&#34;boto-exception-s3responseerror-s3responseerror-400-bad-request&#34;&gt;boto.exception.S3ResponseError: S3ResponseError: 400 Bad Request&lt;/h3&gt;
 
 &lt;p&gt;Make sure you&amp;rsquo;re specifying the correct hostname (see above) for the bucket&amp;rsquo;s region. Determine the bucket&amp;rsquo;s region from the S3 control panel, and then use the &lt;a href=&#34;http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region&#34;&gt;endpoint listed here&lt;/a&gt;.&lt;/p&gt;
 </description>
@@ -6172,7 +6485,7 @@ table.whitelist=KAFKA_TEST
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;detour-nuts&#34;&gt;Detour - nuts&lt;/h2&gt;
+&lt;h3 id=&#34;detour-nuts&#34;&gt;Detour - nuts&lt;/h3&gt;
 
 &lt;p&gt;My first port of call was the top of the Google hits, &lt;a href=&#34;http://networkupstools.org/&#34;&gt;&lt;code&gt;nut&lt;/code&gt; (Network UPS Tools)&lt;/a&gt;, using the &lt;code&gt;usbhid-ups&lt;/code&gt; driver. This failed to even start up:&lt;/p&gt;
 
@@ -6181,14 +6494,14 @@ table.whitelist=KAFKA_TEST
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;success-apcupsd&#34;&gt;Success - apcupsd&lt;/h2&gt;
+&lt;h3 id=&#34;success-apcupsd&#34;&gt;Success - apcupsd&lt;/h3&gt;
 
 &lt;p&gt;Next I found &lt;a href=&#34;http://www.apcupsd.org/&#34;&gt;&lt;code&gt;apcupsd&lt;/code&gt;&lt;/a&gt; (APC UPS Daemon).&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;apt-get install apcupsd
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;finding-the-device&#34;&gt;Finding the device&lt;/h3&gt;
+&lt;h4 id=&#34;finding-the-device&#34;&gt;Finding the device&lt;/h4&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://www.apcupsd.org/manual/manual.html&#34;&gt;The docs&lt;/a&gt; suggested I&amp;rsquo;d find my UPS device listed at &lt;code&gt;/proc/bus/usb/drivers&lt;/code&gt;, and if not the drivers at least at &lt;code&gt;/proc/bus/usb/drivers&lt;/code&gt; - neither of these worked for me:&lt;/p&gt;
 
@@ -6259,7 +6572,7 @@ I:  If#= 0 Alt= 0 #EPs= 1 Cls=03(HID  ) Sub=00 Prot=00 Driver=usbhid
 [...]
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;found-the-device-now-configure-apcupsd&#34;&gt;Found the device, now configure apcupsd&lt;/h3&gt;
+&lt;h4 id=&#34;found-the-device-now-configure-apcupsd&#34;&gt;Found the device, now configure apcupsd&lt;/h4&gt;
 
 &lt;p&gt;In &lt;code&gt;/etc/apcupsd/apcupsd.conf&lt;/code&gt; I set:&lt;/p&gt;
 
@@ -6303,11 +6616,11 @@ Jun 17 14:30:01 proxmox01 apcupsd[1254]: NIS server startup succeeded
 
 &lt;p&gt;The successful service start can also be seen in &lt;code&gt;/var/log/apcupsd.events&lt;/code&gt; and &lt;code&gt;/var/log/daemon.log&lt;/code&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;testing-it&#34;&gt;Testing it&lt;/h2&gt;
+&lt;h3 id=&#34;testing-it&#34;&gt;Testing it&lt;/h3&gt;
 
 &lt;p&gt;Now we&amp;rsquo;re up and running, let&amp;rsquo;s &lt;a href=&#34;http://www.apcupsd.org/manual/manual.html#communications-test&#34;&gt;test it&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h3 id=&#34;disconnect-ups-data-cable-from-server&#34;&gt;Disconnect UPS data cable from Server&lt;/h3&gt;
+&lt;h4 id=&#34;disconnect-ups-data-cable-from-server&#34;&gt;Disconnect UPS data cable from Server&lt;/h4&gt;
 
 &lt;p&gt;The unscary one first - disconnect the data comms between UPS and server. It took a few more than the 6 seconds than the doc says, but within a minute or so I got a system beep on the server and :&lt;/p&gt;
 
@@ -6326,7 +6639,7 @@ Warning communications lost with UPS proxmox01
 &lt;pre&gt;&lt;code&gt;Jun 17 14:41:14 proxmox01 apcupsd[1254]: Communications with UPS restored.
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;disconnect-ups-from-mains-power&#34;&gt;Disconnect UPS from Mains Power&lt;/h3&gt;
+&lt;h4 id=&#34;disconnect-ups-from-mains-power&#34;&gt;Disconnect UPS from Mains Power&lt;/h4&gt;
 
 &lt;p&gt;The document entertainingly says:&lt;/p&gt;
 
@@ -6376,13 +6689,13 @@ Jul 18 02:25:40 proxmox01 apcupsd[1254]: Mains returned. No longer on UPS batter
 Jul 18 02:25:40 proxmox01 apcupsd[1254]: Power is back. UPS running on mains.
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;full-power-outage&#34;&gt;Full Power Outage&lt;/h3&gt;
+&lt;h4 id=&#34;full-power-outage&#34;&gt;Full Power Outage&lt;/h4&gt;
 
 &lt;p&gt;TODO!&lt;/p&gt;
 
 &lt;p&gt;&lt;em&gt;And yes this is bad. Just like backups being only as good as the last successful restore, a UPS graceful shutdown routine really does need to be tested. Watch this space!&lt;/em&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;bonus-data-extract&#34;&gt;Bonus - data extract&lt;/h2&gt;
+&lt;h3 id=&#34;bonus-data-extract&#34;&gt;Bonus - data extract&lt;/h3&gt;
 
 &lt;p&gt;Because we left &lt;code&gt;NETSERVER&lt;/code&gt; enabled in the config, we can probe the stats of the UPS:&lt;/p&gt;
 
@@ -6582,7 +6895,7 @@ apache drill 1.6.0
 
 &lt;p&gt;I wasted &lt;em&gt;literally&lt;/em&gt; two hours on this one, so putting down a note to hopefully help future Googlers.&lt;/p&gt;
 
-&lt;h2 id=&#34;symptom&#34;&gt;Symptom&lt;/h2&gt;
+&lt;h3 id=&#34;symptom&#34;&gt;Symptom&lt;/h3&gt;
 
 &lt;p&gt;Here&amp;rsquo;s all the various errors that I got in the &lt;code&gt;hive-server2.log&lt;/code&gt; during my attempts to get a &lt;code&gt;CREATE EXTERNABLE TABLE&lt;/code&gt; to work against a MongoDB table in Hive:&lt;/p&gt;
 
@@ -6597,7 +6910,7 @@ Caused by: java.lang.ClassNotFoundException: org.bson.io.OutputBuffer
 &lt;pre&gt;&lt;code&gt;Error: Error while processing statement: FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. org/bson/io/OutputBuffer (state=08S01,code=1)
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;solution&#34;&gt;Solution&lt;/h2&gt;
+&lt;h3 id=&#34;solution&#34;&gt;Solution&lt;/h3&gt;
 
 &lt;p&gt;If you&amp;rsquo;re using the &lt;a href=&#34;https://github.com/mongodb/mongo-hadoop/&#34;&gt;MongoDB-Hadoop&lt;/a&gt; connector with Hive, you need three JARs:&lt;/p&gt;
 
@@ -7800,7 +8113,7 @@ EOF
 
 &lt;p&gt;Now let&amp;rsquo;s do something on the front end, and see what catch in our trap&amp;hellip;&lt;/p&gt;
 
-&lt;h2 id=&#34;dataset-storage-limits&#34;&gt;Dataset Storage Limits&lt;/h2&gt;
+&lt;h3 id=&#34;dataset-storage-limits&#34;&gt;Dataset Storage Limits&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;d already logged into Visual Analyzer, and went to the &lt;strong&gt;Data Sources&lt;/strong&gt; page, which triggered this capture:&lt;/p&gt;
 
@@ -7929,7 +8242,7 @@ def send_request():
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;getting-a-session-cookie&#34;&gt;Getting a Session Cookie&lt;/h2&gt;
+&lt;h3 id=&#34;getting-a-session-cookie&#34;&gt;Getting a Session Cookie&lt;/h3&gt;
 
 &lt;p&gt;So all we need to call the &lt;code&gt;va&lt;/code&gt; web service is a valid &lt;code&gt;JSESSIONID&lt;/code&gt; cookie, and then the world is our oyster &amp;hellip; but how do we get one in the first place?&lt;/p&gt;
 
@@ -8315,7 +8628,7 @@ PS C:\OracleBI-BVT\bin&amp;gt;
 
 &lt;p&gt;Which then got me thinking &amp;ndash; why add in InfluxDB and Grafana, if you&amp;rsquo;re already using another datastore and front end (Elasticsearch and Kibana)? Well, I touched on this yesterday, and I would still opt for InfluxDB &amp;amp; Grafana when deploying a metrics-based monitoring solution. But, if your primary focus is on text based data (such as log files), rather than metrics alone, Elastic stack will be just great for you. And so in this scenario, let&amp;rsquo;s bring the ingest rate monitoring back in house!&lt;/p&gt;
 
-&lt;h2 id=&#34;logstash-configuration&#34;&gt;Logstash Configuration&lt;/h2&gt;
+&lt;h3 id=&#34;logstash-configuration&#34;&gt;Logstash Configuration&lt;/h3&gt;
 
 &lt;p&gt;This is the same &lt;a href=&#34;http://rmoff.net/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/&#34;&gt;as before&lt;/a&gt;, except the &lt;strong&gt;output&lt;/strong&gt; stanza points to Elasticsearch:&lt;/p&gt;
 
@@ -8349,7 +8662,7 @@ output {
 
 &lt;p&gt;After making this change, restart your Logstash agent.&lt;/p&gt;
 
-&lt;h2 id=&#34;checking-the-data-s-arriving&#34;&gt;Checking the data&amp;rsquo;s arriving&lt;/h2&gt;
+&lt;h3 id=&#34;checking-the-data-s-arriving&#34;&gt;Checking the data&amp;rsquo;s arriving&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;ve been working with Elastic stack for a few years now, and can&amp;rsquo;t believe that it&amp;rsquo;s only recently I&amp;rsquo;ve discovered &lt;a href=&#34;https://www.elastic.co/guide/en/sense/current/installing.html&#34;&gt;Sense&lt;/a&gt;. It&amp;rsquo;s a plugin for Kibana, and makes working with the Elasticsearch REST API a real pleasure:&lt;/p&gt;
 
@@ -8357,7 +8670,7 @@ output {
 
 &lt;p&gt;So we can see in the new Elasticsearch index &lt;strong&gt;logstash-metrics&lt;/strong&gt; the data&amp;rsquo;s coming through. All good - now onto the graphs!&lt;/p&gt;
 
-&lt;h2 id=&#34;graphing-it-in-kibana&#34;&gt;Graphing it in Kibana&lt;/h2&gt;
+&lt;h3 id=&#34;graphing-it-in-kibana&#34;&gt;Graphing it in Kibana&lt;/h3&gt;
 
 &lt;p&gt;You&amp;rsquo;ve two options for visualising the data here - the Line Chart, or &lt;a href=&#34;https://www.elastic.co/blog/timelion-timeline&#34;&gt;Timelion&lt;/a&gt;. Timelion is still in beta, but longer-term will absolutely be the right choice for this kind of visualisation. So, let&amp;rsquo;s do both!&lt;/p&gt;
 
@@ -8427,17 +8740,17 @@ output {
 
 &lt;p&gt;Let&amp;rsquo;s get started&amp;hellip;&lt;/p&gt;
 
-&lt;h2 id=&#34;pre-requisites&#34;&gt;Pre-Requisites&lt;/h2&gt;
+&lt;h3 id=&#34;pre-requisites&#34;&gt;Pre-Requisites&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;m not going to cover setup &amp;amp; install here - I&amp;rsquo;m assuming that you&amp;rsquo;ve got Logstash &amp;gt;=2.3.1, InfluxDB &amp;gt;= 0.12, Grafana &amp;gt;= 2.6 running. In this example it&amp;rsquo;s all running on a single node, localhost, default ports for everything. The only non-standard configuration is that I&amp;rsquo;ve &lt;a href=&#34;https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md&#34;&gt;enabled the &lt;strong&gt;graphite&lt;/strong&gt; listener in InfluxDB&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;overview&#34;&gt;Overview&lt;/h2&gt;
+&lt;h3 id=&#34;overview&#34;&gt;Overview&lt;/h3&gt;
 
 &lt;p&gt;We&amp;rsquo;ll get Logstash to send event rates over to InfluxDB, from where we&amp;rsquo;ll visualise it in Grafana.&lt;/p&gt;
 
 &lt;p&gt;The example I&amp;rsquo;m using it based on pulling some data in from a Kafka topic (similar to the &lt;a href=&#34;http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/&#34;&gt;pattern described here&lt;/a&gt;) and indexing it into Elasticsearch. I can start and stop my Logstash configuration when I want, and it picks up from where it left off in consuming the data from Kafka.&lt;/p&gt;
 
-&lt;h2 id=&#34;logstash-instrumentation&#34;&gt;Logstash Instrumentation&lt;/h2&gt;
+&lt;h3 id=&#34;logstash-instrumentation&#34;&gt;Logstash Instrumentation&lt;/h3&gt;
 
 &lt;p&gt;First job is to get Logstash to track, and then output, the rate at which it&amp;rsquo;s processing events. One row read from a log, one message pulled from Kafka - each is one &amp;ldquo;event&amp;rdquo;.&lt;/p&gt;
 
@@ -8490,7 +8803,7 @@ output {
 
 &lt;p&gt;But &amp;hellip; that stdout is just debug, remember? Where we really want it is over in InfluxDB, so we can build some lovely charts against it.&lt;/p&gt;
 
-&lt;h2 id=&#34;checking-the-data-in-influxdb&#34;&gt;Checking the data in InfluxDB&lt;/h2&gt;
+&lt;h3 id=&#34;checking-the-data-in-influxdb&#34;&gt;Checking the data in InfluxDB&lt;/h3&gt;
 
 &lt;p&gt;You can use the &lt;a href=&#34;https://docs.influxdata.com/influxdb/v0.12/tools/web_admin/&#34;&gt;InfluxDB GUI&lt;/a&gt; for this, or the &lt;a href=&#34;https://docs.influxdata.com/influxdb/v0.12/tools/shell/&#34;&gt;command line&lt;/a&gt;. Here I&amp;rsquo;ll use the command line.&lt;/p&gt;
 
@@ -8537,7 +8850,7 @@ time                    value
 
 &lt;p&gt;So, we&amp;rsquo;ve instrumented Logstash configuration to generate and send the data, we&amp;rsquo;ve validated that InfluxDB is getting the data &amp;hellip; now let&amp;rsquo;s graph the data!&lt;/p&gt;
 
-&lt;h2 id=&#34;charting-it-in-grafana&#34;&gt;Charting it in Grafana&lt;/h2&gt;
+&lt;h3 id=&#34;charting-it-in-grafana&#34;&gt;Charting it in Grafana&lt;/h3&gt;
 
 &lt;p&gt;In Grafana I&amp;rsquo;ve added a datasource pointing to my InfluxDB, and then headed over to my dashboard. When done in real life, this kind of chart makes a lot of sense alongside other &amp;ldquo;health check&amp;rdquo; visualisations, enabling you to see not only what the data coming into the system is telling you, but also the status of that data flow. There&amp;rsquo;s nothing worse than thinking &amp;ldquo;hey cool, no errors&amp;rdquo; when the reason there&amp;rsquo;s no errors is that all the errors are backed up in the pipeline and not even making it into your monitoring system &amp;hellip;&lt;/p&gt;
 
@@ -8655,7 +8968,7 @@ time                    value
 
 &lt;p&gt;I then had one of those &amp;ldquo;ahhhhh&amp;rdquo; moments, remembering the excellent work that my colleague Jordan Meyer did at the Rittman Mead BI Forum last year in his &lt;a href=&#34;https://s3.amazonaws.com/rmc_docs/rm_bi_forum_mclass_2015_part1.pdf&#34;&gt;Data Discovery and Predictive Modelling&lt;/a&gt; masterclass. In it he extolled the many virtues of R for working with data. Not only is R a powerful statistics language, it&amp;rsquo;s also a damn useful (and, I would say, elegant) one for manipulating data, helped in large part by the &lt;a href=&#34;https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html&#34;&gt;dplyr package&lt;/a&gt;. It also has lots of libraries for doing useful stuff like reading CSV files based on the headers without having to declare the column, as well as reading natively from Excel files. So, off we go:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;## Load main accident facts from CSV
+&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;### Load main accident facts from CSV
 library(&#39;readr&#39;)
 accidents &amp;lt;- read_csv(&amp;quot;/tmp/dft/DfTRoadSafety_Accidents_2014.csv&amp;quot;)
 &lt;/code&gt;&lt;/pre&gt;
@@ -8674,17 +8987,17 @@ accidents &amp;lt;- read_csv(&amp;quot;/tmp/dft/DfTRoadSafety_Accidents_2014.csv
 
 &lt;p&gt;Handling and parsing dates is a problem to be solved across all languages and technologies, and R&amp;rsquo;s &lt;code&gt;lubridate&lt;/code&gt; package is by far the best way I&amp;rsquo;ve ever seen. Using &lt;code&gt;lubridate&lt;/code&gt; you describe the &lt;strong&gt;order&lt;/strong&gt; that the date/time components appear in (e.g. &amp;ldquo;year month day&amp;rdquo;) but without needing to specify the exact format string usually needed, thus avoiding the usual monkeying around with letter symbols, counting out the right number of them and getting the case right (is it YYYYMMDD or YYYYmmDD or YYMD?). In the above data sample you can see that the date is in the form Day / Month / Year, and the Time is Hour / Minute. That&amp;rsquo;s all we need to know - forget having to check if &amp;ldquo;MM&amp;rdquo; is month or minute, whether to escape the separators and so on. Since it&amp;rsquo;s Day / Month / Year / Hour / Minute, we use the &lt;strong&gt;&lt;code&gt;dmy_hm&lt;/code&gt;&lt;/strong&gt; function:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;## Populate a timestamp using the awesome lubridate package
+&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;### Populate a timestamp using the awesome lubridate package
 library(&#39;lubridate&#39;)
-## Using &amp;quot;dmy_hm&amp;quot; we&#39;re telling lubridate that the date is in the order
-## Day / Month / Year / Hour / Minute - the actual format string and
-## separators get figured out automagically
+### Using &amp;quot;dmy_hm&amp;quot; we&#39;re telling lubridate that the date is in the order
+### Day / Month / Year / Hour / Minute - the actual format string and
+### separators get figured out automagically
 accidents$timestamp &amp;lt;- dmy_hm(paste(accidents$Date,accidents$Time))
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The data includes the geo-spatial reference points, which &lt;a href=&#34;https://www.elastic.co/guide/en/elasticsearch/reference/current/geo-point.html&#34;&gt;Elasticsearch can store&lt;/a&gt; enabling analysis of the data in tools including Kibana. To store this properly we define &lt;code&gt;location&lt;/code&gt; as a &lt;code&gt;geo_point&lt;/code&gt; in &lt;a href=&#34;https://github.com/rmoff/dft/blob/master/elasticsearch_mapping_template.sh&#34;&gt;the mapping&lt;/a&gt;, and concatenate the latitude and longitude:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;## Define the location as a string. 
+&lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;### Define the location as a string. 
 accidents$location &amp;lt;- paste(accidents$Latitude,accidents$Longitude,sep=&#39;,&#39;)
 &lt;/code&gt;&lt;/pre&gt;
 
@@ -8772,7 +9085,7 @@ Source: local data frame [146,322 x 2]
 &lt;p&gt;Once the joining is done it&amp;rsquo;s off to another R library, this time &lt;code&gt;elastic&lt;/code&gt;, enabling us to write the denormalised data frame directly into Elasticsearch. We&amp;rsquo;re manually defining &lt;code&gt;Accident_Index&lt;/code&gt; as the unique key for the record, so that if re-run Elasticsearch won&amp;rsquo;t accept duplicate entries.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-R&#34;&gt;library(&amp;quot;elastic&amp;quot;)
-## connect() assumes Elasticsearch is running locally on port 9200
+### connect() assumes Elasticsearch is running locally on port 9200
 connect()
 docs_bulk(accidents,doc_ids = accidents$Accident_Index,index=&amp;quot;dftroadsafetyaccidents02&amp;quot;)
 &lt;/code&gt;&lt;/pre&gt;
@@ -8835,7 +9148,7 @@ docs_bulk(accidents,doc_ids = accidents$Accident_Index,index=&amp;quot;dftroadsa
 
 &lt;p&gt;From the &lt;a href=&#34;https://java.net/projects/oracledi/downloads/directory/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20ElasticSearch&#34;&gt;adaptor page&lt;/a&gt;, download the zip to your machine. I&amp;rsquo;m using Oracle&amp;rsquo;s &lt;a href=&#34;http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html&#34;&gt;BigDataLite VM&lt;/a&gt; which already has GoldenGate installed and configured, and which I&amp;rsquo;ve also got Elasticsearch already on following on from &lt;a href=&#34;http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/&#34;&gt;this earlier post&lt;/a&gt;. If you&amp;rsquo;ve not got Elasticsearch already, head over to &lt;a href=&#34;https://www.elastic.co/downloads/elasticsearch&#34;&gt;elastic.co&lt;/a&gt; to download it. I&amp;rsquo;m using version 2.3.1, installed in &lt;code&gt;/opt/elasticsearch-2.3.1&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;ready&#34;&gt;Ready &amp;hellip;&lt;/h2&gt;
+&lt;h3 id=&#34;ready&#34;&gt;Ready &amp;hellip;&lt;/h3&gt;
 
 &lt;p&gt;Once you&amp;rsquo;ve got the OGG adaptor zip, you&amp;rsquo;ll want to unzip it &amp;ndash; a word of advice here, specify the destination folder as there&amp;rsquo;s no containing root within the archive so you&amp;rsquo;ll end up with a mess of folder and files in amongst your download folder otherwise:&lt;/p&gt;
 
@@ -8870,7 +9183,7 @@ cp /u01/OGG_elasticsearch_v1.0/dirprm/res.prm /u01/ogg-bd/dirprm/
 &lt;li&gt;&lt;p&gt;For &lt;strong&gt;gg.handler.elasticsearch.host&lt;/strong&gt; and &lt;strong&gt;gg.handler.elasticsearch.port&lt;/strong&gt; I left the defaults (localhost / 9300) unchanged - update these for your Elasticsearch instance as required. Note that &lt;a href=&#34;https://www.elastic.co/guide/en/elasticsearch/guide/current/_talking_to_elasticsearch.html&#34;&gt;Elasticsearch listens&lt;/a&gt; on two ports, with 9200 by default for HTTP traffic, and 9300 for Java clients which is what we&amp;rsquo;re using here.&lt;/p&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h2 id=&#34;steady&#34;&gt;Steady &amp;hellip;&lt;/h2&gt;
+&lt;h3 id=&#34;steady&#34;&gt;Steady &amp;hellip;&lt;/h3&gt;
 
 &lt;p&gt;Run &lt;code&gt;ggsci&lt;/code&gt; to add and start the replicat using the provided &lt;code&gt;res&lt;/code&gt; configuration (&lt;strong&gt;res&lt;/strong&gt; = &lt;strong&gt;R&lt;/strong&gt;eplicat, &lt;strong&gt;E&lt;/strong&gt;lastic&lt;strong&gt;S&lt;/strong&gt;earch, I&amp;rsquo;m guessing) and sample trail file (i.e. we don&amp;rsquo;t need a live extract running to try this thing out):&lt;/p&gt;
 
@@ -8894,7 +9207,7 @@ GGSCI (bigdatalite.localdomain) 2&amp;gt; add replicat res, exttrail AdapterExam
 REPLICAT added.
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;go&#34;&gt;Go!&lt;/h2&gt;
+&lt;h3 id=&#34;go&#34;&gt;Go!&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;GGSCI (bigdatalite.localdomain) 3&amp;gt; start res
 
@@ -8935,7 +9248,7 @@ REPLICAT   RES       Initialized   2016-04-14 22:03   Status STOPPED
 &amp;gt; TARGETDB LIBFILE ggjava.dll SET property=dirprm/elasticsearch.props
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;second-time-lucky&#34;&gt;Second time lucky?&lt;/h2&gt;
+&lt;h3 id=&#34;second-time-lucky&#34;&gt;Second time lucky?&lt;/h3&gt;
 
 &lt;p&gt;Redefine the replicat:&lt;/p&gt;
 
@@ -8966,7 +9279,7 @@ Log Read Checkpoint  File AdapterExamples/trail/tr000000000
                      2015-11-05 18:45:39.000000  RBA 5660
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;result&#34;&gt;Result!&lt;/h2&gt;
+&lt;h3 id=&#34;result&#34;&gt;Result!&lt;/h3&gt;
 
 &lt;p&gt;Let&amp;rsquo;s check out what&amp;rsquo;s happened in Elasticsearch. The console log looks promising, showing that an index with two mappings has been created:&lt;/p&gt;
 
@@ -9507,7 +9820,7 @@ Commit complete.
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2016/04/kd05a.png&#34; alt=&#34;kd05a&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;consumer-groups-and-offsets&#34;&gt;Consumer Groups and Offsets&lt;/h2&gt;
+&lt;h3 id=&#34;consumer-groups-and-offsets&#34;&gt;Consumer Groups and Offsets&lt;/h3&gt;
 
 &lt;p&gt;One of the key concepts in all of this is that of the Kafka &lt;strong&gt;consumer group&lt;/strong&gt;, which is a unique identifier for a given consumer (or group of consumers for the same logical entity if you want to parallelise the consumption). In Kafka 0.8 Zookeeper is used by default to keep track off the &lt;strong&gt;offset&lt;/strong&gt; of the last record that a given consumer group received. So in my development environment I can look on my Kafka server at Zookeeper and see for each consumer group the latest offset: (&lt;a href=&#34;https://cwiki.apache.org/confluence/display/KAFKA/System+Tools#SystemTools-ExportZookeeperOffsets&#34;&gt;reference&lt;/a&gt;)&lt;/p&gt;
 
@@ -9530,7 +9843,7 @@ Group           Topic                          Pid Offset          logSize      
 logstash-5-testing irc                            0   4143            4148            5               none
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
+&lt;h3 id=&#34;summary&#34;&gt;Summary&lt;/h3&gt;
 
 &lt;p&gt;Building a successful data pipeline requires that it is flexible to changing requirements, as well as unknown future ones. This is as true for little local PoCs such as this one as it is for large-scale implementations. The pipeline needs to be able to have minimal impact on source systems whilst being able to satisfy multiple destinations, some or all of which may want to batch process instead of stream the data. In addition, being able to re-stream the raw data repeatedly and on-demand into adhoc applications without affecting the primary &amp;lsquo;productionised&amp;rsquo; consumers is a powerful enabler of the &amp;lsquo;data discovery lab&amp;rsquo; concept, which I write about &lt;a href=&#34;http://www.rittmanmead.com/2015/10/forays-into-kafka-enabling-flexible-data-pipelines/&#34;&gt;in more detail here&lt;/a&gt;.&lt;/p&gt;
 
@@ -9584,7 +9897,7 @@ logstash-5-testing irc                            0   4143            4148      
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2016/04/IMG_7375-1.jpg&#34; alt=&#34;Premier Inn Fryup&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;beer-discoveries&#34;&gt;Beer Discoveries&lt;/h2&gt;
+&lt;h3 id=&#34;beer-discoveries&#34;&gt;Beer Discoveries&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://gyle59.co.uk/&#34;&gt;Gyle 59&lt;/a&gt;, Toujours. I&amp;rsquo;ve never quite &amp;ldquo;got&amp;rdquo; saison-style beer, having had a great one (Ilkley&amp;rsquo;s &lt;a href=&#34;http://www.ilkleybrewery.co.uk/our-beers/item/siberia&#34;&gt;Siberia&lt;/a&gt;) and a less good one (for a farmhouse ale it was certainly agricultural, it smelt more like the muck heap than anything good) &amp;ndash; but this convinced me that done we it&amp;rsquo;s a nice beer. Hoppy and tasty.&lt;/li&gt;
@@ -9598,13 +9911,13 @@ logstash-5-testing irc                            0   4143            4148      
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2016/04/IMG_6692.jpg&#34; alt=&#34;Palmers Best Bitter&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;footnote-01-a-geek-s-worst-nightmare&#34;&gt;Footnote 01 - A geek&amp;rsquo;s worst nightmare&lt;/h2&gt;
+&lt;h3 id=&#34;footnote-01-a-geek-s-worst-nightmare&#34;&gt;Footnote 01 - A geek&amp;rsquo;s worst nightmare&lt;/h3&gt;
 
 &lt;p&gt;GPRS. All week. Anywhere in South Devon/Dorset. Better would be &amp;ldquo;No Signal&amp;rdquo;, then there&amp;rsquo;s no tantalising suggestion that it might just work…&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2016/04/IMG_6807.jpg&#34; alt=&#34;GPRS&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;footnote-02-a-great-tech-tool-discovery&#34;&gt;Footnote 02 - A great tech tool discovery&lt;/h2&gt;
+&lt;h3 id=&#34;footnote-02-a-great-tech-tool-discovery&#34;&gt;Footnote 02 - A great tech tool discovery&lt;/h3&gt;
 
 &lt;p&gt;A colleague of mine recently turned up to a meeting with nothing but his iPhone, and a Bluetooth keyboard. The portability and simplicity of the solution looked great and I soon bought myself an &lt;a href=&#34;http://www.amazon.co.uk/Bluetooth-Ultra-Slim-Aluminum-Keyboard-Windows-Android/dp/B00BKW2410&#34;&gt;Anker T320&lt;/a&gt;. I brought it away on holiday with me and coupled with an iPad mini it&amp;rsquo;s super for writing long passages of text (here using &lt;a href=&#34;http://omz-software.com/editorial/&#34;&gt;Editorial&lt;/a&gt;).&lt;/p&gt;
 
@@ -10061,7 +10374,7 @@ Caused By: oracle.security.jps.service.credstore.CredStoreException: JPS-01061: 
 
 &lt;p&gt;Fortunately it&amp;rsquo;s still possible to run this setup out of the box in BDL 4.4, with bells on because it includes &lt;a href=&#34;http://kafka.apache.org/&#34;&gt;Kafka&lt;/a&gt; too. And, who doesn&amp;rsquo;t like a bit of Kafka nowadays?&lt;/p&gt;
 
-&lt;h2 id=&#34;getting-it-running&#34;&gt;Getting it running&lt;/h2&gt;
+&lt;h3 id=&#34;getting-it-running&#34;&gt;Getting it running&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;&lt;p&gt;Set the Oracle extract running (as per the OBE/HOL instructions).&lt;/p&gt;
@@ -10140,7 +10453,7 @@ gg.handler.kafkahandler.mode =tx
 &lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h2 id=&#34;testing-it-out&#34;&gt;Testing it out&lt;/h2&gt;
+&lt;h3 id=&#34;testing-it-out&#34;&gt;Testing it out&lt;/h3&gt;
 
 &lt;p&gt;Using the Kafka console shell we can observe what Oracle GoldenGate sends to Kafka:&lt;/p&gt;
 
@@ -10151,7 +10464,7 @@ gg.handler.kafkahandler.mode =tx
 
 &lt;p&gt;&lt;img src=&#34;https://rmoff.github.io/content/images/2016/03/ogg-kafka.gif&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h3 id=&#34;always-rtfm&#34;&gt;Always RTFM…&lt;/h3&gt;
+&lt;h4 id=&#34;always-rtfm&#34;&gt;Always RTFM…&lt;/h4&gt;
 
 &lt;blockquote&gt;
 &lt;p&gt;The manual? That thing that explains how things work, and what problems to watch out for? Yeah… about that…&lt;/p&gt;
@@ -10197,7 +10510,7 @@ Turns out &lt;a href=&#34;https://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/
 
 &lt;p&gt;Obviously this has performance implications in a real-life implementation, but for proving out functionality, it saved me from complete insanity :-)&lt;/p&gt;
 
-&lt;h2 id=&#34;sidenote-error-in-reset-bigdata-oby&#34;&gt;Sidenote - error in reset_bigdata.oby?&lt;/h2&gt;
+&lt;h3 id=&#34;sidenote-error-in-reset-bigdata-oby&#34;&gt;Sidenote - error in reset_bigdata.oby?&lt;/h3&gt;
 
 &lt;p&gt;I might be missing something here, but it looks like there&amp;rsquo;s a minor fubar in &lt;code&gt;/u01/ogg-bd/dirprm/reset_bigdata.oby&lt;/code&gt;:&lt;/p&gt;
 
@@ -10212,7 +10525,7 @@ stop rkafka
 
 &lt;p&gt;That second &lt;code&gt;stop rkafka&lt;/code&gt; I&amp;rsquo;m guessing should be &lt;code&gt;delete rkafka&lt;/code&gt;?&lt;/p&gt;
 
-&lt;h2 id=&#34;logstash&#34;&gt;Logstash&lt;/h2&gt;
+&lt;h3 id=&#34;logstash&#34;&gt;Logstash&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;m a long-time fan of the &lt;a href=&#34;http://elastic.co&#34;&gt;Elastic stack&lt;/a&gt;, and Logstash has an input plugin for Kafka, so let&amp;rsquo;s see if that can fit the jigsaw here too.&lt;/p&gt;
 
@@ -10428,7 +10741,7 @@ Logstash startup completed
 			<guid>https://rmoff.github.io/2016/03/03/obihackers-irc-channel/</guid>
 			<description>
 
-&lt;h2 id=&#34;obihackers&#34;&gt;&lt;code&gt;#obihackers&lt;/code&gt;&lt;/h2&gt;
+&lt;h3 id=&#34;obihackers&#34;&gt;&lt;code&gt;#obihackers&lt;/code&gt;&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a &lt;code&gt;#obihackers&lt;/code&gt; IRC channel on freenode, where a dozen or so of us have hung out for several years now. Chat is usually OBIEE, Oracle, ODI, and general geek out.&lt;/p&gt;
 
@@ -10436,7 +10749,7 @@ Logstash startup completed
 
 &lt;p&gt;Interested? &lt;a href=&#34;http://webchat.freenode.net/?channels=%23obihackers&amp;amp;uio=d4&#34;&gt;Join in!&lt;/a&gt;. You&amp;rsquo;ll find me there most of the time with the handle &lt;code&gt;rmoff&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;what-s-irc&#34;&gt;What&amp;rsquo;s IRC?&lt;/h2&gt;
+&lt;h3 id=&#34;what-s-irc&#34;&gt;What&amp;rsquo;s IRC?&lt;/h3&gt;
 
 &lt;p&gt;For you kids out there, IRC is one of the old-school protocols on the internet, before WhatsApp et al existed, in fact, probably before the people who wrote WhatsApp et all were even born.&lt;/p&gt;
 
