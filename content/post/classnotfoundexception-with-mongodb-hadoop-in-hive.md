@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/1__screen__ssh_.png"
 slug = "classnotfoundexception-with-mongodb-hadoop-in-hive"
-tags = ["mogodb", "hive", "jar", "classnotfoundexception"]
+tag = ["mogodb", "hive", "jar", "classnotfoundexception"]
 title = "ClassNotFoundException with MongoDB-Hadoop in Hive"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/03/IMG_4011-1.JPG"
 slug = "cloning-ubiquitis-mongodb-instance-to-a-separate-server"
-tags = ["mongodb", "ubiquiti", "ubnt", "mongorestore", "mongodump"]
+tag = ["mongodb", "ubiquiti", "ubnt", "mongorestore", "mongodump"]
 title = "Cloning Ubiquiti's MongoDB instance to a separate server"
 
 +++

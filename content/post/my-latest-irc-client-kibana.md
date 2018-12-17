@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/03/logstash-irc.png"
 slug = "my-latest-irc-client-kibana"
-tags = ["logstash", "kibana", "elasticsearch", "irc", "obihackers"]
+tag = ["logstash", "kibana", "elasticsearch", "irc", "obihackers"]
 title = "My latest IRC client : Kibana"
 
 +++

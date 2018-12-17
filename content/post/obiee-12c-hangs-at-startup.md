@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/limes_lemons.jpeg"
 slug = "obiee-12c-hangs-at-startup"
-tags = ["obiee", "obiee12c", "hang", "boot.properties", "start.cmd"]
+tag = ["obiee", "obiee12c", "hang", "boot.properties", "start.cmd"]
 title = "OBIEE 12c hangs at startup - Starting AdminServer ..."
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/08/IMG_4821-1.jpg"
 slug = "converting-from-asciidoc-to-ms-word"
-tags = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown"]
+tag = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown"]
 title = "Converting from AsciiDoc to MS Word"
 
 +++

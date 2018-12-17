@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/photo-1459620842579-b4421440f66b.jpeg"
 slug = "obiee-security-patches-and-final-11-1-1-7-patchset-release"
-tags = ["obiee"]
+tag = ["obiee"]
 title = "OBIEE security patches, and FINAL 11.1.1.7 patchset release"
 
 +++

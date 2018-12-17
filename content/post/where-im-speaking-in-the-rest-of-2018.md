@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/08/IMG_3838-1.jpg"
 slug = "where-im-speaking-in-the-rest-of-2018"
-tags = ["speaking", "schedule", "calendar", "javazone", "lisa", "usenix", "devoxx"]
+tag = ["speaking", "schedule", "calendar", "javazone", "lisa", "usenix", "devoxx"]
 title = "Where I'm speaking in the rest of 2018"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/02/IMG_8618.JPG"
 slug = "streaming-data-from-kafka-into-elasticsearch"
-tags = ["kafka connect", "elasticsearch", "kafka", "oracle", "streaming etl"]
+tag = ["kafka connect", "elasticsearch", "kafka", "oracle", "streaming etl"]
 title = "Streaming data from Kafka into Elasticsearch"
 
 +++

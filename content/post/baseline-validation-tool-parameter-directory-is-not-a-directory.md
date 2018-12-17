@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/2016-05-18_15-26-14.jpg"
 slug = "baseline-validation-tool-parameter-directory-is-not-a-directory"
-tags = ["obiee", "bvt", "regression testing", "baseline validation tool", "obiee12c"]
+tag = ["obiee", "bvt", "regression testing", "baseline validation tool", "obiee12c"]
 title = "OBIEE Baseline Validation Tool - Parameter 'directory' is not a directory"
 
 +++

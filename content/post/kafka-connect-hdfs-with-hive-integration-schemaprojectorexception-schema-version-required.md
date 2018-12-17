@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/07/photo-1466046690866-98181611563d.jpeg"
 slug = "kafka-connect-hdfs-with-hive-integration-schemaprojectorexception-schema-version-required"
-tags = ["kafka", "avro", "kafka connect", "SchemaProjectorException"]
+tag = ["kafka", "avro", "kafka connect", "SchemaProjectorException"]
 title = "Kafka Connect - HDFS with Hive Integration - SchemaProjectorException - Schema version required"
 
 +++

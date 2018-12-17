@@ -5,7 +5,7 @@ date = 2017-06-21T06:14:45Z
 description = ""
 draft = false
 slug = "linux-usb-disk-connection-problems-uas-probe-failed-with-error-12"
-tags = ["lsblk", "uas", "usb", "mount"]
+tag = ["lsblk", "uas", "usb", "mount"]
 title = "Linux - USB disk connection problems - uas: probe failed with error -12"
 
 +++

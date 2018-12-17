@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/lsir13-1.png"
 slug = "monitoring-logstash-ingest-rates-with-influxdb-and-grafana"
-tags = ["influxdb", "grafana", "logstash", "graphite", "monitoring", "ingest"]
+tag = ["influxdb", "grafana", "logstash", "graphite", "monitoring", "ingest"]
 title = "Monitoring Logstash Ingest Rates with InfluxDB and Grafana"
 
 +++

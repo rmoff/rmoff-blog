@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/03/IMG_0699.jpg"
 slug = "streaming-data-from-mysql-into-kafka-with-kafka-connect-and-debezium"
-tags = ["debezium", "kafka", "kafka connect", "mysql"]
+tag = ["debezium", "kafka", "kafka connect", "mysql"]
 title = "Streaming Data from MySQL into Kafka with Kafka Connect and Debezium"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/07/download1.jpg"
 slug = "ogg-15051-oracle-goldengate-util-ggexception-class-not-found-kafkahandler"
-tags = ["kafka", "goldengate", "ogg", "ogg-15051"]
+tag = ["kafka", "goldengate", "ogg", "ogg-15051"]
 title = "OGG-15051 oracle.goldengate.util.GGException:  Class not found: \"kafkahandler\""
 
 +++

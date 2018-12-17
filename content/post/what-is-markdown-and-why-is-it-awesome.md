@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/09/screenshot-1.png"
 slug = "what-is-markdown-and-why-is-it-awesome"
-tags = ["markdown", "marked2", "emacs", "vi"]
+tag = ["markdown", "marked2", "emacs", "vi"]
 title = "What is Markdown, and Why is it Awesome?"
 
 +++

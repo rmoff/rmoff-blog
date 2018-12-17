@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/11/oggkaf01_sm.jpg"
 slug = "installing-oracle-goldengate-for-big-data-12-3-1-with-kafka-connect-and-confluent-platform"
-tags = ["goldengate", "oracle", "kafka", "confluent platform", "swingbench"]
+tag = ["goldengate", "oracle", "kafka", "confluent platform", "swingbench"]
 title = "Installing Oracle GoldenGate for Big Data 12.3.1 with Kafka Connect and Confluent Platform"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/CjDpUPaXIAAiSRV-jpg-large-1.jpg"
 slug = "york-fry-ups"
-tags = ["fullenglish", "fryup", "york", "black pudding", "fried slice"]
+tag = ["fullenglish", "fryup", "york", "black pudding", "fried slice"]
 title = "York Fry Ups"
 
 +++

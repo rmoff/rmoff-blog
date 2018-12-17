@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/06/IMG_3302.jpg"
 slug = "analysing-network-data-with-apache-kafka-ksql-and-elasticsearch"
-tags = ["elasticsearch", "ksql", "apache kafka", "ubiquiti", "espressi", "slack", "python", "stream processing"]
+tag = ["elasticsearch", "ksql", "apache kafka", "ubiquiti", "espressi", "slack", "python", "stream processing"]
 title = "Analysing Network Data with Apache Kafka, KSQL, and Elasticsearch"
 
 +++

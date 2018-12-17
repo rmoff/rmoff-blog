@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/07/download.jpg"
 slug = "ogg-class-not-found-com-company-kafka-customproducerrecord"
-tags = ["ogg", "goldengate", "kafka"]
+tag = ["ogg", "goldengate", "kafka"]
 title = "OGG -  Class not found: \"com.company.kafka.CustomProducerRecord\""
 
 +++

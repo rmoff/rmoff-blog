@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/IMG_7889-1.jpg"
 slug = "commissioning-my-proxmox-server"
-tags = ["proxmox", "ext4", "e2label", "lsblk", "hdiutil", "bootable usb", "memtest"]
+tag = ["proxmox", "ext4", "e2label", "lsblk", "hdiutil", "bootable usb", "memtest"]
 title = "Commissioning my Proxmox Server - OS and filesystems"
 
 +++

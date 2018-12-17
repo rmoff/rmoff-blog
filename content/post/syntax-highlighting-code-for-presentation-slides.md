@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/06/IMG_0257.jpg"
 slug = "syntax-highlighting-code-for-presentation-slides"
-tags = ["pygments", "pygmentize", "jq", "syntax highlighting", "keynote", "presenting", "asciinema"]
+tag = ["pygments", "pygmentize", "jq", "syntax highlighting", "keynote", "presenting", "asciinema"]
 title = "Syntax highlighting code for presentation slides"
 
 +++

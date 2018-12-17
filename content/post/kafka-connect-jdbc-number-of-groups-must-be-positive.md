@@ -5,7 +5,7 @@ date = 2016-07-27T15:23:14Z
 description = ""
 draft = false
 slug = "kafka-connect-jdbc-number-of-groups-must-be-positive"
-tags = ["kafka", "kafka connect", "jdbc", "oracle", "log4j"]
+tag = ["kafka", "kafka connect", "jdbc", "oracle", "log4j"]
 title = "Kafka Connect JDBC - Oracle - Number of groups must be positive"
 
 +++

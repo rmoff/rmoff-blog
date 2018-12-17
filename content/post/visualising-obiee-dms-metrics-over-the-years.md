@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/02/metrics05.png"
 slug = "visualising-obiee-dms-metrics-over-the-years"
-tags = ["obiee", "dms", "metrics", "jmanage", "jmx"]
+tag = ["obiee", "dms", "metrics", "jmanage", "jmx"]
 title = "Visualising OBIEE DMS Metrics over the years"
 
 +++

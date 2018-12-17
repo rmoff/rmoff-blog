@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/12/IMG_7311.jpg"
 slug = "kafka-connect-cli-tricks"
-tags = ["kafka connect", "bash", "jq", "peco", "xargs", "rest api"]
+tag = ["kafka connect", "bash", "jq", "peco", "xargs", "rest api"]
 title = "Kafka Connect CLI tricks"
 
 +++

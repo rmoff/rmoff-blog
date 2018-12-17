@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/06/IMG_8940.jpg"
 slug = "compare-and-apply-a-diff-patch-recursively"
-tags = ["diff", "patch"]
+tag = ["diff", "patch"]
 title = "Compare and apply a diff / patch recursively"
 
 +++

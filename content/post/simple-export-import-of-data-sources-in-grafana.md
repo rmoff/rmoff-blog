@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/08/Grafana_-_Click_Stream_Analysis_--.png"
 slug = "simple-export-import-of-data-sources-in-grafana"
-tags = ["curl", "grafana", "bash", "jq"]
+tag = ["curl", "grafana", "bash", "jq"]
 title = "Simple export/import of Data Sources in Grafana"
 
 +++

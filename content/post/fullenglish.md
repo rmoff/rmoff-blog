@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/02/thumb_IMG_3621_1024.jpg"
 slug = "fullenglish"
-tags = ["food", "fullenglish"]
+tag = ["food", "fullenglish"]
 title = "#FullEnglish"
 
 +++

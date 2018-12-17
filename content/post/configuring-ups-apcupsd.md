@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/07/1__rmoff_proxmox01___var_log__ssh_-3.png"
 slug = "configuring-ups-apcupsd"
-tags = ["apcupsd", "ups"]
+tag = ["apcupsd", "ups"]
 title = "Configuring UPS/apcupsd"
 
 +++

@@ -6,7 +6,7 @@ description = "How do you try and stay current on technical affairs, given only 
 draft = false
 image = "/images/2017/02/dan-gold-101685.jpg"
 slug = "keeping-up-with-the-deluge"
-tags = ["reading", "books", "twitter", "podcasts", "knowledge", "data", "career"]
+tag = ["reading", "books", "twitter", "podcasts", "knowledge", "data", "career"]
 title = "Keeping Up with the Deluge"
 
 +++

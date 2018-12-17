@@ -5,7 +5,7 @@ date = 2018-12-15T22:00:55Z
 description = ""
 image = "/images/2018/12/IMG_7431.jpg"
 slug = "docker-tips-and-tricks-with-ksql-and-kafka"
-tags = ["docker", "Docker Compose", "ksql", "ksql-cli", "ksql-server", "kafka connect"]
+tag = ["docker", "Docker Compose", "ksql", "ksql-cli", "ksql-server", "kafka connect"]
 title = "Docker Tips and Tricks with KSQL and Kafka"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/11/IMG_7280-EFFECTS.jpg"
 slug = "logging-in-as-root-on-oracle-database-docker-image"
-tags = ["oracle", "docker", "sudo", "root"]
+tag = ["oracle", "docker", "sudo", "root"]
 title = "Logging in as root on Oracle Database Docker image"
 
 +++

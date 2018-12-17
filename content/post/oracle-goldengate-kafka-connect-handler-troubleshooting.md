@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/09/1__screen__ssh_.png"
 slug = "oracle-goldengate-kafka-connect-handler-troubleshooting"
-tags = ["goldengate", "kafka connect", "avro", "schema registry", "oracle"]
+tag = ["goldengate", "kafka connect", "avro", "schema registry", "oracle"]
 title = "Oracle GoldenGate / Kafka Connect Handler troubleshooting"
 
 +++

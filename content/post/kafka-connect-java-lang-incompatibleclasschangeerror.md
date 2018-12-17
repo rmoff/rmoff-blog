@@ -5,7 +5,7 @@ date = 2016-11-24T20:58:44Z
 description = ""
 draft = false
 slug = "kafka-connect-java-lang-incompatibleclasschangeerror"
-tags = ["kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
+tag = ["kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
 title = "Kafka Connect - java.lang.IncompatibleClassChangeError"
 
 +++

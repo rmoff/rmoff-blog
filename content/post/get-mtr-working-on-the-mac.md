@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/12/DSCF2037.jpg"
 slug = "get-mtr-working-on-the-mac"
-tags = ["mtr", "mac", "brew"]
+tag = ["mtr", "mac", "brew"]
 title = "Get mtr working on the Mac"
 
 +++

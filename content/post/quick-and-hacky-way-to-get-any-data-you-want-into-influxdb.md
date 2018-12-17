@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/02/2016-02-27_21-01-43-1.png"
 slug = "quick-and-hacky-way-to-get-any-data-you-want-into-influxdb"
-tags = ["influxdb", "metrics", "bash", "awk", "sed", "du", "curl", "grafana"]
+tag = ["influxdb", "metrics", "bash", "awk", "sed", "du", "curl", "grafana"]
 title = "Streaming data to InfluxDB from any bash command"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/05/1__screen.png"
 slug = "configuring-kafka-connect-to-log-rest-http-messages-to-a-separate-file"
-tags = ["kafka", "log4j", "kafka connect"]
+tag = ["kafka", "log4j", "kafka connect"]
 title = "Configuring Kafka Connect to log REST HTTP messages to a separate file"
 
 +++

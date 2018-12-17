@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/04/dft02-1.jpg"
 slug = "denormalising-data-for-analysis-in-kibana"
-tags = ["R", "dft", "kibana", "elasticsearch", "dplyr", "lubridate", "wrangling", "elastic"]
+tag = ["R", "dft", "kibana", "elasticsearch", "dplyr", "lubridate", "wrangling", "elastic"]
 title = "Using R to Denormalise Data for Analysis in Kibana"
 
 +++

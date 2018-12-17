@@ -5,7 +5,7 @@ date = 2016-10-14T08:41:30Z
 description = ""
 draft = false
 slug = "boto-s3-errors"
-tags = ["boto", "s3", "aws", "python"]
+tag = ["boto", "s3", "aws", "python"]
 title = "boto / S3 errors"
 
 +++

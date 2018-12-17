@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/12/fullsizeoutput_7b71.jpeg"
 slug = "tools-i-use-ipad-pro"
-tags = ["ipad pro", "apple pencil", "apple keyboard", "keynote"]
+tag = ["ipad pro", "apple pencil", "apple keyboard", "keynote"]
 title = "Tools I Use: iPad Pro"
 
 +++

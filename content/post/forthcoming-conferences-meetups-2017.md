@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/09/Confluent---16.png"
 slug = "forthcoming-conferences-meetups-2017"
-tags = ["conferences", "meetups", "speaking", "doag", "ukoug", "oow"]
+tag = ["conferences", "meetups", "speaking", "doag", "ukoug", "oow"]
 title = "Conferences & Meetups at which I'll be speaking - 2017"
 
 +++

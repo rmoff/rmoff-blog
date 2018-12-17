@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/09/2018-09-17_17-38-42.png"
 slug = "accessing-kafka-docker-container-jmx-from-host"
-tags = ["jmx", "kafka", "docker"]
+tag = ["jmx", "kafka", "docker"]
 title = "Accessing Kafka Docker containers' JMX from host"
 
 +++

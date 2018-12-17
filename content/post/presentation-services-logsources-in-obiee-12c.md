@@ -5,7 +5,7 @@ date = 2016-06-01T11:03:00Z
 description = ""
 draft = false
 slug = "presentation-services-logsources-in-obiee-12c"
-tags = ["sawserver", "logging", "diagnostics"]
+tag = ["sawserver", "logging", "diagnostics"]
 title = "Presentation Services Logsources in OBIEE 12c"
 
 +++

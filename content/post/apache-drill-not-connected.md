@@ -5,7 +5,7 @@ date = 2016-06-20T19:04:18Z
 description = ""
 draft = false
 slug = "apache-drill-not-connected"
-tags = ["apache drill"]
+tag = ["apache drill"]
 title = "Apache Drill - conflicting jar problem - \"No current connection\""
 
 +++

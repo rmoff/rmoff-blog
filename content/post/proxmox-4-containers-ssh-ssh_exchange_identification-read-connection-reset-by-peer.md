@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/07/proxmox01_-_Proxmox_Virtual_Environment-1.png"
 slug = "proxmox-4-containers-ssh-ssh_exchange_identification-read-connection-reset-by-peer"
-tags = ["proxmox", "cidr", "networking", "lxc"]
+tag = ["proxmox", "cidr", "networking", "lxc"]
 title = "Proxmox 4 Containers - ssh - ssh_exchange_identification: read: Connection reset by peer"
 
 +++

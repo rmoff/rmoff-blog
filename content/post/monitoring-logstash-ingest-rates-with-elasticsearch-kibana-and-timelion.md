@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/Visualize_-_Kibana_and_untitled_and_1__screen-1.png"
 slug = "monitoring-logstash-ingest-rates-with-elasticsearch-kibana-and-timelion"
-tags = ["logstash", "timelion", "kibana", "elasticsearch", "monitoring", "ingest"]
+tag = ["logstash", "timelion", "kibana", "elasticsearch", "monitoring", "ingest"]
 title = "Monitoring Logstash Ingest Rates with Elasticsearch, Kibana, and Timelion"
 
 +++

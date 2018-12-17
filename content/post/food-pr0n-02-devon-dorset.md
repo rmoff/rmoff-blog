@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/04/IMG_6631-2.jpg"
 slug = "food-pr0n-02-devon-dorset"
-tags = ["lardy cake", "dorset", "devon", "gyle 59", "palmers", "beer", "fryup", "fullenglish"]
+tag = ["lardy cake", "dorset", "devon", "gyle 59", "palmers", "beer", "fryup", "fullenglish"]
 title = "Food Pr0n 02 - Devon & Dorset"
 
 +++

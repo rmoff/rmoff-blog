@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/01/cow-and-calf.jpg"
 slug = "kafka-adminclient-connection-to-node-1-could-not-be-established-broker-may-not-be-available"
-tags = ["kafka", "adminclient", "networking"]
+tag = ["kafka", "adminclient", "networking"]
 title = "Kafka - AdminClient - Connection to node -1 could not be established. Broker may not be available"
 
 +++

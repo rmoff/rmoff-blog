@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/03/2016-03-30_00-07-36-1.png"
 slug = "experiments-with-kibana-timelion-2"
-tags = ["kibana", "timelion", "quandl", "topbeat"]
+tag = ["kibana", "timelion", "quandl", "topbeat"]
 title = "Experiments with Kibana Timelion"
 
 +++

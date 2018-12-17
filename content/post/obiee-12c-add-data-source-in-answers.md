@@ -5,7 +5,7 @@ date = 2016-05-27T08:44:24Z
 description = ""
 draft = false
 slug = "obiee-12c-add-data-source-in-answers"
-tags = ["obiee", "obiee12c", "xsa", "dataset", "datasetsvc"]
+tag = ["obiee", "obiee12c", "xsa", "dataset", "datasetsvc"]
 title = "OBIEE 12c - \"Add Data Source\" in Answers"
 
 +++

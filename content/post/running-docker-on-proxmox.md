@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/limes_lemons.jpeg"
 slug = "running-docker-on-proxmox"
-tags = ["docker", "proxmox", "bittorrent sync", "dropbox"]
+tag = ["docker", "proxmox", "bittorrent sync", "dropbox"]
 title = "Running a Docker Container on Proxmox for BitTorrent Sync"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/03/IMG_3698-1.jpg"
 slug = "food-pr0n-01"
-tags = ["food", "fullenglish", "hawksmoor", "burger", "indian", "black pudding", "suet pudding", "cubano"]
+tag = ["food", "fullenglish", "hawksmoor", "burger", "indian", "black pudding", "suet pudding", "cubano"]
 title = "Food Pr0n - 01"
 
 +++

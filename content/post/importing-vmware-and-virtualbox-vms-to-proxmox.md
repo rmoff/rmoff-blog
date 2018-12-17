@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/prox01-1.png"
 slug = "importing-vmware-and-virtualbox-vms-to-proxmox"
-tags = ["proxmox", "vmware", "virtualbox", "qcow2"]
+tag = ["proxmox", "vmware", "virtualbox", "qcow2"]
 title = "Importing VMWare and VirtualBox VMs to Proxmox"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/Timelion_-_Kibana-6.png"
 slug = "kibana-timelion-series-calculations-difference-from-one-week-ago"
-tags = ["timelion", "kibana", "offset", "formatting", "bar", "line"]
+tag = ["timelion", "kibana", "offset", "formatting", "bar", "line"]
 title = "Kibana Timelion - Series Calculations - Difference from One Week Ago"
 
 +++

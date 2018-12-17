@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/02/poland_sunrise_lake_IMG_4256_sm.JPG"
 slug = "time-for-a-change"
-tags = ["career"]
+tag = ["career"]
 title = "Time For a Change"
 
 +++

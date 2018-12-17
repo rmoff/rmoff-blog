@@ -5,7 +5,7 @@ date = 2016-12-02T11:35:57Z
 description = ""
 draft = false
 slug = "kafka-schema-registry-error-registering-avro-schema-io-confluent-kafka-schemaregistry-client-rest-exceptions-restclientexception"
-tags = ["kafka", "schema registry", "kafka-avro-console-producer"]
+tag = ["kafka", "schema registry", "kafka-avro-console-producer"]
 title = "kafka-avro-console-producer - Error registering Avro schema / io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException"
 
 +++

@@ -5,7 +5,7 @@ date = 2016-06-06T22:28:25Z
 description = ""
 draft = false
 slug = "new-version-of-bigdatalite-vm-from-oracle"
-tags = ["oracle", "bigdatalite", "vm"]
+tag = ["oracle", "bigdatalite", "vm"]
 title = "New version of BigDataLite VM from Oracle"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/05/IMG_8934.jpg"
 slug = "stream-table-joins-in-ksql-stream-events-must-be-timestamped-after-the-table-messages"
-tags = ["ksql", "stream", "table", "join"]
+tag = ["ksql", "stream", "table", "join"]
 title = "Stream-Table Joins in KSQL: Stream events must be timestamped after the Table messages"
 
 +++

@@ -5,7 +5,7 @@ date = 2016-07-13T04:50:16Z
 description = ""
 draft = false
 slug = "spark-sqlcontext-read-json-java-io-ioexception-no-input-paths-specified-in-job"
-tags = ["spark", "sparksql", "json"]
+tag = ["spark", "sparksql", "json"]
 title = "Spark sqlContext.read.json - java.io.IOException: No input paths specified in job"
 
 +++

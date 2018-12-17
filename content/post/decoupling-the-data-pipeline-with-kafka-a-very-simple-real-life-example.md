@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/04/kd05a-1.png"
 slug = "decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example"
-tags = ["apache kafka", "kafka", "logstash", "elastic", "elasticsearch", "kibana", "elastic v5", "zookeeper"]
+tag = ["apache kafka", "kafka", "logstash", "elastic", "elasticsearch", "kibana", "elastic v5", "zookeeper"]
 title = "Decoupling the Data Pipeline with Kafka - A (Very) Simple Real Life Example"
 
 +++

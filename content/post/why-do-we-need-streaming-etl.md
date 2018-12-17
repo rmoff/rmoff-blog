@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/02/IMG_8620-EFFECTS-1.jpg"
 slug = "why-do-we-need-streaming-etl"
-tags = ["streaming", "etl", "apache kafka", "confluent platform"]
+tag = ["streaming", "etl", "apache kafka", "confluent platform"]
 title = "Why Do We Need Streaming ETL?"
 
 +++

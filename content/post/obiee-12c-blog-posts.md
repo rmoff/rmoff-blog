@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/photo-1463412855783-af97e375664b.jpeg"
 slug = "obiee-12c-blog-posts"
-tags = ["obiee12c"]
+tag = ["obiee12c"]
 title = "OBIEE 12c blog posts"
 
 +++

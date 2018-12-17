@@ -5,7 +5,7 @@ date = 2017-01-18T19:53:10Z
 description = ""
 draft = false
 slug = "kibana-timelion-anomaly-detection"
-tags = ["kibana", "timelion", "holt"]
+tag = ["kibana", "timelion", "holt"]
 title = "Kibana Timelion - Anomaly Detection"
 
 +++

@@ -5,7 +5,7 @@ date = 2017-09-06T12:00:25Z
 description = ""
 draft = false
 slug = "kafka-connect-jsondeserializer-with-schemas-enable-requires-schema-and-payload-fields"
-tags = ["kafka connect", "JsonDeserializer"]
+tag = ["kafka connect", "JsonDeserializer"]
 title = "Kafka Connect - JsonDeserializer with schemas.enable requires \"schema\" and \"payload\" fields"
 
 +++

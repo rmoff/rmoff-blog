@@ -5,7 +5,7 @@ date = 2016-03-18T18:04:07Z
 description = ""
 draft = false
 slug = "obiee-11-1-1-9-installation-jps-06514-opening-of-file-based-keystore-failed"
-tags = ["obiee", "installation", "jps-06514", "jdk", "environment variables", "wls", "keystore"]
+tag = ["obiee", "installation", "jps-06514", "jdk", "environment variables", "wls", "keystore"]
 title = "OBIEE 11.1.1.9 installation - JPS-06514: Opening of file based keystore failed"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/12/IMG_7464.jpg"
 slug = "streaming-data-from-oracle-into-kafka-december-2018"
-tags = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "flashback", "licence", "ksql"]
+tag = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "flashback", "licence", "ksql"]
 title = "Streaming data from Oracle into Kafka (December 2018)"
 
 +++

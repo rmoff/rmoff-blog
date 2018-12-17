@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/cdh-yarn-01-2.png"
 slug = "swapfree-on-lxc-causes-problems-with-cdh-install"
-tags = ["lxc", "proxmox", "swapfree", "cdh", "cloudera", "yarn", "readProcMemInfoFile", "/proc/meminfo"]
+tag = ["lxc", "proxmox", "swapfree", "cdh", "cloudera", "yarn", "readProcMemInfoFile", "/proc/meminfo"]
 title = "Erroneous SwapFree on LXC causes problems with CDH install"
 
 +++

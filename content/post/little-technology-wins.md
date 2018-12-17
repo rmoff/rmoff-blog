@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/02/darius-soodmand-116246.jpg"
 slug = "little-technology-wins"
-tags = ["headphones", "microphone", "headset", "wireless", "logitech", "microsoft", "apple", "strava", "running", "podcasts", "apple watch"]
+tag = ["headphones", "microphone", "headset", "wireless", "logitech", "microsoft", "apple", "strava", "running", "podcasts", "apple watch"]
 title = "Little Technology Wins"
 
 +++

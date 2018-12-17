@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/12/connect_sink_converter_01.png"
 slug = "so-how-do-you-make-those-cool-diagrams"
-tags = ["paper", "ios", "diagrams", "presenting", "ipad", "tools"]
+tag = ["paper", "ios", "diagrams", "presenting", "ipad", "tools"]
 title = "So how DO you make those cool diagrams?"
 
 +++

@@ -5,7 +5,7 @@ date = 2017-03-11T14:21:00Z
 description = ""
 draft = false
 slug = "mount-vmdk-ovf-ova-on-amazon-web-services-aws-ec2"
-tags = ["vmdk", "vgscan", "lvm", "mount", "raw", "img", "aws", "losetup"]
+tag = ["vmdk", "vgscan", "lvm", "mount", "raw", "img", "aws", "losetup"]
 title = "Mount VMDK/OVF/OVA on Amazon Web Services (AWS) EC2"
 
 +++

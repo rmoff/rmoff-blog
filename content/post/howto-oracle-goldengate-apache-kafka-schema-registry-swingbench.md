@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/02/IMG_8617.JPG"
 slug = "howto-oracle-goldengate-apache-kafka-schema-registry-swingbench"
-tags = ["apache kafka", "schema registry", "swingbench", "goldengate", "oracle"]
+tag = ["apache kafka", "schema registry", "swingbench", "goldengate", "oracle"]
 title = "HOWTO: Oracle GoldenGate + Apache Kafka + Schema Registry + Swingbench"
 
 +++

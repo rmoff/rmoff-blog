@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/09/2018-09-03_17-58-49.png"
 slug = "window-timestamps-in-ksql-integration-with-elasticsearch"
-tags = ["ksql", "window", "aggregate", "timestamp", "elasticsearch", "kibana"]
+tag = ["ksql", "window", "aggregate", "timestamp", "elasticsearch", "kibana"]
 title = "Window Timestamps in KSQL / Integration with Elasticsearch"
 
 +++

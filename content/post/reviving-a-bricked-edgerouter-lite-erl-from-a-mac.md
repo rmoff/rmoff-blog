@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/1__screen-1.png"
 slug = "reviving-a-bricked-edgerouter-lite-erl-from-a-mac"
-tags = ["edgemax", "erl", "edgerouter lite", "tftp", "rj45", "screen", "squashfs", "router", "networking"]
+tag = ["edgemax", "erl", "edgerouter lite", "tftp", "rj45", "screen", "squashfs", "router", "networking"]
 title = "Reviving a bricked EdgeRouter Lite (ERL) from a Mac"
 
 +++

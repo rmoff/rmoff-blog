@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/05/1__screen_and_3__oracle_vbgeneric____ssh_.png"
 slug = "kafka-common-kafkaexception-no-key-found-on-line-1"
-tags = ["kafka", "key", "spelling", "pebcak"]
+tag = ["kafka", "key", "spelling", "pebcak"]
 title = "kafka.common.KafkaException: No key found on line 1"
 
 +++

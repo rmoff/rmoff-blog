@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/rest03.png"
 slug = "lifting-the-lid-on-obiee-12c-web-services-part-1"
-tags = ["obiee", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
+tag = ["obiee", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
 title = "Lifting the Lid on OBIEE 12c Web Services - Part 1"
 
 +++

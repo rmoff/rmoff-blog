@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/01/2017-01-20_09-44-02.png"
 slug = "hbase-crash-after-resuming-suspended-vm"
-tags = ["hbase", "bigdatalite", "virtualbox", "ova"]
+tag = ["hbase", "bigdatalite", "virtualbox", "ova"]
 title = "HBase crash after resuming suspended VM"
 
 +++

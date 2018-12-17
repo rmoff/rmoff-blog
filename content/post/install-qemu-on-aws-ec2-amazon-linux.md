@@ -5,7 +5,7 @@ date = 2017-03-11T15:04:00Z
 description = ""
 draft = false
 slug = "install-qemu-on-aws-ec2-amazon-linux"
-tags = ["qemu", "aws", "ec2", "centos", "rhel"]
+tag = ["qemu", "aws", "ec2", "centos", "rhel"]
 title = "Install qemu on AWS EC2 Amazon Linux"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/11/IMG_6965-EFFECTS.jpg"
 slug = "error-invalid-interpolation-format-for-command-option-in-service"
-tags = ["docker", "docker-compose"]
+tag = ["docker", "docker-compose"]
 title = "ERROR: Invalid interpolation format for \"command\" option in service…"
 
 +++

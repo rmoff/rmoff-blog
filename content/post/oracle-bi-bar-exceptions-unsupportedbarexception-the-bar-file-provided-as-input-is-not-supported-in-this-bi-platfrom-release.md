@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/05/2016-05-19_12-05-07.jpg"
 slug = "oracle-bi-bar-exceptions-unsupportedbarexception-the-bar-file-provided-as-input-is-not-supported-in-this-bi-platfrom-release"
-tags = ["obiee", "obiee12c", "bar"]
+tag = ["obiee", "obiee12c", "bar"]
 title = "oracle.bi.bar.exceptions.UnSupportedBarException: The Bar file provided as input is not supported in this BI Platfrom release."
 
 +++

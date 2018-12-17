@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/03/2016-03-28_22-53-18.png"
 slug = "connecting-to-obiee-via-jdbc-with-jisql"
-tags = ["obiee", "jdbc", "jisql", "logical sql"]
+tag = ["obiee", "jdbc", "jisql", "logical sql"]
 title = "Connecting to OBIEE via JDBC - with jisql"
 
 +++

@@ -5,7 +5,7 @@ date = 2016-11-29T22:04:38Z
 description = ""
 draft = false
 slug = "oracle-goldengate-kafka-connect-failed-to-serialize-avro-data"
-tags = ["ogg", "kafka connect", "avro"]
+tag = ["ogg", "kafka connect", "avro"]
 title = "Oracle GoldenGate -> Kafka Connect - \"Failed to serialize Avro data\""
 
 +++

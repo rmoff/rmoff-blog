@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/04/ogges02-1.png"
 slug = "streaming-data-through-oracle-goldengate-to-elasticsearch"
-tags = ["elasticsearch", "goldengate", "kafka", "logstash", "oracle"]
+tag = ["elasticsearch", "goldengate", "kafka", "logstash", "oracle"]
 title = "Streaming Data through Oracle GoldenGate to Elasticsearch"
 
 +++

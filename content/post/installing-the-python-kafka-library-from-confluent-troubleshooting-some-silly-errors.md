@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/03/2018-03-06_22-17-48.png"
 slug = "installing-the-python-kafka-library-from-confluent-troubleshooting-some-silly-errors"
-tags = ["kafka", "confluent", "python", "apt-get"]
+tag = ["kafka", "confluent", "python", "apt-get"]
 title = "Installing the Python Kafka library from Confluent - troubleshooting some silly errors…"
 
 +++

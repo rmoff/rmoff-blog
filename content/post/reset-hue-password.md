@@ -5,7 +5,7 @@ date = 2016-07-05T13:27:06Z
 description = ""
 draft = false
 slug = "reset-hue-password"
-tags = ["hue", "django", "python", "cdh"]
+tag = ["hue", "django", "python", "cdh"]
 title = "Reset Hue password"
 
 +++

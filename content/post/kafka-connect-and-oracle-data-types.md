@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/05/IMG_2759.jpg"
 slug = "kafka-connect-and-oracle-data-types"
-tags = ["kafka connect", "oracle", "number", "timestamp"]
+tag = ["kafka connect", "oracle", "number", "timestamp"]
 title = "Kafka Connect and Oracle data types"
 
 +++

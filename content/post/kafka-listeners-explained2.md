@@ -6,7 +6,7 @@ description = "How to connect clients to Kafka hosted in separate networks, such
 draft = false
 image = "/images/2018/08/IMG_4351.jpg"
 slug = "kafka-listeners-explained"
-tags = ["apache kafka", "kafka", "docker", "advertised.listeners", "listeners", "aws", "ec2", "KAFKA_ADVERTISED_LISTENERS"]
+tag = ["apache kafka", "kafka", "docker", "advertised.listeners", "listeners", "aws", "ec2", "KAFKA_ADVERTISED_LISTENERS"]
 title = "Kafka Listeners - Explained"
 
 +++

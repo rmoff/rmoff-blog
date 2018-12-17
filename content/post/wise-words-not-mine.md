@@ -5,7 +5,7 @@ date = 2017-03-31T23:31:39Z
 description = ""
 draft = true
 slug = "wise-words-not-mine"
-tags = ["career", "job", "advice"]
+tag = ["career", "job", "advice"]
 title = "Wise Words (not mine)"
 
 +++

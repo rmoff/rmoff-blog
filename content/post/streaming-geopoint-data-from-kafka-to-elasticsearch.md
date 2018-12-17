@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/10/IMG_5972.jpg"
 slug = "streaming-geopoint-data-from-kafka-to-elasticsearch"
-tags = ["elasticsearch", "kafka", "kafkaconnect", "geopoint"]
+tag = ["elasticsearch", "kafka", "kafkaconnect", "geopoint"]
 title = "Streaming geopoint data from Kafka to Elasticsearch"
 
 +++

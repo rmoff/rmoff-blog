@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "https://images.unsplash.com/photo-1453946610176-6be21147c400"
 slug = "collection-of-articles-on-how-to-write-a-good-conference-abstract"
-tags = ["conferences", "speaking", "user groups", "abstract"]
+tag = ["conferences", "speaking", "user groups", "abstract"]
 title = "Collection of Articles on How to Write a Good Conference Abstract"
 
 +++

@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/05/IMG_2304.jpg"
 slug = "quick-n-easy-population-of-realistic-test-data-into-kafka-with-mockaroo-and-kafkacat"
-tags = ["kafka", "kafkacat", "mockaroo", "testing"]
+tag = ["kafka", "kafkacat", "mockaroo", "testing"]
 title = "Quick 'n Easy Population of Realistic Test Data into Kafka"
 
 +++

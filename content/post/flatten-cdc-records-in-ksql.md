@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/10/IMG_6257--1--1.jpg"
 slug = "flatten-cdc-records-in-ksql"
-tags = ["cdc", "ksql", "kafka", "jdbc sink"]
+tag = ["cdc", "ksql", "kafka", "jdbc sink"]
 title = "Flatten CDC records in KSQL"
 
 +++

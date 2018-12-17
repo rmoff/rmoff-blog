@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2018/09/IMG_5520.jpg"
 slug = "exploring-jmx-with-jmxterm"
-tags = ["kafka", "ksql", "jmx", "jmxterm"]
+tag = ["kafka", "ksql", "jmx", "jmxterm"]
 title = "Exploring JMX with jmxterm"
 
 +++

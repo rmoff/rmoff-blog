@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2017/09/oraclehq2.jpg"
 slug = "where-will-i-be-at-openworld-oak-table-world"
-tags = ["oracle", "openworld", "oaktable world"]
+tag = ["oracle", "openworld", "oaktable world"]
 title = "Where will I be at OpenWorld / Oak Table World?"
 
 +++

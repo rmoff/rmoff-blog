@@ -6,7 +6,7 @@ description = ""
 draft = false
 image = "/images/2016/06/photo-1463412855783-af97e375664b-1.jpeg"
 slug = "a-new-arrival"
-tags = ["proxmox", "home server", "lxc", "docker", "vmware esxi"]
+tag = ["proxmox", "home server", "lxc", "docker", "vmware esxi"]
 title = "A New Arrival"
 
 +++
