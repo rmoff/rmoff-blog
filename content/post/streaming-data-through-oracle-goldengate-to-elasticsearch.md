@@ -17,7 +17,7 @@ Elasticsearch is a 'document store' widely used for both search and analytics. I
 
 From the [adaptor page](https://java.net/projects/oracledi/downloads/directory/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20ElasticSearch), download the zip to your machine. I'm using Oracle's [BigDataLite VM](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html) which already has GoldenGate installed and configured, and which I've also got Elasticsearch already on following on from [this earlier post](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/). If you've not got Elasticsearch already, head over to [elastic.co](https://www.elastic.co/downloads/elasticsearch) to download it. I'm using version 2.3.1, installed in `/opt/elasticsearch-2.3.1`.
 
-## Ready ... ##
+### Ready ... ##
 
 Once you've got the OGG adaptor zip, you'll want to unzip it -- a word of advice here, specify the destination folder as there's no containing root within the archive so you'll end up with a mess of folder and files in amongst your download folder otherwise:
 
@@ -45,7 +45,7 @@ Edit the `elasticsearch.props` (e.g. `/u01/ogg/dirprm/elasticsearch.props`) file
 
 3. For **gg.handler.elasticsearch.host** and **gg.handler.elasticsearch.port** I left the defaults (localhost / 9300) unchanged - update these for your Elasticsearch instance as required. Note that [Elasticsearch listens](https://www.elastic.co/guide/en/elasticsearch/guide/current/_talking_to_elasticsearch.html) on two ports, with 9200 by default for HTTP traffic, and 9300 for Java clients which is what we're using here.
 
-## Steady ... ##
+### Steady ... ##
 
 Run `ggsci` to add and start the replicat using the provided `res` configuration (**res** = **R**eplicat, **E**lastic**S**earch, I'm guessing) and sample trail file (i.e. we don't need a live extract running to try this thing out):
 
@@ -71,7 +71,7 @@ REPLICAT added.
 ```
 
 
-## Go! ##
+### Go! ##
 
 ```bash
 GGSCI (bigdatalite.localdomain) 3> start res
@@ -112,7 +112,7 @@ So, a quick change to the `prm` is in order, switching `.dll` for `.so`:
 	---
 	> TARGETDB LIBFILE ggjava.dll SET property=dirprm/elasticsearch.props
 
-## Second time lucky? ##
+### Second time lucky? ##
 
 Redefine the replicat:
 
@@ -140,7 +140,7 @@ Now it looks better:
 	Log Read Checkpoint  File AdapterExamples/trail/tr000000000
 						 2015-11-05 18:45:39.000000  RBA 5660
 
-## Result! ##
+### Result! ##
 
 Let's check out what's happened in Elasticsearch. The console log looks promising, showing that an index with two mappings has been created:
 

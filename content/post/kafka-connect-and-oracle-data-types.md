@@ -18,22 +18,22 @@ The [Kafka Connect JDBC Connector](https://docs.confluent.io/current/connect/con
 
 Read more about `NUMBER` data type in the [Oracle docs](https://docs.oracle.com/database/121/SQLRF/sql_elements001.htm#SQLRF002220).
 
-## tl;dr : How do I make it work? 
+### tl;dr : How do I make it work? 
 
 There are several options: 
 
-### New in Confluent Platform 4.1.1 : `numeric.mapping`
+#### New in Confluent Platform 4.1.1 : `numeric.mapping`
 
 * In the connector configuration, set `"numeric.mapping":"best_fit"`
 * New in Confluent Platform 4.1.1 ([Doc](https://docs.confluent.io/current/connect/connect-jdbc/docs/source_config_options.html#database))
 
-### Avoid the problem in the first place
+#### Avoid the problem in the first place
 
 * Change the DDL of the source object. For example: 
   * refine the `NUMBER` 's precision and scale
   * Use a `TIMESTAMP` type that is supported
 
-### CAST the datatypes in the `query`
+#### CAST the datatypes in the `query`
 
 * Pull from the object directly, and use `query` in the JDBC connector (instead of `table.whitelist`)—and cast the columns appropriately:
 
@@ -72,7 +72,7 @@ There are several options:
         }
         Processed a total of 1 messages
 
-### Use a View in the source database to cast the data types
+#### Use a View in the source database to cast the data types
 
 * Define a view in the source DB that casts the columns appropriately, and then use the connector against this instead (make sure to include `"table.types":"VIEW"`)
 
@@ -114,7 +114,7 @@ There are several options:
         }
         Processed a total of 1 messages
 
-## What happens
+### What happens
 
     SQL> DESCRIBE LOGON;
      Name                                      Null?    Type
@@ -198,7 +198,7 @@ same bytes output:
     }
     Processed a total of 1 messages
 
-## Why does it happen?
+### Why does it happen?
 
 The source data is defined as `NUMERIC`: 
 

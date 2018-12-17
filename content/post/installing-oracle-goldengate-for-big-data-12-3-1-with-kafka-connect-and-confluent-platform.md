@@ -105,7 +105,7 @@ Check that OGG Manager is running
 
     GGSCI (localhost.localdomain) 2>
 
-## Configure DB for OGG ##
+### Configure DB for OGG ##
 
 Since the DB is multitenant, [need to use](http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-1A6D7483-BF6D-4354-904D-E9BBD0E7DD59.htm#GIORA558) [integrated capture mode](http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-6C0E8B93-FA67-4700-AC33-6E57F4DBF9B2.htm#GIORA212).
 
@@ -138,7 +138,7 @@ Run the following:
     ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION=TRUE SCOPE=BOTH;
     EXIT
 
-### Configure OGG Extract ###
+#### Configure OGG Extract ###
 
 Launch OGG command line:
 
@@ -220,7 +220,7 @@ Log Read Checkpoint  Oracle Integrated Redo Logs
 
 If it doesn't start successfully then check `/u01/app/ogg/ggserr.log`.
 
-### Smoketest ###
+#### Smoketest ###
 
 Log into SQL*Plus
 
@@ -258,7 +258,7 @@ Check the extract trail file and see the record added (preceeded by the table me
 
 <script src="https://gist.github.com/rmoff/db86d4b12a295aea51b55f3c5abf5236.js"></script>
 
-## Install OGG-BD ##
+### Install OGG-BD ##
 
 Doc: [Installing Oracle GoldenGate for Big Data](http://docs.oracle.com/goldengate/bd123110/gg-bd/GBDIG/toc.htm)
 
@@ -366,7 +366,7 @@ To start Confluent Platform run
 
 # Configure & Smoke Test OGG-Kafka Connect → Kafka #
 
-## Configure for OGG-BD Kafka Connect handler  ##
+### Configure for OGG-BD Kafka Connect handler  ##
 
 ([Doc](http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GADBD-GUID-81730248-AC12-438E-AF82-48C7002178EC))
 
@@ -418,7 +418,7 @@ Log Read Checkpoint  File /u01/app/ogg/dirdat/lt000000002
 
 Check logfile `/u01/app/ogg-bd/ggserr.log` and `/u01/app/ogg-bd/dirrpt/*` for any errors.
 
-## Smoke test OGG -- Kafka Connect --> Kafka ##
+### Smoke test OGG -- Kafka Connect --> Kafka ##
 
 Insert a row in Oracle (as done already above)
 

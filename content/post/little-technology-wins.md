@@ -11,7 +11,7 @@ title = "Little Technology Wins"
 
 +++
 
-## Wireless Headset for VOIP With No 30-Minute Dalek Timebomb
+### Wireless Headset for VOIP With No 30-Minute Dalek Timebomb
 
 A lot of my work is done remotely, with colleagues and customers. Five years ago I bought a [Microsoft LifeChat LX-3000](https://www.amazon.co.uk/Microsoft-JUG-00014-LifeChat-LX-3000-Headset) which plugged into the USB port on my Mac. It did the job kinda fine, with two gripes:
 
@@ -21,7 +21,7 @@ A lot of my work is done remotely, with colleagues and customers. Five years ago
 
 So I switched, on a colleague's recommendation, to the [Logitech H600](https://www.amazon.co.uk/Logitech-H600-Wireless-Headset-Mac/). I love it. The wireless works flawlessly, and no dalek effect. Gripes? Well there's no pleasing some people. The audio quality is great for calls, but for music I switch back to my wireless [Avantree Auditions](https://www.amazon.co.uk/Avantree-Comfortable-Bluetooth-Headphones-Lightweight). The Logitech headset also feels a bit plastic, which I don't care about unless I'm back here in six months complaining that it's broken....
 
-## Apple Watch 2 plus Bluetooth Headphones
+### Apple Watch 2 plus Bluetooth Headphones
 
 Eighteen months ago I took up running, since for the past 37 years I'd done all I could to avoid exercise, and with my fondness for [beer]() and [fryups](), it was time to do something to try and influence the statistics of health problems back in my favour...
 

@@ -19,7 +19,7 @@ Platforms such as github natively support Markdown rendering - so you write your
 
 I've used Markdown for years now, after being introduced to it at my previous company. When I worked as a consultant I would be delivering client reports, and I wrote all of them in Markdown. The final delivered copy was in DOCX or maybe HTML - but the master copy remained as Markdown.
 
-## How Do I Write Markdown?
+### How Do I Write Markdown?
 
 There's a [comprehensive reference guide here](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet).
 
@@ -42,7 +42,7 @@ There's a [comprehensive reference guide here](https://github.com/adam-p/markdow
 
 But, there are other tools that can make your Markdown life even better, such as previewers.
 
-## Markdown Previewers ##
+### Markdown Previewers ##
 
 The best of these by a mile on the Mac is [Marked2](http://marked2app.com/). It gives you a nice rendering of any markdown document that you're working on. Used with the El Capitan split-screen it's pretty-near perfect way to write Markdown.
 
@@ -50,7 +50,7 @@ The best of these by a mile on the Mac is [Marked2](http://marked2app.com/). It 
 
 Marked2 can also export to DOCX, PDF, HTML, etc.
 
-## Other Useful Tools ##
+### Other Useful Tools ##
 
 * [Editorial](http://omz-software.com/editorial/) is a good iOS Markdown editor & previewer
 * [Mou](http://25.io/mou/) does quite a good job of an all-in-one Markdown editor & previewer for the Mac. Personally, I prefer running two separate tools that excel at editing and previewing respectively, instead of one single one trying to do both. YMMV.

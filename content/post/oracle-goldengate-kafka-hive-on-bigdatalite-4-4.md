@@ -17,7 +17,7 @@ The OBE (and similar [Hands On Lab](http://www.oracle.com/webfolder/technetwork/
 
 Fortunately it's still possible to run this setup out of the box in BDL 4.4, with bells on because it includes [Kafka](http://kafka.apache.org/) too. And, who doesn't like a bit of Kafka nowadays?
 
-## Getting it running
+### Getting it running
 
 1. Set the Oracle extract running (as per the OBE/HOL instructions). 
 
@@ -91,7 +91,7 @@ Fortunately it's still possible to run this setup out of the box in BDL 4.4, wit
 		#gg.handler.kafkahandler.maxGroupSize =100, 1Mb
 		#gg.handler.kafkahandler.minGroupSize =50, 500Kb
 
-## Testing it out
+### Testing it out
 
 Using the Kafka console shell we can observe what Oracle GoldenGate sends to Kafka: 
 
@@ -101,7 +101,7 @@ In a separate session (or even better, in the same session but using `screen` as
 
 ![](/content/images/2016/03/ogg-kafka.gif)
 
-### Always RTFM…
+#### Always RTFM…
 
 > The manual? That thing that explains how things work, and what problems to watch out for? Yeah… about that…
 
@@ -139,7 +139,7 @@ And since I'm noodling around with a few rows of data here and there (nowhere ne
 
 Obviously this has performance implications in a real-life implementation, but for proving out functionality, it saved me from complete insanity :-)
 
-## Sidenote - error in reset_bigdata.oby? 
+### Sidenote - error in reset_bigdata.oby? 
 
 I might be missing something here, but it looks like there's a minor fubar in `/u01/ogg-bd/dirprm/reset_bigdata.oby`: 
 
@@ -155,7 +155,7 @@ stop rkafka
 
 That second `stop rkafka` I'm guessing should be `delete rkafka`?
 
-## Logstash
+### Logstash
 
 I'm a long-time fan of the [Elastic stack](http://elastic.co), and Logstash has an input plugin for Kafka, so let's see if that can fit the jigsaw here too. 
 

@@ -13,7 +13,7 @@ title = "Streaming data from Oracle into Kafka (December 2018)"
 
 _This is a short summary discussing what the options are for integrating Oracle RDBMS into Kafka, as of December 2018. For a more detailed background to why and how at a broader level for all databases (not just Oracle) see [this blog](http://cnfl.io/kafka-cdc) and [these slides](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)._
 
-## What techniques & tools are there? 
+### What techniques & tools are there? 
 
 As of December 2018, this is what the line-up looks like: 
 
@@ -35,7 +35,7 @@ As of December 2018, this is what the line-up looks like:
 * **Triggers** to capture changes made to a table, write details of those changes to another database table, ingest that table into Kafka (e.g. with JDBC connector).
 * **Flashback** to show all changes to a given table between two points in time. [Implemented as a PoC by Stewart Bryson and Björn Rost](https://blog.pythian.com/streaming-oracle-kafka-stories-message-bus-stop/).
 
-## What do they look like in action? 
+### What do they look like in action? 
 
 I did a recent talk at UK Oracle User Group TECH18 conference, presenting my talk "[No More Silos: Integrating Databases and Apache Kafka](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)". As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the new Debezium/XStream option (log-based CDC). Here I'll try and replicate the discussion and examples. You can also see previous articles that I've written showing [GoldenGate in action](https://rmoff.net/tag/goldengate/).
 
@@ -46,7 +46,7 @@ You can find all of the code on the [demo-scene](https://github.com/confluentinc
 
 The setup script does all of the rest, including bringing up Confluent Platform, and configuring the connectors. _You do have to [build the Oracle database docker image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) first_.
 
-### Setup
+#### Setup
 
 Some notes on setup of each option: 
 
@@ -73,7 +73,7 @@ You can validate that each connector is running by querying the REST API for the
     $ curl -s "http://localhost:8083/connectors"| jq '.[]'| xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| column -s : -t| sed 's/\"//g'| sort
     ora-source-debezium-xstream  |  RUNNING  |  RUNNING
 
-### Initial data load
+#### Initial data load
 
 In Oracle, check the source data: 
 
@@ -155,7 +155,7 @@ Note that I'm accessing nested attributes of the `AFTER` object here using the `
 
 The schema for both topics come from the Schema Registry, in which Kafka Connect automatically stores the schema for the data coming from Oracle and serialises the data into Avro. The great thing about this is in a consuming application, such as KSQL, the schema is already available and doesn't have to be manually entered. 
 
-### INSERT
+#### INSERT
 
 Insert a row in the Oracle database: 
 
@@ -192,7 +192,7 @@ Straight away in the Kafka topics you'll see a new row (in fact, if you have lef
 
 So far, so same. Each captures an insert. Debezium from XStream and the database's redo log, JDBC by polling the database for any rows with a newer `UPDATE_TS` or higher `ID` than the previous request.
 
-### UPDATE
+#### UPDATE
 
 This is where things get interesting. Let's update the row in Oracle that we just created: 
 
@@ -271,7 +271,7 @@ Now check out the data in Kafka.
 
       So each time a change is made in the database, you get a full before/after snapshot of the record, plus a bunch of other metadata. This is great for applications processing inbound changes that need to know not just that something changed (_here's the new record_) but also exactly _what_ changed (before/after payloads) as well as _how_ (insert/update/etc.)
 
-### DELETE
+#### DELETE
 
 Delete a record from the source system
 
@@ -366,7 +366,7 @@ You'll note here no available `OP` information, and no row for the corresponding
 
 ----
 
-## Ecosystem
+### Ecosystem
 
 When you're bringing data into Kafka, you need to remember the bigger picture. Dumping it into a topic alone is not enough. Well, it is, but your wider community of developers won't thank you. 
 
@@ -377,7 +377,7 @@ However you do this, it should be in a way that integrates with the broader Kafk
 ----
 
 
-## Overview of the Pros and Cons of each technique
+### Overview of the Pros and Cons of each technique
 
 _Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections in the comment function below welcomed!_
 
@@ -475,7 +475,7 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
   <blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="en" dir="ltr">There are 2 flashback features:<br>Flashback transaction query shows transactions from redo, similar to log miner.<br>Flashback version query shows previous versions, from undo, within undo_retention. Allowed in all editions. I think this is the one you mention.</p>&mdash; Franck Pachot (@FranckPachot) <a href="https://twitter.com/FranckPachot/status/1073323013750317056?ref_src=twsrc%5Etfw">December 13, 2018</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-## References
+### References
 
 * Oracle GoldenGate for Big Data
   * https://www.oracle.com/middleware/data-integration/goldengate/big-data/
@@ -492,11 +492,11 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
 
   * https://docs.oracle.com/en/database/oracle/oracle-database/18/sutil/oracle-logminer-utility.html#GUID-2EAA593B-DC09-4D30-87EB-34819FC68B3D
 
-## Try it out! 
+### Try it out! 
 
 You can find all of the code used in this article [on github here](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/). 
 
-## Feedback?
+### Feedback?
 
 Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections in the comment function below welcomed!
 
@@ -510,7 +510,7 @@ There's also a good Debezium community:
 * Mailing list: https://groups.google.com/forum/#!forum/debezium
 * Gitter: https://gitter.im/debezium/user
 
-## Updates & Comments
+### Updates & Comments
 
 * Adam Leszczyński has built a (non-Kafka Connect) source: https://www.bersler.com/blog/openlogreplicator-first-log-based-open-source-oracle-to-kafka-replication/
 

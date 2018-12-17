@@ -104,7 +104,7 @@ The technical books that I do read I get as `epub` to consume on my Mac or Kindl
 
 --- 
 
-## Your Turn!
+### Your Turn!
 
 What's your system for trying to capture, consume, and comprehend the deluge of information out there? Let me know in the comments section below :)
 

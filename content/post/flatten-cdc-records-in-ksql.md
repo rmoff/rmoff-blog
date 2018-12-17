@@ -11,7 +11,7 @@ title = "Flatten CDC records in KSQL"
 
 +++
 
-## The problem - nested messages in Kafka
+### The problem - nested messages in Kafka
 
 Data comes into Kafka in many shapes and sizes. Sometimes it's from CDC tools, and may be nested like this: 
 
@@ -44,7 +44,7 @@ Note that the 'payload' is nested under `data`->`value`. A user on the [Confluen
 
 The key(!) thing here is `record value schema does not contain field ID`. The connector cannot find the field `ID` in the source message—because it's nested. 
 
-## The solution - KSQL to flatten messages
+### The solution - KSQL to flatten messages
 
 You can use [KSQL](https://www.confluent.io/ksql) to transform every record on the source topic as it arrives, writing to a new topic and using _that_ topic as the source for the JDBC Sink. 
 

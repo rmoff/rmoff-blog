@@ -19,62 +19,62 @@ As always, if you're nearby then hope to see you there, and let me know if you w
 
 --- 
 
-## September 
+### September 
 
-### 🇪🇸 Madrid, Spain
+#### 🇪🇸 Madrid, Spain
 
 * 6th Sept: [Madrid Kafka Meetup](https://www.meetup.com/apachekafkamadrid/events/251264347/)
 
-### 🇳🇴 Oslo, Norway
+#### 🇳🇴 Oslo, Norway
 
 * 10th Sept: [Oslo Kafka Meetup](https://www.meetup.com/Oslo-Kafka/events/)
 * 11th Sept: [JavaZone](https://2018.javazone.no/program/73fa52a7-661c-47a0-b4f3-55aaf5b10f6b)
 
-### 🇧🇪 Antwerp/Brussels, Belgium
+#### 🇧🇪 Antwerp/Brussels, Belgium
 
 * 25th Sept: [Brussels Kafka Meetup](https://www.meetup.com/Brussels-Apache-Kafka-Meetup-by-Confluent/events/253855467/)
 
-### 🇪🇸 Barcelona, Spain
+#### 🇪🇸 Barcelona, Spain
 
 * 26th Sept: [Barcelona Kafka Meetup](https://www.meetup.com/Barcelona-Kafka-Meetup/events/254252957/)
 
 --- 
 
-## October
+### October
 
-### 🇬🇧 Leeds, UK
+#### 🇬🇧 Leeds, UK
 
 * 4th Oct: [The JVM Thing meetup](https://www.meetup.com/Leeds-JVMThing/events/)
 
-### 🇺🇸 Nashville (TN), USA
+#### 🇺🇸 Nashville (TN), USA
 
 * 31st Oct: [LISA18](https://www.usenix.org/conference/lisa18/conference-program)
 
 --- 
 
-## November
+### November
 
-### 🇩🇪 Münich, Germany
+#### 🇩🇪 Münich, Germany
 
 * 7th Nov: [W-JAX](https://jax.de/)
 
-### 🇧🇪 Antwerp, Belgium
+#### 🇧🇪 Antwerp, Belgium
 
 * 13th Nov: [Devoxx Belgium](https://devoxx.be/)
 
-### 🇵🇱 Krakow, Poland
+#### 🇵🇱 Krakow, Poland
 
 * 26th Nov: [CoreDump](http://coredump.events/2018/)
 
 --- 
 
-## December
+### December
 
-### 🇬🇧 Liverpool, UK
+#### 🇬🇧 Liverpool, UK
 
 * 4th Dec: [UKOUG TECH 18](https://www.ukougconferences.org.uk/ukoug/frontend/reg/tAgendaWebsite.csp?pageID=306&eventID=2&language=1&mainFramePage=dailyagenda.csp&mode=)
 
-### 🇩🇪 Frankfurt, Germany
+#### 🇩🇪 Frankfurt, Germany
 
 * 10th Dec: [Apache Kafka Meetup](https://www.meetup.com/Frankfurt-Apache-Kafka-Meetup-by-Confluent/events/256599175/)
 * 11th Dec: [IT Days](https://www.ittage.informatik-aktuell.de/)

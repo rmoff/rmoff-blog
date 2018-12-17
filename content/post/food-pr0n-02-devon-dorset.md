@@ -35,7 +35,7 @@ On the last day of holiday an overnight stop at Southhampton's Premier Inn North
 
 ![Premier Inn Fryup](/content/images/2016/04/IMG_7375-1.jpg)
 
-## Beer Discoveries
+### Beer Discoveries
 
 * [Gyle 59](http://gyle59.co.uk/), Toujours. I've never quite "got" saison-style beer, having had a great one (Ilkley's [Siberia](http://www.ilkleybrewery.co.uk/our-beers/item/siberia)) and a less good one (for a farmhouse ale it was certainly agricultural, it smelt more like the muck heap than anything good) -- but this convinced me that done we it's a nice beer. Hoppy and tasty. 
 
@@ -45,13 +45,13 @@ On the last day of holiday an overnight stop at Southhampton's Premier Inn North
 
   ![Palmers Best Bitter](/content/images/2016/04/IMG_6692.jpg)
 	
-## Footnote 01 - A geek's worst nightmare
+### Footnote 01 - A geek's worst nightmare
 
 GPRS. All week. Anywhere in South Devon/Dorset. Better would be "No Signal", then there's no tantalising suggestion that it might just work…
 
 ![GPRS](/content/images/2016/04/IMG_6807.jpg)
 
-## Footnote 02 - A great tech tool discovery
+### Footnote 02 - A great tech tool discovery
 
 A colleague of mine recently turned up to a meeting with nothing but his iPhone, and a Bluetooth keyboard. The portability and simplicity of the solution looked great and I soon bought myself an [Anker T320](http://www.amazon.co.uk/Bluetooth-Ultra-Slim-Aluminum-Keyboard-Windows-Android/dp/B00BKW2410). I brought it away on holiday with me and coupled with an iPad mini it's super for writing long passages of text (here using [Editorial](http://omz-software.com/editorial/)). 
 

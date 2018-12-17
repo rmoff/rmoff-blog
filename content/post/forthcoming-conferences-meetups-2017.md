@@ -15,14 +15,14 @@ I'm excited to be speaking at several conferences and meetups over the next few 
 
 If you're at any of these, please do come and say hi :) 
 
-## Apache Kafka Meetup - London
+### Apache Kafka Meetup - London
 
 *My first time talking at the London Apache Kafka Meetup - always a sold-out crowd, this will be fun!*
 
 * September 20th, 19:00 : **[Look Ma, no Code! Building Streaming Data Pipelines with Apache Kafka](https://www.meetup.com/Apache-Kafka-London/events/242981989/)**
   * Slides are [available here](https://speakerdeck.com/rmoff/look-ma-no-code-building-streaming-data-pipelines-with-apache-kafka)
 
-## Oracle OpenWorld - San Francisco
+### Oracle OpenWorld - San Francisco
 
 *This will be my second time at OOW - I [wrote up my previous trip here](https://www.rittmanmead.com/blog/2014/10/first-timer-tips-for-oracle-open-world/)*
 
@@ -32,17 +32,17 @@ If you're at any of these, please do come and say hi :)
 
 * Oct 4th, 15:30 [**An Enterprise Databus: Oracle GoldenGate in the Cloud Working with Kafka and Spark** (CON6895)](https://events.rainfocus.com/catalog/oracle/oow17/catalogoow17?search=CON6895&showEnrolled=false) (Moscone West - Room 3003)
 
-## Oak Table World - San Francisco
+### Oak Table World - San Francisco
 
 *Oak Table World is **awesome**–go along if you can make it, as it is literally just next door to OOW itself. I'm really honoured to speaking here with my colleague Gwen Shapira.*
 
 * Oct 2nd - 14:30 [**What's this stream processing thing anyway?**](http://www.oaktable.net/blog/oak-table-world-2017-oracle-open-world)
 
-## Hadoop User Group - Dublin
+### Hadoop User Group - Dublin
 
 * October 19th, 18:00: **[Look Ma, no Code! Building Streaming Data Pipelines with Apache Kafka]( https://www.meetup.com/hadoop-user-group-ireland/events/243387159/)**
 
-## DOAG - Nuremberg
+### DOAG - Nuremberg
 
 *My first time presenting in Germany - looking forward to this!*
 
@@ -50,7 +50,7 @@ If you're at any of these, please do come and say hi :)
 
 * November 23rd, 16:00 [**Building a Real-Time Streaming Platform with Oracle, Apache Kafka, and KSQL**](https://www.doag.org/konferenz/konferenzplaner/konferenzplaner_details.php?locS=1&id=535509&vid=545631)
 
-## UKOUG - Birmingham
+### UKOUG - Birmingham
 
 _There was lots of interest in Kafka last year - I've got my fingers crossed for a room with [bigger capacity](https://twitter.com/lasjen/status/805768105578401792) ;)_
 

@@ -11,7 +11,7 @@ title = "Get mtr working on the Mac"
 
 +++
 
-## Install
+### Install
 
 Not sure why the `brew` doesn't work as it used to, but here's how to get it working: 
 
@@ -21,6 +21,6 @@ Not sure why the `brew` doesn't work as it used to, but here's how to get it wor
 
 _(If you don't do the two symbolic links (`ln`) you'll get `mtr: command not found` or `mtr: Failure to start mtr-packet: Invalid argument`)_
 
-## Run
+### Run
 
     sudo mtr google.com

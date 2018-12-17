@@ -10,7 +10,7 @@ title = "Wise Words (not mine)"
 
 +++
 
-## Career
+### Career
 
 https://www.troyhunt.com/why-online-identities-are-smart-career/
 http://www.benstopford.com/2015/01/02/a-career-in-technology/
@@ -28,5 +28,5 @@ https://www.troyhunt.com/tag/career-development/
 
 https://www.pluralsight.com/courses/play-by-play-crafting-a-brand-for-growth-and-prosperity
 
-## Speaking
+### Speaking
 

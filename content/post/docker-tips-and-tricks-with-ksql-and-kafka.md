@@ -14,7 +14,7 @@ A few years ago a colleague of mine told me about this thing called Docker, and 
 
 So, here's a collection of tricks I use with Docker and Docker Compose that might be useful, particularly for those working with Apache Kafka and Confluent Platform. 
 
-## Wait for an HTTP endpoint to be available
+### Wait for an HTTP endpoint to be available
 
 Often a container will be 'up' before it's _actually_ up. So Docker Compose's `depends_on` dependencies don't do everything we need here. For a service that exposes an HTTP endpoint (e.g. Kafka Connect, KSQL Server, etc) you can use this bash snippet to force a script to wait before continuing execution of something that requires the service to actually be ready and available: 
 
@@ -39,7 +39,7 @@ docker-compose exec ksql-cli bash -c 'echo -e "\n\n⏳ Waiting for KSQL to be av
 
 You can also build it into a Docker Compose file as shown below. 
 
-## Wait for a particular message in a container's log
+### Wait for a particular message in a container's log
 
 For the same reason as above—waiting for a service to be ready—you can use this trick built around `grep` and bash's [*process substitution*](http://tldp.org/LDP/abs/html/process-sub.html), which will make the script wait until the given phrase is found in the logs from Docker Compose:
 
@@ -49,7 +49,7 @@ echo -e "\n--\n\nWaiting for Kafka Connect to start on $CONNECT_HOST … ⏳"
 grep -q "Kafka Connect started" <(docker-compose logs -f $CONNECT_HOST)
 {{< /highlight >}}
 
-## Run custom code before launching a container's program
+### Run custom code before launching a container's program
 
 Maybe you want to download a dependency, or move some files around, or do something. You could build a new `Dockerfile`, but often you want to overlay on an existing standard image a slight tweak for a demo. With Docker Compose this is easy enough to do. First you need to figure out what command the container is going to run when it launches, which will either be through `Entrypoint` or `Cmd`: 
 
@@ -86,7 +86,7 @@ Now the additional bits will run, and _then_ the container's intended process wi
 
 The `- |` is some YAML magic; we're passing in three arguments to `command`, and the `|` tells YAML that the following lines are all part of the same entry. It makes for a much neater and easier to read file than trying to put everything into a single line as is sometimes done with `command`. 
 
-## Deploy a Kafka Connect connector automatically
+### Deploy a Kafka Connect connector automatically
 
 In the above example, we run some code _before_ the container's payload (the KSQL Server) starts because of a dependency on it. In the next example we'll do it the other way around; launch the service and wait for it to start, and then run some more code. This is the pattern we need for deploying a Kafka Connect connector. 
 
@@ -126,7 +126,7 @@ Notes:
         /etc/confluent/docker/run
 
 
-## Execute a KSQL script through ksql-cli
+### Execute a KSQL script through ksql-cli
 
 This Docker Compose snippet will run KSQL CLI and pass in a KSQL script for execution to it. The manual `EXIT` is required because of a [NPE bug](https://github.com/confluentinc/ksql/issues/1327). The advantage of this method vs running KSQL Server headless with a queries file passed to it is that you can still interact with KSQL this way, but can pre-build the environment to a certain state. 
 

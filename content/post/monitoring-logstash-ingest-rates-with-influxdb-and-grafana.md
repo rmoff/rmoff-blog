@@ -17,17 +17,17 @@ Logstash is powerful tool for data ingest, processing, and distribution. It orig
 
 Let's get started...
 
-## Pre-Requisites ##
+### Pre-Requisites ##
 
 I'm not going to cover setup & install here - I'm assuming that you've got Logstash >=2.3.1, InfluxDB >= 0.12, Grafana >= 2.6 running. In this example it's all running on a single node, localhost, default ports for everything. The only non-standard configuration is that I've [enabled the **graphite** listener in InfluxDB](https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md).
 
-## Overview ##
+### Overview ##
 
 We'll get Logstash to send event rates over to InfluxDB, from where we'll visualise it in Grafana.
 
 The example I'm using it based on pulling some data in from a Kafka topic (similar to the [pattern described here](http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/)) and indexing it into Elasticsearch. I can start and stop my Logstash configuration when I want, and it picks up from where it left off in consuming the data from Kafka.
 
-## Logstash Instrumentation ##
+### Logstash Instrumentation ##
 
 First job is to get Logstash to track, and then output, the rate at which it's processing events. One row read from a log, one message pulled from Kafka - each is one "event".
 
@@ -80,7 +80,7 @@ And, aside from any other stdout that your script is writing, you'll now see the
 
 But ... that stdout is just debug, remember? Where we really want it is over in InfluxDB, so we can build some lovely charts against it.
 
-## Checking the data in InfluxDB ##
+### Checking the data in InfluxDB ##
 
 You can use the [InfluxDB GUI](https://docs.influxdata.com/influxdb/v0.12/tools/web_admin/) for this, or the [command line](https://docs.influxdata.com/influxdb/v0.12/tools/shell/). Here I'll use the command line.
 
@@ -123,7 +123,7 @@ The time value is epoch microseconds. For more information on the InfluxDB query
 
 So, we've instrumented Logstash configuration to generate and send the data, we've validated that InfluxDB is getting the data ... now let's graph the data!
 
-## Charting it in Grafana ##
+### Charting it in Grafana ##
 
 In Grafana I've added a datasource pointing to my InfluxDB, and then headed over to my dashboard. When done in real life, this kind of chart makes a lot of sense alongside other "health check" visualisations, enabling you to see not only what the data coming into the system is telling you, but also the status of that data flow. There's nothing worse than thinking "hey cool, no errors" when the reason there's no errors is that all the errors are backed up in the pipeline and not even making it into your monitoring system ...
 

@@ -17,19 +17,19 @@ I [write](https://www.confluent.io/blog/author/robin/) and [speak](http://rmoff.
 
 So here's a short, and longer, answer! 
 
-## tl;dr
+### tl;dr
 
 An iOS app called [Paper, from a company called FiftyThree](https://paper.bywetransfer.com/)
 
-## So, how DO you make those cool diagrams? 
+### So, how DO you make those cool diagrams? 
 
 _Disclaimer: This is a style that I have copied straight from my esteemed colleagues at Confluent, including Neha Narkhede and Ben Stopford, as well as others including Martin Kleppmann._
 
-### Equipment
+#### Equipment
 
 I use an iPad Pro (10.5"), with Apple Pencil, and [Paper from FiftyThree/WeTransfer](https://paper.bywetransfer.com/). I also have a [matte screen protector](https://www.amazon.co.uk/gp/product/B073X5BML2) on the iPad which makes it feel nicer to draw on (less "skiddy"). I previously used an iPad mini with a cheapy stylus which did the job but was no use for detailed diagrams (and certainly not for actual writing)
 
-### Process
+#### Process
 
 1. Sketch out the diagram in Paper, leaving space for text. 
     ![](/content/images/2018/12/diagrams.png)
@@ -44,7 +44,7 @@ I use an iPad Pro (10.5"), with Apple Pencil, and [Paper from FiftyThree/WeTrans
 
 Paper is not vector-based, and editing existing diagrams gets pretty clunky. 
 
-### Other tools
+#### Other tools
 
 Since getting the iPad Pro with Pencil, I've tried:
 

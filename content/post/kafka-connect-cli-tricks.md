@@ -17,7 +17,7 @@ I'm showing the commands split with a line continuation character (`\`) but you 
 
 <script id="asciicast-jYF38DsTB4PQbdoittTz1QARn" src="https://asciinema.org/a/jYF38DsTB4PQbdoittTz1QARn.js" async></script>
 
-## List all running connectors: 
+### List all running connectors: 
 
 ```bash
 curl -s "http://localhost:8083/connectors"| \
@@ -28,7 +28,7 @@ sed 's/\"//g'| \
 sort
 ```
 
-## Selectively delete a connector
+### Selectively delete a connector
 
 (h/t to [@madewithtea](https://twitter.com/madewithtea/status/1068467440202514432) for the idea of using `peco`)
 
@@ -40,7 +40,7 @@ xargs -I{connector_name} curl -s -XDELETE "http://loc
 alhost:8083/connectors/"{connector_name}
 ```
 
-## Delete all connectors
+### Delete all connectors
 
 **CAUTION** with this one, as it will delete all your connectors!
 

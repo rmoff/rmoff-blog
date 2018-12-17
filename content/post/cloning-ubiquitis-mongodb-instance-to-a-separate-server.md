@@ -15,7 +15,7 @@ DISCLAIMER: I am not a MongoDB person (even if it is [Web Scale](http://www.mong
 
 For some work I've been doing I wanted to access the data in Ubiquiti's Unifi controller which it stores in MongoDB. Because I didn't want to risk my actual Unifi device by changing local settings to enable remote access, and also because the version of MongoDB on it is older than ideal, I wanted to clone the data elsewhere. This article shows you how.
 
-## Dump data from source server (unifi)
+### Dump data from source server (unifi)
 
 To start with, SSH to the Unifi box (in my case, it's a CloudKey). Username and password are the same as Unifi web GUI login.
 
@@ -57,7 +57,7 @@ Wed Mar  7 12:14:05.118 	ace.alarm to dump/ace/alarm.bson
 Wed Mar  7 12:14:05.124 		 152 objects
 ```
 
-## Install MongoDB locally
+### Install MongoDB locally
 
 Ref: [Install docs](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/)
 
@@ -76,7 +76,7 @@ MongoDB shell version v3.6.3
 connecting to: mongodb://127.0.0.1:27017/
 ```
 
-## Restore data to new server
+### Restore data to new server
 
 Copy dump file from CloudKey to local server:
 

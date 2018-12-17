@@ -37,7 +37,7 @@ Just a tip - black background looks l33t, but sucks for being able to read from 
 
 ![](/content/images/2018/06/2018-06-20_17-28-31.png)
 
-## Getting it into Keynote (or PPTX, if you must)
+### Getting it into Keynote (or PPTX, if you must)
 
 If you're using iTerm you can select the text and then use the **Copy with Styles** option from the Edit menu (press Alt to access this option), and paste the results directly into Keynote with the formatting preserved. 
 
@@ -51,7 +51,7 @@ If you also want to format your JSON with linebreaks, run it through `jq` first:
 
 ![](/content/images/2018/06/2018-06-20_20-09-22.png)
 
-## Output to HTML 
+### Output to HTML 
 
 As well as writing the highlighted code to the terminal, you can output to things like HTML, for nice embedding in…blogs!
 
@@ -81,7 +81,7 @@ There's other [formatters](http://pygments.org/docs/formatters/), including gene
 
 _For images, run `pip install PILLOW` for the required library first._
 
-## Support for SQL, and more!
+### Support for SQL, and more!
 
 Pygments supports [multiple languages](http://pygments.org/languages/) too, and can do things like enforce upper-case for SQL. If you don't pass a file to `pygmentize` then it'll read from `stdin` - press Ctrl-D to end input and see the result: 
 

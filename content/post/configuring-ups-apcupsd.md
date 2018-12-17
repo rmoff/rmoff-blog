@@ -21,7 +21,7 @@ The UPS I'm running is a [APC Back-UPS 650](https://www.scan.co.uk/products/650v
 
 ---
 
-## Detour - nuts
+### Detour - nuts
 
 My first port of call was the top of the Google hits, [`nut` (Network UPS Tools)](http://networkupstools.org/), using the `usbhid-ups` driver. This failed to even start up:
 
@@ -29,7 +29,7 @@ My first port of call was the top of the Google hits, [`nut` (Network UPS Tools)
 
 ---
 
-## Success - apcupsd
+### Success - apcupsd
 
 Next I found [`apcupsd`](http://www.apcupsd.org/) (APC UPS Daemon).
 
@@ -37,7 +37,7 @@ Next I found [`apcupsd`](http://www.apcupsd.org/) (APC UPS Daemon).
 apt-get install apcupsd
 ```
 
-### Finding the device
+#### Finding the device
 
 [The docs](http://www.apcupsd.org/manual/manual.html) suggested I'd find my UPS device listed at `/proc/bus/usb/drivers`, and if not the drivers at least at `/proc/bus/usb/drivers` - neither of these worked for me:
 
@@ -114,7 +114,7 @@ I:  If#= 0 Alt= 0 #EPs= 1 Cls=03(HID  ) Sub=00 Prot=00 Driver=usbhid
 
 
 
-### Found the device, now configure apcupsd
+#### Found the device, now configure apcupsd
 
 In `/etc/apcupsd/apcupsd.conf` I set:
 
@@ -158,11 +158,11 @@ Jun 17 14:30:01 proxmox01 apcupsd[1254]: NIS server startup succeeded
 
 The successful service start can also be seen in `/var/log/apcupsd.events` and `/var/log/daemon.log`
 
-## Testing it
+### Testing it
 
 Now we're up and running, let's [test it](http://www.apcupsd.org/manual/manual.html#communications-test).
 
-### Disconnect UPS data cable from Server ###
+#### Disconnect UPS data cable from Server ###
 
 The unscary one first - disconnect the data comms between UPS and server. It took a few more than the 6 seconds than the doc says, but within a minute or so I got a system beep on the server and :
 
@@ -184,7 +184,7 @@ I plugged the USB back in to my server, and got:
 Jun 17 14:41:14 proxmox01 apcupsd[1254]: Communications with UPS restored.
 ```
 
-### Disconnect UPS from Mains Power ###
+#### Disconnect UPS from Mains Power ###
 
 The document entertainingly says:
 
@@ -235,13 +235,13 @@ Jul 18 02:19:06 proxmox01 apcupsd[1254]: Running on UPS batteries.
 Jul 18 02:25:40 proxmox01 apcupsd[1254]: Mains returned. No longer on UPS batteries.
 Jul 18 02:25:40 proxmox01 apcupsd[1254]: Power is back. UPS running on mains.
 ```
-### Full Power Outage ###
+#### Full Power Outage ###
 
 TODO!
 
 *And yes this is bad. Just like backups being only as good as the last successful restore, a UPS graceful shutdown routine really does need to be tested. Watch this space!*
 
-## Bonus - data extract
+### Bonus - data extract
 
 Because we left `NETSERVER` enabled in the config, we can probe the stats of the UPS:
 

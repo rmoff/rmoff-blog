@@ -13,13 +13,13 @@ title = "Simple export/import of Data Sources in Grafana"
 
 [Grafana API Reference](http://docs.grafana.org/http_api/data_source/)
 
-## Export all Grafana data sources to data_sources folder
+### Export all Grafana data sources to data_sources folder
 
     mkdir -p data_sources && curl -s "http://localhost:3000/api/datasources"  -u admin:admin|jq -c -M '.[]'|split -l 1 - data_sources/
 
 This exports each data source to a separate JSON file in the `data_sources` folder.
 	
-## Load data sources back in from folder
+### Load data sources back in from folder
 
 This submits every file that exists in the `data_sources` folder to Grafana as a new data source definition.
 

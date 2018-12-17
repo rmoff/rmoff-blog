@@ -15,7 +15,7 @@ title = "Stream-Table Joins in KSQL: Stream events must be timestamped after the
 
 **tl;dr** When doing a stream-table join, your *table* messages must already exist (and must be timestamped) _before_ the stream messages. If you re-emit your source stream messages, after the table topic is populated, the join will succeed.
 
-## Example data
+### Example data
 
 Use `kafakcat` to populate topics:
 
@@ -42,7 +42,7 @@ Validate topic contents:
     {"SessionIdTime":"2018-05-17 11:26:33 BST","SessionIdSeq":2,"Details":"Bar2"}
 
 
-## Declare source streams
+### Declare source streams
 
     ksql> CREATE STREAM session_details_stream \
           (Media varchar ,SessionIdTime varchar,SessionIdSeq long) \
@@ -70,7 +70,7 @@ Validate topic contents:
     1526553143176 | null | 2018-05-17 11:26:33 BST | 2 | Bar2
     ^CQuery terminated
 
-## Repartition each topic on SessionIdTime+SessionIdSeq
+### Repartition each topic on SessionIdTime+SessionIdSeq
 
     ksql> CREATE STREAM SESSION AS \
           SELECT Media, CONCAT(SessionIdTime,SessionIdSeq) AS root \
@@ -99,7 +99,7 @@ Validate topic contents:
     ----------------------------
     ksql>
 
-## Declare table
+### Declare table
 
     ksql> CREATE TABLE VOIP_TABLE (root VARCHAR, details VARCHAR) \
           WITH (KAFKA_TOPIC='VOIP', VALUE_FORMAT='JSON', KEY='root');
@@ -113,7 +113,7 @@ Validate topic contents:
     1526553143176 | 2018-05-17 11:25:33 BST1 | 2018-05-17 11:25:33 BST1 | Bar1a
     1526553143176 | 2018-05-17 11:25:33 BST1 | 2018-05-17 11:25:33 BST1 | Bar1b
 
-## Join SESSION stream to VOIP table
+### Join SESSION stream to VOIP table
 
     ksql> SELECT s.ROWTIME, s.root, s.media, v.details \
           FROM SESSION s \

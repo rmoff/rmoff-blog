@@ -61,7 +61,7 @@ In both of these cases **the existing original consumer remains running and unto
 
 ![kd05a](/content/images/2016/04/kd05a.png)
 
-## Consumer Groups and Offsets ##
+### Consumer Groups and Offsets ##
 
 One of the key concepts in all of this is that of the Kafka **consumer group**, which is a unique identifier for a given consumer (or group of consumers for the same logical entity if you want to parallelise the consumption). In Kafka 0.8 Zookeeper is used by default to keep track off the **offset** of the last record that a given consumer group received. So in my development environment I can look on my Kafka server at Zookeeper and see for each consumer group the latest offset: ([reference](https://cwiki.apache.org/confluence/display/KAFKA/System+Tools#SystemTools-ExportZookeeperOffsets))
 
@@ -86,7 +86,7 @@ Group           Topic                          Pid Offset          logSize      
 logstash-5-testing irc                            0   4143            4148            5               none
 ```
 
-## Summary ##
+### Summary ##
 
 Building a successful data pipeline requires that it is flexible to changing requirements, as well as unknown future ones. This is as true for little local PoCs such as this one as it is for large-scale implementations. The pipeline needs to be able to have minimal impact on source systems whilst being able to satisfy multiple destinations, some or all of which may want to batch process instead of stream the data. In addition, being able to re-stream the raw data repeatedly and on-demand into adhoc applications without affecting the primary 'productionised' consumers is a powerful enabler of the 'data discovery lab' concept, which I write about [in more detail here](http://www.rittmanmead.com/2015/10/forays-into-kafka-enabling-flexible-data-pipelines/).
 

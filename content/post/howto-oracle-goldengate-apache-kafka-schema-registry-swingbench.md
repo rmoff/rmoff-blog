@@ -26,7 +26,7 @@ I used Oracle's [Oracle Developer Days VM](http://www.oracle.com/technetwork/dat
 
 From this point, I'll now walk through configuring OGG-BD with the Kafka Connect handler
 
-## Configuring the Kafka Connect replicat ##
+### Configuring the Kafka Connect replicat ##
 
 The OGG-BD replicat takes the trail file of events written by the `extract` job, and replays those events to the target. In our case, the target is the Kafka Connect handler.
 
@@ -42,7 +42,7 @@ In this article we're going to use OGG-BD to populate a topic for each table, us
 
 **Be very careful with copying & pasting these configuration files, as trailing whitespace can cause problems, [detailed here](https://rmoff.net/2017/09/12/oracle-goldengate-kafka-connect-handler-troubleshooting/).**
 
-## Starting the replicat ##
+### Starting the replicat ##
 
 From the bash shell, start the OGG-BD `ggsci` tool:
 

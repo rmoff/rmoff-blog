@@ -19,7 +19,7 @@ The software versions used here are:
 * Debezium 0.7.2
 * MySQL 5.7.19 with [Sakila sample database](https://dev.mysql.com/doc/sakila/en/sakila-installation.html) installed
 
-## Install Debezium
+### Install Debezium
 
 To use it, you need the relevant JAR for the source system (e.g. MySQL), and make that JAR available to Kafka Connect. Here we'll set it up for MySQL.
 
@@ -45,7 +45,7 @@ plugin.path=share/java,/u01/plugins/
 
 `plugin.path` is based on this expected structure: ![](/content/images/2018/03/KafkaConnect_pluginpath.png)
 
-## MySQL config
+### MySQL config
 
 Debezium uses MySQL's binlog facility to extract events, and you need to configure MySQL to enable it. Here is the bare-basics necessary to get this working - fine for demo purposes, but not a substitute for an actual MySQL DBA doing this properly :)
 
@@ -96,7 +96,7 @@ $ mysql -uroot
 mysql> GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'debezium' IDENTIFIED BY 'dbz';
 ```
 
-## Kafka Connect setup
+### Kafka Connect setup
 
 Load the connector configuration into Kafka Connect using the REST API:
 
@@ -144,7 +144,7 @@ Assuming it's `RUNNING`, you should see in the Connect Worker logs something lik
 [2018-02-09 15:27:57,299] INFO Completed snapshot in 00:00:17.032 (io.debezium.connector.mysql.SnapshotReader:661)
 ```
 
-## Inspect the MySQL data in Kafka
+### Inspect the MySQL data in Kafka
 
 Use `kafka-topics` to see all the topics created by Debezium:
 
@@ -233,7 +233,7 @@ The records from Debezium look like this:
 
 Note the structure of the messages - you get an `before` and `after` view of the record, plus a bunch of metadata (`source`, `op`, `ts_ms`). Depending on what you're using the CDC events for, you'll want to retain some or all of this structure.
 
-## Event Message Flattening with Single Message Transform
+### Event Message Flattening with Single Message Transform
 
 For simply streaming into Kafka the _current_ state of the record, it can be useful to take just the `after` section of the message. Kafka Connect includes functionality called Single Message Transform (SMT). As the name suggests, it enables you to transform single messages! You can read more about it and examples of its usage [here](https://www.confluent.io/blog/simplest-useful-kafka-connect-data-pipeline-world-thereabouts-part-3/). As well as the [Transforms that ship with Apache Kafka](http://kafka.apache.org/documentation.html#connect_transforms), you can write your own using the [documented API](https://kafka.apache.org/10/javadoc/org/apache/kafka/connect/transforms/Transformation.html). This is exactly what the Debezium project have done, shipping their own SMT as part of it, providing an easy way to [flatten the events that Debezium emits](http://debezium.io/docs/configuration/event-flattening/).
 

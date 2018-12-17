@@ -30,7 +30,7 @@ First up was trying to keep the toolset down to a minimum, and modifying the CSV
 I then had one of those "ahhhhh" moments, remembering the excellent work that my colleague Jordan Meyer did at the Rittman Mead BI Forum last year in his [Data Discovery and Predictive Modelling](https://s3.amazonaws.com/rmc_docs/rm_bi_forum_mclass_2015_part1.pdf) masterclass. In it he extolled the many virtues of R for working with data. Not only is R a powerful statistics language, it's also a damn useful (and, I would say, elegant) one for manipulating data, helped in large part by the [dplyr package](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html). It also has lots of libraries for doing useful stuff like reading CSV files based on the headers without having to declare the column, as well as reading natively from Excel files. So, off we go:
 
 ```R
-## Load main accident facts from CSV
+### Load main accident facts from CSV
 library('readr')
 accidents <- read_csv("/tmp/dft/DfTRoadSafety_Accidents_2014.csv")
 ```
@@ -51,18 +51,18 @@ With the data loaded, let's now set a proper timestamp column, since in the data
 Handling and parsing dates is a problem to be solved across all languages and technologies, and R's `lubridate` package is by far the best way I've ever seen. Using `lubridate` you describe the **order** that the date/time components appear in (e.g. "year month day") but without needing to specify the exact format string usually needed, thus avoiding the usual monkeying around with letter symbols, counting out the right number of them and getting the case right (is it YYYYMMDD or YYYYmmDD or YYMD?). In the above data sample you can see that the date is in the form Day / Month / Year, and the Time is Hour / Minute. That's all we need to know - forget having to check if "MM" is month or minute, whether to escape the separators and so on. Since it's Day / Month / Year / Hour / Minute, we use the **`dmy_hm`** function:
 
 ```R
-## Populate a timestamp using the awesome lubridate package
+### Populate a timestamp using the awesome lubridate package
 library('lubridate')
-## Using "dmy_hm" we're telling lubridate that the date is in the order
-## Day / Month / Year / Hour / Minute - the actual format string and
-## separators get figured out automagically
+### Using "dmy_hm" we're telling lubridate that the date is in the order
+### Day / Month / Year / Hour / Minute - the actual format string and
+### separators get figured out automagically
 accidents$timestamp <- dmy_hm(paste(accidents$Date,accidents$Time))
 ```
 
 The data includes the geo-spatial reference points, which [Elasticsearch can store](https://www.elastic.co/guide/en/elasticsearch/reference/current/geo-point.html) enabling analysis of the data in tools including Kibana. To store this properly we define `location` as a `geo_point` in [the mapping](https://github.com/rmoff/dft/blob/master/elasticsearch_mapping_template.sh), and concatenate the latitude and longitude: 
 
 ```R
-## Define the location as a string. 
+### Define the location as a string. 
 accidents$location <- paste(accidents$Latitude,accidents$Longitude,sep=',')
 ```
 
@@ -156,7 +156,7 @@ Once the joining is done it's off to another R library, this time `elastic`, ena
 
 ```R
 library("elastic")
-## connect() assumes Elasticsearch is running locally on port 9200
+### connect() assumes Elasticsearch is running locally on port 9200
 connect()
 docs_bulk(accidents,doc_ids = accidents$Accident_Index,index="dftroadsafetyaccidents02")
 ```

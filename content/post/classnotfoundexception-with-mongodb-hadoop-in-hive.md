@@ -13,7 +13,7 @@ title = "ClassNotFoundException with MongoDB-Hadoop in Hive"
 
 I wasted *literally* two hours on this one, so putting down a note to hopefully help future Googlers. 
 
-## Symptom
+### Symptom
 Here's all the various errors that I got in the `hive-server2.log` during my attempts to get a `CREATE EXTERNABLE TABLE` to work against a MongoDB table in Hive: 
 
 ```
@@ -29,7 +29,7 @@ Whilst Hive would throw errors along the lines of:
 Error: Error while processing statement: FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. org/bson/io/OutputBuffer (state=08S01,code=1)
 ```
 
-## Solution
+### Solution
 
 If you're using the [MongoDB-Hadoop](https://github.com/mongodb/mongo-hadoop/) connector with Hive, you need three JARs: 
 

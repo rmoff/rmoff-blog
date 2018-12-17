@@ -20,7 +20,7 @@ This question comes up on StackOverflow and such places a **lot**, so here's som
 In this post I'll talk about _why_ this is necessary, and then show _how_ to do it, based on a couple of scenarios - Docker, and AWS. 
 
 
-### Is anyone listening? 
+#### Is anyone listening? 
 
 Kafka is a distributed system. Data is read from & written to the _Leader_ for a given partition, which could be on any of the brokers in a cluster. When a client (producer/consumer) starts, it will request metadata about which broker is the leader for a partition—and it can do this from _any_ broker. The metadata returned will include the endpoints available for the Leader broker for that partition, and the client will then use those endpoints to connect to the broker to read/write data as required. 
 
@@ -89,7 +89,7 @@ Based on the same listener config as above (`LISTENER_BOB` / `LISTENER_FRED`), c
 You can also use `tcpdump` to examine the traffic from a client connecting to the broker, and spot the hostname that's returned from the broker. 
 
 
-### Why can I connect to the broker, but the client still fails? 
+#### Why can I connect to the broker, but the client still fails? 
 
 *tl;dr* Even if you can make the initial connection to the broker, the address returned in the metadata may still be for a hostname that is not accessible from your client. 
 
@@ -150,7 +150,7 @@ Let's walk this through step by step.
 
 
 
-### I saw a StackOverflow answer suggesting to just update my hosts file…isn't that easier? 
+#### I saw a StackOverflow answer suggesting to just update my hosts file…isn't that easier? 
 
 This is nothing more than a hack to workaround a mis-configuration, instead of actually fixing it. 
 
@@ -158,7 +158,7 @@ If the broker is reporting back a hostname to which the client cannot connect, t
 
 Much better is to understand and actually fix the `advertised.listeners` setting for your network. 
 
-### HOWTO: Connecting to Kafka on Docker
+#### HOWTO: Connecting to Kafka on Docker
 
 ![images/docker01.png](/content/images/2018/08/docker01.png)
 
@@ -187,7 +187,7 @@ Run within Docker, you will need to configure two listeners for Kafka:
 * Clients _external_ to the Docker network connect using listener "FRED", with port 9092 and hostname `localhost`. Port 9092 is exposed by the Docker container and so available to connect to. When clients connect, they are given the hostname `localhost` for the broker's metadata, and so connect to this when reading/writing data. 
 * The above configuration would _not_ handle the scenario in which a client external to Docker _and_ external to the host machine wants to connect. This is because neither `kafka0` (the internal Docker hostname) _or_ `localhost` (the loopback address for the Docker host machine) would be resolvable. 
 
-### HOWTO: Connecting to Kafka on AWS/IaaS
+#### HOWTO: Connecting to Kafka on AWS/IaaS
 
 _I'm naming AWS because it's what the majority of people use, but this applies to any IaaS/Cloud solution._
 
@@ -197,7 +197,7 @@ A further complication is that whilst Docker networks are heavily segregated fro
 
 There are two approaches, depending on whether the external address through which you're going to connect to the broker is also resolvable locally to all of the brokers on the network (e.g VPC). 
 
-#### Option 1 - external address IS resolvable locally
+##### Option 1 - external address IS resolvable locally
 
 ![images/aws01.png](/content/images/2018/08/aws01-1.png)
 
@@ -207,7 +207,7 @@ You can get by with one listener here. The existing listener, called `PLAINTEXT`
 
 Now connections both internally and externally will use `ec2-54-191-84-122.us-west-2.compute.amazonaws.com` for connecting. Because `ec2-54-191-84-122.us-west-2.compute.amazonaws.com` can be resolved both locally and externally, things work fine. 
 
-#### Option 2 - external address is NOT resolvable locally
+##### Option 2 - external address is NOT resolvable locally
 
 You will need to configure two listeners for Kafka: 
 
@@ -226,7 +226,7 @@ Here's an example configuration:
     advertised.listeners=INTERNAL://ip-172-31-18-160.us-west-2.compute.internal:19092,EXTERNAL://ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092
     inter.broker.listener.name=INTERNAL
 
-### Exploring listeners with Docker
+#### Exploring listeners with Docker
 
 Take a look at https://github.com/rmoff/kafka-listeners. This includes a docker-compose to bring up a Zookeeper instance along with Kafka broker configured with several listeners. 
 
@@ -260,11 +260,11 @@ Take a look at https://github.com/rmoff/kafka-listeners. This includes a docker-
         1 brokers:
           broker 0 at never-gonna-give-you-up:29094
 
-### Redux
+#### Redux
 
 I recently referenced this post in [a StackOverflow answer I gave](https://stackoverflow.com/questions/52438822/docker-kafka-dockerized-python-application/52440056#52440056), and re-articulated the solution. If you're still not quite following, check it out and maybe second time around I'll have explained it better:) 
 
-### References
+#### References
 
 * https://kafka.apache.org/documentation/#brokerconfigs
 * https://cwiki.apache.org/confluence/display/KAFKA/KIP-103%3A+Separation+of+Internal+and+External+traffic
@@ -272,6 +272,6 @@ I recently referenced this post in [a StackOverflow answer I gave](https://stack
 * https://cwiki.apache.org/confluence/display/KAFKA/Multiple+Listeners+for+Kafka+Brokers
 * https://stackoverflow.com/questions/42998859/kafka-server-configuration-listeners-vs-advertised-listeners
 
-### Still not sure? 
+#### Still not sure? 
 
 Check out the [Confluent Community Slack group](http://cnfl.io/slack) or [Apache Kafka user mailing list](https://lists.apache.org/list.html?users@kafka.apache.org) for more help. 

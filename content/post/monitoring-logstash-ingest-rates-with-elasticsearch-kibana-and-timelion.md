@@ -20,7 +20,7 @@ Yesterday I wrote about [Monitoring Logstash Ingest Rates with InfluxDB and Graf
 
 Which then got me thinking -- why add in InfluxDB and Grafana, if you're already using another datastore and front end (Elasticsearch and Kibana)? Well, I touched on this yesterday, and I would still opt for InfluxDB & Grafana when deploying a metrics-based monitoring solution. But, if your primary focus is on text based data (such as log files), rather than metrics alone, Elastic stack will be just great for you. And so in this scenario, let's bring the ingest rate monitoring back in house!
 
-## Logstash Configuration
+### Logstash Configuration
 
 This is the same [as before](http://rmoff.net/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/), except the **output** stanza points to Elasticsearch: 
 
@@ -55,7 +55,7 @@ output {
 
 After making this change, restart your Logstash agent. 
 
-## Checking the data's arriving
+### Checking the data's arriving
 
 I've been working with Elastic stack for a few years now, and can't believe that it's only recently I've discovered [Sense](https://www.elastic.co/guide/en/sense/current/installing.html). It's a plugin for Kibana, and makes working with the Elasticsearch REST API a real pleasure: 
 
@@ -63,7 +63,7 @@ I've been working with Elastic stack for a few years now, and can't believe that
 
 So we can see in the new Elasticsearch index **logstash-metrics** the data's coming through. All good - now onto the graphs!
 
-## Graphing it in Kibana
+### Graphing it in Kibana
 
 You've two options for visualising the data here - the Line Chart, or [Timelion](https://www.elastic.co/blog/timelion-timeline). Timelion is still in beta, but longer-term will absolutely be the right choice for this kind of visualisation. So, let's do both!
 

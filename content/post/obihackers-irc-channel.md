@@ -8,7 +8,7 @@ title = "#obihackers IRC channel"
 
 +++
 
-## `#obihackers`
+### `#obihackers`
 
 There's a `#obihackers` IRC channel on freenode, where a dozen or so of us have hung out for several years now. Chat is usually OBIEE, Oracle, ODI, and general geek out.
 
@@ -17,7 +17,7 @@ Bear in mind this is the equivalent of us hanging out in a bar; if you wanna sho
 Interested? [Join in!](http://webchat.freenode.net/?channels=%23obihackers&uio=d4). You'll find me there most of the time with the handle `rmoff`.
 
 
-## What's IRC? 
+### What's IRC? 
 
 For you kids out there, IRC is one of the old-school protocols on the internet, before WhatsApp et al existed, in fact, probably before the people who wrote WhatsApp et all were even born. 
 

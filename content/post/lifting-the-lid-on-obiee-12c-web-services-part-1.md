@@ -36,7 +36,7 @@ To explain the syntax:
 
 Now let's do something on the front end, and see what catch in our trap...
 
-## Dataset Storage Limits
+### Dataset Storage Limits
 
 I'd already logged into Visual Analyzer, and went to the **Data Sources** page, which triggered this capture: 
 
@@ -162,7 +162,7 @@ def send_request():
 
 ---
 
-## Getting a Session Cookie
+### Getting a Session Cookie
 
 So all we need to call the `va` web service is a valid `JSESSIONID` cookie, and then the world is our oyster ... but how do we get one in the first place? 
 

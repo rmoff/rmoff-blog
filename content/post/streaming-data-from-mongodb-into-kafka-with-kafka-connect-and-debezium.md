@@ -13,7 +13,7 @@ title = "Streaming Data from MongoDB into Kafka with Kafka Connect and Debezium"
 
 _Disclaimer: I am not a MongoDB person. These steps may or may not be appropriate and proper. But they worked for me :) Feel free to post in comments if I'm doing something wrong_
 
-## MongoDB config - enabling replica sets
+### MongoDB config - enabling replica sets
 
 For Debezium to be able to stream changes from MongoDB, Mongo needs to have replication configured:
 
@@ -77,11 +77,11 @@ Check `/var/log/mongodb/mongod.log`, should see replica set config success and o
 2018-03-07T13:12:26.048+0000 I REPL     [conn1] New replica set config in use: { _id: "mongo01", version: 1, protocolVersion: 1, members: [ { _id: 0, host: "127.0.0.1:27017", arbiterOnly: false, buildIndexes: true, hidden: false, priority: 1.0, tags: {}, slaveDelay: 0, votes: 1 } ], settings: { chainingAllowed: true, heartbeatIntervalMillis: 2000, heartbeatTimeoutSecs: 10, electionTimeoutMillis: 10000, catchUpTimeoutMillis: -1, catchUpTakeoverDelayMillis: 30000, getLastErrorModes: {}, getLastErrorDefaults: { w: 1, wtimeout: 0 }, replicaSetId: ObjectId('5a9fe53ac81eed28a3bf207a') } }
 ```
 
-## Setting up Debezium to stream changes from MongoDB into Apache Kafka
+### Setting up Debezium to stream changes from MongoDB into Apache Kafka
 
 There's a [detailed explanation of how Debezium CDC works with Debezium](http://debezium.io/docs/connectors/mongodb/) on the Debezium doc site.
 
-### Install Debezium Mongo plugin
+#### Install Debezium Mongo plugin
 
 ```
 mkdir ~/connect-jars
@@ -96,7 +96,7 @@ Add the plugin folder (e.g. `/home/rmoff/connect-jars`) to the Connect worker co
 plugin.path=share/java,/home/rmoff/connect-jars
 ```
 
-### Configure Debezium MongoDB connector
+#### Configure Debezium MongoDB connector
 
 Config file (`/home/rmoff/connect-config/mongodb.json`):
 
