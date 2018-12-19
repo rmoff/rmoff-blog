@@ -7,17 +7,17 @@ classes:
 
 ---
 
-*My primary blog writing is [elsewhere](https://www.confluent.io/blog/author/robin/) ([previously](http://ritt.md/rmoff)). I write at [rmoff.net](http://rmoff.net) for random tech scribblings and notes, and pictures of fried breakfasts.*
+_My primary blog writing is [elsewhere](https://www.confluent.io/blog/author/robin/) ([previously](http://ritt.md/rmoff)). I write at [rmoff.net](http://rmoff.net) for random tech scribblings and notes, and pictures of fried breakfasts._
 
 ---
 
-## `whoami`
+### `whoami`
 
-_Robin is a Developer Advocate at Confluent, the company founded by the creators of Apache Kafka, as well as an Oracle Groundbreaker Ambassador and ACE Director (alumnus). His career has always involved data, from the old worlds of COBOL and DB2, through the worlds of Oracle and Hadoop, and into the current world with Kafka. His particular interests are analytics, systems architecture, performance testing and optimization. He blogs at http://cnfl.io/rmoff and http://rmoff.net/ (and previously http://ritt.md/rmoff) and can be found tweeting grumpy geek thoughts as @rmoff. Outside of work he enjoys drinking good beer and eating fried breakfasts, although generally not at the same time._
+> Robin is a Developer Advocate at Confluent, the company founded by the creators of Apache Kafka, as well as an Oracle Groundbreaker Ambassador and ACE Director (alumnus). His career has always involved data, from the old worlds of COBOL and DB2, through the worlds of Oracle and Hadoop, and into the current world with Kafka. His particular interests are analytics, systems architecture, performance testing and optimization. He blogs at http://cnfl.io/rmoff and http://rmoff.net/ (and previously http://ritt.md/rmoff) and can be found tweeting grumpy geek thoughts as @rmoff. Outside of work he enjoys drinking good beer and eating fried breakfasts, although generally not at the same time.
 
 --- 
 
-## Speaking experience
+### Speaking experience
 
 Speaker since 2009 at conferences including Devoxx, USENIX LISA, Kafka Summit, Oracle OpenWorld, JavaZone, Big Data LDN, UKOUG, Oracle CODE, PGConf, etc plus numerous meetups.
 
@@ -25,7 +25,7 @@ Slides & Recordings: http://rmoff.net/presentations/
 
 ---
 
-## Social
+### Social
 
 * Twitter [@rmoff](https://twitter.com/rmoff/)
 * [Email](mailto:robin@rmoff.net)
@@ -47,7 +47,7 @@ Slides & Recordings: http://rmoff.net/presentations/
 
 ---
 
-## Mugshots
+### Mugshots
 
-![](/content/images/2018/05/ksldn18-01.jpg)
-![](/content/images/2018/05/robin-moffatt-600px.jpg)
+![](/images/2018/05/ksldn18-01.jpg)
+![](/images/2018/05/robin-moffatt-600px.jpg)
