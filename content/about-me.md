@@ -21,7 +21,7 @@ _My primary blog writing is [elsewhere](https://www.confluent.io/blog/author/rob
 
 Speaker since 2009 at conferences including Devoxx, USENIX LISA, Kafka Summit, Oracle OpenWorld, JavaZone, Big Data LDN, UKOUG, Oracle CODE, PGConf, etc plus numerous meetups.
 
-Slides & Recordings: http://rmoff.net/presentations/
+Slides & Recordings: http://rmoff.net/talks/
 
 ---
 
