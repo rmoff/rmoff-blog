@@ -1,6 +1,6 @@
 ---
 author : "Robin Moffatt"
-image : "/images/2018/06/IMG_3809.jpg"
+image : "/images/2016/05/photo-1458639817867-2c9d4c5dcad4.jpg"
 slug : "talks"
 title : "Talks"
 classes:
@@ -36,7 +36,7 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 * 📽 Recording 
   * [Devoxx Belgium](https://www.youtube.com/watch?v=RJtEacDX4Oc)
      * Rated [17](https://twitter.com/Devoxx/status/1064452715034669056) out of all the conference talks
-     * Scored 4.55/5, 102 votes
+     * Scored {{< math >}}4.55/5{{< /math >}}, 102 votes
   * [USENIX LISA18](https://www.youtube.com/watch?v=FD2z3bdN1Jw)
   * [Kraków meetup](https://www.youtube.com/watch?v=hZE409e1tlg&feature=youtu.be)
   * [Madrid meetup](https://www.youtube.com/watch?v=SvaMFCT_6GI)
