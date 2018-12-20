@@ -154,3 +154,40 @@ ksql-cli:
 {{< /highlight >}}
 
 Note that the `sleep infinity` is required, otherwise the container will exit since all of the defined `entrypoint` will have executed.
+
+### Install a JDBC driver for Kafka Connect
+
+Two techniques here, depending on whether the JDBC driver is available from a URL as a `tar` or `jar` (it needs to be a `jar`, and the Kafka Connect docker image doesn't have `unzip`)
+
+#### Option 1 : Download the JAR
+
+{{< highlight yaml "hl_lines=7-15">}}
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:5.1.0
+…
+    environment:
+…
+      CONNECT_PLUGIN_PATH: '/usr/share/java'
+    command: 
+      - /bin/bash
+      - -c 
+      - |
+        cd /usr/share/java/kafka-connect-jdbc/
+        curl https://cdn.mysql.com//Downloads/Connector-J/mysql-connector-java-8.0.13.tar.gz | tar xz 
+        /etc/confluent/docker/run 
+{{< /highlight >}}
+
+The fancy trick here is that `curl` pulls the tar down and pipes it through `tar`, directly into the current folder (which is the Kafka Connect JDBC folder). Once it's done this, it launches the Kafka Connect Docker run script. 
+Note that it doesn't matter if the JAR is in a sub-folder since Kafka Connect scans recursively for JARs.
+
+#### Option 2 : JAR is available locally
+
+Assuming you have the JAR locally, you can just mount it into the Kafka Connect container in the Kafka Connect JDBC folder (or sub-folder). 
+
+{{< highlight yaml "hl_lines=7-15">}}
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:5.1.0
+…
+    volumes:
+      - /my/local/folder/with/jdbc-driver/:/usr/share/java/kafka-connect-jdbc/jars/
+{{< /highlight >}}
