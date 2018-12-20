@@ -18,6 +18,7 @@ Here's a collection of useful articles that I've found over the years that give 
 * [Kellyn Pot’Vin-Gorman - Abstracts, Reviews and Conferences, Oh My!](http://dbakevlar.com/2013/10/abstracts-reviews-and-conferences-oh-my/)
 * [Russ Unger - Conference Proposals that Don’t Suck](http://alistapart.com/article/conference-proposals-that-dont-suck)
 * [Martin Widlake - Tips on Submitting an Abstract to Conference](https://mwidlake.wordpress.com/2015/04/17/tips-on-submitting-an-abstract-to-conference/)
+* [Bridget Kromhout - give actionable takeaways](https://bridgetkromhout.com/blog/give-actionable-takeaways/)
 
 ---
 
