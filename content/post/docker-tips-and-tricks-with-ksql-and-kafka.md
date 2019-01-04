@@ -18,15 +18,27 @@ So, here's a collection of tricks I use with Docker and Docker Compose that migh
 
 Often a container will be 'up' before it's _actually_ up. So Docker Compose's `depends_on` dependencies don't do everything we need here. For a service that exposes an HTTP endpoint (e.g. Kafka Connect, KSQL Server, etc) you can use this bash snippet to force a script to wait before continuing execution of something that requires the service to actually be ready and available: 
 
-{{< highlight shell >}}
+* KSQL: 
+
+    {{< highlight shell >}}
 
 echo -e "\n\n⏳ Waiting for KSQL to be available before launching CLI\n"
-while [ $$(curl -s -o /dev/null -w %{http_code} http://ksql-server:8088/) -eq 000 ]
+while [ $(curl -s -o /dev/null -w %{http_code} http://ksql-server:8088/) -eq 000 ]
 do 
-  echo -e $$(date) "KSQL Server HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://ksql-server:8088/) " (waiting for 200)"
+  echo -e $(date) "KSQL Server HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://ksql-server:8088/) " (waiting for 200)"
   sleep 5
 done
+{{< /highlight >}}
 
+* Kafka Connect: 
+
+    {{< highlight shell >}}
+
+echo "Waiting for Kafka Connect to start listening on kafka-connect-worker ⏳"
+while [ $(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) -eq 000 ] ; do 
+  echo -e $(date) " Kafka Connect listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) " (waiting for 200)"
+  sleep 5 
+done
 {{< /highlight >}}
 
 
@@ -104,12 +116,12 @@ kafka-connect:
     - -c 
     - |
       /etc/confluent/docker/run & 
-      echo "Waiting for Kafka Connect to start listening on $$CONNECT_REST_ADVERTISED_HOST_NAME ⏳"
-      while [ $$(curl -s -o /dev/null -w %{http_code} http://$$CONNECT_REST_ADVERTISED_HOST_NAME:$$CONNECT_REST_PORT/connectors) -eq 000 ] ; do 
-        echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://$$CONNECT_REST_ADVERTISED_HOST_NAME:$$CONNECT_REST_PORT/connectors) " (waiting for 200)"
+      echo "Waiting for Kafka Connect to start listening on kafka-connect-worker ⏳"
+      while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) -eq 000 ] ; do 
+        echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) " (waiting for 200)"
         sleep 5 
       done
-      nc -vz $$CONNECT_REST_ADVERTISED_HOST_NAME $$CONNECT_REST_PORT
+      nc -vz kafka-connect-worker 8083
       echo -e "\n--\n+> Creating Kafka Connect Elasticsearch sink"
       /scripts/create-es-sink.sh 
       sleep infinity

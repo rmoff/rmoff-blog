@@ -447,6 +447,39 @@ $ docker inspect --format&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;&l
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;      sleep infinity&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Note that the &lt;code&gt;sleep infinity&lt;/code&gt; is required, otherwise the container will exit since all of the defined &lt;code&gt;entrypoint&lt;/code&gt; will have executed.&lt;/p&gt;
+
+&lt;h3 id=&#34;install-a-jdbc-driver-for-kafka-connect&#34;&gt;Install a JDBC driver for Kafka Connect&lt;/h3&gt;
+
+&lt;p&gt;Two techniques here, depending on whether the JDBC driver is available from a URL as a &lt;code&gt;tar&lt;/code&gt; or &lt;code&gt;jar&lt;/code&gt; (it needs to be a &lt;code&gt;jar&lt;/code&gt;, and the Kafka Connect docker image doesn&amp;rsquo;t have &lt;code&gt;unzip&lt;/code&gt;)&lt;/p&gt;
+
+&lt;h4 id=&#34;option-1-download-the-jar&#34;&gt;Option 1 : Download the JAR&lt;/h4&gt;
+
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;kafka-connect:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;image:&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;confluentinc/cp-kafka-connect:&lt;span style=&#34;color:#666&#34;&gt;5.1&lt;/span&gt;.&lt;span style=&#34;color:#666&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;&lt;/span&gt;…&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;environment:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;&lt;/span&gt;…&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;CONNECT_PLUGIN_PATH:&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;/usr/share/java&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;command:&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;/bin/bash&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;-c&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;|
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        cd /usr/share/java/kafka-connect-jdbc/
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        curl https://cdn.mysql.com//Downloads/Connector-J/mysql-connector-java-8.0.13.tar.gz | tar xz 
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:block;width:100%;background-color:#e5e5e5&#34;&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        /etc/confluent/docker/run &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The fancy trick here is that &lt;code&gt;curl&lt;/code&gt; pulls the tar down and pipes it through &lt;code&gt;tar&lt;/code&gt;, directly into the current folder (which is the Kafka Connect JDBC folder). Once it&amp;rsquo;s done this, it launches the Kafka Connect Docker run script.
+Note that it doesn&amp;rsquo;t matter if the JAR is in a sub-folder since Kafka Connect scans recursively for JARs.&lt;/p&gt;
+
+&lt;h4 id=&#34;option-2-jar-is-available-locally&#34;&gt;Option 2 : JAR is available locally&lt;/h4&gt;
+
+&lt;p&gt;Assuming you have the JAR locally, you can just mount it into the Kafka Connect container in the Kafka Connect JDBC folder (or sub-folder).&lt;/p&gt;
+
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;kafka-connect:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;image:&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;confluentinc/cp-kafka-connect:&lt;span style=&#34;color:#666&#34;&gt;5.1&lt;/span&gt;.&lt;span style=&#34;color:#666&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;&lt;/span&gt;…&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;volumes:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;/my/local/folder/with/jdbc-driver/:/usr/share/java/kafka-connect-jdbc/jars/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 </description>
 		</item>
 		
