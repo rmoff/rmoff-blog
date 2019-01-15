@@ -1,0 +1,60 @@
+---
+title: 'Logging Kafka Connect to File'
+date: "2019-01-15T10:40:57Z"
+url: "/post/logging-kafka-connect-to-file"
+description: ""
+tldr: ""
+image: ""
+credit: ""
+thumbnail: ""
+categories:
+- Kafka Connect
+---
+
+By default Kafka Connect sends its output to `stdout`, so you'll see it on the console, Docker logs, or wherever. Sometimes you might want to route it to file, and you can do this by reconfiguring log4j. To find out the config file location simply inspect the running Kafka Connect process, or the existing `stdout`, and look for the location of `connect-log4j.properties` in `-Dlog4j.configuration`: 
+
+[source,bash]
+----
+[2019-01-15 10:34:22,755] INFO WorkerInfo values:
+        jvm.args = -Xms256M, -Xmx2G, -XX:+UseG1GC, -XX:MaxGCPauseMillis=20, -XX:InitiatingHeapOccupancyPercent=35, -XX:+ExplicitGCInvokesConcurrent, -Djava.awt.headless=true, -Dcom.sun.management.jmxremote, -Dcom.sun.management.jmxremote.authenticate=false, -Dcom.sun.management.jmxremote.ssl=false, -Dkafka.logs.dir=/var/folders/q9/2tg_lt9j6nx29rvr5r5jn_bw0000gp/T/confluent.tcrfo4zH/connect/logs, -Dlog4j.configuration=file:/Users/Robin/cp/confluent-5.1.0/bin/../etc/kafka/connect-log4j.properties
+----
+
+By default the file looks like this: 
+
+[source,bash]
+----
+log4j.rootLogger=INFO, stdout
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c:%L)%n
+
+log4j.logger.org.apache.zookeeper=ERROR
+log4j.logger.org.I0Itec.zkclient=ERROR
+log4j.logger.org.reflections=ERROR
+----
+
+To send the output to file instead, change it to this: 
+
+[source,bash]
+----
+log4j.rootLogger=INFO, logFile
+
+log4j.appender.logFile=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.logFile.DatePattern='.'yyyy-MM-dd-HH
+log4j.appender.logFile.File=/tmp/connect-worker.log
+log4j.appender.logFile.layout=org.apache.log4j.PatternLayout
+log4j.appender.logFile.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c:%L)%n
+
+log4j.logger.org.apache.zookeeper=ERROR
+log4j.logger.org.I0Itec.zkclient=ERROR
+log4j.logger.org.reflections=ERROR
+----
+
+This will write it to `/tmp/connect-worker.log`. 
+
+See also https://rmoff.net/2017/06/12/configuring-kafka-connect-to-log-rest-http-messages-to-a-separate-file/[Configuring Kafka Connect to log REST HTTP messages to a separate file]
