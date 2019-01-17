@@ -1,0 +1,84 @@
+---
+title: 'KSQL REST API cheatsheet'
+date: "2019-01-17T12:12:11Z"
+url: "/post/ksql-rest-api-cheatsheet"
+description: "KSQL REST API cheatsheet"
+tldr: ""
+image: "/images/2019/01/IMG_7935.jpg"
+credit: ""
+thumbnail: ""
+categories:
+- KSQL
+- rest
+---
+
+Full reference is https://docs.confluent.io/current/ksql/docs/developer-guide/api.html[here]
+
+* https://docs.confluent.io/current/ksql/docs/developer-guide/api.html#run-a-query-and-stream-back-the-output[Run a query]
++
+{{< highlight shell >}}
+$ curl -X POST \
+    http://localhost:8088/query \
+    -H 'content-type: application/vnd.ksql.v1+json; charset=utf-8' \
+    -d '{"ksql":"SELECT * FROM COMPUTER_T;", "streamsProperties": {
+      "ksql.streams.auto.offset.reset": "earliest"
+    }}'
+
+
+{"row":{"columns":[1547723561637,"100",1,"100","e0:a1:d7:18:c2:72"]},"errorMessage":null,"finalMessage":null}
+{"row":{"columns":[1547723561637,"101",2,"101","e1:a3:d7:18:c2:72"]},"errorMessage":null,"finalMessage":null}
+{"row":{"columns":[1547723561637,"102",3,"102","e2:a4:d7:18:c2:72"]},"errorMessage":null,"finalMessage":null}
+
+{{< /highlight >}}
++
+Remember, KSQL is a continuous query so this will keep executing; use `LIMIT x` if you just want the first `x` rows. 
+
+* Run a statement, use jq to format the output 
++
+{{< highlight shell >}}
+$ curl -s -X "POST" "http://localhost:8088/ksql" \
+       -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+       -d '{
+    "ksql": "LIST TABLES;"
+  }'| jq '.'
+[
+  {
+    "@type": "tables",
+    "statementText": "LIST TABLES;",
+    "tables": [
+      {
+        "type": "TABLE",
+        "name": "COMPUTER_T",
+        "topic": "computers",
+        "format": "JSON",
+        "isWindowed": false
+      },
+      {
+        "type": "TABLE",
+        "name": "COMP_WATCH_BY_EMP_ID_T",
+        "topic": "COMP_WATCH_BY_EMP_ID_T",
+        "format": "AVRO",
+        "isWindowed": false
+      },
+      {
+        "type": "TABLE",
+        "name": "EMPLOYEE_T",
+        "topic": "employees",
+        "format": "JSON",
+        "isWindowed": false
+      }
+    ]
+  }
+]
+{{< /highlight >}}
+
+* Get runtime stats for a table/stream using `DESCRIBE EXTENDED` and `jq`: 
++
+{{< highlight shell >}}
+$ curl -s -X "POST" "http://localhost:8088/ksql" \
+       -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+       -d '{
+    "ksql": "DESCRIBE EXTENDED COMPUTER_T;"
+  }'| jq '.[].sourceDescription.statistics'
+"consumer-messages-per-sec:         0 consumer-total-bytes:       193 consumer-total-messages:         3     last-message: 2019-01-17T11:54:08.593Z"
+{{< /highlight >}}
