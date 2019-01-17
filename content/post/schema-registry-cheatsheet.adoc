@@ -1,0 +1,169 @@
+---
+title: 'Confluent Schema Registry REST API cheatsheet'
+date: "2019-01-17T11:25:40Z"
+url: "/post/schema-registry-cheatsheet"
+description: "Confluent Schema Registry REST API cheatsheet"
+summary: "Confluent Schema Registry REST API cheatsheet"
+image: "/images/2019/01/IMG_7936.jpg"
+credit: ""
+thumbnail: ""
+categories:
+- rest
+- Schema Registry
+---
+
+= Schema Registry REST API cheatsheet
+
+The https://docs.confluent.io/current/schema-registry/docs/index.html[Schema Registry] support a REST API for finding out information about the schemas within it. Here's a quick cheatsheat with REST calls that I often use. 
+
+* https://docs.confluent.io/current/schema-registry/docs/api.html#get--subjects[List 'subjects' (topics)]
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/"
+["COMP_WATCH_BY_EMP_ID_T-value"]⏎
+{{< /highlight >}}
+* https://docs.confluent.io/current/schema-registry/docs/api.html#get--schemas-ids-int-%20id[List schema for given ID]
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/schemas/ids/1"
+{"schema":"{\"type\":\"record\",\"name\":\"KsqlDataSourceSchema\",\"namespace\":\"io.confluent.ksql.avro_schemas\",\"fields\":[{\"name\":\"EMP_ID\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_NAME\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_KEY\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"MACADDR\",\"type\":[\"null\",\"string\"],\"default\":null}]}"}⏎
+{{< /highlight >}}
+
+* https://docs.confluent.io/current/schema-registry/docs/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)[List latest schema for given subject]
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/COMP_WATCH_BY_EMP_ID_T-value/versions/latest"|jq '.'
+{
+  "subject": "COMP_WATCH_BY_EMP_ID_T-value",
+  "version": 1,
+  "id": 1,
+  "schema": "{\"type\":\"record\",\"name\":\"KsqlDataSourceSchema\",\"namespace\":\"io.confluent.ksql.avro_schemas\",\"fields\":[{\"name\":\"EMP_ID\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_NAME\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_KEY\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"MACADDR\",\"type\":[\"null\",\"string\"],\"default\":null}]}"
+}
+{{< /highlight >}}
+
+* https://docs.confluent.io/current/schema-registry/docs/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)[List schema for given subject and version]
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/COMP_WATCH_BY_EMP_ID_T-value/versions/1"|jq '.'
+{
+  "subject": "COMP_WATCH_BY_EMP_ID_T-value",
+  "version": 1,
+  "id": 1,
+  "schema": "{\"type\":\"record\",\"name\":\"KsqlDataSourceSchema\",\"namespace\":\"io.confluent.ksql.avro_schemas\",\"fields\":[{\"name\":\"EMP_ID\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_NAME\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"EMP_KEY\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"MACADDR\",\"type\":[\"null\",\"string\"],\"default\":null}]}"
+}
+{{< /highlight >}}
+
+* https://docs.confluent.io/current/schema-registry/docs/api.html#get--subjects-(string-%20subject)-versions[List versions for given subject]
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/COMP_WATCH_BY_EMP_ID_T-value/versions/"
+[1]⏎
+{{< /highlight >}}
+
+* Use https://stedolan.github.io/jq/[`jq`] to reformat the schema JSON: 
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/COMP_WATCH_BY_EMP_ID_T-value/versions/1"|jq '.schema|fromjson'
+{
+  "type": "record",
+  "name": "KsqlDataSourceSchema",
+  "namespace": "io.confluent.ksql.avro_schemas",
+  "fields": [
+    {
+      "name": "EMP_ID",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "EMP_NAME",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "EMP_KEY",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "MACADDR",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  ]
+}
+{{< /highlight >}}
+
+* Use https://stedolan.github.io/jq/[`jq`] to show schema for columns matching a given name pattern
++
+{{< highlight shell >}}
+$ curl -s "http://localhost:8081/subjects/oracle-04-NUM_TEST-value/versions/latest"|jq '.schema|fromjson.fields[] | select (.name | contains("AMOUNT"))'
+{
+  "name": "AMOUNT_01",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_02",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_03",
+  "type": [
+    "null",
+    "int"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_04",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_05",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_06",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{
+  "name": "AMOUNT_07",
+  "type": [
+    "null",
+    "double"
+  ],
+  "default": null
+}
+{{< /highlight >}}
+
