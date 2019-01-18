@@ -17,7 +17,7 @@ I [write](https://www.confluent.io/blog/author/robin/) and [speak](http://rmoff.
 
 So here's a short, and longer, answer! 
 
-### tl;dr
+### tl;dr
 
 An iOS app called [Paper, from a company called FiftyThree](https://paper.bywetransfer.com/)
 
