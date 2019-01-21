@@ -1,0 +1,89 @@
+---
+title: 'Replacing UTF8 non-breaking-space with bash/sed on the Mac'
+date: "2019-01-21T14:01:24Z"
+url: "/post/replacing-utf8-non-breaking-space-with-bash-sed-on-the-mac"
+description: ""
+tldr: ""
+image: "/images/2019/01/fullsizeoutput_7f5d.jpeg"
+credit: ""
+thumbnail: ""
+categories:
+- bash
+---
+
+= Replacing UTF8 non-breaking-space with bash/sed on the Mac
+
+A script I'd batch-run on my Markdown files had inserted a UTF-8 non-breaking-space between Markdown heading indicator and the text, which meant that `### My title` actually got rendered as that, instead of an H3 title. 
+
+Looking at the file contents, I could see it wasn't just a space between the `#` and the text, but a non-breaking space.
+
+<!--more-->
+
+Both `od` and `hexdump` can be used : 
+
+{{< highlight shell >}}
+$ grep -e "Kit$" content/post/tools-i-use-ipad-pro.md | od -aox
+0000000    #   #   #   �   �   K   i   t  nl
+           021443  141043  045640  072151  000012
+             2323    c223    4ba0    7469    000a
+0000011
+
+$ grep -e "Kit$" content/post/tools-i-use-ipad-pro.md | hexdump -C
+00000000  23 23 23 c2 a0 4b 69 74  0a                       |###..Kit.|
+{{< /highlight >}}
+
+So here the hash (`#`) character is hex `23`, and the UTF8 non-breaking space `c2 a0` in hex.
+
+You can also see this with `printf`: 
+
+{{< highlight shell >}}
+$ printf '\xC2\xA0\x23' | od -aox
+0000000    �   �   #
+           120302  000043
+             a0c2    0023
+
+$ printf '\xC2\xA0\x23' | hexdump -C
+00000000  c2 a0 23                                          |..#|
+00000003             
+{{< /highlight >}}
+
+On Linux it's easy enough to use `sed` to replace the UTF-8 non-breaking-space with a plain space: 
+
+{{< highlight shell >}}
+$ printf '\xC2\xA0\x23' | sed 's/\xC2\xA0/ /g' | hexdump -C
+00000000  20 23                                             | #|
+00000002
+{{< /highlight >}}
+
+On the Mac though, no such luck - it just doesn't work: 
+
+{{< highlight shell >}}
+$ printf '\xC2\xA0\x23' | sed 's/\xC2\xA0/ /g' | hexdump -C
+00000000  c2 a0 23 0a                                       |..#.|
+00000004
+{{< /highlight >}}
+
+Thanks to https://stackoverflow.com/questions/14889005/hex-codes-in-sed-not-behaving-as-expected-on-osx/14889910#14889910[StackOverflow] I found that a magic dollar sign before the `sed` string is all it takes:
+
+{{< highlight shell >}}
+printf '\xC2\xA0\x23' | sed $'s/\xC2\xA0/ /g' | hexdump -C
+00000000  20 23 0a                                          | #.|
+00000003
+{{< /highlight >}}
+
+So now prototype the batch conversion, targeting a single file: 
+
+{{< highlight shell >}}
+$ sed -i'.bak' $'s/\x23\xC2\xA0/# /g' content/post/tools-i-use-ipad-pro.md
+$ grep -e "Kit$" content/post/tools-i-use-ipad-pro.md | hexdump -C
+00000000  23 23 23 20 4b 69 74 0a                           |### Kit.|
+00000008
+{{< /highlight >}}
+
+Looks good; now to convert all the Markdown files: 
+
+{{< highlight shell >}}
+$ sed -i'.bak' $'s/\x23\xC2\xA0/# /g' content/post/*.md
+{{< /highlight >}}
+
+Useful reference: https://superuser.com/a/517852/66380
