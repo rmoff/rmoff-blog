@@ -1,0 +1,172 @@
+---
+title: 'How KSQL handles case'
+date: "2019-01-21T12:05:48Z"
+url: "/post/how-ksql-handles-case"
+description: ""
+tldr: ""
+image: "/images/2019/01/IMG_7989.jpg"
+credit: ""
+thumbnail: ""
+categories:
+- ksql
+---
+
+https://www.confluent.io/ksql[KSQL] is generally case-sensitive. Very sensitive, at times ;-)
+
+== Topics
+
+Topics need to be quoted, always. 
+
+{{< highlight sql >}}
+ksql> LIST TOPICS;
+
+ Kafka Topic            | Registered | Partitions | Partition Replicas | Consumers | ConsumerGroups
+----------------------------------------------------------------------------------------------------
+ localpcap              | true       | 1          | 1                  | 2         | 2
+
+ksql> PRINT localpcap;
+Could not find topic 'LOCALPCAP', KSQL uses uppercase.
+To print a case-sensitive topic apply quotations, for example: print 'topic';
+ksql> PRINT 'localpcap';
+{"ROWTIME":1548071548370,"ROWKEY":"null","index":{"_index":"packets-2019-01-21","_type":"pcap_file"}}
+…
+{{< /highlight >}}
+
+{{< highlight sql >}}
+ksql> CREATE STREAM FOO (COL1 VARCHAR) \
+        WITH (KAFKA_TOPIC='localPCAP', VALUE_FORMAT='JSON');
+Kafka topic does not exist: localPCAP
+
+ksql> CREATE STREAM FOO (COL1 VARCHAR) \
+        WITH (KAFKA_TOPIC='localpcap', VALUE_FORMAT='JSON');
+
+ Message
+----------------
+ Stream created
+----------------
+{{< /highlight >}}
+
+== Statements
+
+Statements are not case-sensitive: 
+
+{{< highlight sql >}}
+ksql> LisT toPICs;
+
+ Kafka Topic            | Registered | Partitions | Partition Replicas | Consumers | ConsumerGroups
+----------------------------------------------------------------------------------------------------
+ localpcap              | true       | 1          | 1                  | 2         | 2
+{{< /highlight >}}
+
+== Object names
+
+This gets a bit more complicated. TL;DR is that KSQL will force unquoted names to uppercase. Thus, these statements all succeed since *the object itself is uppercase*: 
+
+{{< highlight sql >}}
+ksql> LIST STREAMS;
+
+ Stream Name     | Kafka Topic     | Format
+--------------------------------------------
+ SOURCE          | SOURCE          | JSON
+--------------------------------------------
+
+ksql> SELECT * FROM source LIMIT 1;
+1548071546868 | null | null
+Limit Reached
+Query terminated
+
+ksql> SELECT * FROM SOURCE LIMIT 1;
+1548071546868 | null | 0
+Limit Reached
+Query terminated
+
+ksql> SELECT * FROM souRCE LIMIT 1;
+1548071546868 | null | null
+Limit Reached
+Query terminated
+{{< /highlight >}}
+
+However, this *mixed-case object name*  must be quoted when referenced: 
+
+{{< highlight sql >}}
+ksql> LIST STREAMS;
+
+ Stream Name     | Kafka Topic     | Format
+--------------------------------------------
+ MixedCaseStream | MixedCaseStream | JSON
+
+ksql> SELECT COL1 FROM MixedCaseStream LIMIT 1;
+Failed to prepare statement: MIXEDCASESTREAM does not exist.
+Caused by: MIXEDCASESTREAM does not exist.
+
+ksql> SELECT COL1 FROM "MixedCaseStream" LIMIT 1;
+null
+Limit Reached
+Query terminated
+ksql>
+{{< /highlight >}}
+
+A slight twist on this is that `SELECT *` doesn't work, but specifying the individual columns does (https://github.com/confluentinc/ksql/issues/2176[#2176]): 
+
+{{< highlight sql >}}
+ksql> DESCRIBE "MixedCaseStream";
+
+Name                 : MixedCaseStream
+ Field                    | Type
+------------------------------------------------------
+ ROWTIME                  | BIGINT           (system)
+ ROWKEY                   | VARCHAR(STRING)  (system)
+ COL1                     | VARCHAR(STRING)
+ lowercase_col1           | VARCHAR(STRING)
+ MixedCase_COL1           | VARCHAR(STRING)
+ UPPERCASE_COL1           | VARCHAR(STRING)
+ NOTQUOTED_MIXEDCASE_COL1 | VARCHAR(STRING)
+------------------------------------------------------
+For runtime statistics and query details run: DESCRIBE EXTENDED <Stream,Table>;
+ksql> SELECT * FROM "MixedCaseStream";
+Invalid Expression MixedCaseStream.ROWTIME.
+ksql>
+ksql> SELECT ROWTIME, COL1 FROM "MixedCaseStream" LIMIT 1;
+1548071546868 | null
+Limit Reached
+Query terminated
+{{< /highlight >}}
+
+And now we get to the crux of it, which is that *every* non-uppercase object and column needs quoting: 
+
+{{< highlight sql >}}
+ksql> SELECT ROWTIME, ROWKEY, COL1, lowercase_col1, \
+             MixedCase_COL1, UPPERCASE_COL1, \
+             NOTQUOTED_MIXEDCASE_COL1 \
+        FROM "MixedCaseStream" LIMIT 1;
+Column LOWERCASE_COL1 cannot be resolved.
+ksql>
+ksql> SELECT ROWTIME, ROWKEY, COL1, "lowercase_col1", \
+             "MixedCase_COL1", UPPERCASE_COL1, \
+             NOTQUOTED_MIXEDCASE_COL1 \
+        FROM "MixedCaseStream" LIMIT 1;
+1548071547366 | null | null | null | null | null | null
+Limit Reached
+Query terminated
+{{< /highlight >}}
+
+== Creating Mixed-Case objects and columns
+
+TL;DR : enclose them in quotes. 
+
+{{< highlight sql >}}
+ksql> CREATE STREAM "MixedCaseStream" AS \
+            SELECT COL1, \
+                   COL1 AS "lowercase_col1", \
+                   COL1 AS "MixedCase_COL1", \
+                   COL1 AS "UPPERCASE_COL1", \
+                   COL1 AS NOTQUOTED_MixedCase_COL1 \
+          FROM SOURCE;
+
+ Message
+----------------------------
+ Stream created and running
+----------------------------
+{{< /highlight >}}
+
+*BUT* as shown above, once created as a non-uppercase column, you need to forever-after quote it when referencing it. 
