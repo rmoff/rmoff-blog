@@ -11,30 +11,38 @@ title = "ERROR: Invalid interpolation format for \"command\" option in service�
 
 +++
 
+
 Doing some funky Docker Compose stuff, including: 
 
-    …
-    kafkacat:
-      image: confluentinc/cp-kafkacat:latest
-      depends_on:
-        - kafka
-      command: 
-        - bash 
-        - -c 
-        - |
-          echo "Waiting for Kafka ⏳"
-          cub kafka-ready -b kafka:29092 1 300 && 
-          while [ 1 -eq 1 ]
-            do awk '{print $0;system("sleep 0.5");}' /data/data.json | \
-                kafkacat -b kafka:29092 -P -t purchases
-            done
-      volumes: 
-        - $PWD:/data
-    …
+
+<!--more-->
+
+{{< highlight yaml >}}
+  …
+  kafkacat:
+    image: confluentinc/cp-kafkacat:latest
+    depends_on:
+      - kafka
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Waiting for Kafka ⏳"
+        cub kafka-ready -b kafka:29092 1 300 && 
+        while [ 1 -eq 1 ]
+          do awk '{print $0;system("sleep 0.5");}' /data/data.json | \
+              kafkacat -b kafka:29092 -P -t purchases
+          done
+    volumes: 
+      - $PWD:/data
+  …
+{{< /highlight >}}
 
 Run it: 
 
-    $ docker-compose up -d
+{{< highlight shell >}}
+$ docker-compose up -d
+{{< /highlight >}}
 
 
 Oh noes! Error! 
@@ -44,28 +52,32 @@ Oh noes! Error!
 
 The cause? `$` in the embedded `command`:
 
-    …
-    do awk '{print $0;system("sleep 0.5");}' /data/data.json | \
-    …
+{{< highlight shell >}}
+…
+do awk '{print $0;system("sleep 0.5");}' /data/data.json | \
+…
+{{< /highlight >}}
 
 
 
 The fix? Double it up: 
 
+{{< highlight yaml >}}
 
-    kafkacat:
-      image: confluentinc/cp-kafkacat:latest
-      depends_on:
-        - kafka
-      command: 
-        - bash 
-        - -c 
-        - |
-          echo "Waiting for Kafka ⏳"
-          cub kafka-ready -b kafka:29092 1 300 && 
-          while [ 1 -eq 1 ]
-            do awk '{print $$0;system("sleep 0.5");}' /data/data.json | \
-                kafkacat -b kafka:29092 -P -t purchases
-            done
-      volumes: 
-        - $PWD:/data
+  kafkacat:
+    image: confluentinc/cp-kafkacat:latest
+    depends_on:
+      - kafka
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Waiting for Kafka ⏳"
+        cub kafka-ready -b kafka:29092 1 300 && 
+        while [ 1 -eq 1 ]
+          do awk '{print $$0;system("sleep 0.5");}' /data/data.json | \
+              kafkacat -b kafka:29092 -P -t purchases
+          done
+    volumes: 
+      - $PWD:/data
+{{< /highlight >}}

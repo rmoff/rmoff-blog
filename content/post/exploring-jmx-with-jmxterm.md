@@ -13,6 +13,9 @@ title = "Exploring JMX with jmxterm"
 
 Check out the [jmxterm repository](https://github.com/jiaqi/jmxterm/) / Download jmxterm from [http://wiki.cyclopsgroup.org/jmxterm/](http://wiki.cyclopsgroup.org/jmxterm/)
 
+<!--more-->
+
+
 Launch: 
 
     java -jar ~/Downloads/jmxterm-1.0.0-uber.jar --url localhost:30002

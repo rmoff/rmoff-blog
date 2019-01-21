@@ -13,6 +13,9 @@ title = "Streaming geopoint data from Kafka to Elasticsearch"
 
 Using the [Elasticsearch Kafka Connect connector](https://www.confluent.io/connector/kafka-connect-elasticsearch/) to stream events from a Kafka topic to Elasticsearch. 
 
+<!--more-->
+
+
 ```
 curl -X "POST" "http://kafka-connect:8083/connectors/" \
      -H "Content-Type: application/json" \

@@ -15,6 +15,9 @@ title = "Flatten CDC records in KSQL"
 
 Data comes into Kafka in many shapes and sizes. Sometimes it's from CDC tools, and may be nested like this: 
 
+<!--more-->
+
+
 ```
 {
   "SCN": 12206116841348,

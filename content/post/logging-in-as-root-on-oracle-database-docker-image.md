@@ -11,15 +11,19 @@ title = "Logging in as root on Oracle Database Docker image"
 
 +++
 
+
 tl;dr: 
 
-    docker exec --interactive \
-                --tty \
-                --user root \
-                --workdir / \
-                oracle-container-name bash
+{{< highlight shell >}}
+docker exec --interactive \
+            --tty \
+            --user root \
+            --workdir / \
+            oracle-container-name bash
 
----
+{{< /highlight >}}
+
+<!--more-->
 
 
 Using Oracle's [Docker database image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) I wanted to install some additional apps, without modifying the `Dockerfile`. 
