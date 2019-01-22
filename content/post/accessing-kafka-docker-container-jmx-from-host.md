@@ -11,7 +11,7 @@ title = "Accessing Kafka Docker containers' JMX from host"
 
 +++
 
-See also : https://docs.confluent.io/current/installation/docker/docs/operations/monitoring.html
+_See also [docs](https://docs.confluent.io/current/installation/docker/docs/operations/monitoring.html)._
 
 To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: `<x>_JMX_HOSTNAME` and `<x>_JMX_PORT`, prefixed by a component name. Here it's illustrated for KSQL: 
 
@@ -22,6 +22,8 @@ For Kafka, Kafka Connect, and Zookeeper use the prefix `KAFKA`, i.e.
 
 * `KAFKA_JMX_HOSTNAME`
 * `KAFKA_JMX_PORT`
+
+TODO: Confirm values to use for Schema Registry and REST Proxy
 
 If you don't set `<x>_JMX_HOSTNAME` then the Docker launch script uses the _host details of the container_, which results in connectivity problems. 
 
@@ -47,3 +49,28 @@ $>open localhost:18088
 
 For JConsole it'll just hang/timeout, or appear to work but disconnected.
 
+To validate your connection easily you can use `jmxterm`: 
+
+{{< highlight shell >}}
+$ echo 'domains' | java -jar ~/Downloads/jmxterm-1.0.0-uber.jar  -l localhost:18088 -n -v silent
+JMImplementation
+com.sun.management
+java.lang
+java.nio
+java.util.logging
+kafka.connect
+kafka.consumer
+kafka.producer
+
+$ echo 'domains' | java -jar ~/Downloads/jmxterm-1.0.0-uber.jar  -l localhost:18086 -n -v silent
+JMImplementation
+com.sun.management
+java.lang
+java.nio
+java.util.logging
+log4j
+org.apache.ZooKeeperService
+
+{{< /highlight >}}
+
+Read more about [jxmterm here](https://rmoff.net/2018/09/19/exploring-jmx-with-jmxterm/)
