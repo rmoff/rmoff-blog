@@ -13,17 +13,19 @@ title = "Accessing Kafka Docker containers' JMX from host"
 
 _See also [docs](https://docs.confluent.io/current/installation/docker/docs/operations/monitoring.html)._
 
-To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: `<x>_JMX_HOSTNAME` and `<x>_JMX_PORT`, prefixed by a component name. Here it's illustrated for KSQL: 
+To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: `<x>_JMX_HOSTNAME` and `<x>_JMX_PORT`, prefixed by a component name. 
 
-* `KSQL_JMX_HOSTNAME` - the hostname/IP of the *host* machine. This is used by the JMX client to connect back into JMX, so must be accessible from the _host machine running the JMX client_. If you're just running your JMX client locally on the Docker host, you can set this to `127.0.0.1`
-* `KSQL_JMX_PORT` - a port on which you want to access the metrics. Make sure you expose this port through Docker
+* `<x>_JMX_HOSTNAME` - the hostname/IP of the *host* machine. This is used by the JMX client to connect back into JMX, so must be accessible from the _host machine running the JMX client_. If you're just running your JMX client locally on the Docker host, you can set this to `127.0.0.1`
+* `<x>_JMX_PORT` - a port on which you want to access the metrics. Make sure you expose this port through Docker
 
-For Kafka, Kafka Connect, and Zookeeper use the prefix `KAFKA`, i.e.
-
-* `KAFKA_JMX_HOSTNAME`
-* `KAFKA_JMX_PORT`
-
-TODO: Confirm values to use for Schema Registry and REST Proxy
+Component|Hostname|Port
+-|-|-
+Kafka|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
+Kafka Connect|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
+Zookeeper|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
+KSQL|`KSQL_JMX_HOSTNAME`|`KSQL_JMX_PORT`
+REST Proxy|`KAFKAREST_JMX_HOSTNAME`|`KAFKAREST_JMX_PORT`
+Schema Registry|`SCHEMA_REGISTRY_JMX_HOSTNAME`|`SCHEMA_REGISTRY_JMX_PORT`
 
 If you don't set `<x>_JMX_HOSTNAME` then the Docker launch script uses the _host details of the container_, which results in connectivity problems. 
 
