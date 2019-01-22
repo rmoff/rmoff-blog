@@ -11,12 +11,19 @@ title = "Accessing Kafka Docker containers' JMX from host"
 
 +++
 
-To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: 
+See also : https://docs.confluent.io/current/installation/docker/docs/operations/monitoring.html
+
+To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: `<x>_JMX_HOSTNAME` and `<x>_JMX_PORT`, prefixed by a component name. Here it's illustrated for KSQL: 
 
 * `KSQL_JMX_HOSTNAME` - the hostname/IP of the *host* machine. This is used by the JMX client to connect back into JMX, so must be accessible from the _host machine running the JMX client_. If you're just running your JMX client locally on the Docker host, you can set this to `127.0.0.1`
 * `KSQL_JMX_PORT` - a port on which you want to access the metrics. Make sure you expose this port through Docker
 
-If you don't set `KSQL_JMX_HOSTNAME` then the Docker launch script uses the _host details of the container_, which results in connectivity problems. 
+For Kafka, Kafka Connect, and Zookeeper use the prefix `KAFKA`, i.e.
+
+* `KAFKA_JMX_HOSTNAME`
+* `KAFKA_JMX_PORT`
+
+If you don't set `<x>_JMX_HOSTNAME` then the Docker launch script uses the _host details of the container_, which results in connectivity problems. 
 
 From [jmxterm](http://wiki.cyclopsgroup.org/jmxterm/) you'll get errors like: 
 
@@ -39,3 +46,4 @@ $>open localhost:18088
 ```
 
 For JConsole it'll just hang/timeout, or appear to work but disconnected.
+

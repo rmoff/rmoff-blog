@@ -7,7 +7,92 @@
 		<language>en-us</language>
 		<author>Robin Moffatt</author>
 		<rights>Copyright (c) 2019</rights>
-		<updated>2019-01-21 12:05:48 &#43;0000 UTC</updated>
+		<updated>2019-01-21 14:01:24 &#43;0000 UTC</updated>
+		
+		<item>
+			<title>Replacing UTF8 non-breaking-space with bash/sed on the Mac</title>
+			<link>https://rmoff.github.io/post/replacing-utf8-non-breaking-space-with-bash-sed-on-the-mac/</link>
+			<pubDate>Mon, 21 Jan 2019 14:01:24 UTC</pubDate>
+			<author>Robin Moffatt</author>
+			<guid>https://rmoff.github.io/post/replacing-utf8-non-breaking-space-with-bash-sed-on-the-mac/</guid>
+			<description>&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;A script I&amp;#8217;d batch-run on my Markdown files had inserted a UTF-8 non-breaking-space between Markdown heading indicator and the text, which meant that &lt;code&gt;&lt;mark&gt;#&lt;/mark&gt; My title&lt;/code&gt; actually got rendered as that, instead of an H3 title.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;Looking at the file contents, I could see it wasn&amp;#8217;t just a space between the &lt;code&gt;#&lt;/code&gt; and the text, but a non-breaking space.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;Both &lt;code&gt;od&lt;/code&gt; and &lt;code&gt;hexdump&lt;/code&gt; can be used :&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ grep -e &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;Kit&lt;/span&gt;$&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;&lt;/span&gt; content/post/tools-i-use-ipad-pro.md | od -aox
+&lt;span style=&#34;color:#666&#34;&gt;0000000&lt;/span&gt;    &lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;#   #   #   �   �   K   i   t  nl&lt;/span&gt;
+           &lt;span style=&#34;color:#666&#34;&gt;021443&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;141043&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;045640&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;072151&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;000012&lt;/span&gt;
+             &lt;span style=&#34;color:#666&#34;&gt;2323&lt;/span&gt;    c223    4ba0    &lt;span style=&#34;color:#666&#34;&gt;7469&lt;/span&gt;    000a
+&lt;span style=&#34;color:#666&#34;&gt;0000011&lt;/span&gt;
+
+$ grep -e &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;Kit&lt;/span&gt;$&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;&lt;/span&gt; content/post/tools-i-use-ipad-pro.md | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; c2 a0 4b &lt;span style=&#34;color:#666&#34;&gt;69&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;74&lt;/span&gt;  0a                       |&lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;###..Kit.|&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;So here the hash (&lt;code&gt;#&lt;/code&gt;) character is hex &lt;code&gt;23&lt;/code&gt;, and the UTF8 non-breaking space &lt;code&gt;c2 a0&lt;/code&gt; in hex.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;You can also see this with &lt;code&gt;printf&lt;/code&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ &lt;span style=&#34;color:#008000&#34;&gt;printf&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;\xC2\xA0\x23&amp;#39;&lt;/span&gt; | od -aox
+&lt;span style=&#34;color:#666&#34;&gt;0000000&lt;/span&gt;    �   �   #
+           &lt;span style=&#34;color:#666&#34;&gt;120302&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;000043&lt;/span&gt;
+             a0c2    &lt;span style=&#34;color:#666&#34;&gt;0023&lt;/span&gt;
+
+$ &lt;span style=&#34;color:#008000&#34;&gt;printf&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;\xC2\xA0\x23&amp;#39;&lt;/span&gt; | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  c2 a0 &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt;                                          |..#|
+&lt;span style=&#34;color:#666&#34;&gt;00000003&lt;/span&gt;             &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;On Linux it&amp;#8217;s easy enough to use &lt;code&gt;sed&lt;/code&gt; to replace the UTF-8 non-breaking-space with a plain space:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ &lt;span style=&#34;color:#008000&#34;&gt;printf&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;\xC2\xA0\x23&amp;#39;&lt;/span&gt; | sed &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;s/\xC2\xA0/ /g&amp;#39;&lt;/span&gt; | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;20&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt;                                             | &lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;#|&lt;/span&gt;
+&lt;span style=&#34;color:#666&#34;&gt;00000002&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;On the Mac though, no such luck - it just doesn&amp;#8217;t work:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ &lt;span style=&#34;color:#008000&#34;&gt;printf&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;\xC2\xA0\x23&amp;#39;&lt;/span&gt; | sed &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;s/\xC2\xA0/ /g&amp;#39;&lt;/span&gt; | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  c2 a0 &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; 0a                                       |..#.|
+&lt;span style=&#34;color:#666&#34;&gt;00000004&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;Thanks to &lt;a href=&#34;https://stackoverflow.com/questions/14889005/hex-codes-in-sed-not-behaving-as-expected-on-osx/14889910#14889910&#34;&gt;StackOverflow&lt;/a&gt; I found that a magic dollar sign before the &lt;code&gt;sed&lt;/code&gt; string is all it takes:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span style=&#34;color:#008000&#34;&gt;printf&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;\xC2\xA0\x23&amp;#39;&lt;/span&gt; | sed &lt;span style=&#34;color:#ba2121&#34;&gt;$&amp;#39;s/\xC2\xA0/ /g&amp;#39;&lt;/span&gt; | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;20&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; 0a                                          | &lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;#.|&lt;/span&gt;
+&lt;span style=&#34;color:#666&#34;&gt;00000003&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;So now prototype the batch conversion, targeting a single file:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ sed -i&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;.bak&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;$&amp;#39;s/\x23\xC2\xA0/# /g&amp;#39;&lt;/span&gt; content/post/tools-i-use-ipad-pro.md
+$ grep -e &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;Kit&lt;/span&gt;$&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#34;&lt;/span&gt; content/post/tools-i-use-ipad-pro.md | hexdump -C
+&lt;span style=&#34;color:#666&#34;&gt;00000000&lt;/span&gt;  &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;23&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;20&lt;/span&gt; 4b &lt;span style=&#34;color:#666&#34;&gt;69&lt;/span&gt; &lt;span style=&#34;color:#666&#34;&gt;74&lt;/span&gt; 0a                           |&lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;### Kit.|&lt;/span&gt;
+&lt;span style=&#34;color:#666&#34;&gt;00000008&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;Looks good; now to convert all the Markdown files:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ sed -i&lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;.bak&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#ba2121&#34;&gt;$&amp;#39;s/\x23\xC2\xA0/# /g&amp;#39;&lt;/span&gt; content/post/*.md&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;Useful reference: &lt;a href=&#34;https://superuser.com/a/517852/66380&#34; class=&#34;bare&#34;&gt;https://superuser.com/a/517852/66380&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;</description>
+		</item>
 		
 		<item>
 			<title>How KSQL handles case</title>
@@ -187,8 +272,7 @@ Query terminated&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;strong&gt;BUT&lt;/strong&gt; as shown above, once created as a non-uppercase column, you need to forever-after quote it when referencing it.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-&lt;/div&gt;
-</description>
+&lt;/div&gt;</description>
 		</item>
 		
 		<item>
@@ -272,8 +356,7 @@ Query terminated&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;/div&gt;
-</description>
+&lt;/div&gt;</description>
 		</item>
 		
 		<item>
@@ -440,8 +523,7 @@ Query terminated&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;/div&gt;
-</description>
+&lt;/div&gt;</description>
 		</item>
 		
 		<item>
@@ -1810,7 +1892,7 @@ d | null | Platinum | null
 
 &lt;p&gt;I&amp;rsquo;ve written recently about &lt;a href=&#34;https://rmoff.net/2018/12/10/so-how-do-you-make-those-cool-diagrams/&#34;&gt;how I create the diagrams in my blog posts and talks&lt;/a&gt;, and from discussions around that, a couple of people were interested more broadly in how I use my iPad Pro. So, on the basis that if two people are interested maybe others are (and if no-one else is, I have a copy-and-paste answer to give to those two people) here we go.&lt;/p&gt;
 
-&lt;p&gt;### Kit&lt;/p&gt;
+&lt;h3 id=&#34;kit&#34;&gt;Kit&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;iPad Pro 10.5&amp;rdquo; (2018)
@@ -2060,14 +2142,11 @@ xargs -I{connector_name} curl -s -XDELETE &amp;quot;http://localhost:8083/connec
 			<guid>https://rmoff.github.io/2018/11/30/logging-in-as-root-on-oracle-database-docker-image/</guid>
 			<description>&lt;p&gt;tl;dr:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;docker exec --interactive \
-            --tty \
-            --user root \
-            --workdir / \
-            oracle-container-name bash
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;hr /&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker &lt;span style=&#34;color:#008000&#34;&gt;exec&lt;/span&gt; --interactive &lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;&lt;/span&gt;            --tty &lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;&lt;/span&gt;            --user root &lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;&lt;/span&gt;            --workdir / &lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;&lt;/span&gt;            oracle-container-name bash&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Using Oracle&amp;rsquo;s &lt;a href=&#34;https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md&#34;&gt;Docker database image&lt;/a&gt; I wanted to install some additional apps, without modifying the &lt;code&gt;Dockerfile&lt;/code&gt;.&lt;/p&gt;
 
@@ -2095,8 +2174,7 @@ OCI runtime exec failed: exec failed: container_linux.go:348: starting container
 &lt;pre&gt;&lt;code&gt;$ docker exec --interactive --tty --user root --workdir / docker-compose_oracle_1_479e7fa05ab5 bash
 bash-4.2# whoami
 root
-&lt;/code&gt;&lt;/pre&gt;
-</description>
+&lt;/code&gt;&lt;/pre&gt;</description>
 		</item>
 		
 		<item>
@@ -2107,30 +2185,28 @@ root
 			<guid>https://rmoff.github.io/2018/11/20/error-invalid-interpolation-format-for-command-option-in-service/</guid>
 			<description>&lt;p&gt;Doing some funky Docker Compose stuff, including:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;…
-kafkacat:
-  image: confluentinc/cp-kafkacat:latest
-  depends_on:
-    - kafka
-  command: 
-    - bash 
-    - -c 
-    - |
-      echo &amp;quot;Waiting for Kafka ⏳&amp;quot;
-      cub kafka-ready -b kafka:29092 1 300 &amp;amp;&amp;amp; 
-      while [ 1 -eq 1 ]
-        do awk &#39;{print $0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.json | \
-            kafkacat -b kafka:29092 -P -t purchases
-        done
-  volumes: 
-    - $PWD:/data
-…
-&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;…&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;kafkacat:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;image:&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;confluentinc/cp-kafkacat:latest&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;depends_on:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;kafka&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;command:&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;bash&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;-c&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;|
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        echo &amp;#34;Waiting for Kafka ⏳&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        cub kafka-ready -b kafka:29092 1 300 &amp;amp;&amp;amp; 
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        while [ 1 -eq 1 ]
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;          do awk &amp;#39;{print $0;system(&amp;#34;sleep 0.5&amp;#34;);}&amp;#39; /data/data.json | \
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;              kafkacat -b kafka:29092 -P -t purchases
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;          done&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;volumes:&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;$PWD:/data&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;…&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Run it:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;$ docker-compose up -d
-&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ docker-compose up -d&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Oh noes! Error!&lt;/p&gt;
 
@@ -2139,31 +2215,28 @@ kafkacat:
 
 &lt;p&gt;The cause? &lt;code&gt;$&lt;/code&gt; in the embedded &lt;code&gt;command&lt;/code&gt;:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;…
-do awk &#39;{print $0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.json | \
-…
-&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;…
+&lt;span style=&#34;color:#008000;font-weight:bold&#34;&gt;do&lt;/span&gt; awk &lt;span style=&#34;color:#ba2121&#34;&gt;&amp;#39;{print $0;system(&amp;#34;sleep 0.5&amp;#34;);}&amp;#39;&lt;/span&gt; /data/data.json | &lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#b62;font-weight:bold&#34;&gt;&lt;/span&gt;…&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The fix? Double it up:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;kafkacat:
-  image: confluentinc/cp-kafkacat:latest
-  depends_on:
-    - kafka
-  command: 
-    - bash 
-    - -c 
-    - |
-      echo &amp;quot;Waiting for Kafka ⏳&amp;quot;
-      cub kafka-ready -b kafka:29092 1 300 &amp;amp;&amp;amp; 
-      while [ 1 -eq 1 ]
-        do awk &#39;{print $$0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.json | \
-            kafkacat -b kafka:29092 -P -t purchases
-        done
-  volumes: 
-    - $PWD:/data
-&lt;/code&gt;&lt;/pre&gt;
-</description>
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#bbb&#34;&gt;  &lt;/span&gt;kafkacat:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;image:&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;confluentinc/cp-kafkacat:latest&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;depends_on:&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;kafka&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;command:&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;bash&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;-c&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;|
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        echo &amp;#34;Waiting for Kafka ⏳&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        cub kafka-ready -b kafka:29092 1 300 &amp;amp;&amp;amp; 
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;        while [ 1 -eq 1 ]
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;          do awk &amp;#39;{print $$0;system(&amp;#34;sleep 0.5&amp;#34;);}&amp;#39; /data/data.json | \
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;              kafkacat -b kafka:29092 -P -t purchases
+&lt;/span&gt;&lt;span style=&#34;color:#ba2121;font-style:italic&#34;&gt;          done&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;    &lt;/span&gt;volumes:&lt;span style=&#34;color:#bbb&#34;&gt; 
+&lt;/span&gt;&lt;span style=&#34;color:#bbb&#34;&gt;      &lt;/span&gt;-&lt;span style=&#34;color:#bbb&#34;&gt; &lt;/span&gt;$PWD:/data&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</description>
 		</item>
 		
 		<item>
@@ -2172,9 +2245,7 @@ do awk &#39;{print $0;system(&amp;quot;sleep 0.5&amp;quot;);}&#39; /data/data.js
 			<pubDate>Thu, 11 Oct 2018 15:13:59 UTC</pubDate>
 			<author>Robin Moffatt</author>
 			<guid>https://rmoff.github.io/2018/10/11/flatten-cdc-records-in-ksql/</guid>
-			<description>
-
-&lt;h3 id=&#34;the-problem-nested-messages-in-kafka&#34;&gt;The problem - nested messages in Kafka&lt;/h3&gt;
+			<description>&lt;h3 id=&#34;the-problem-nested-messages-in-kafka&#34;&gt;The problem - nested messages in Kafka&lt;/h3&gt;
 
 &lt;p&gt;Data comes into Kafka in many shapes and sizes. Sometimes it&amp;rsquo;s from CDC tools, and may be nested like this:&lt;/p&gt;
 
@@ -2279,8 +2350,7 @@ ksql&amp;gt;
 
 &lt;p&gt;Now you can use the target topic (&lt;code&gt;FLATTENED_DATA&lt;/code&gt;) as the source for the JDBC sink, with &lt;code&gt;ID&lt;/code&gt; and other columns exposed as top-level elements.&lt;/p&gt;
 
-&lt;p&gt;KSQL is a continuous query language and so every new event on the source topic will automatically be processed and written to the target topic.&lt;/p&gt;
-</description>
+&lt;p&gt;KSQL is a continuous query language and so every new event on the source topic will automatically be processed and written to the target topic.&lt;/p&gt;</description>
 		</item>
 		
 		<item>
@@ -2527,8 +2597,7 @@ FROM   ATM_TXNS X
       &amp;quot;TXN2_LOCATION&amp;quot;: &amp;quot;37.3540655,-122.0512763&amp;quot;
     }
   }
-&lt;/code&gt;&lt;/pre&gt;
-</description>
+&lt;/code&gt;&lt;/pre&gt;</description>
 		</item>
 		
 		<item>
@@ -2615,8 +2684,7 @@ $&amp;gt;
 messages-consumed-total = 251329.0;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Note that jmxterm support tab-completion for all the commands, which makes it much easier to use.&lt;/p&gt;
-</description>
+&lt;p&gt;Note that jmxterm support tab-completion for all the commands, which makes it much easier to use.&lt;/p&gt;</description>
 		</item>
 		
 		<item>
