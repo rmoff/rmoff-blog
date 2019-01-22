@@ -19,7 +19,7 @@ To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kaf
 * `<x>_JMX_PORT` - a port on which you want to access the metrics. Make sure you expose this port through Docker
 
 Component|Hostname|Port
--|-|-
+---------|--------|----
 Kafka|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
 Kafka Connect|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
 Zookeeper|`KAFKA_JMX_HOSTNAME`|`KAFKA_JMX_PORT`
@@ -31,23 +31,23 @@ If you don't set `<x>_JMX_HOSTNAME` then the Docker launch script uses the _host
 
 From [jmxterm](http://wiki.cyclopsgroup.org/jmxterm/) you'll get errors like: 
 
-```
+{{< highlight shell >}}
 $ java -jar ~/Downloads/jmxterm-1.0.0-uber.jar
 Welcome to JMX terminal. Type "help" for available commands.
 $>open localhost:18088
 #RuntimeIOException: Runtime IO exception: Connection refused to host: 192.168.144.4; nested exception is:
         java.net.ConnectException: Operation timed out (Connection timed out)
-```
+{{< /highlight >}}
 
 or 
 
-```
+{{< highlight shell >}}
 $ java -jar ~/Downloads/jmxterm-1.0.0-uber.jar
 Welcome to JMX terminal. Type "help" for available commands.
 $>open localhost:18088
 #RuntimeIOException: Runtime IO exception: Failed to retrieve RMIServer stub: javax.naming.CommunicationException [Root exception is java.rmi.ConnectIOException: error during JRMP connection establishment; nested exception is:
         java.io.EOFException]
-```
+{{< /highlight >}}
 
 For JConsole it'll just hang/timeout, or appear to work but disconnected.
 
