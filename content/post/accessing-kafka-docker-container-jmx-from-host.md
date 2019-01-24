@@ -15,7 +15,11 @@ _See also [docs](https://docs.confluent.io/current/installation/docker/docs/oper
 
 To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: `<x>_JMX_HOSTNAME` and `<x>_JMX_PORT`, prefixed by a component name. 
 
-* `<x>_JMX_HOSTNAME` - the hostname/IP of the *host* machine. This is used by the JMX client to connect back into JMX, so must be accessible from the _host machine running the JMX client_. If you're just running your JMX client locally on the Docker host, you can set this to `127.0.0.1`
+* `<x>_JMX_HOSTNAME` - the hostname/IP of the *JMX host* machine, _as accessible from the JMX Client_. 
+
+    This is used by the JMX client to connect back into JMX, so must be accessible from the _host machine running the JMX client_. 
+    
+    If you're just running your JMX client locally on the Docker host, you can set this to `127.0.0.1`
 * `<x>_JMX_PORT` - a port on which you want to access the metrics. Make sure you expose this port through Docker
 
 Component|Hostname|Port
