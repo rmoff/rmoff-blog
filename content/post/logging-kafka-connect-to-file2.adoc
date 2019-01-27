@@ -4,12 +4,18 @@ categories = ["Kafka Connect"]
 date = 2019-01-15T10:40:57Z
 description = ""
 draft = false
-slug = "logging-kafka-connect-to-file"
+slug = "kafka-connect-change-log-level-write-log-to-file"
 tag = ["2019-01-15T10:40:57Z"]
-title = "Logging Kafka Connect to File"
+title = "Changing Kafka Connect log levels, and writing logs to file"
 +++
 
-By default Kafka Connect sends its output to `stdout`, so you'll see it on the console, Docker logs, or wherever. Sometimes you might want to route it to file, and you can do this by reconfiguring log4j. To find out the config file location simply inspect the running Kafka Connect process, or the existing `stdout`, and look for the location of `connect-log4j.properties` in `-Dlog4j.configuration`: 
+By default Kafka Connect sends its output to `stdout`, so you'll see it on the console, Docker logs, or wherever. Sometimes you might want to route it to file, and you can do this by reconfiguring log4j. You can also change the configuration to get more (or less) detail in the logs by changing the log level. 
+
+== Finding the log configuration file
+
+The configuration file is called `connect-log4j.properties` and usually found in `etc/kafka/connect-log4j.properties`.
+
+To find out the config file location simply inspect the running Kafka Connect process, or the existing `stdout`, and look for the location of `connect-log4j.properties` in `-Dlog4j.configuration`: 
 
 {{< highlight shell >}}
 [2019-01-15 10:34:22,755] INFO WorkerInfo values:
@@ -30,6 +36,17 @@ log4j.logger.org.apache.zookeeper=ERROR
 log4j.logger.org.I0Itec.zkclient=ERROR
 log4j.logger.org.reflections=ERROR
 ----
+
+== Changing the log level 
+
+In troubleshooting Kafka Connect it can be useful to increase the log level to `DEBUG` (or even `TRACE`). To do this simply change the config file's `rootlogger`: 
+
+{{< highlight shell >}}
+#log4j.rootLogger=INFO, stdout
+log4j.rootLogger=DEBUG, stdout
+{{< /highlight >}}
+
+== Sending logs to file
 
 To send the output to file instead, change it to this: 
 
@@ -53,6 +70,8 @@ log4j.logger.org.reflections=ERROR
 ----
 
 This will write it to `/tmp/connect-worker.log`. 
+
+== Sending logs to both `stdout` and file
 
 You can get fancy and send `TRACE` to file whilst retaining `INFO` (and above) on `stdout`, using the `Threshold` option for the `stdout` appender: 
 
