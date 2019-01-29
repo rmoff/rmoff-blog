@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Analysing Network Data with Apache Kafka, KSQL, and Elasticsearch</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/06/17/analysing-network-data-with-apache-kafka-ksql-and-elasticsearch/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Analysing Network Data with Apache Kafka, KSQL, and Elasticsearch" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/06/IMG_3302.jpg" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/06/17/analysing-network-data-with-apache-kafka-ksql-and-elasticsearch/" />
+		<meta name="og:site_name" content="Analysing Network Data with Apache Kafka, KSQL, and Elasticsearch" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/06/IMG_3302.jpg'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Analysing Network Data with Apache Kafka, KSQL, and Elasticsearch</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-06-17T11:35:20Z">Jun 17, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//elasticsearch" class="no-underline category near-white dim">Elasticsearch</a>, <a href="https://rmoff.github.io/categories//ksql" class="no-underline category near-white dim">Ksql</a>, <a href="https://rmoff.github.io/categories//apache-kafka" class="no-underline category near-white dim">Apache Kafka</a>, <a href="https://rmoff.github.io/categories//ubiquiti" class="no-underline category near-white dim">Ubiquiti</a>, <a href="https://rmoff.github.io/categories//espressi" class="no-underline category near-white dim">Espressi</a>, <a href="https://rmoff.github.io/categories//slack" class="no-underline category near-white dim">Slack</a>, <a href="https://rmoff.github.io/categories//python" class="no-underline category near-white dim">Python</a>, <a href="https://rmoff.github.io/categories//stream-processing" class="no-underline category near-white dim">Stream Processing</a>
+								<span class="display-print">at https://rmoff.github.io/2018/06/17/analysing-network-data-with-apache-kafka-ksql-and-elasticsearch/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p>In <a href="http://cnfl.io/syslogs-filtering">this article</a> I demonstrated how to use KSQL to filter streams of network event data. As well as filtering, KSQL can be used to easily <a href="https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-enriching-events-with-external-data/">enrich streams</a>. In this article we&rsquo;ll see how this enriched data can be used to drive analysis in Elasticsearch and Kibana—and how KSQL again came into use for building some stream processing as a result of the discovery made.</p>
+
+<p>The data came from my home <a href="https://www.ubnt.com/">Ubiquiti</a> router, and took two forms:</p>
+
+<ol>
+<li>A stream of network events from the router, sent over <a href="https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-part-1-filtering">syslog</a> to Apache Kafka</li>
+<li>Device information that the router stores in an internal MongoDB database, streamed into Kafka using <a href="https://rmoff.net/2018/03/27/streaming-data-from-mongodb-into-kafka-with-kafka-connect-and-debezium/">Debezium and Kafka Connect</a></li>
+</ol>
+
+<p>With <a href="https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-enriching-events-with-external-data/">KSQL I denormalised the two sets of data</a>, enriching each network event with full details of the associated device, based on the device&rsquo;s ID stored in each network event. The device information came from MongoDB, a copy of which was in a Kafka topic along with any changes that subsequently occurred in the MongoDB data (courtesy of CDC and Debezium).</p>
+
+<p>From the Kibana dashboard I built, I noticed an interesting pattern. Around 29th April, there is a huge peak in activity relative to the rest of the time.</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_01.png" alt="ubnt_analyse_01.png" /></p>
+
+<p>I wonder what&rsquo;s causing this? Let&rsquo;s drill into the data a bit more. Looking closely at the device type and Access Point, we can see it&rsquo;s the &ldquo;Attic&rdquo; AP, and &ldquo;Espressi&rdquo; device types</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_02.png" alt="images/ubnt_analyse_02.png" />
+<img src="/content/images/2018/06/ubnt_analyse_03.png" alt="images/ubnt_analyse_03.png" /></p>
+
+<p>Using Kibana&rsquo;s filtering to isolate the data to just these two facets, it&rsquo;s clear that it&rsquo;s just a particular device that&rsquo;s so busy</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_04.png" alt="images/ubnt_analyse_04.png" /></p>
+
+<p>&ldquo;Attic lights plug&rdquo; is, as the name suggests, a wifi plug that I have controlling the lights in the attic of my house. But why&rsquo;s it got so much activity, compared to usual? Let&rsquo;s look at the times again:</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_05.png" alt="images/ubnt_analyse_05.png" /></p>
+
+<p>Roughly 10:00 on the 28th April, through to c.18:00 on the 30th April. The missing data here necessary for the automatic correlation is the howls of complaint from my kids when Netflix wouldn&rsquo;t work this weekend—my home internet connection was down!</p>
+
+<p>So from the looks of it, this wifi plug is not at all happy when it can&rsquo;t &lsquo;phone home&rsquo;, and so tries reconnecting to the AP again…and again…and again!</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_07.png" alt="images/ubnt_analyse_07.png" /></p>
+
+<p>The frequency works out at just under one connection attempt per minute, as can be seen from this graph:</p>
+
+<p><img src="/content/images/2018/06/ubnt_analyse_06.png" alt="images/ubnt_analyse_06.png" /></p>
+
+<p>So yay for dataviz and analytics. But—what can we do with this new-found knowledge? Watching a dashboard to look for this happening again is not so useful. Since we know what the pattern is, perhaps we can encode this into an application, and have an automatic alert tell me when it looks like my broadband&rsquo;s gone offline?</p>
+
+<p>The pattern we want to catch is:</p>
+
+<ul>
+<li>A particular device (&ldquo;Attic lights plug&rdquo;)</li>
+<li>Connecting to an Access Point</li>
+<li>At a rate of once per minute—or to not make it too sensitive, let&rsquo;s say more than twice in a five minute period</li>
+</ul>
+
+<p>Traditionally, doing this kind of realtime detection against a stream of inbound data would require some serious coding beyond the scope of many. Even seasoned programmers might not be familiar with the latest stream processing libraries. But what almost all programmers, developers, and even hand-crafted artisanal data engineers are familiar with is SQL! Let&rsquo;s see what the above English statement of the pattern looks like in KSQL:</p>
+
+<pre><code class="language-sql">ksql&gt; SELECT USER_DEVICE_NAME, COUNT(*) AS AP_CONNECT_COUNT \
+FROM UBNT_AP_USER_DEVICE_CONNECTS WINDOW TUMBLING (SIZE 5 MINUTES) \
+WHERE USER_DEVICE_NAME='Attic lights plug' \
+GROUP BY USER_DEVICE_NAME \
+HAVING COUNT(*)&gt;2;
+
+Attic lights plug | 7
+Attic lights plug | 8
+Attic lights plug | 7
+Attic lights plug | 7
+Attic lights plug | 5
+Attic lights plug | 6
+</code></pre>
+
+<p>We can persist this as a Kafka topic, so that any new instances of this condition being met (i.e. a signal that my internet might be down!), are written to a Kafka topic that I can use to drive an alert:</p>
+
+<pre><code class="language-sql">CREATE TABLE OFFLINE_WARNING_SIGNAL AS \
+SELECT USER_DEVICE_NAME, COUNT(*) AS AP_CONNECT_COUNT \
+FROM UBNT_AP_USER_DEVICE_CONNECTS WINDOW TUMBLING (SIZE 5 MINUTES) \
+WHERE USER_DEVICE_NAME='Attic lights plug' \
+GROUP BY USER_DEVICE_NAME \
+HAVING COUNT(*)&gt;2;
+</code></pre>
+
+<p>Now I have a Kafka topic (<code>OFFLINE_WARNING_SIGNAL</code>) that I can do something like hook up to a Python driven alert as <a href="https://www.confluent.io/blog/real-time-syslog-processing-with-apache-kafka-and-ksql-part-2-event-driven-alerting-with-slack/">illustrated here</a>. All this driven with a simple SQL expression, in effect giving us a full-blown stream processing application!</p>
+
+<p><img src="/content/images/2018/06/slack_notify_01.jpg" alt="iOS Slack Alert" /></p>
+
+<p>How cool is that: expressing patterns of interest in data, and building it into a real-time stream processing application, all using SQL!</p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

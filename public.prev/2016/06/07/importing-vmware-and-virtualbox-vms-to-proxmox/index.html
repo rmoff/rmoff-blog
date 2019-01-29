@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Importing VMWare and VirtualBox VMs to Proxmox</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2016/06/07/importing-vmware-and-virtualbox-vms-to-proxmox/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Importing VMWare and VirtualBox VMs to Proxmox" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2016/06/prox01-1.png" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2016/06/07/importing-vmware-and-virtualbox-vms-to-proxmox/" />
+		<meta name="og:site_name" content="Importing VMWare and VirtualBox VMs to Proxmox" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2016/06/prox01-1.png'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Importing VMWare and VirtualBox VMs to Proxmox</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2016-06-07T21:14:26Z">Jun 7, 2016</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//proxmox" class="no-underline category near-white dim">Proxmox</a>, <a href="https://rmoff.github.io/categories//vmware" class="no-underline category near-white dim">Vmware</a>, <a href="https://rmoff.github.io/categories//virtualbox" class="no-underline category near-white dim">Virtualbox</a>, <a href="https://rmoff.github.io/categories//qcow2" class="no-underline category near-white dim">Qcow2</a>
+								<span class="display-print">at https://rmoff.github.io/2016/06/07/importing-vmware-and-virtualbox-vms-to-proxmox/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p>(<a href="http://rmoff.net/2016/06/07/a-new-arrival/">Previously</a>, <a href="http://rmoff.net/2016/06/07/commissioning-my-proxmox-server/">previously</a>)</p>
+
+<p>I&rsquo;ve got a bunch of existing VirtualBox and VMWare VMs that I want to run on Proxmox. Eventually I&rsquo;ll migrate them to containers, but for the time being run them as &ldquo;fat&rdquo; VMs using Proxmox&rsquo;s KVM virtualisation. After copying the OVA files that I had to the server, I uncompressed them:</p>
+
+<pre><code class="language-bash">root@proxmox01:/data04/vms/bdl44-biwa# cd ../bdl44
+root@proxmox01:/data04/vms/bdl44# ll
+total 27249328
+-rw------- 1 root root 27903306752 Jun  1 10:14 BigDataLite440.ova
+root@proxmox01:/data04/vms/bdl44# tar -xf BigDataLite440.ova
+root@proxmox01:/data04/vms/bdl44# ll
+total 54498668
+-rw------- 1 root root  7300486656 Feb 18 21:25 BigDataLite440-disk1.vmdk
+-rw------- 1 root root  1261044224 Feb 18 21:26 BigDataLite440-disk2.vmdk
+-rw------- 1 root root 19295202816 Feb 18 21:48 BigDataLite440-disk3.vmdk
+-rw------- 1 root root    46550528 Feb 18 21:48 BigDataLite440-disk4.vmdk
+-rw------- 1 root root 27903306752 Jun  1 10:14 BigDataLite440.ova
+-rw------- 1 root root       19619 Feb 18 21:15 BigDataLite440.ovf
+</code></pre>
+
+<p>and then converted each disk image to qcow2 format:
+(_You can read more about how and why <a href="https://www.jamescoyle.net/how-to/1218-upload-ova-to-proxmox-kvm">here</a> and <a href="https://pve.proxmox.com/wiki/Migration_of_servers_to_Proxmox_VE#VMware_to_Proxmox_VE_.28KVM.29">here</a>_).</p>
+
+<pre><code class="language-bash">root@proxmox01:/data04/vms/bdl44# time qemu-img convert -f vmdk BigDataLite440-disk1.vmdk -O qcow2 BigDataLite440-disk1.qcow2
+
+real    2m14.986s
+user    1m39.976s
+sys     0m23.548s
+root@proxmox01:/data04/vms/bdl44# time qemu-img convert -f vmdk BigDataLite440-disk2.vmdk -O qcow2 BigDataLite440-disk2.qcow2
+
+real    0m47.865s
+user    0m35.556s
+sys     0m3.684s
+root@proxmox01:/data04/vms/bdl44# time qemu-img convert -f vmdk BigDataLite440-disk3.vmdk -O qcow2 BigDataLite440-disk3.qcow2
+
+real    5m21.469s
+user    3m49.736s
+sys     1m0.348s
+root@proxmox01:/data04/vms/bdl44# time qemu-img convert -f vmdk BigDataLite440-disk4.vmdk -O qcow2 BigDataLite440-disk4.qcow2
+
+real    0m13.419s
+user    0m5.716s
+sys     0m0.296s
+</code></pre>
+
+<p>For re-usability, this will convert all found vmdk files in one fell swoop:</p>
+
+<pre><code class="language-bash">for file in *.vmdk; do   i=${file##*/};qemu-img convert -f vmdk $i -O qcow2 $(echo $i |sed 's/vmdk/qcow2/g'); done
+</code></pre>
+
+<p>I then created a new VM using the Proxmox web interface, specifying the disk to match the size of the first disk listed in the <code>OVF</code> of the unpacked <code>OVA</code></p>
+
+<pre><code class="language-xml">  &lt;DiskSection&gt;
+    &lt;Info&gt;List of the virtual disks used in the package&lt;/Info&gt;
+    &lt;Disk ovf:capacity=&quot;41943040000&quot; ovf:diskId=&quot;vmdisk2&quot; ovf:fileRef=&quot;file1&quot; ovf:format=&quot;http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized&quot; vbox:uuid=&quot;150dbbe8-0c88-48d0-9fcf-e80d7d7d4c2f&quot;/&gt;
+    &lt;Disk ovf:capacity=&quot;104857600000&quot; ovf:diskId=&quot;vmdisk3&quot; ovf:fileRef=&quot;file2&quot; ovf:format=&quot;http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized&quot; vbox:uuid=&quot;64101bef-46af-4e89-8c02-0e6315d6be41&quot;/&gt;
+    &lt;Disk ovf:capacity=&quot;62914560000&quot; ovf:diskId=&quot;vmdisk4&quot; ovf:fileRef=&quot;file3&quot; ovf:format=&quot;http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized&quot; vbox:uuid=&quot;d7fae10b-aac3-4675-b295-6a5ab9db3e7f&quot;/&gt;
+    &lt;Disk ovf:capacity=&quot;20971520000&quot; ovf:diskId=&quot;vmdisk5&quot; ovf:fileRef=&quot;file4&quot; ovf:format=&quot;http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized&quot; vbox:uuid=&quot;e29ccf7f-69f1-4338-ac2d-909344d74f75&quot;/&gt;
+  &lt;/DiskSection&gt;
+</code></pre>
+
+<p>and once created added the three remaining disks to the VM configuration. I removed the CD device so as to be able to sequence the four IDE disks as per the original OVF configuration.</p>
+
+<p><img src="/content/images/2016/06/prox01.png" alt="" /></p>
+
+<p>The config for the server looks like this:</p>
+
+<pre><code class="language-bash">root@proxmox01:/data04/vms/bdl44# cat /etc/pve/nodes/proxmox01/qemu-server/100.conf
+bootdisk: ide0
+cores: 4
+ide0: data01:100/vm-100-disk-1.qcow2,size=40G
+ide1: data01:100/vm-100-disk-2.qcow2,size=100G
+ide2: data01:100/vm-100-disk-4.qcow2,size=60G
+ide3: data01:100/vm-100-disk-5.qcow2,size=20G
+memory: 16000
+name: bdl44
+net0: bridge=vmbr0,e1000=66:65:31:38:36:64
+numa: 1
+ostype: l26
+smbios1: uuid=58e05db8-1bae-4ccf-90fe-9ea036a58056
+sockets: 2
+</code></pre>
+
+<p>I copied the qcow2 files (converted from VMDK) <strong>over</strong> the existing qcow2 files:</p>
+
+<pre><code class="language-bash">time mv -f /data04/vms/bdl44/BigDataLite440-disk1.qcow2 /data01/images/100/vm-100-disk-1.qcow2
+time mv -f /data04/vms/bdl44/BigDataLite440-disk2.qcow2 /data01/images/100/vm-100-disk-2.qcow2
+time mv -f /data04/vms/bdl44/BigDataLite440-disk3.qcow2 /data01/images/100/vm-100-disk-3.qcow2
+time mv -f /data04/vms/bdl44/BigDataLite440-disk4.qcow2 /data01/images/100/vm-100-disk-4.qcow2
+</code></pre>
+
+<p>From the Proxmox GUI I started the migrated VM, but it failed with the error <code>Unable to resolve 'LABEL=oracle_sw'</code></p>
+
+<p><img src="/content/images/2016/06/prox02.png" alt="" /></p>
+
+<p>The reason being I&rsquo;d got the disks wrong - look at the above configuration (1,2,4,5) and list of disk images (1-4). After fixing this the VM (a version of Big Data Lite 4.4) started up just fine. As did SampleApp v506:</p>
+
+<p><img src="/content/images/2016/06/prox03.png" alt="" /></p>
+
+<p>If you want you can tidy up by uninstalling the VirtualBox support modules:</p>
+
+<pre><code class="language-bash">sudo /opt/VBoxGuestAdditions-4.3.22/uninstall.sh
+</code></pre>
+
+<p>For reference:</p>
+
+<ol>
+<li>I&rsquo;m not sure if it makes too much difference on the exact sizing of the disk images in the qemu configuration file, since they grow as needed - hence sticking a size of 200G is going to do no harm (unless you actually don&rsquo;t have that disk space) and makes importing the image easier.</li>
+<li>You can update the configuration file to make the disk image names match those that you have, instead of renaming them to match the pattern that qemu generates. Swings &amp; roundabouts.</li>
+</ol>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

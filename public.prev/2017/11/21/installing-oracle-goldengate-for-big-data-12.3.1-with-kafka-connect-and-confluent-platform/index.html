@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Installing Oracle GoldenGate for Big Data 12.3.1 with Kafka Connect and Confluent Platform</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2017/11/21/installing-oracle-goldengate-for-big-data-12.3.1-with-kafka-connect-and-confluent-platform/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Installing Oracle GoldenGate for Big Data 12.3.1 with Kafka Connect and Confluent Platform" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2017/11/oggkaf01_sm.jpg" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2017/11/21/installing-oracle-goldengate-for-big-data-12.3.1-with-kafka-connect-and-confluent-platform/" />
+		<meta name="og:site_name" content="Installing Oracle GoldenGate for Big Data 12.3.1 with Kafka Connect and Confluent Platform" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2017/11/oggkaf01_sm.jpg'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Installing Oracle GoldenGate for Big Data 12.3.1 with Kafka Connect and Confluent Platform</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2017-11-21T17:31:00Z">Nov 21, 2017</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//goldengate" class="no-underline category near-white dim">Goldengate</a>, <a href="https://rmoff.github.io/categories//oracle" class="no-underline category near-white dim">Oracle</a>, <a href="https://rmoff.github.io/categories//kafka" class="no-underline category near-white dim">Kafka</a>, <a href="https://rmoff.github.io/categories//confluent-platform" class="no-underline category near-white dim">Confluent Platform</a>, <a href="https://rmoff.github.io/categories//swingbench" class="no-underline category near-white dim">Swingbench</a>
+								<span class="display-print">at https://rmoff.github.io/2017/11/21/installing-oracle-goldengate-for-big-data-12.3.1-with-kafka-connect-and-confluent-platform/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	
+
+<p><em>Some notes that I made on installing and configuring Oracle GoldenGate with Confluent Platform. Excuse the brevity, but hopefully useful to share!</em></p>
+
+<hr />
+
+<p>I used the <a href="http://www.oracle.com/technetwork/database/enterprise-edition/databaseappdev-vm-161299.html">Oracle Developer Days VM</a> for this - it&rsquo;s preinstalled with Oracle 12cR2. <a href="http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html">Big Data Lite</a> is nice but currently has an older version of GoldenGate.</p>
+
+<p>Login to the VM (oracle/oracle) and then install some useful things:</p>
+
+<pre><code>sudo rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install -y screen htop collectl rlwrap p7zip unzip sysstat perf iotop
+sudo su -
+cd /etc/yum.repos.d/
+wget http://download.opensuse.org/repositories/shells:fish:release:2/CentOS_7/shells:fish:release:2.repo
+yum install fish
+</code></pre>
+
+<p>Check Oracle version etc:</p>
+
+<script src="https://gist.github.com/rmoff/dedaa1a2ef4b3225a6299a36629dcb67.js"></script>
+
+<h1 id="install-ogg">Install OGG</h1>
+
+<p><a href="http://www.oracle.com/technetwork/middleware/goldengate/downloads/index.html">Download both</a> <strong>Oracle GoldenGate</strong> 12.3.0.1 and <strong>Oracle GoldenGate for Big Data</strong> 12.3.1.1.0. For reference, here is the <a href="http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-B5B88238-C74D-487B-AD7D-7809ED5125EE.htm#GIORA162">Install guide</a>.</p>
+
+<p>Make sure installers are present on VM</p>
+
+<pre><code>[oracle@localhost ~]$ ls -l ~/Downloads/
+total 610368
+-rw-r--r--. 1 oracle oinstall 543200432 Sep  5 08:45 123010_fbo_ggs_Linux_x64_shiphome.zip
+-rw-r--r--. 1 oracle oinstall  81812011 Sep  5 08:38 123110_ggs_Adapters_Linux_x64.zip
+</code></pre>
+
+<p>Unzip the OGG installer</p>
+
+<pre><code>[oracle@localhost Downloads]$ unzip 123010_fbo_ggs_Linux_x64_shiphome.zip
+</code></pre>
+
+<p>Build a response file (e.g. <code>/tmp/oggcore.rsp</code>)</p>
+
+<pre><code>oracle.install.responseFileVersion=/oracle/install/rspfmt_ogginstall_response_schema_v12_1_2
+INSTALL_OPTION=ORA12c
+SOFTWARE_LOCATION=/u01/app/ogg
+START_MANAGER=true
+MANAGER_PORT=7809
+DATABASE_LOCATION=/u01/app/oracle/product/12.2/db_1/
+INVENTORY_LOCATION=/u01/app/oraInventory/
+UNIX_GROUP_NAME=oracle
+</code></pre>
+
+<p>Install OGG:</p>
+
+<pre><code>[oracle@localhost Disk1]$ ~/Downloads/fbo_ggs_Linux_x64_shiphome/Disk1/runInstaller -silent -nowait -responseFile /tmp/oggcore.rsp
+Starting Oracle Universal Installer...
+
+Checking Temp space: must be greater than 120 MB.   Actual 13557 MB    Passed
+Checking swap space: must be greater than 150 MB.   Actual 4088 MB    Passed
+Preparing to launch Oracle Universal Installer from /tmp/OraInstall2017-09-05_09-34-29AM. Please wait ...[oracle@localhost Disk1]$ [WARNING] [INS-75014] Database version cannot be determined from the location specified.
+CAUSE: The components inventory may be missing or corrupted in the location specified.
+ACTION: Specify an alternate database location.
+You can find the log of this install session at:
+/u01/installervb/logs/installActions2017-09-05_09-34-29AM.log
+
+…
+…
+
+The installation of Oracle GoldenGate Core was successful.
+Please check '/u01/installervb/logs/silentInstall2017-09-05_09-34-29AM.log' for more details.
+Successfully Setup Software.
+</code></pre>
+
+<p>Check that OGG Manager is running</p>
+
+<pre><code>[oracle@localhost ogg]$ . oraenv
+ORACLE_SID = [oracle] ? orcl12c
+ORACLE_BASE environment variable is not being set since this
+information is not available for the current user ID oracle.
+You can set ORACLE_BASE manually if it is required.
+Resetting ORACLE_BASE to its previous value or ORACLE_HOME
+The Oracle base has been set to /u01/app/oracle/product/12.2/db_1
+[oracle@localhost ogg]$ cd /u01/app/ogg/
+[oracle@localhost ogg]$ rlwrap ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.3.0.1.0 OGGCORE_12.3.0.1.0_PLATFORMS_170721.0154_FBO
+Linux, x64, 64bit (optimized), Oracle 12c on Jul 21 2017 23:31:13
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (localhost.localdomain) 1&gt; info mgr
+
+Manager is running (IP port localhost.localdomain.7809, Process ID 23231).
+
+
+GGSCI (localhost.localdomain) 2&gt;
+</code></pre>
+
+<h3 id="configure-db-for-ogg">Configure DB for OGG</h3>
+
+<p>Since the DB is multitenant, <a href="http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-1A6D7483-BF6D-4354-904D-E9BBD0E7DD59.htm#GIORA558">need to use</a> <a href="http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-6C0E8B93-FA67-4700-AC33-6E57F4DBF9B2.htm#GIORA212">integrated capture mode</a>.</p>
+
+<p>Add TNS entry (per <a href="http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-A72C7E33-6AA6-4F88-9F01-E9FC0FDE0C46.htm#GIORA982">doc</a>) to <code>/u01/app/oracle/product/12.2/db_1/network/admin/tnsnames.ora</code>:</p>
+
+<pre><code>OGG_ORCL12C =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 0.0.0.0)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = orcl12c)
+    )
+  )
+</code></pre>
+
+<p>Next, set up <a href="http://docs.oracle.com/goldengate/c1221/gg-winux/GIORA/GUID-55E7046C-0550-40C2-A855-904A2049F31B.htm#GIORA367">Minimum Database-level Supplemental Logging</a></p>
+
+<p>Launch SQL*Plus: <code>rlwrap sqlplus SYS/oracle@orcl12c as sysdba</code></p>
+
+<p>Run the following:</p>
+
+<pre><code>ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+ALTER DATABASE FORCE LOGGING;
+SHUTDOWN IMMEDIATE
+STARTUP MOUNT
+ALTER DATABASE ARCHIVELOG;
+ALTER DATABASE OPEN;
+ALTER SYSTEM SWITCH LOGFILE;
+ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION=TRUE SCOPE=BOTH;
+EXIT
+</code></pre>
+
+<h4 id="configure-ogg-extract">Configure OGG Extract</h4>
+
+<p>Launch OGG command line:</p>
+
+<pre><code>[oracle@localhost ~]$ . oraenv
+ORACLE_SID = [oracle] ? orcl12c
+ORACLE_BASE environment variable is not being set since this
+information is not available for the current user ID oracle.
+You can set ORACLE_BASE manually if it is required.
+Resetting ORACLE_BASE to its previous value or ORACLE_HOME
+The Oracle base has been set to /u01/app/oracle/product/12.2/db_1
+[oracle@localhost ~]$
+[oracle@localhost ~]$ cd /u01/app/ogg/
+[oracle@localhost ogg]$ rlwrap ./ggs
+ggsci       ggserr.log
+[oracle@localhost ogg]$ rlwrap ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.3.0.1.0 OGGCORE_12.3.0.1.0_PLATFORMS_170721.0154_FBO
+Linux, x64, 64bit (optimized), Oracle 12c on Jul 21 2017 23:31:13
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (localhost.localdomain) 1&gt;
+</code></pre>
+
+<p>Register the integrated Extract process, for the Container Database (<code>orcl</code>) - this&rsquo;ll take a minute or two to complete:</p>
+
+<pre><code>DBLOGIN USERID SYSTEM@localhost:1521/orcl12c PASSWORD oracle
+REGISTER EXTRACT EXT1 DATABASE CONTAINER (ORCL)
+</code></pre>
+
+<p>Enter commands to enable schema logging with all columns captured, on schema <code>HR</code> in the pluggable DB (<code>ORCL</code>):</p>
+
+<pre><code>ADD SCHEMATRANDATA ORCL.HR ALLCOLS
+</code></pre>
+
+<p>We can now define the extract itself:</p>
+
+<pre><code>ADD EXTRACT EXT1, INTEGRATED TRANLOG, BEGIN NOW
+</code></pre>
+
+<p>Write a trail file for the extract</p>
+
+<pre><code>ADD EXTTRAIL ./dirdat/lt EXTRACT EXT1
+</code></pre>
+
+<p>Specify parameters for the extract:</p>
+
+<pre><code>EDIT PARAM EXT1
+</code></pre>
+
+<p>In the edit session paste:</p>
+
+<pre><code>EXTRACT EXT1
+USERID SYSTEM@OGG_ORCL12C, PASSWORD oracle
+EXTTRAIL ./dirdat/lt
+SOURCECATALOG ORCL
+TABLE HR.*;
+</code></pre>
+
+<p>Save and close the file. Now we&rsquo;re ready to start the extract.</p>
+
+<p>From the <code>GGSCI</code> prompt issue:</p>
+
+<pre><code>START EXT1
+</code></pre>
+
+<p>and check that it&rsquo;s running:</p>
+
+<pre><code>INFO EXT1
+</code></pre>
+
+<p>Expected status:</p>
+
+<pre><code>EXTRACT    EXT1      Last Started 2017-09-05 11:21   Status RUNNING
+Checkpoint Lag       00:00:00 (updated 00:00:05 ago)
+Process ID           27550
+Log Read Checkpoint  Oracle Integrated Redo Logs
+                     2017-09-05 11:21:18
+                     SCN 0.1957461 (1957461)
+</code></pre>
+
+<p>If it doesn&rsquo;t start successfully then check <code>/u01/app/ogg/ggserr.log</code>.</p>
+
+<h4 id="smoketest">Smoketest</h4>
+
+<p>Log into SQL*Plus</p>
+
+<pre><code>rlwrap sqlplus SYS/oracle@orcl as sysdba
+</code></pre>
+
+<p>Insert a row and commit:</p>
+
+<pre><code>SQL&gt; INSERT INTO HR.REGIONS VALUES (42,'FOO');
+
+1 row created.
+
+SQL&gt; commit;
+
+Commit complete.
+</code></pre>
+
+<p>Fire up OGG&rsquo;s <code>logdump</code> (<a href="https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/">ref</a>):</p>
+
+<pre><code>[oracle@localhost ogg]$ rlwrap ./logdump
+
+Oracle GoldenGate Log File Dump Utility for Oracle
+Version 12.3.0.1.0 OGGCORE_12.3.0.1.0_PLATFORMS_170721.0154
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+Logdump 11 &gt;GHDR ON
+Logdump 12 &gt;DETAIL ON
+Logdump 13 &gt;DETAIL DATA
+Logdump 14 &gt;OPEN /u01/app/ogg/dirdat/lt000000000
+Current LogTrail is /u01/app/ogg/dirdat/lt000000000
+Logdump 15 &gt;
+</code></pre>
+
+<p>Check the extract trail file and see the record added (preceeded by the table metadata):</p>
+
+<script src="https://gist.github.com/rmoff/db86d4b12a295aea51b55f3c5abf5236.js"></script>
+
+<h3 id="install-ogg-bd">Install OGG-BD</h3>
+
+<p>Doc: <a href="http://docs.oracle.com/goldengate/bd123110/gg-bd/GBDIG/toc.htm">Installing Oracle GoldenGate for Big Data</a></p>
+
+<p>Unpack OGG-BD into target folder:</p>
+
+<pre><code>mkdir /u01/app/ogg-bd
+cp ~/Downloads/123110_ggs_Adapters_Linux_x64.zip /u01/app/ogg-bd/
+cd /u01/app/ogg-bd/
+unzip 123110_ggs_Adapters_Linux_x64.zip
+tar -xf ggs_Adapters_Linux_x64.tar
+</code></pre>
+
+<p>Set <code>LD_LIBRARY_PATH</code> environment variable (this needs to be set each time you prior to launching the MGR process through <code>ggsci</code>, otherwise the replicat will abort with the error <code>OGG-15050  Oracle GoldenGate Delivery, rkconn.prm:  Error loading Java VM runtime library: (2 No such file or directory).</code>). <a href="http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/introduction1.htm#GADBD113">Ref</a></p>
+
+<pre><code>[oracle@localhost ogg-bd]$ export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server/
+[oracle@localhost ~]$ echo $JAVA_HOME
+/home/oracle/java/jdk1.8.0_131
+[oracle@localhost ~]$ echo $LD_LIBRARY_PATH
+/home/oracle/java/jdk1.8.0_131/jre/lib/amd64/server/
+[oracle@localhost ~]$
+</code></pre>
+
+<p>Create initial folders and create manager config</p>
+
+<pre><code>oracle@localhost /u/a/ogg-bd&gt; rlwrap ./ggsci
+Oracle GoldenGate for Big Data
+Version 12.3.1.1.0
+
+Oracle GoldenGate Command Interpreter
+Version 12.3.0.1.0 OGGCORE_OGGADP.12.3.0.1.0GA_PLATFORMS_170810.0015
+Linux, x64, 64bit (optimized), Generic on Aug 10 2017 01:26:22
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (localhost.localdomain) 1&gt; CREATE SUBDIRS
+
+Creating subdirectories under current directory /u01/app/ogg-bd
+
+Parameter file                 /u01/app/ogg-bd/dirprm: created.
+Report file                    /u01/app/ogg-bd/dirrpt: created.
+Checkpoint file                /u01/app/ogg-bd/dirchk: created.
+Process status files           /u01/app/ogg-bd/dirpcs: created.
+SQL script files               /u01/app/ogg-bd/dirsql: created.
+Database definitions files     /u01/app/ogg-bd/dirdef: created.
+Extract data files             /u01/app/ogg-bd/dirdat: created.
+Temporary files                /u01/app/ogg-bd/dirtmp: created.
+Credential store files         /u01/app/ogg-bd/dircrd: created.
+Masterkey wallet files         /u01/app/ogg-bd/dirwlt: created.
+Dump files                     /u01/app/ogg-bd/dirdmp: created.
+
+
+GGSCI (localhost.localdomain) 2&gt; EDIT PARAM MGR
+</code></pre>
+
+<p>In the config file put:</p>
+
+<pre><code>PORT 7801
+</code></pre>
+
+<p>And then from the <code>ggsci</code> prompt start the manager and confirm that it&rsquo;s running</p>
+
+<pre><code>GGSCI (localhost.localdomain) 3&gt; start mgr
+Manager started.
+
+
+GGSCI (localhost.localdomain) 4&gt; info mgr
+
+Manager is running (IP port localhost.localdomain.7801, Process ID 28707).
+</code></pre>
+
+<h1 id="install-confluent-platform-3-3">Install Confluent Platform 3.3</h1>
+
+<pre><code>sudo rpm --import http://packages.confluent.io/rpm/3.3/archive.key
+</code></pre>
+
+<p>Add to <code>/etc/yum.repos.d/confluent.repo</code></p>
+
+<pre><code>[Confluent.dist]
+name=Confluent repository (dist)
+baseurl=http://packages.confluent.io/rpm/3.3/7
+gpgcheck=1
+gpgkey=http://packages.confluent.io/rpm/3.3/archive.key
+enabled=1
+
+[Confluent]
+name=Confluent repository
+baseurl=http://packages.confluent.io/rpm/3.3
+gpgcheck=1
+gpgkey=http://packages.confluent.io/rpm/3.3/archive.key
+enabled=1
+</code></pre>
+
+<p>Install Confluent Enterprise</p>
+
+<pre><code>sudo yum clean all
+sudo yum install confluent-platform-2.11
+</code></pre>
+
+<p>Modify Oracle to shut down HTTP listener on port 8081 since we don&rsquo;t need it and it clashes with Schema Registry. As SYSDBA run on <strong>each</strong> CDB/PDB run:</p>
+
+<pre><code>exec dbms_xdb.sethttpport(0);
+</code></pre>
+
+<p>Then stop/start the listener.</p>
+
+<p>To start Confluent Platform run</p>
+
+<pre><code>confluent start
+</code></pre>
+
+<h1 id="configure-smoke-test-ogg-kafka-connect-kafka">Configure &amp; Smoke Test OGG-Kafka Connect → Kafka</h1>
+
+<h3 id="configure-for-ogg-bd-kafka-connect-handler">Configure for OGG-BD Kafka Connect handler</h3>
+
+<p>(<a href="http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GADBD-GUID-81730248-AC12-438E-AF82-48C7002178EC">Doc</a>)</p>
+
+<p>Put these files in <code>/u01/app/ogg-bd/dirprm</code>:</p>
+
+<script src="https://gist.github.com/rmoff/0b658cccc625eed827ade52d7abab048.js"></script>
+
+<p><strong>Be very careful with the above configuration files for any trailing whitespace</strong> - it can cause problem, <a href="https://rmoff.net/2017/09/12/oracle-goldengate-kafka-connect-handler-troubleshooting/">detailed here</a>.</p>
+
+<p>Launch <code>ggsci</code>:</p>
+
+<pre><code>cd /u01/app/ogg-bd &amp;&amp; rlwrap ./ggsci
+</code></pre>
+
+<p>[Re-]Add replicat:</p>
+
+<pre><code>stop rkconn
+pause 1
+delete replicat rkconn
+pause 1
+add replicat rkconn, exttrail /u01/app/ogg/dirdat/lt
+pause 1
+start rkconn
+</code></pre>
+
+<p>Check status</p>
+
+<pre><code>info all
+info rkconn
+</code></pre>
+
+<p>Expect:</p>
+
+<pre><code>GGSCI (localhost.localdomain) 37&gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     RUNNING
+REPLICAT    RUNNING     RKCONN      00:00:00      00:00:05
+
+
+GGSCI (localhost.localdomain) 38&gt; info rkconn
+
+REPLICAT   RKCONN    Last Started 2017-09-27 13:50   Status RUNNING
+Checkpoint Lag       00:00:00 (updated 00:00:09 ago)
+Process ID           15843
+Log Read Checkpoint  File /u01/app/ogg/dirdat/lt000000002
+2017-09-27 13:43:27.000000  RBA 2393
+
+</code></pre>
+
+<p>Check logfile <code>/u01/app/ogg-bd/ggserr.log</code> and <code>/u01/app/ogg-bd/dirrpt/*</code> for any errors.</p>
+
+<h3 id="smoke-test-ogg-kafka-connect-kafka">Smoke test OGG &ndash; Kafka Connect &ndash;&gt; Kafka</h3>
+
+<p>Insert a row in Oracle (as done already above)</p>
+
+<ul>
+<li><p>Log into SQL*Plus</p>
+
+<pre><code>rlwrap sql SYS/oracle@orcl as sysdba
+</code></pre></li>
+
+<li><p>Insert a row and commit:</p>
+
+<pre><code>SQL&gt; INSERT INTO HR.REGIONS VALUES (42,'FOO');
+
+1 row created.
+
+SQL&gt; commit;
+
+Commit complete.
+</code></pre></li>
+</ul>
+
+<p>Check that the Kafka topic has been created</p>
+
+<pre><code>kafka-topics --zookeeper localhost:2181 --list
+...
+ora-ogg-HR-COUNTRIES-avro
+ora-ogg-HR-REGIONS-avro
+...
+</code></pre>
+
+<p>View the record</p>
+
+<pre><code>kafka-avro-console-consumer \
+--bootstrap-server localhost:9092 \
+--property schema.registry.url=http://localhost:8081 \
+--property print.key=true \
+--from-beginning \
+--topic ora-ogg-HR-COUNTRIES-avro
+</code></pre>
+
+<p>Optionally install <code>jq</code> (<code>sudo yum install jq</code>) to pretty-print the JSON displayed (remember the message is still in Avro in Kafka internally though)</p>
+
+<pre><code>$ kafka-avro-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --property schema.registry.url=http://localhost:8081 \
+  --from-beginning \
+  --topic ora-ogg-HR-COUNTRIES-avro|jq '.'
+{
+  &quot;table&quot;: {
+    &quot;string&quot;: &quot;ORCL.HR.COUNTRIES&quot;
+  },
+  &quot;op_type&quot;: {
+    &quot;string&quot;: &quot;I&quot;
+  },
+  &quot;op_ts&quot;: {
+    &quot;string&quot;: &quot;2017-09-12 22:26:11.000000&quot;
+  },
+  &quot;current_ts&quot;: {
+    &quot;string&quot;: &quot;2017-09-27 13:50:59.279000&quot;
+  },
+  &quot;pos&quot;: {
+    &quot;string&quot;: &quot;00000000010000002739&quot;
+  },
+  &quot;COUNTRY_ID&quot;: {
+    &quot;string&quot;: &quot;XX&quot;
+  },
+  &quot;COUNTRY_NAME&quot;: {
+    &quot;string&quot;: &quot;FOO&quot;
+  },
+  &quot;REGION_ID&quot;: {
+    &quot;double&quot;: 42
+  }
+}
+</code></pre>
+
+<h1 id="bonus-install-swingbench-and-build-seed-schema">Bonus: Install Swingbench and build/seed schema</h1>
+
+<p><a href="http://dominicgiles.com/downloads.html">Download Swingbench 2.6</a></p>
+
+<pre><code>unzip swingbench261046.zip
+sudo mv swingbench /opt
+</code></pre>
+
+<p>Create the tablespace and user manually so that we can capture everything with GoldenGate (there&rsquo;s probably a better way to do this?)</p>
+
+<script src="https://gist.github.com/rmoff/959a7b090c67725abcb009017545406c.js"></script>
+
+<p>Define the Extract properties</p>
+
+<pre><code>cat &gt;&gt; /u01/app/ogg/dirprm/EXT_SOE.prm&lt;&lt;EOF
+EXTRACT EXT_SOE
+USERID SYSTEM@OGG_ORCL12C, PASSWORD oracle
+EXTTRAIL ./dirdat/oe
+SOURCECATALOG ORCL
+TABLE SOE.*;
+EOF
+</code></pre>
+
+<p>Then launch OGG</p>
+
+<pre><code>cd /u01/app/ogg/
+rlwrap ./ggsci
+</code></pre>
+
+<p>and set up capture of the schema</p>
+
+<pre><code>DBLOGIN USERID SYSTEM@localhost:1521/orcl12c PASSWORD oracle
+REGISTER EXTRACT EXT_SOE DATABASE CONTAINER (ORCL)
+ADD SCHEMATRANDATA ORCL.SOE ALLCOLS
+ADD EXTRACT EXT_SOE, INTEGRATED TRANLOG, BEGIN NOW
+ADD EXTTRAIL ./dirdat/oe EXTRACT EXT_SOE
+START EXT_SOE
+</code></pre>
+
+<p>Now run Swingbench <code>oewizard</code>, and the creation of the tables and data load will be captured in OGG:</p>
+
+<pre><code>/opt/swingbench/bin/oewizard -cs localhost:1521/orcl -cl -scale 0.1 -dbap oracle -u soe -p soe -v -create
+</code></pre>
+
+<p>Swingbench output:</p>
+
+<pre><code>SwingBench Wizard
+Author  :        Dominic Giles
+Version :        2.6.0.1046
+
+Running in Lights Out Mode using config file : ../wizardconfigs/oewizard.xml
+
+[...]
+
+============================================
+|           Datagenerator Run Stats        |
+============================================
+Connection Time                        0:00:00.003
+Data Generation Time                   0:01:03.240
+DDL Creation Time                      0:00:43.730
+Total Run Time                         0:01:46.979
+Rows Inserted per sec                       19,200
+Data Generated (MB) per sec                    1.9
+Actual Rows Generated                    2,116,908
+
+Connecting to : jdbc:oracle:thin:@localhost:1521/orcl
+Connected
+
+Post Creation Validation Report
+===============================
+The schema appears to have been created successfully.
+
+Valid Objects
+=============
+Valid Tables : 'ORDERS','ORDER_ITEMS','CUSTOMERS','WAREHOUSES','ORDERENTRY_METADATA','INVENTORIES','PRODUCT_INFORMATION','PRODUCT_DESCRIPTIONS','ADDRESSES','CARD_DETAILS'
+Valid Indexes : 'PRD_DESC_PK','PROD_NAME_IX','PRODUCT_INFORMATION_PK','PROD_SUPPLIER_IX','PROD_CATEGORY_IX','INVENTORY_PK','INV_PRODUCT_IX','INV_WAREHOUSE_IX','ORDER_PK','ORD_SALES_REP_IX','ORD_CUSTOMER_IX','ORD_ORDER_DATE_IX','ORD_WAREHOUSE_IX','ORDER_ITEMS_PK','ITEM_ORDER_IX','ITEM_PRODUCT_IX','WAREHOUSES_PK','WHS_LOCATION_IX','CUSTOMERS_PK','CUST_EMAIL_IX','CUST_ACCOUNT_MANAGER_IX','CUST_FUNC_LOWER_NAME_IX','ADDRESS_PK','ADDRESS_CUST_IX','CARD_DETAILS_PK','CARDDETAILS_CUST_IX'
+Valid Views : 'PRODUCTS','PRODUCT_PRICES'
+Valid Sequences : 'CUSTOMER_SEQ','ORDERS_SEQ','ADDRESS_SEQ','LOGON_SEQ','CARD_DETAILS_SEQ'
+Valid Code : 'ORDERENTRY'
+Schema Created
+oracle@localhost /o/swingbench&gt;
+</code></pre>
+
+<p>For more details on how to do cool stuff with Swingbench data, including in KSQL for live joining of events with reference data, keep an eye on the <a href="https://www.confluent.io/blog/">Confluent blog</a>…</p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

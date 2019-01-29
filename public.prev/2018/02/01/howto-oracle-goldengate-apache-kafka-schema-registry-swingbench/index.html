@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>HOWTO: Oracle GoldenGate &#43; Apache Kafka &#43; Schema Registry &#43; Swingbench</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="HOWTO: Oracle GoldenGate &#43; Apache Kafka &#43; Schema Registry &#43; Swingbench" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/02/IMG_8617.JPG" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/" />
+		<meta name="og:site_name" content="HOWTO: Oracle GoldenGate &#43; Apache Kafka &#43; Schema Registry &#43; Swingbench" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/02/IMG_8617.JPG'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">HOWTO: Oracle GoldenGate + Apache Kafka + Schema Registry + Swingbench</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-02-01T23:15:00Z">Feb 1, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//apache-kafka" class="no-underline category near-white dim">Apache Kafka</a>, <a href="https://rmoff.github.io/categories//schema-registry" class="no-underline category near-white dim">Schema Registry</a>, <a href="https://rmoff.github.io/categories//swingbench" class="no-underline category near-white dim">Swingbench</a>, <a href="https://rmoff.github.io/categories//goldengate" class="no-underline category near-white dim">Goldengate</a>, <a href="https://rmoff.github.io/categories//oracle" class="no-underline category near-white dim">Oracle</a>
+								<span class="display-print">at https://rmoff.github.io/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	
+
+<p><em>This is the detailed step-by-step if you want to recreate the process I describe in the <a href="https://www.confluent.io/blog/ksql-in-action-real-time-streaming-etl-from-oracle-transactional-data">Confluent blog here</a></em></p>
+
+<hr />
+
+<p>I used Oracle&rsquo;s <a href="http://www.oracle.com/technetwork/database/enterprise-edition/databaseappdev-vm-161299.html">Oracle Developer Days VM</a>, which comes preinstalled with Oracle 12cR2. You can see the notes on <a href="https://rmoff.net/2017/11/21/installing-oracle-goldengate-for-big-data-12-3-1-with-kafka-connect-and-confluent-platform/">how to do this here</a>. These notes take you through installing and configuring:</p>
+
+<ul>
+<li>Swingbench, to create a sample &ldquo;Order Entry&rdquo; schema and simulate events on the Oracle database</li>
+<li>Oracle GoldenGate (OGG, forthwith) and Oracle GoldenGate for Big Data (OGG-BD, forthwith)
+
+<ul>
+<li>I&rsquo;m using Oracle GoldenGate 12.3.1 which includes the Kafka Connect handler as part of its distribution. A connector for earlier versions can be <a href="http://www.oracle.com/technetwork/middleware/goldengate/oracle-goldengate-exchange-3805527.html">found here</a>. Some of the syntax may differ in the configuration below - if you hit problems then check out [an article that I wrote]() with an earlier version of the tool.</li>
+</ul></li>
+<li>OGG <code>extract</code> from the Order Entry schema</li>
+<li>Confluent Platform</li>
+<li>KSQL</li>
+<li>Elasticsearch</li>
+</ul>
+
+<p>From this point, I&rsquo;ll now walk through configuring OGG-BD with the Kafka Connect handler</p>
+
+<h3 id="configuring-the-kafka-connect-replicat">Configuring the Kafka Connect replicat</h3>
+
+<p>The OGG-BD replicat takes the trail file of events written by the <code>extract</code> job, and replays those events to the target. In our case, the target is the Kafka Connect handler.</p>
+
+<p><img src="/content/images/2018/02/oggkaf01sm.jpg" alt="" /></p>
+
+<p>You can find full documentation for the OGG-BD replicat <a href="http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GADBD-GUID-81730248-AC12-438E-AF82-48C7002178EC">here</a>. Each replicat has three configuration files:</p>
+
+<ul>
+<li>A <strong>parameter</strong> file, which can be used to specify configuration including the selection of specific tables or schemas from the Extract trail file. This file also points to the primary <strong>properties</strong> file</li>
+<li>The <strong>properties</strong> file is where we tell OGG-BD to use the Kafka Connect handler (<code>gg.handler.kafkaconnect.type=kafkaconnect</code>), as well as the <strong>topic name format</strong> and <strong>Kafka message key</strong>. These latter two items are new and improved in 12.3.1, and are template-driven. You can see the full syntax for them <a href="http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GUID-A87CAFFA-DACF-43A0-8C6C-5C64B578D606">here</a>. Another useful configuration item in this file is <code>gg.log.level</code> which you can set to <code>DEBUG</code> if you need to dig into what&rsquo;s going on.</li>
+<li>The <strong>Kafka Connect configuration</strong> file, which points to the Kafka brokers, and the Converters that we want to use (Json or Avro). If we&rsquo;re using Avro, the URL for the Schema Registry is also defined here.</li>
+</ul>
+
+<p>In this article we&rsquo;re going to use OGG-BD to populate a topic for each table, using Avro encoding. <a href="https://gist.github.com/rmoff/221b4a1903a85568042e3a1b9b07ab95">Here are</a> the three configuration files you should put in <code>/u01/app/ogg-bd/dirprm</code>.</p>
+
+<p><strong>Be very careful with copying &amp; pasting these configuration files, as trailing whitespace can cause problems, <a href="https://rmoff.net/2017/09/12/oracle-goldengate-kafka-connect-handler-troubleshooting/">detailed here</a>.</strong></p>
+
+<h3 id="starting-the-replicat">Starting the replicat</h3>
+
+<p>From the bash shell, start the OGG-BD <code>ggsci</code> tool:</p>
+
+<pre><code># set to orcl12c when prompted
+. oraenv
+
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server/
+
+cd /u01/app/ogg-bd
+rlwrap ./ggsci
+</code></pre>
+
+<p>and then from the <code>ggsci&gt;</code> prompt run the following to start each replicat:</p>
+
+<pre><code>add replicat rkafavro, exttrail /u01/app/ogg/dirdat/oe
+start rkafavro
+</code></pre>
+
+<p>Having done this, we&rsquo;ll want to do a little smoke test just to see that data modified in the SOE schema streams through via OGG-BD into Kafka.</p>
+
+<p>Insert row to an SOE table</p>
+
+<pre><code>[oracle@localhost ~]$ rlwrap sqlplus SYS/oracle@orcl as sysdba
+
+SQL*Plus: Release 12.2.0.1.0 Production on Mon Sep 11 10:14:28 2017
+
+Copyright (c) 1982, 2016, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 12c Enterprise Edition Release 12.2.0.1.0 - 64bit Production
+
+SQL&gt; insert into soe.logon values(42,42,sysdate);
+
+1 row created.
+
+SQL&gt; commit;
+
+Commit complete.
+
+SQL&gt;
+</code></pre>
+
+<p>Check that the topics have been created:</p>
+
+<pre><code>$ kafka-topics --zookeeper localhost:2181 --list
+__confluent.support.metrics
+__consumer_offsets
+_schemas
+connect-configs
+connect-offsets
+connect-statuses
+ora-ogg-SOE-LOGON-avro
+</code></pre>
+
+<p>View the record</p>
+
+<pre><code>kafka-avro-console-consumer \
+--bootstrap-server localhost:9092 \
+--property schema.registry.url=http://localhost:8081 \
+--property print.key=true \
+--from-beginning \
+--topic ora-ogg-SOE-LOGON-avro | jq '.'
+</code></pre>
+
+<pre><code class="language-json">&quot;42_42_2017-09-11 10:14:30&quot;
+{
+  &quot;table&quot;: {
+    &quot;string&quot;: &quot;ORCL.SOE.LOGON&quot;
+  },
+  &quot;op_type&quot;: {
+    &quot;string&quot;: &quot;I&quot;
+  },
+  &quot;op_ts&quot;: {
+    &quot;string&quot;: &quot;2017-09-11 14:14:39.000000&quot;
+  },
+  &quot;current_ts&quot;: {
+    &quot;string&quot;: &quot;2017-09-11 10:14:43.164000&quot;
+  },
+  &quot;pos&quot;: {
+    &quot;string&quot;: &quot;00000000010000002172&quot;
+  },
+  &quot;LOGON_ID&quot;: {
+    &quot;double&quot;: 42
+  },
+  &quot;CUSTOMER_ID&quot;: {
+    &quot;double&quot;: 42
+  },
+  &quot;LOGON_DATE&quot;: {
+    &quot;string&quot;: &quot;2017-09-11 10:14:30&quot;
+  }
+}
+</code></pre>
+
+<p>Having confirmed that the replication is working, we can now run Swingbench to simulate some work on our source transactional system.</p>
+
+<pre><code>/opt/swingbench/bin/charbench -cs localhost:1521/orcl -u soe -p soe -v trans,users -c /opt/swingbench/configs/SOE_Client_Side.xml
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Author  :        Dominic Giles
+Version :        2.6.0.1046
+
+Results will be written to results.xml.
+Hit Return to Terminate Run...
+
+Time            NCR     UCD     BP      OP      PO      BO      SQ      WQ      WA      Users
+09:01:04        0       0       0       0       0       0       0       0       0       [0/4]
+09:01:06        0       0       0       0       0       0       0       0       0       [0/4]
+09:01:08        15      7       68      28      3       12      1       0       0       [4/4]
+09:01:10        47      15      179     75      9       31      2       0       0       [4/4]
+09:01:12        74      20      248     119     11      45      3       2       0       [4/4]
+[...]
+</code></pre>
+
+<p>Hit Ctrl-C when you want to quit Swingbench. I&rsquo;ve shown the command line version (<code>charbench</code>) above; there is also a GUI version that you can use if you want to easily tweak the simulation characteristics.</p>
+
+<hr />
+
+<p><em>To read more about this, and see the awesome KSQL in action, head over to the <a href="https://www.confluent.io/blog/">Confluent blog</a></em></p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

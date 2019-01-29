@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Using R to Denormalise Data for Analysis in Kibana</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2016/04/24/using-r-to-denormalise-data-for-analysis-in-kibana/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Using R to Denormalise Data for Analysis in Kibana" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2016/04/dft02-1.jpg" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2016/04/24/using-r-to-denormalise-data-for-analysis-in-kibana/" />
+		<meta name="og:site_name" content="Using R to Denormalise Data for Analysis in Kibana" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2016/04/dft02-1.jpg'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Using R to Denormalise Data for Analysis in Kibana</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2016-04-24T12:22:12Z">Apr 24, 2016</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//r" class="no-underline category near-white dim">R</a>, <a href="https://rmoff.github.io/categories//dft" class="no-underline category near-white dim">Dft</a>, <a href="https://rmoff.github.io/categories//kibana" class="no-underline category near-white dim">Kibana</a>, <a href="https://rmoff.github.io/categories//elasticsearch" class="no-underline category near-white dim">Elasticsearch</a>, <a href="https://rmoff.github.io/categories//dplyr" class="no-underline category near-white dim">Dplyr</a>, <a href="https://rmoff.github.io/categories//lubridate" class="no-underline category near-white dim">Lubridate</a>, <a href="https://rmoff.github.io/categories//wrangling" class="no-underline category near-white dim">Wrangling</a>, <a href="https://rmoff.github.io/categories//elastic" class="no-underline category near-white dim">Elastic</a>
+								<span class="display-print">at https://rmoff.github.io/2016/04/24/using-r-to-denormalise-data-for-analysis-in-kibana/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p><a href="https://www.elastic.co/products/kibana">Kibana</a> is a tool from <a href="https://www.elastic.co/">Elastic</a> that makes analysis of data held in <a href="https://www.elastic.co/products/elasticsearch">Elasticsearch</a> really easy and very powerful. Because Elasticsearch has very loose schema that can evolve on demand it makes it very quick to get up and running with some cool visualisations and analysis on any set of data. I demonstrated this in a <a href="http://www.rittmanmead.com/2015/04/using-the-elk-stack-to-analyse-donors-choose-data/">blog post last year</a>, taking a CSV file and loading it into Elasticsearch via Logstash.</p>
+
+<p>This is all great, but the one real sticking point with analytics in Elasticsearch/Kibana is that it needs the data to be <strong>denormalised</strong>. That is, you can&rsquo;t give it a bunch of sources of data and it perform the joins for you in Kibana - it just doesn&rsquo;t work like that. If you&rsquo;re using Elasticsearch alone for analytics, maybe with a bespoke application, <a href="https://www.elastic.co/guide/en/elasticsearch/guide/current/relations.html">there are ways of approaching it</a>, but not through Kibana. Now, depending on where the data is coming from, this may not be a problem. For example, if you use the <a href="https://www.elastic.co/guide/en/logstash/current/plugins-inputs-jdbc.html">JDBC Logstash input</a> to pull from an RDBMS source you can specify a complex SQL query going across multiple tables, so that the data when it hits Elasticsearch is nice and denormalised and ready for fun in Kibana. But, source data doesn&rsquo;t always come this way, and it&rsquo;s useful to have a way to work with the data still when it is like this.</p>
+
+<p>I was playing around with some data recently (as one does, of course 8-) ) to try and load Elasticsearch so as to look at the <a href="https://www.elastic.co/products/graph">Graph</a> function in more detail, but struggling because the data itself was mostly made of codes that were foreign keys to separate datasets. The data was a CSV from <a href="https://data.gov.uk/dataset/road-accidents-safety-data">data.gov.uk</a>, detailing road accidents. Each field, such as the police force, was simply a code that then had to be looked up on an Excel document <a href="https://data.gov.uk/data/resource_cache/ad/ad15bff1-9fec-4bac-befe-7005d104344e/Road-Accident-Safety-Data-Guide.xls">available separately</a>. Loading just the main CSV into Elasticsearch was easy enough (<a href="https://github.com/rmoff/dft/blob/master/logstash-DfTRoadSafety_Accidents.conf">see github for details</a>), but of limited use once in Kibana:</p>
+
+<p><img src="/content/images/2016/04/dft01.jpg" alt="" /></p>
+
+<p><code>Day_of_Week</code> being from 1 to 7 I could probably hazard a guess at the lookup value myself, but <code>Junction_Detail</code> of &ldquo;8&rdquo; &hellip; not a clue. To find out, I need to match each foreign key with the corresponding lookup data, which is in a set of sheets in an Excel document:</p>
+
+<p><img src="/content/images/2016/04/dft04.png" alt="" /></p>
+
+<p>At this point we are at the official start of &ldquo;wrangling&rdquo; the data. We don&rsquo;t know what we can do with the data until we&rsquo;ve got it in a structure that makes it useful, so we don&rsquo;t want to front-load the time needed for discovery with some complex ETL if the data&rsquo;s not going to turn out to yield much of interest. We <em>could</em> use a data integration tool such as <a href="http://www.oracle.com/technetwork/middleware/data-integrator/overview/index.html">ODI</a>, but talk about sledgehammer to crack a nut &hellip; and that&rsquo;s before we take into account license costs, infrastructure overheard, and so on. Surely we can do this more smartly, as a one-off or hacky-repeatable thing, until we&rsquo;re sure it&rsquo;s going to be of worth to &lsquo;productionise&rsquo;.</p>
+
+<p>First up was trying to keep the toolset down to a minimum, and modifying the CSV file from bash itself. People sometimes forget that bash comes with a fantastically powerful set of data manipulation tools, in the form of <code>sed</code>, <code>awk</code>, <code>tr</code>, <code>grep</code>, and so on. One of these is also <code>join</code>, which as the name says, let&rsquo;s you take two files and join on a given column. However, after a few iterations (read: bouncing back and forth between the terminal and Google and nearly throwing my laptop at the wall) I wrote it off as unfeasible. Problems with character encoding of the datasets, and the fact that I had to manually extract the data from Excel first before I could run it - not to mention the fact there are nearly 20 dimensions to join - meant that I discounted this option.</p>
+
+<p>I then had one of those &ldquo;ahhhhh&rdquo; moments, remembering the excellent work that my colleague Jordan Meyer did at the Rittman Mead BI Forum last year in his <a href="https://s3.amazonaws.com/rmc_docs/rm_bi_forum_mclass_2015_part1.pdf">Data Discovery and Predictive Modelling</a> masterclass. In it he extolled the many virtues of R for working with data. Not only is R a powerful statistics language, it&rsquo;s also a damn useful (and, I would say, elegant) one for manipulating data, helped in large part by the <a href="https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html">dplyr package</a>. It also has lots of libraries for doing useful stuff like reading CSV files based on the headers without having to declare the column, as well as reading natively from Excel files. So, off we go:</p>
+
+<pre><code class="language-R">### Load main accident facts from CSV
+library('readr')
+accidents &lt;- read_csv(&quot;/tmp/dft/DfTRoadSafety_Accidents_2014.csv&quot;)
+</code></pre>
+
+<p><em>N.B. If you&rsquo;ve any libraries here not already installed, you can install using <code>install.packages('foo')</code></em></p>
+
+<p>With the data loaded, let&rsquo;s now set a proper timestamp column, since in the data there&rsquo;s only Date and Time on their own. We can see some sample values with the <code>head</code> function:</p>
+
+<pre><code>&gt; head(accidents$Date)
+[1] &quot;09/01/2014&quot; &quot;20/01/2014&quot; &quot;21/01/2014&quot; &quot;15/01/2014&quot; &quot;09/01/2014&quot;
+[6] &quot;17/01/2014&quot;
+&gt; head(accidents$Time)
+[1] &quot;13:21&quot; &quot;23:00&quot; &quot;10:40&quot; &quot;17:45&quot; &quot;08:50&quot; &quot;14:11&quot;
+&gt;
+</code></pre>
+
+<p>Handling and parsing dates is a problem to be solved across all languages and technologies, and R&rsquo;s <code>lubridate</code> package is by far the best way I&rsquo;ve ever seen. Using <code>lubridate</code> you describe the <strong>order</strong> that the date/time components appear in (e.g. &ldquo;year month day&rdquo;) but without needing to specify the exact format string usually needed, thus avoiding the usual monkeying around with letter symbols, counting out the right number of them and getting the case right (is it YYYYMMDD or YYYYmmDD or YYMD?). In the above data sample you can see that the date is in the form Day / Month / Year, and the Time is Hour / Minute. That&rsquo;s all we need to know - forget having to check if &ldquo;MM&rdquo; is month or minute, whether to escape the separators and so on. Since it&rsquo;s Day / Month / Year / Hour / Minute, we use the <strong><code>dmy_hm</code></strong> function:</p>
+
+<pre><code class="language-R">### Populate a timestamp using the awesome lubridate package
+library('lubridate')
+### Using &quot;dmy_hm&quot; we're telling lubridate that the date is in the order
+### Day / Month / Year / Hour / Minute - the actual format string and
+### separators get figured out automagically
+accidents$timestamp &lt;- dmy_hm(paste(accidents$Date,accidents$Time))
+</code></pre>
+
+<p>The data includes the geo-spatial reference points, which <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/geo-point.html">Elasticsearch can store</a> enabling analysis of the data in tools including Kibana. To store this properly we define <code>location</code> as a <code>geo_point</code> in <a href="https://github.com/rmoff/dft/blob/master/elasticsearch_mapping_template.sh">the mapping</a>, and concatenate the latitude and longitude:</p>
+
+<pre><code class="language-R">### Define the location as a string. 
+accidents$location &lt;- paste(accidents$Latitude,accidents$Longitude,sep=',')
+</code></pre>
+
+<p>At this point we have just our main &ldquo;fact&rdquo; dataset, including properly formatted and typed Timestamp column:</p>
+
+<pre><code class="language-R">&gt; str(accidents)
+Classes 'tbl_df', 'tbl' and 'data.frame':	146322 obs. of  33 variables:
+ $ ﻿Accident_Index                             : chr  &quot;201401BS70001&quot; &quot;201401BS70002&quot; &quot;201401BS70003&quot; &quot;201401BS70004&quot; ...
+ $ Location_Easting_OSGR                      : int  524600 525780 526880 525580 527040 524750 524950 523850 524500 526450 ...
+ $ Location_Northing_OSGR                     : int  179020 178290 178430 179080 179030 178970 179240 181450 180260 179230 ...
+ $ Longitude                                  : num  -0.206 -0.19 -0.174 -0.192 -0.171 ...
+ $ Latitude                                   : num  51.5 51.5 51.5 51.5 51.5 ...
+ $ Police_Force                               : int  1 1 1 1 1 1 1 1 1 1 ...
+ $ Accident_Severity                          : int  3 3 3 3 3 3 3 3 3 3 ...
+&gt; head(accidents$timestamp)
+[1] &quot;2014-01-09 13:21:00 UTC&quot; &quot;2014-01-20 23:00:00 UTC&quot;
+[3] &quot;2014-01-21 10:40:00 UTC&quot; &quot;2014-01-15 17:45:00 UTC&quot;
+[5] &quot;2014-01-09 08:50:00 UTC&quot; &quot;2014-01-17 14:11:00 UTC&quot;
+&gt;
+</code></pre>
+
+<p>Now let&rsquo;s load a lookup dataset for one of the dimensions &ndash; Police Force.</p>
+
+<pre><code class="language-R">library('readxl')
+police &lt;-
+  read_excel(&quot;/tmp/dft/Road-Accident-Safety-Data-Guide.xls&quot;,sheet = 3)
+</code></pre>
+
+<p>We can check the data:</p>
+
+<pre><code class="language-R">&gt; library('tibble')
+&gt; as_data_frame(police)
+Source: local data frame [51 x 2]
+
+    code               label
+   &lt;dbl&gt;               &lt;chr&gt;
+1      1 Metropolitan Police
+2      3             Cumbria
+3      4          Lancashire
+4      5          Merseyside
+[...]
+</code></pre>
+
+<p>but note the second column heading &ndash; <code>label</code>. When we come to do our joining we want the name of this descriptor column to reference the dimension to which it is attached. So, we rename it using a function in the dplyr library:</p>
+
+<pre><code class="language-R">&gt; library('dplyr')
+&gt; police &lt;-
+   police %&gt;%
+   rename(police_force=label)
+&gt; as_data_frame(police)
+Source: local data frame [51 x 2]
+
+    code        police_force
+   &lt;dbl&gt;               &lt;chr&gt;
+1      1 Metropolitan Police
+2      3             Cumbria
+3      4          Lancashire
+4      5          Merseyside
+[...]
+</code></pre>
+
+<p>Much better! Now to join this to the main dataset. For this we use dplyr again, with its <strong>join</strong> function:</p>
+
+<pre><code class="language-R">accidents &lt;-
+  left_join(accidents,police, by=c(&quot;Police_Force&quot;=&quot;code&quot;))
+</code></pre>
+
+<blockquote>
+<p><em>If you want to see more about working with R, there&rsquo;s a great reference PDF here: <strong><a href="https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf">Data Wrangling with dplyr and tidyr Cheat Sheet</a></strong>.</em></p>
+</blockquote>
+
+<p>Check out the results:</p>
+
+<pre><code class="language-R">&gt; accidents %&gt;%
++ select(1,34)
+Source: local data frame [146,322 x 2]
+
+   ﻿Accident_Index        police_force
+            &lt;chr&gt;               &lt;chr&gt;
+1   201401BS70001 Metropolitan Police
+2   201401BS70002 Metropolitan Police
+3   201401BS70003 Metropolitan Police
+</code></pre>
+
+<p>Once the joining is done it&rsquo;s off to another R library, this time <code>elastic</code>, enabling us to write the denormalised data frame directly into Elasticsearch. We&rsquo;re manually defining <code>Accident_Index</code> as the unique key for the record, so that if re-run Elasticsearch won&rsquo;t accept duplicate entries.</p>
+
+<pre><code class="language-R">library(&quot;elastic&quot;)
+### connect() assumes Elasticsearch is running locally on port 9200
+connect()
+docs_bulk(accidents,doc_ids = accidents$Accident_Index,index=&quot;dftroadsafetyaccidents02&quot;)
+</code></pre>
+
+<p>Heading over to Kibana we now have the basis from which to start usefully exploring the data &hellip;</p>
+
+<p><img src="/content/images/2016/04/dft02.jpg" alt="" /></p>
+
+<p>&hellip; as well as knocking out aggregate visualisations with ease:</p>
+
+<p><img src="/content/images/2016/04/dft03.jpg" alt="" /></p>
+
+<p>And since we stored the data using the geo-spatial reference format we can also map it out:</p>
+
+<p><img src="/content/images/2016/04/dft05.png" alt="" /></p>
+
+<p>Stay tuned for more details of the actual Graph analysis that I did with the data once it was loaded&hellip;.</p>
+
+<hr />
+
+<p>You can find <a href="https://github.com/rmoff/dft">the full R code on github here</a>, including joins to all 18 lookup data sets. There&rsquo;s also the code for loading the data into Elasticsearch directly via Logstash from the CSV, and the necessary Elasticsearch mapping template.</p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

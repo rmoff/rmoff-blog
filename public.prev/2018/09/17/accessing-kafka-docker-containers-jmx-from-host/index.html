@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Accessing Kafka Docker containers&rsquo; JMX from host</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/09/17/accessing-kafka-docker-containers-jmx-from-host/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Accessing Kafka Docker containers&rsquo; JMX from host" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/09/2018-09-17_17-38-42.png" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/09/17/accessing-kafka-docker-containers-jmx-from-host/" />
+		<meta name="og:site_name" content="Accessing Kafka Docker containers&rsquo; JMX from host" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/09/2018-09-17_17-38-42.png'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Accessing Kafka Docker containers&rsquo; JMX from host</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-09-17T15:29:48Z">Sep 17, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//jmx" class="no-underline category near-white dim">Jmx</a>, <a href="https://rmoff.github.io/categories//kafka" class="no-underline category near-white dim">Kafka</a>, <a href="https://rmoff.github.io/categories//docker" class="no-underline category near-white dim">Docker</a>
+								<span class="display-print">at https://rmoff.github.io/2018/09/17/accessing-kafka-docker-containers-jmx-from-host/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p><em>See also <a href="https://docs.confluent.io/current/installation/docker/docs/operations/monitoring.html">docs</a>.</em></p>
+
+<p>To help future Googlers… with the Confluent docker images for Kafka, KSQL, Kafka Connect, etc, if you want to access JMX metrics from within, you just need to pass two environment variables: <code>&lt;x&gt;_JMX_HOSTNAME</code> and <code>&lt;x&gt;_JMX_PORT</code>, prefixed by a component name.</p>
+
+<ul>
+<li><p><code>&lt;x&gt;_JMX_HOSTNAME</code> - the hostname/IP of the <em>JMX host</em> machine, <em>as accessible from the JMX Client</em>.</p>
+
+<p>This is used by the JMX client to connect back into JMX, so must be accessible from the <em>host machine running the JMX client</em>.</p>
+
+<p>If you&rsquo;re just running your JMX client locally on the Docker host, you can set this to <code>127.0.0.1</code></p></li>
+
+<li><p><code>&lt;x&gt;_JMX_PORT</code> - a port on which you want to access the metrics. Make sure you expose this port through Docker</p></li>
+</ul>
+
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Hostname</th>
+<th>Port</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Kafka</td>
+<td><code>KAFKA_JMX_HOSTNAME</code></td>
+<td><code>KAFKA_JMX_PORT</code></td>
+</tr>
+
+<tr>
+<td>Kafka Connect</td>
+<td><code>KAFKA_JMX_HOSTNAME</code></td>
+<td><code>KAFKA_JMX_PORT</code></td>
+</tr>
+
+<tr>
+<td>Zookeeper</td>
+<td><code>KAFKA_JMX_HOSTNAME</code></td>
+<td><code>KAFKA_JMX_PORT</code></td>
+</tr>
+
+<tr>
+<td>KSQL</td>
+<td><code>KSQL_JMX_HOSTNAME</code></td>
+<td><code>KSQL_JMX_PORT</code></td>
+</tr>
+
+<tr>
+<td>REST Proxy</td>
+<td><code>KAFKAREST_JMX_HOSTNAME</code></td>
+<td><code>KAFKAREST_JMX_PORT</code></td>
+</tr>
+
+<tr>
+<td>Schema Registry</td>
+<td><code>SCHEMA_REGISTRY_JMX_HOSTNAME</code></td>
+<td><code>SCHEMA_REGISTRY_JMX_PORT</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>If you don&rsquo;t set <code>&lt;x&gt;_JMX_HOSTNAME</code> then the Docker launch script uses the <em>host details of the container</em>, which results in connectivity problems.</p>
+
+<p>From <a href="http://wiki.cyclopsgroup.org/jmxterm/">jmxterm</a> you&rsquo;ll get errors like:</p>
+
+<div class="highlight"><pre style=";-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ java -jar ~/Downloads/jmxterm-1.0.0-uber.jar
+Welcome to JMX terminal. Type <span style="color:#ba2121">&#34;help&#34;</span> <span style="color:#008000;font-weight:bold">for</span> available commands.
+$&gt;open localhost:18088
+<span style="color:#408080;font-style:italic">#RuntimeIOException: Runtime IO exception: Connection refused to host: 192.168.144.4; nested exception is:</span>
+        java.net.ConnectException: Operation timed out <span style="color:#666">(</span>Connection timed out<span style="color:#666">)</span></code></pre></div>
+
+<p>or</p>
+
+<div class="highlight"><pre style=";-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ java -jar ~/Downloads/jmxterm-1.0.0-uber.jar
+Welcome to JMX terminal. Type <span style="color:#ba2121">&#34;help&#34;</span> <span style="color:#008000;font-weight:bold">for</span> available commands.
+$&gt;open localhost:18088
+<span style="color:#408080;font-style:italic">#RuntimeIOException: Runtime IO exception: Failed to retrieve RMIServer stub: javax.naming.CommunicationException [Root exception is java.rmi.ConnectIOException: error during JRMP connection establishment; nested exception is:</span>
+        java.io.EOFException<span style="color:#666">]</span></code></pre></div>
+
+<p>For JConsole it&rsquo;ll just hang/timeout, or appear to work but disconnected.</p>
+
+<p>To validate your connection easily you can use <code>jmxterm</code>:</p>
+
+<div class="highlight"><pre style=";-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ <span style="color:#008000">echo</span> <span style="color:#ba2121">&#39;domains&#39;</span> | java -jar ~/Downloads/jmxterm-1.0.0-uber.jar  -l localhost:18088 -n -v silent
+JMImplementation
+com.sun.management
+java.lang
+java.nio
+java.util.logging
+kafka.connect
+kafka.consumer
+kafka.producer
+
+$ <span style="color:#008000">echo</span> <span style="color:#ba2121">&#39;domains&#39;</span> | java -jar ~/Downloads/jmxterm-1.0.0-uber.jar  -l localhost:18086 -n -v silent
+JMImplementation
+com.sun.management
+java.lang
+java.nio
+java.util.logging
+log4j
+org.apache.ZooKeeperService</code></pre></div>
+
+<p>Read more about <a href="https://rmoff.net/2018/09/19/exploring-jmx-with-jmxterm/">jxmterm here</a></p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

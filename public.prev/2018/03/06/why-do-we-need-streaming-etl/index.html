@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Why Do We Need Streaming ETL?</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/03/06/why-do-we-need-streaming-etl/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Why Do We Need Streaming ETL?" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/02/IMG_8620-EFFECTS-1.jpg" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/03/06/why-do-we-need-streaming-etl/" />
+		<meta name="og:site_name" content="Why Do We Need Streaming ETL?" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/02/IMG_8620-EFFECTS-1.jpg'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Why Do We Need Streaming ETL?</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-03-06T22:18:00Z">Mar 6, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//streaming" class="no-underline category near-white dim">Streaming</a>, <a href="https://rmoff.github.io/categories//etl" class="no-underline category near-white dim">Etl</a>, <a href="https://rmoff.github.io/categories//apache-kafka" class="no-underline category near-white dim">Apache Kafka</a>, <a href="https://rmoff.github.io/categories//confluent-platform" class="no-underline category near-white dim">Confluent Platform</a>
+								<span class="display-print">at https://rmoff.github.io/2018/03/06/why-do-we-need-streaming-etl/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p><em>(This is an expanded version of the intro to an article I posted over on the <a href="https://www.confluent.io/blog/ksql-in-action-real-time-streaming-etl-from-oracle-transactional-data">Confluent blog</a>. Here I get to be as verbose as I like <code>;)</code>)</em></p>
+
+<p>My first job from university was building a datawarehouse for a retailer in the UK. Back then, it was writing COBOL jobs to load tables in DB2. We waited for all the shops to close and do their end of day system processing, and send their data back to the central mainframe. From there it was checked and loaded, and then reports generated on it. This was nearly twenty years ago as my greying beard will attest—and not a lot has changed in the large majority of reporting and analytics systems since then. COBOL is maybe less common, but what has remained constant is the batch-driven nature of processing. Sometimes batches are run more frequently, and get given fancy names like intra-day ETL or even micro-batching. But batch processing it is, and as such latency is built into our reporting <em>by design</em>. When we opt for batch processing we voluntarily inject delays into the availability of data to our end users. Much better is to build our systems around a streaming platform instead.</p>
+
+<p><img src="/content/images/2018/02/streaming-platform.png" alt="" /></p>
+
+<p>Apache Kafka is a distributed streaming platform, and as well as powering a large number of stream-based mission-critical systems around the world, it has a huge role to play in <strong>data integration</strong> too. Back in 2016 Neha Narkhede wrote that <a href="https://www.infoq.com/presentations/etl-streams">ETL Is Dead, Long Live Streams</a>, and since then we&rsquo;ve seen more and more companies moving to adopt Apache Kafka as the backbone of their architectures. Through <a href="https://www.confluent.io/product/connectors/">Kafka&rsquo;s Connect API</a> pretty much any standard system can serve as the source of streaming data into Kafka. Once data is in Kafka, it is &ldquo;just&rdquo; a message; its source is irrelevant when it comes to how we want to use it. From within Kafka we can transform the data further, drive microservices, and stream the data out through Kafka&rsquo;s Connect API to myriad targets. Which targets? Many targets!</p>
+
+<p><img src="https://www.confluent.io/wp-content/uploads/etl_streaming-768x410.png" alt="" /></p>
+
+<ul>
+<li>Often we&rsquo;ll want to use the data not landed in a store, but as the input for <a href="https://www.confluent.io/blog/building-a-microservices-ecosystem-with-kafka-streams-and-ksql/"><em>event driven architectures</em></a> that drive business processes.</li>
+<li>For long-term analytics we have the data lake concept, often hosted on technologies such as HDFS/Hive, S3/Athena, BigQuery, and Snowflake.</li>
+<li>Often we want refine elements of the data lake into what&rsquo;s generally recognised as a data warehouse/mart for performance as well as formal modelling and audit of the data lineage. These may also reside on the same platforms as the data lake, or perhaps standard RDBMS such as Postgres, MySQL, Oracle etc.</li>
+<li>Real-time analytics can be served through slices of our events streamed to NoSQL stores such as Cassandra, or search-based tools such as Elasticsearch</li>
+<li>Elasticsearch and similar tools such as Solr are frequently used for search replicas/caches of data both to drive search in end-user applications and websites, as well as ad-hoc analytics and data exploration by analysts.</li>
+<li>More specific tasks often demand dedicated technologies, such as time series databases like InfluxDB, Graph analytics with Neo4j, and so on</li>
+</ul>
+
+<p>As the above list demonstrates, how we think about data and what we want to do with it helps define the kind of technology we&rsquo;re going to use to store it. A very important point to realise here is that <em>you generally will not have just one target for your data</em>. Kafka enables two vital architectural principles here:</p>
+
+<ol>
+<li>Stream your data from source into Kafka, and from there to target. Decouple your architecture to make it flexible and agile for future development. Resist the temptation to load it into your data lake <em>first</em> and then process it onwards. Why introduce completely unnecessary latencies and dependencies in your processing?</li>
+<li>Following on from the above, be aware that you can stream data from Kafka to multiple targets <em>concurrently</em>. If you want all your data in Hadoop for audit purposes, or just because it gives you a warm fuzzy feeling - you can do. But if you want to use that data somewhere else, you can stream it directly from Kafka. Perhaps you want to drive some alerting based on the events streaming in, or you just want the data in a second data store. Either way, you decouple that secondary use from Hadoop, making the pipeline simpler to maintain, less fragile—and without the latency!</li>
+</ol>
+
+<p>From a point of view of data latency this first point above is critical. Getting data where you want it when you (and your users) want it is one of the key drivers of technology choice. Reducing the latency of data made available to users enables them to make more accurate business decisions. And if you don&rsquo;t care about latency? Well that&rsquo;s fine too; Kafka supports batch-concepts too, by virtue of the fact that it <em>persists data</em> which means that it is there for a consumer to read when the consumer wants to—even if that&rsquo;s just as part of a once-a-day batch load.</p>
+
+<p><img src="/content/images/2018/02/kafka_streaming_etl.png" alt="" /></p>
+
+<p>As well as chosing the most appropriate technology for a particular task and being able to maintain a correct state of data in it via Kafka, using Kafka as our data backbone also lets us embrace and rationalise the proliferation of technologies in use across organisations as control moves away from central IT and out to individual business units. Instead of the futility of railing against this and trying to prevent it, with Kafka we can easily provide a feed of clean data to anyone who wants it, without impacting the design or availability of our central data architecture. <em>Embrace the Anarchy!</em></p>
+
+<p>Even if you don&rsquo;t face the challenge of disparate systems and have a perfectly controlled and rational technology footprint, Kafka gives you the power to <strong>evolve</strong> this in a beautifully flexible manner. With Kafka at the heart of your architecture, you can replace sources without impacting downstream users of the data. You can add additional targets, or evaluate alternative technologies, alongside existing ones. All of this is done in a <strong>decoupled</strong> manner, enabling agile development of systems.</p>
+
+<p>One last point for now is that in some cases, we don&rsquo;t even want to store the data outside of Kafka. <em>What is the nonsense</em>, you may ask? Surely we must always land data to a database, to a data store? Not always. Here are two examples:</p>
+
+<ol>
+<li>Consider a source of data that you want to enrich and load to a target. Standard design would be to load the raw data into a database as the staging layer, and then enrich and transform it from there. <strong>Kafka itself is the staging layer</strong> here, acting as the central point for all inbound data.</li>
+<li>Kafka Streams has <strong>interactive query</strong> capabilities meaning that it can serve up the state of a stream (such as a point in time aggregation) directly from its local state store. Doing this, external applications can query a dedicated stream job to directly access data, without needing to land it at an intermediary data source. Interactive query generally fits operational systems better, such as realtime embedded dashboards, but where you do have these, challenge any assumptions that you have around the necessity of a database.</li>
+</ol>
+
+<p>To read more about storing data in Kafka see <a href="https://www.confluent.io/blog/okay-store-data-apache-kafka/">Jay Krep&rsquo;s recent article</a> as well as an example of it in action at the <a href="https://www.confluent.io/blog/publishing-apache-kafka-new-york-times/">New York Times</a>.</p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

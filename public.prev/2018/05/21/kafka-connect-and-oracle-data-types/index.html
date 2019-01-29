@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Kafka Connect and Oracle data types</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/05/21/kafka-connect-and-oracle-data-types/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Kafka Connect and Oracle data types" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/05/IMG_2759.jpg" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/05/21/kafka-connect-and-oracle-data-types/" />
+		<meta name="og:site_name" content="Kafka Connect and Oracle data types" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/05/IMG_2759.jpg'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Kafka Connect and Oracle data types</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-05-21T08:59:00Z">May 21, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//kafka-connect" class="no-underline category near-white dim">Kafka Connect</a>, <a href="https://rmoff.github.io/categories//oracle" class="no-underline category near-white dim">Oracle</a>, <a href="https://rmoff.github.io/categories//number" class="no-underline category near-white dim">Number</a>, <a href="https://rmoff.github.io/categories//timestamp" class="no-underline category near-white dim">Timestamp</a>
+								<span class="display-print">at https://rmoff.github.io/2018/05/21/kafka-connect-and-oracle-data-types/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	
+
+<p>The <a href="https://docs.confluent.io/current/connect/connect-jdbc/docs/source_connector.html">Kafka Connect JDBC Connector</a> by default does not cope so well with:</p>
+
+<ul>
+<li><code>NUMBER</code> columns with no defined precision/scale. You may end up with apparent junk (<code>bytes</code>) in the output, or just errors.</li>
+<li><code>TIMESTAMP WITH LOCAL TIME ZONE</code>. Throws <code>JDBC type -102 not currently supported</code> warning in the log.</li>
+</ul>
+
+<p>Read more about <code>NUMBER</code> data type in the <a href="https://docs.oracle.com/database/121/SQLRF/sql_elements001.htm#SQLRF002220">Oracle docs</a>.</p>
+
+<h3 id="tl-dr-how-do-i-make-it-work">tl;dr : How do I make it work?</h3>
+
+<p>There are several options:</p>
+
+<h4 id="new-in-confluent-platform-4-1-1-numeric-mapping">New in Confluent Platform 4.1.1 : <code>numeric.mapping</code></h4>
+
+<ul>
+<li>In the connector configuration, set <code>&quot;numeric.mapping&quot;:&quot;best_fit&quot;</code></li>
+<li>New in Confluent Platform 4.1.1 (<a href="https://docs.confluent.io/current/connect/connect-jdbc/docs/source_config_options.html#database">Doc</a>)</li>
+</ul>
+
+<h4 id="avoid-the-problem-in-the-first-place">Avoid the problem in the first place</h4>
+
+<ul>
+<li>Change the DDL of the source object. For example:
+
+<ul>
+<li>refine the <code>NUMBER</code> &rsquo;s precision and scale</li>
+<li>Use a <code>TIMESTAMP</code> type that is supported</li>
+</ul></li>
+</ul>
+
+<h4 id="cast-the-datatypes-in-the-query">CAST the datatypes in the <code>query</code></h4>
+
+<ul>
+<li><p>Pull from the object directly, and use <code>query</code> in the JDBC connector (instead of <code>table.whitelist</code>)—and cast the columns appropriately:</p>
+
+<pre><code>curl -i -X POST -H &quot;Accept:application/json&quot; \
+  -H  &quot;Content-Type:application/json&quot; http://localhost:8083/connectors/ \
+  -d '{
+        &quot;name&quot;: &quot;jdbc_source_oracle_soe_logon_07&quot;,
+        &quot;config&quot;: {
+                &quot;connector.class&quot;: &quot;io.confluent.connect.jdbc.JdbcSourceConnector&quot;,
+                &quot;connection.url&quot;: &quot;jdbc:oracle:thin:soe/soe@localhost:1521/ORCLPDB1&quot;,
+                &quot;mode&quot;: &quot;incrementing&quot;,
+                &quot;query&quot;: &quot;SELECT CAST(LOGON_ID AS NUMERIC(8,0)) AS LOGON_ID, CAST(CUSTOMER_ID AS NUMERIC(18,0)) AS CUSTOMER_ID, LOGON_DATE FROM LOGON&quot;,
+                &quot;poll.interval.ms&quot;: &quot;1000&quot;,
+                &quot;incrementing.column.name&quot;:&quot;LOGON_ID&quot;,
+                &quot;topic.prefix&quot;: &quot;ora-soe-07-LOGON&quot;,
+                &quot;validate.non.null&quot;:false
+        }
+}'
+</code></pre>
+
+<p>Data:</p>
+
+<pre><code>Robin@asgard02 ~/cp&gt; kafka-avro-console-consumer \
+                        --bootstrap-server localhost:9092 \
+                        --property schema.registry.url=http://localhost:8081 \
+                        --topic ora-soe-07-LOGON --from-beginning --max-messages 1| jq '.'
+{
+  &quot;LOGON_ID&quot;: {
+    &quot;int&quot;: 2
+  },
+  &quot;CUSTOMER_ID&quot;: {
+    &quot;long&quot;: 48645
+  },
+  &quot;LOGON_DATE&quot;: {
+    &quot;long&quot;: 962854648000
+  }
+}
+Processed a total of 1 messages
+</code></pre></li>
+</ul>
+
+<h4 id="use-a-view-in-the-source-database-to-cast-the-data-types">Use a View in the source database to cast the data types</h4>
+
+<ul>
+<li><p>Define a view in the source DB that casts the columns appropriately, and then use the connector against this instead (make sure to include <code>&quot;table.types&quot;:&quot;VIEW&quot;</code>)</p>
+
+<pre><code>CREATE VIEW VW_LOGON AS SELECT CAST(LOGON_ID AS NUMERIC(8,0)) AS LOGON_ID, CAST(CUSTOMER_ID AS NUMERIC(18,0)) AS CUSTOMER_ID, LOGON_DATE FROM LOGON;
+
+curl -i -X POST -H &quot;Accept:application/json&quot; \
+  -H  &quot;Content-Type:application/json&quot; http://localhost:8083/connectors/ \
+  -d '{
+        &quot;name&quot;: &quot;jdbc_source_oracle_soe_logon_05&quot;,
+        &quot;config&quot;: {
+                &quot;connector.class&quot;: &quot;io.confluent.connect.jdbc.JdbcSourceConnector&quot;,
+                &quot;connection.url&quot;: &quot;jdbc:oracle:thin:soe/soe@localhost:1521/ORCLPDB1&quot;,
+                &quot;table.whitelist&quot;:&quot;VW_LOGON&quot;,
+                &quot;table.types&quot;:&quot;VIEW&quot;,
+                &quot;mode&quot;: &quot;incrementing&quot;,
+                &quot;poll.interval.ms&quot;: &quot;1000&quot;,
+                &quot;incrementing.column.name&quot;:&quot;LOGON_ID&quot;,
+                &quot;topic.prefix&quot;: &quot;ora-soe-05-&quot;,
+                &quot;validate.non.null&quot;:false
+        }
+}'
+</code></pre>
+
+<p>Happy data:</p>
+
+<pre><code>Robin@asgard02 ~/cp&gt; kafka-avro-console-consumer \
+                        --bootstrap-server localhost:9092 \
+                        --property schema.registry.url=http://localhost:8081 \
+                        --topic ora-soe-05-VW_LOGON --from-beginning --max-messages 1| jq '.'
+{
+  &quot;LOGON_ID&quot;: {
+    &quot;int&quot;: 2
+  },
+  &quot;CUSTOMER_ID&quot;: {
+    &quot;long&quot;: 48645
+  },
+  &quot;LOGON_DATE&quot;: {
+    &quot;long&quot;: 962854648000
+  }
+}
+Processed a total of 1 messages
+</code></pre></li>
+</ul>
+
+<h3 id="what-happens">What happens</h3>
+
+<pre><code>SQL&gt; DESCRIBE LOGON;
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ LOGON_ID                                  NOT NULL NUMBER
+ CUSTOMER_ID                               NOT NULL NUMBER
+ LOGON_DATE                                         DATE
+</code></pre>
+
+<p>Using the ID column doesn&rsquo;t work:</p>
+
+<pre><code>curl -i -X POST -H &quot;Accept:application/json&quot; \
+  -H  &quot;Content-Type:application/json&quot; http://localhost:8083/connectors/ \
+  -d '{
+        &quot;name&quot;: &quot;jdbc_source_oracle_soe_logon_01&quot;,
+        &quot;config&quot;: {
+                &quot;connector.class&quot;: &quot;io.confluent.connect.jdbc.JdbcSourceConnector&quot;,
+                &quot;connection.url&quot;: &quot;jdbc:oracle:thin:soe/soe@localhost:1521/ORCLPDB1&quot;,
+                &quot;table.whitelist&quot;:&quot;LOGON&quot;,
+                &quot;mode&quot;: &quot;incrementing&quot;,
+                &quot;poll.interval.ms&quot;: &quot;1000&quot;,
+                &quot;incrementing.column.name&quot;:&quot;LOGON_ID&quot;,
+                &quot;topic.prefix&quot;: &quot;ora-soe-&quot;
+        }
+}'
+</code></pre>
+
+<p>The task fails with</p>
+
+<pre><code>org.apache.kafka.connect.errors.ConnectException: Scale of Decimal value for incrementing column must be 0
+</code></pre>
+
+<p>Using <code>timestamp</code> works but the data pulled through has the <code>NUMBER</code> columns as bytes, which is no use.</p>
+
+<pre><code>curl -i -X POST -H &quot;Accept:application/json&quot; \
+  -H  &quot;Content-Type:application/json&quot; http://localhost:8083/connectors/ \
+  -d '{
+        &quot;name&quot;: &quot;jdbc_source_oracle_soe_logon_01&quot;,
+        &quot;config&quot;: {
+                &quot;connector.class&quot;: &quot;io.confluent.connect.jdbc.JdbcSourceConnector&quot;,
+                &quot;connection.url&quot;: &quot;jdbc:oracle:thin:soe/soe@localhost:1521/ORCLPDB1&quot;,
+                &quot;table.whitelist&quot;:&quot;LOGON&quot;,
+                &quot;mode&quot;: &quot;timestamp&quot;,
+                &quot;poll.interval.ms&quot;: &quot;1000&quot;,
+                &quot;timestamp.column.name&quot;:&quot;LOGON_DATE&quot;,
+                &quot;topic.prefix&quot;: &quot;ora-soe-&quot;,
+                &quot;validate.non.null&quot;:false
+        }
+}'
+</code></pre>
+
+<p>Sample message:</p>
+
+<pre><code>{&quot;LOGON_ID&quot;: {&quot;bytes&quot;: &quot;\u0000ÖÝ³pÌ\u0081ä\u008E8\u0005µì4påI\u008DÍO;Ê¶÷SI1½éoUÙv\u0099\f\u0003ð5j|\u0080\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000&quot;}, &quot;CUSTOMER_ID&quot;: {&quot;bytes&quot;: &quot;\t±Ó\u001Cluº\u000B|8åÆM0jzÏXFioF.\u0084\u008B,\f%ïYÝ\u0011\u0082À*\fjÑ\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000&quot;}, &quot;LOGON_DATE&quot;: 1526388662000}
+</code></pre>
+
+<p>Using 4.1.1 and <code>&quot;numeric.mapping&quot;:&quot;best_fit&quot;,</code>, no joy</p>
+
+<pre><code>curl -i -X POST -H &quot;Accept:application/json&quot; \
+  -H  &quot;Content-Type:application/json&quot; http://localhost:8083/connectors/ \
+  -d '{
+        &quot;name&quot;: &quot;jdbc_source_oracle_soe_logon_04&quot;,
+        &quot;config&quot;: {
+                &quot;connector.class&quot;: &quot;io.confluent.connect.jdbc.JdbcSourceConnector&quot;,
+                &quot;connection.url&quot;: &quot;jdbc:oracle:thin:soe/soe@localhost:1521/ORCLPDB1&quot;,
+                &quot;table.whitelist&quot;:&quot;LOGON&quot;,
+                &quot;mode&quot;: &quot;timestamp&quot;,
+                &quot;poll.interval.ms&quot;: &quot;1000&quot;,
+                &quot;timestamp.column.name&quot;:&quot;LOGON_DATE&quot;,&quot;numeric.mapping&quot;:&quot;best_fit&quot;,
+                &quot;topic.prefix&quot;: &quot;ora-soe-04-&quot;,&quot;validate.non.null&quot;:false,&quot;numeric.mapping&quot;:&quot;best_fit&quot;
+        }
+}'
+</code></pre>
+
+<p>same bytes output:</p>
+
+<pre><code>Robin@asgard02 ~/cp&gt; kafka-avro-console-consumer \
+                        --bootstrap-server localhost:9092 \
+                        --property schema.registry.url=http://localhost:8081 \
+                        --topic ora-soe-04-LOGON --from-beginning --max-messages 1| jq '.'
+{
+  &quot;LOGON_ID&quot;: &quot;'ñK\u0001³èò~¯x6\&quot;¤É^ãñ&amp;Ý\u001cÐÀl)\u001f\u0019W¤¦ ­b»;ç\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000&quot;,
+  &quot;CUSTOMER_ID&quot;: &quot;\u001e©/@sy/\tÍ`j;±èÂÃAâ#,ú1\u0003\u0017Ùg|ÙóNwEj\u001cH\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000&quot;,
+  &quot;LOGON_DATE&quot;: {
+    &quot;long&quot;: 946687534000
+  }
+}
+Processed a total of 1 messages
+</code></pre>
+
+<h3 id="why-does-it-happen">Why does it happen?</h3>
+
+<p>The source data is defined as <code>NUMERIC</code>:</p>
+
+<blockquote>
+<p><code>NUMBER</code> means &ldquo;store the value as given&rdquo;, and the JDBC metadata for the column returns a precision of 38 and scale of non-zero. The connector has to trust the metadata, so it maps that to smallest type it can: <code>Decimal</code> logical type  (or <code>java.math.BigDecimal</code>).</p>
+</blockquote>
+
+<pre><code>SQL&gt; DESCRIBE LOGON;
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ LOGON_ID                                  NOT NULL NUMBER
+ CUSTOMER_ID                               NOT NULL NUMBER
+ LOGON_DATE                                         DATE
+</code></pre>
+
+<p>Compare this to when a scale is given, e.g. :</p>
+
+<pre><code>SQL&gt; DESCRIBE WAREHOUSES;
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ WAREHOUSE_ID                                       NUMBER(6)
+ WAREHOUSE_NAME                                     VARCHAR2(35)
+ LOCATION_ID                                        NUMBER(4)
+</code></pre>
+
+<p>This works fine:</p>
+
+<pre><code>Robin@asgard02 ~/cp&gt; kafka-avro-console-consumer \
+                        --bootstrap-server localhost:9092 \
+                        --property schema.registry.url=http://localhost:8081 \
+                        --topic ora-soe-03-WAREHOUSES --from-beginning --max-messages 1| jq '.'
+{
+  &quot;WAREHOUSE_ID&quot;: {
+    &quot;int&quot;: 712
+  },
+  &quot;WAREHOUSE_NAME&quot;: {
+    &quot;string&quot;: &quot;bFLB2&quot;
+  },
+  &quot;LOCATION_ID&quot;: {
+    &quot;int&quot;: 1564
+  }
+}
+Processed a total of 1 messages
+</code></pre>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

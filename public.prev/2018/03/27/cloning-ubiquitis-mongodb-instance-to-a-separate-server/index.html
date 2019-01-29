@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Cloning Ubiquiti&rsquo;s MongoDB instance to a separate server</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/03/27/cloning-ubiquitis-mongodb-instance-to-a-separate-server/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Cloning Ubiquiti&rsquo;s MongoDB instance to a separate server" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/03/IMG_4011-1.JPG" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/03/27/cloning-ubiquitis-mongodb-instance-to-a-separate-server/" />
+		<meta name="og:site_name" content="Cloning Ubiquiti&rsquo;s MongoDB instance to a separate server" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/03/IMG_4011-1.JPG'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Cloning Ubiquiti&rsquo;s MongoDB instance to a separate server</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-03-27T18:45:20Z">Mar 27, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//mongodb" class="no-underline category near-white dim">Mongodb</a>, <a href="https://rmoff.github.io/categories//ubiquiti" class="no-underline category near-white dim">Ubiquiti</a>, <a href="https://rmoff.github.io/categories//ubnt" class="no-underline category near-white dim">Ubnt</a>, <a href="https://rmoff.github.io/categories//mongorestore" class="no-underline category near-white dim">Mongorestore</a>, <a href="https://rmoff.github.io/categories//mongodump" class="no-underline category near-white dim">Mongodump</a>
+								<span class="display-print">at https://rmoff.github.io/2018/03/27/cloning-ubiquitis-mongodb-instance-to-a-separate-server/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	
+
+<p>DISCLAIMER: I am not a MongoDB person (even if it is <a href="http://www.mongodb-is-web-scale.com/">Web Scale</a> X-D) - below instructions may work for you, they may not. Use with care!</p>
+
+<p>For some work I&rsquo;ve been doing I wanted to access the data in Ubiquiti&rsquo;s Unifi controller which it stores in MongoDB. Because I didn&rsquo;t want to risk my actual Unifi device by changing local settings to enable remote access, and also because the version of MongoDB on it is older than ideal, I wanted to clone the data elsewhere. This article shows you how.</p>
+
+<h3 id="dump-data-from-source-server-unifi">Dump data from source server (unifi)</h3>
+
+<p>To start with, SSH to the Unifi box (in my case, it&rsquo;s a CloudKey). Username and password are the same as Unifi web GUI login.</p>
+
+<p>Inspect local MongoDB instance (<code>ace</code> is the database that unifi uses):</p>
+
+<pre><code>root@UniFi-CloudKey:~# mongo localhost:27117/ace
+MongoDB shell version: 2.4.10
+connecting to: localhost:27117/foo
+Server has startup warnings:
+Wed Nov  1 19:38:11.033 [initandlisten]
+Wed Nov  1 19:38:11.033 [initandlisten] ** NOTE: This is a 32 bit MongoDB binary.
+Wed Nov  1 19:38:11.033 [initandlisten] **       32 bit builds are limited to less than 2GB of data (or less with --journal).
+Wed Nov  1 19:38:11.033 [initandlisten] **       Note that journaling defaults to off for 32 bit and is currently off.
+Wed Nov  1 19:38:11.033 [initandlisten] **       See http://dochub.mongodb.org/core/32bit
+Wed Nov  1 19:38:11.034 [initandlisten]
+
+mongo01:PRIMARY&gt; db.getCollection('device').find({},{name:1})
+{ &quot;_id&quot; : ObjectId(&quot;58385328e4b001431e4e497a&quot;), &quot;name&quot; : &quot;Unifi AP - Study&quot; }
+{ &quot;_id&quot; : ObjectId(&quot;583854cde4b001431e4e4982&quot;), &quot;name&quot; : &quot;Unifi AP - Attic&quot; }
+</code></pre>
+
+<p>Now run <a href="https://docs.mongodb.com/manual/reference/program/mongodump/#bin.mongodump"><code>mongodump</code></a> to dump the DB to file:</p>
+
+<pre><code>root@UniFi-CloudKey:~# mongodump --port 27117
+connected to: 127.0.0.1:27117
+Wed Mar  7 12:14:05.092 all dbs
+Wed Mar  7 12:14:05.098 DATABASE: ace	 to 	dump/ace
+Wed Mar  7 12:14:05.103 	ace.system.indexes to dump/ace/system.indexes.bson
+Wed Mar  7 12:14:05.108 		 120 objects
+Wed Mar  7 12:14:05.110 	ace.account to dump/ace/account.bson
+Wed Mar  7 12:14:05.112 		 0 objects
+Wed Mar  7 12:14:05.112 	Metadata for ace.account to dump/ace/account.metadata.json
+Wed Mar  7 12:14:05.114 	ace.admin to dump/ace/admin.bson
+Wed Mar  7 12:14:05.116 		 1 objects
+Wed Mar  7 12:14:05.117 	Metadata for ace.admin to dump/ace/admin.metadata.json
+Wed Mar  7 12:14:05.118 	ace.alarm to dump/ace/alarm.bson
+Wed Mar  7 12:14:05.124 		 152 objects
+</code></pre>
+
+<h3 id="install-mongodb-locally">Install MongoDB locally</h3>
+
+<p>Ref: <a href="https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/">Install docs</a></p>
+
+<pre><code class="language-shell">sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
+echo &quot;deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.6 main&quot; | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+</code></pre>
+
+<p>Check version:</p>
+
+<pre><code class="language-shell">rmoff@proxmox01 ~&gt; mongo --host 127.0.0.1:27017
+MongoDB shell version v3.6.3
+connecting to: mongodb://127.0.0.1:27017/
+</code></pre>
+
+<h3 id="restore-data-to-new-server">Restore data to new server</h3>
+
+<p>Copy dump file from CloudKey to local server:</p>
+
+<pre><code>rmoff@proxmox01 ~&gt; scp -r robin@unifi.moffatt.me:/root/dump unifi-mongodump
+</code></pre>
+
+<p>Run <a href="https://docs.mongodb.com/manual/reference/program/mongodump/#bin.mongodump"><code>mongorestore</code></a> to restore dump to local MongoDB instance:</p>
+
+<pre><code>rmoff@proxmox01 ~&gt; mongorestore unifi-mongodump/
+
+----
+connected to: 127.0.0.1
+Wed Mar  7 12:17:31.910 unifi-mongodump/ace/alarm.bson
+Wed Mar  7 12:17:31.910         going into namespace [ace.alarm]
+152 objects found
+Wed Mar  7 12:17:31.912         Creating index: { name: &quot;_id_&quot;, key: { _id: 1 }, ns: &quot;ace.alarm&quot; }
+Wed Mar  7 12:17:31.930         Creating index: { name: &quot;datetime_1&quot;, key: { datetime: 1 }, ns: &quot;ace.alarm&quot; }
+Wed Mar  7 12:17:31.931         Creating index: { name: &quot;archived_1&quot;, key: { archived: 1 }, ns: &quot;ace.alarm&quot; }
+Wed Mar  7 12:17:31.932 unifi-mongodump/ace/radiusprofile.bson
+[...]
+----
+</code></pre>
+
+<p>Done!</p>
+
+<p>Using <a href="https://www.robomongo.org/">Robo 3T</a> (formerly Robomongo) it&rsquo;s easy to explore the data in the restored instance:</p>
+
+<p><img src="/content/images/2018/03/mongo01.png" alt="" /></p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>

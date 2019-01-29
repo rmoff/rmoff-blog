@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Sending multiline messages to Kafka</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rmoff.github.io/index.xml">
+		<link rel="canonical" href="https://rmoff.github.io/2018/09/04/sending-multiline-messages-to-kafka/">
+		
+		<link rel="shortcut icon" type="image/png" href="https://rmoff.github.io/apple-touch-icon-precomposed.png">
+		
+		
+		<meta name="generator" content="Hugo 0.52" />
+
+		
+		<meta name="og:title" content="Sending multiline messages to Kafka" />
+		<meta name="og:type" content="article" />
+		<meta name="og:image" content="https://rmoff.github.io/images/2018/09/2018-09-04_10-25-48-1.png" />
+		<meta name="og:description" content="" />
+		<meta name="og:url" content="https://rmoff.github.io/2018/09/04/sending-multiline-messages-to-kafka/" />
+		<meta name="og:site_name" content="Sending multiline messages to Kafka" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@" />
+
+
+		
+		<link rel="stylesheet" href="https://rmoff.github.io/css/tachyons.min.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/story.css" />
+		<link rel="stylesheet" href="https://rmoff.github.io/css/descartes.css" />
+		
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
+		<script src="https://rmoff.github.io/js/story.js"></script>
+
+	</head>
+	<body class="ma0 bg-white section-post page-kind-page is-page-true ">
+		
+		<header class="cover bg-top" style="background-image: url('https://rmoff.github.io/images/2018/09/2018-09-04_10-25-48-1.png'); background-position: center;">
+			<div class="bg-black-30 bb bt">
+
+				<nav class="hide-print sans-serif  border-box pa3 ph5-l">
+					<a href="https://rmoff.github.io" title="Home">
+						<img src="https://rmoff.github.io/img/logo.jpg" class="w2 h2 br-100" alt="rmoff&#39;s random ramblings" />
+					</a>
+					<div class="fr h2 pv2 tr">
+						<a class="link f5 ml2 dim near-white" href="/about-me/">about</a>
+						<a class="link f5 ml2 dim near-white" href="/talks/">talks</a>
+						<a class="link f5 ml2 dim near-white" href="https://github.com/rmoff/"><i class="fab fa-github-square"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://www.linkedin.com/in/robinmoffatt/"><i class="fab fa-linkedin"></i></a>
+						<a class="link f5 ml2 dim near-white" href="https://twitter.com/rmoff/"><i class="fab fa-twitter-square"></i></a>
+						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="https://rmoff.github.io/index.xml" title="RSS Feed"></a>
+						<a class="link f5 ml2 dim near-white fas fa-search" href="https://rmoff.github.io/search/" role="search" title="Search"></a>
+					</div>
+				</nav>
+
+				<div id="hdr" class="tc-l pv4-ns pv5-l pv2 ph3 ph4-ns">
+					<h1 class="near-white mt1-ns f2 fw3 mb0 mt0 lh-title">Sending multiline messages to Kafka</h1>
+					<h2 class="near-white mt3-l mb4-l fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
+						
+						
+							
+								Published
+								<time datetime="2018-09-04T08:26:51Z">Sep 4, 2018</time>
+								<span class="display-print">by Robin Moffatt</span>
+								 in <a href="https://rmoff.github.io/categories//kafkacat" class="no-underline category near-white dim">Kafkacat</a>, <a href="https://rmoff.github.io/categories//kafka" class="no-underline category near-white dim">Kafka</a>, <a href="https://rmoff.github.io/categories//multiline" class="no-underline category near-white dim">Multiline</a>
+								<span class="display-print">at https://rmoff.github.io/2018/09/04/sending-multiline-messages-to-kafka/</span>
+							
+						
+					</h2>
+				</div>
+
+				
+				
+				
+				
+
+			</div>
+		</header>
+		
+		<main role="main">
+		
+<article class="center bg-white br-3 pv1 ph4 nested-copy-line-height lh-copy f4 nested-links mw-100 measure-wide">
+	<p>(<a href="https://stackoverflow.com/questions/52151816/push-multiple-line-text-as-one-message-in-a-kafka-topic/52162998#52162998">SO answer repost</a>)</p>
+
+<p>You can use <a href="https://docs.confluent.io/current/app-development/kafkacat-usage.html"><code>kafkacat</code></a> to send messages to Kafka that include line breaks. To do this, use its <code>-D</code> operator to specify a custom message delimiter (in this example <code>/</code>):</p>
+
+<pre><code>kafkacat -b kafka:29092 \
+        -t test_topic_01 \
+        -D/ \
+        -P &lt;&lt;EOF
+this is a string message 
+with a line break/this is 
+another message with two 
+line breaks!
+EOF
+</code></pre>
+
+<p><em>Note that the delimiter <strong>must</strong> be a single byte - multi-byte chars will end up getting included in the resulting message <a href="https://github.com/edenhill/kafkacat/issues/140">See issue #140</a></em></p>
+
+<p>Resulting messages, inspected also using kafkacat:</p>
+
+<pre><code>$ kafkacat -b kafka:29092 -C \
+         -f '\nKey (%K bytes): %k\t\nValue (%S bytes): %s\n\Partition: %p\tOffset: %o\n--\n' \
+         -t test_topic_01
+
+Key (-1 bytes):
+Value (43 bytes): this is a string message
+with a line break
+Partition: 0    Offset: 0
+--
+
+Key (-1 bytes):
+Value (48 bytes): this is
+another message with two
+line breaks!
+
+Partition: 0    Offset: 1
+--
+% Reached end of topic test_topic_01 [0] at offset 2
+</code></pre>
+
+<p>Inspecting using <code>kafka-console-consumer</code>:</p>
+
+<pre><code>$ kafka-console-consumer \
+    --bootstrap-server kafka:29092 \
+    --topic test_topic_01 \
+    --from-beginning
+
+this is a string message
+with a line break
+this is
+another message with two
+line breaks!
+</code></pre>
+
+<p>(<em>thus illustrating why <code>kafkacat</code> is nicer to work with than <code>kafka-console-consumer</code> because of its optional verbosity :)</em> )</p>
+
+<hr />
+
+<p><em><a href="https://docs.confluent.io/current/app-development/kafkacat-usage.html">Read more about kafkacat here</a></em></p>
+
+</article>
+
+		</main>
+		
+				<div class="hide-print sans-serif f6 f5-l mt5 ph3 pb6 center nested-copy-line-height lh-copy nested-links mw-100 measure-wide">
+		<div class="about-the-author">
+		
+			
+			
+				
+					<hr />
+
+<p><img src="/images/2018/05/ksldn18-01.jpg" alt="Robin Moffatt" /></p>
+
+<p>Robin Moffatt is a Developer Advocate at Confluent, and Oracle Groundbreaker Ambassador. He also likes writing about himself in the third person, eating good breakfasts, and drinking good beer.</p>
+
+				
+			
+		
+		</div>
+		
+	</div>
+
+		
+		
+		
+		<footer class="hide-print sans-serif f6 fw1 bg-black near-white bottom-0 w-100 pa3" role="contentinfo">
+			<p class="w-50 fr tr">
+			<a class="no-underline near-white" href="https://github.com/xaprb/story"><img class="dib" title="Made with Hugo and Story" alt="Story logo" src="https://rmoff.github.io/img/story-logo-white.svg" style="width: 1.5rem; height: 1.5rem" /></a>
+			</p>
+			<p class="w-50 near-white">
+				&copy; 2019 Robin Moffatt
+			</p>
+		</footer>
+		
+	
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-75492960-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+	
+	</body>
+</html>
