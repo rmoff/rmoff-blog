@@ -7,7 +7,123 @@
 		<language>en-us</language>
 		<author>Robin Moffatt</author>
 		<rights>Copyright (c) 2019</rights>
-		<updated>2019-01-21 14:01:24 &#43;0000 UTC</updated>
+		<updated>2019-01-29 11:15:01 -0800 PST</updated>
+		
+		<item>
+			<title>Kafka Connect Change Log Level and Write Log to File</title>
+			<link>https://rmoff.github.io/post/kafka-connect-change-log-level-and-write-log-to-file/</link>
+			<pubDate>Tue, 29 Jan 2019 11:15:01 PST</pubDate>
+			<author>Robin Moffatt</author>
+			<guid>https://rmoff.github.io/post/kafka-connect-change-log-level-and-write-log-to-file/</guid>
+			<description>&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;By default Kafka Connect sends its output to &lt;code&gt;stdout&lt;/code&gt;, so you&amp;#8217;ll see it on the console, Docker logs, or wherever. Sometimes you might want to route it to file, and you can do this by reconfiguring log4j. You can also change the configuration to get more (or less) detail in the logs by changing the log level.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;sect1&#34;&gt;
+&lt;h2 id=&#34;_finding_the_log_configuration_file&#34;&gt;Finding the log configuration file&lt;/h2&gt;
+&lt;div class=&#34;sectionbody&#34;&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;The configuration file is called &lt;code&gt;connect-log4j.properties&lt;/code&gt; and usually found in &lt;code&gt;etc/kafka/connect-log4j.properties&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;To find out the config file location simply inspect the running Kafka Connect process, or the existing &lt;code&gt;stdout&lt;/code&gt;, and look for the location of &lt;code&gt;connect-log4j.properties&lt;/code&gt; in &lt;code&gt;-Dlog4j.configuration&lt;/code&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span style=&#34;color:#666&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#666&#34;&gt;2019&lt;/span&gt;-01-15 &lt;span style=&#34;color:#666&#34;&gt;10&lt;/span&gt;:34:22,755&lt;span style=&#34;color:#666&#34;&gt;]&lt;/span&gt; INFO WorkerInfo values:
+        jvm.args &lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt; -Xms256M, -Xmx2G, -XX:+UseG1GC, -XX:MaxGCPauseMillis&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#666&#34;&gt;20&lt;/span&gt;, -XX:InitiatingHeapOccupancyPercent&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#666&#34;&gt;35&lt;/span&gt;, -XX:+ExplicitGCInvokesConcurrent, -Djava.awt.headless&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;true, -Dcom.sun.management.jmxremote, -Dcom.sun.management.jmxremote.authenticate&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;false, -Dcom.sun.management.jmxremote.ssl&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;false, -Dkafka.logs.dir&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;/var/folders/q9/2tg_lt9j6nx29rvr5r5jn_bw0000gp/T/confluent.tcrfo4zH/connect/logs, -Dlog4j.configuration&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;file:/Users/Robin/cp/confluent-5.1.0/bin/../etc/kafka/connect-log4j.properties&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;By default the file looks like this:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;listingblock&#34;&gt;
+&lt;div class=&#34;content&#34;&gt;
+&lt;pre class=&#34;highlight&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;log4j.rootLogger=INFO, stdout
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c:%L)%n
+
+log4j.logger.org.apache.zookeeper=ERROR
+log4j.logger.org.I0Itec.zkclient=ERROR
+log4j.logger.org.reflections=ERROR&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;sect1&#34;&gt;
+&lt;h2 id=&#34;_changing_the_log_level&#34;&gt;Changing the log level&lt;/h2&gt;
+&lt;div class=&#34;sectionbody&#34;&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;In troubleshooting Kafka Connect it can be useful to increase the log level to &lt;code&gt;DEBUG&lt;/code&gt; (or even &lt;code&gt;TRACE&lt;/code&gt;). To do this simply change the config file&amp;#8217;s &lt;code&gt;rootlogger&lt;/code&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span style=&#34;color:#408080;font-style:italic&#34;&gt;#log4j.rootLogger=INFO, stdout&lt;/span&gt;
+log4j.rootLogger&lt;span style=&#34;color:#666&#34;&gt;=&lt;/span&gt;DEBUG, stdout&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;sect1&#34;&gt;
+&lt;h2 id=&#34;_sending_logs_to_file&#34;&gt;Sending logs to file&lt;/h2&gt;
+&lt;div class=&#34;sectionbody&#34;&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;To send the output to file instead, change it to this:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;listingblock&#34;&gt;
+&lt;div class=&#34;content&#34;&gt;
+&lt;pre class=&#34;highlight&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;log4j.rootLogger=INFO, logFile
+
+log4j.appender.logFile=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.logFile.DatePattern=&#39;.&#39;yyyy-MM-dd-HH
+log4j.appender.logFile.File=/tmp/connect-worker.log
+log4j.appender.logFile.layout=org.apache.log4j.PatternLayout
+log4j.appender.logFile.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c:%L)%n
+
+log4j.logger.org.apache.zookeeper=ERROR
+log4j.logger.org.I0Itec.zkclient=ERROR
+log4j.logger.org.reflections=ERROR&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;This will write it to &lt;code&gt;/tmp/connect-worker.log&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;sect1&#34;&gt;
+&lt;h2 id=&#34;_sending_logs_to_both_stdout_and_file&#34;&gt;Sending logs to both &lt;code&gt;stdout&lt;/code&gt; and file&lt;/h2&gt;
+&lt;div class=&#34;sectionbody&#34;&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;You can get fancy and send &lt;code&gt;TRACE&lt;/code&gt; to file whilst retaining &lt;code&gt;INFO&lt;/code&gt; (and above) on &lt;code&gt;stdout&lt;/code&gt;, using the &lt;code&gt;Threshold&lt;/code&gt; option for the &lt;code&gt;stdout&lt;/code&gt; appender:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&#34;listingblock&#34;&gt;
+&lt;div class=&#34;content&#34;&gt;
+&lt;pre class=&#34;highlight&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;log4j.rootLogger=TRACE, traceFile, stdout
+
+log4j.appender.traceFile=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.traceFile.DatePattern=&#39;.&#39;yyyy-MM-dd-HH
+log4j.appender.traceFile.File=/tmp/connect-worker-trace.log
+log4j.appender.traceFile.layout=org.apache.log4j.PatternLayout
+log4j.appender.traceFile.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Threshold=INFO
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c:%L)%n
+
+log4j.logger.org.apache.zookeeper=ERROR
+log4j.logger.org.I0Itec.zkclient=ERROR
+log4j.logger.org.reflections=ERROR&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&#34;paragraph&#34;&gt;
+&lt;p&gt;See also &lt;a href=&#34;https://rmoff.net/2017/06/12/configuring-kafka-connect-to-log-rest-http-messages-to-a-separate-file/&#34;&gt;Configuring Kafka Connect to log REST HTTP messages to a separate file&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description>
+		</item>
 		
 		<item>
 			<title>Replacing UTF8 non-breaking-space with bash/sed on the Mac</title>
