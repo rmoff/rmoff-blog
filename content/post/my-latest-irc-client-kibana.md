@@ -13,7 +13,7 @@ title = "My latest IRC client : Kibana"
 
 OK, maybe that's not entirely true. But my *read-only* client, certainly. 
 
-![](/content/images/2016/03/2016-03-24_21-15-30.png)
+![](/images/2016/03/2016-03-24_21-15-30.png)
 
 I was perusing the [Logstash input plugins](https://www.elastic.co/guide/en/logstash/current/input-plugins.html) recently when I noticed that there was one for [IRC](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-irc.html). Being a fan of IRC and a regular on the [#obihackers](http://rmoff.net/2016/03/03/obihackers-irc-channel/) channel, I thought this could be fun and yet another great example of how easy [the Elastic stack](http://elastic.co) is to work with.
 
@@ -39,7 +39,7 @@ Start up Elasticsearch and Kibana:
 
 *Use [screen](https://en.wikipedia.org/wiki/GNU_Screen), cos it's awesome, to run these in parallel on the same SSH connection.* 
 
-![](/content/images/2016/03/2016-03-24_21-00-03.png)
+![](/images/2016/03/2016-03-24_21-00-03.png)
 
 Now create a file (e.g. `logtash-irc.conf`) to hold the Logstash configuration. It's very simple - connect to the IRC server, on a given channel, then add geographical attributes to each message based on the host of the user, and then dump the whole lot to both `stdout` and Elasticsearch: 
 
@@ -141,6 +141,6 @@ You should get something like this back:
 ```
 Now the data's in Elasticsearch, it's a piece of cake to knock up a quick dashboard in Kibana with auto-refresh switched on, showing the current channel activity and some key stats for the day: 
 
-![](/content/images/2016/03/2016-03-24_21-13-16.png)
+![](/images/2016/03/2016-03-24_21-13-16.png)
 
 If you've not built a Kibana dashboard before, check out [other](https://www.elastic.co/blog/visualising-oracle-performance-data-with-the-elastic-stack) [articles](http://www.rittmanmead.com/2015/04/using-the-elk-stack-to-analyse-donors-choose-data/) I've written which walk through the process.

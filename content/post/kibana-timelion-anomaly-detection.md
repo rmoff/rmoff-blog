@@ -12,7 +12,7 @@ title = "Kibana Timelion - Anomaly Detection"
 
 Using the `holt` function in Timelion to do anomaly detection on Metricbeat data in Kibana: 
 
-![](/content/images/2017/01/holt_-_Timelion_-_Kibana.png)
+![](/images/2017/01/holt_-_Timelion_-_Kibana.png)
 
 Expression: 
 

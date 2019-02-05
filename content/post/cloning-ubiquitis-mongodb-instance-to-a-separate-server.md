@@ -106,4 +106,4 @@ Done!
 
 Using [Robo 3T](https://www.robomongo.org/) (formerly Robomongo) it's easy to explore the data in the restored instance: 
 
-![](/content/images/2018/03/mongo01.png)
+![](/images/2018/03/mongo01.png)

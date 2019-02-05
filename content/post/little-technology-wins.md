@@ -29,7 +29,7 @@ Being a geek, I obviously had to track my runs, which I did at first with MapMyR
 
 On my runs I listen to podcasts, and previously had done this using an old Nexus 4 that I had, with a pair of MPow Swift Bluetooth Headphones. This worked great. Then I realised that the Apple Watch 2 can pair directly with headphones! At first it refused to pair with the MPow Swift, but after a bit of Googling I found that by first deleting the pairing from my Nexus 4 to the headphones, I could then pair them fine to the Apple Watch 2. Following [this convoluted method](http://www.idownloadblog.com/2015/04/28/how-to-sync-podcasts-apple-watch/) I can get podcasts on my Apple Watch 2 ... 
 
-![](/content/images/2017/02/IMG_2057.jpg)
+![](/images/2017/02/IMG_2057.jpg)
 
 So my little tech win is being able to go for a run with just my Apple Watch 2 and MPow Swift headphones, track my run with GPS (using Strava's [new support for Watch-only tracking](https://www.strava.com/apple-watch?hl=en-GB)), and listen to podcasts!
 

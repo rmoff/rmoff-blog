@@ -46,7 +46,7 @@ But, there are other tools that can make your Markdown life even better, such as
 
 The best of these by a mile on the Mac is [Marked2](http://marked2app.com/). It gives you a nice rendering of any markdown document that you're working on. Used with the El Capitan split-screen it's pretty-near perfect way to write Markdown.
 
-![](/content/images/2017/09/screenshot.png)
+![](/images/2017/09/screenshot.png)
 
 Marked2 can also export to DOCX, PDF, HTML, etc.
 

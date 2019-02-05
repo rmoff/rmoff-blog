@@ -43,7 +43,7 @@ Edit `./etc/kafka/connect-distributed.properties` and append to `plugin.path` th
 plugin.path=share/java,/u01/plugins/
 ```
 
-`plugin.path` is based on this expected structure: ![](/content/images/2018/03/KafkaConnect_pluginpath.png)
+`plugin.path` is based on this expected structure: ![](/images/2018/03/KafkaConnect_pluginpath.png)
 
 ### MySQL config
 

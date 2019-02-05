@@ -32,12 +32,12 @@ I use an iPad Pro (10.5"), with Apple Pencil, and [Paper from FiftyThree/WeTrans
 #### Process
 
 1. Sketch out the diagram in Paper, leaving space for text. 
-    ![](/content/images/2018/12/diagrams.png)
+    ![](/images/2018/12/diagrams.png)
     I rarely try to do actual handwriting in Paper, because (a) my handwriting is pretty dreadful and (b) re-editing that is a massive PITA—there are enough nice handwriting fonts to make it fairly pointless.
 
 2. From Paper, export the image as a PNG and airdrop it to my Mac (or just open in Keynote on the iPad Pro)
 3. On the Mac, use Keynote to overlay text markup up on the diagram. I use **Indie Flower** font.
-    ![](/content/images/2018/12/keynote-1.jpg)
+    ![](/images/2018/12/keynote-1.jpg)
 
 4. Rinse and repeat, going back to Paper as required to make more space for text, etc.
 5. On Keynote I'll sometimes create white boxes to overlay and hide parts of the diagram if I just want to show a particular component. 

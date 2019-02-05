@@ -15,7 +15,7 @@ _(This is an expanded version of the intro to an article I posted over on the [C
 
 My first job from university was building a datawarehouse for a retailer in the UK. Back then, it was writing COBOL jobs to load tables in DB2. We waited for all the shops to close and do their end of day system processing, and send their data back to the central mainframe. From there it was checked and loaded, and then reports generated on it. This was nearly twenty years ago as my greying beard will attest—and not a lot has changed in the large majority of reporting and analytics systems since then. COBOL is maybe less common, but what has remained constant is the batch-driven nature of processing. Sometimes batches are run more frequently, and get given fancy names like intra-day ETL or even micro-batching. But batch processing it is, and as such latency is built into our reporting *by design*. When we opt for batch processing we voluntarily inject delays into the availability of data to our end users. Much better is to build our systems around a streaming platform instead.
 
-![](/content/images/2018/02/streaming-platform.png)
+![](/images/2018/02/streaming-platform.png)
 
 Apache Kafka is a distributed streaming platform, and as well as powering a large number of stream-based mission-critical systems around the world, it has a huge role to play in **data integration** too. Back in 2016 Neha Narkhede wrote that [ETL Is Dead, Long Live Streams](https://www.infoq.com/presentations/etl-streams), and since then we've seen more and more companies moving to adopt Apache Kafka as the backbone of their architectures. Through [Kafka's Connect API](https://www.confluent.io/product/connectors/) pretty much any standard system can serve as the source of streaming data into Kafka. Once data is in Kafka, it is "just" a message; its source is irrelevant when it comes to how we want to use it. From within Kafka we can transform the data further, drive microservices, and stream the data out through Kafka's Connect API to myriad targets. Which targets? Many targets!
 
@@ -35,7 +35,7 @@ As the above list demonstrates, how we think about data and what we want to do w
 
 From a point of view of data latency this first point above is critical. Getting data where you want it when you (and your users) want it is one of the key drivers of technology choice. Reducing the latency of data made available to users enables them to make more accurate business decisions. And if you don't care about latency? Well that's fine too; Kafka supports batch-concepts too, by virtue of the fact that it *persists data* which means that it is there for a consumer to read when the consumer wants to—even if that's just as part of a once-a-day batch load.
 
-![](/content/images/2018/02/kafka_streaming_etl.png)
+![](/images/2018/02/kafka_streaming_etl.png)
 
 As well as chosing the most appropriate technology for a particular task and being able to maintain a correct state of data in it via Kafka, using Kafka as our data backbone also lets us embrace and rationalise the proliferation of technologies in use across organisations as control moves away from central IT and out to individual business units. Instead of the futility of railing against this and trying to prevent it, with Kafka we can easily provide a feed of clean data to anyone who wants it, without impacting the design or availability of our central data architecture. *Embrace the Anarchy!*
 

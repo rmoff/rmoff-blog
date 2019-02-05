@@ -17,11 +17,11 @@ This is all great, but the one real sticking point with analytics in Elasticsear
 
 I was playing around with some data recently (as one does, of course 8-) ) to try and load Elasticsearch so as to look at the [Graph](https://www.elastic.co/products/graph) function in more detail, but struggling because the data itself was mostly made of codes that were foreign keys to separate datasets. The data was a CSV from [data.gov.uk](https://data.gov.uk/dataset/road-accidents-safety-data), detailing road accidents. Each field, such as the police force, was simply a code that then had to be looked up on an Excel document [available separately](https://data.gov.uk/data/resource_cache/ad/ad15bff1-9fec-4bac-befe-7005d104344e/Road-Accident-Safety-Data-Guide.xls). Loading just the main CSV into Elasticsearch was easy enough ([see github for details](https://github.com/rmoff/dft/blob/master/logstash-DfTRoadSafety_Accidents.conf)), but of limited use once in Kibana:
 
-![](/content/images/2016/04/dft01.jpg)
+![](/images/2016/04/dft01.jpg)
 
 `Day_of_Week` being from 1 to 7 I could probably hazard a guess at the lookup value myself, but `Junction_Detail` of "8" ... not a clue. To find out, I need to match each foreign key with the corresponding lookup data, which is in a set of sheets in an Excel document:
 
-![](/content/images/2016/04/dft04.png)
+![](/images/2016/04/dft04.png)
 
 At this point we are at the official start of "wrangling" the data. We don't know what we can do with the data until we've got it in a structure that makes it useful, so we don't want to front-load the time needed for discovery with some complex ETL if the data's not going to turn out to yield much of interest. We *could* use a data integration tool such as [ODI](http://www.oracle.com/technetwork/middleware/data-integrator/overview/index.html), but talk about sledgehammer to crack a nut ... and that's before we take into account license costs, infrastructure overheard, and so on. Surely we can do this more smartly, as a one-off or hacky-repeatable thing, until we're sure it's going to be of worth to 'productionise'.
 
@@ -163,15 +163,15 @@ docs_bulk(accidents,doc_ids = accidents$Accident_Index,index="dftroadsafetyaccid
 
 Heading over to Kibana we now have the basis from which to start usefully exploring the data ...
 
-![](/content/images/2016/04/dft02.jpg)
+![](/images/2016/04/dft02.jpg)
 
 ... as well as knocking out aggregate visualisations with ease:
 
-![](/content/images/2016/04/dft03.jpg)
+![](/images/2016/04/dft03.jpg)
 
 And since we stored the data using the geo-spatial reference format we can also map it out: 
 
-![](/content/images/2016/04/dft05.png)
+![](/images/2016/04/dft05.png)
 
 Stay tuned for more details of the actual Graph analysis that I did with the data once it was loaded....
 

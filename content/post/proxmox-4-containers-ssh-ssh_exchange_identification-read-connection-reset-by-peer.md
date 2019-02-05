@@ -33,7 +33,7 @@ It wasn't just SSH that was affected - any inbound network requests to the serve
 ---
 After a bunch of fruitless Googling and dead-ends, I hit upon the problem. One thing that I had found was that if I changed the network configuration for the container from a static IP to DHCP, it worked fine and I could ssh to it. Looking closer at the network configuration, I saw the problem: 
 
-![](/content/images/2016/07/proxmox01_-_Proxmox_Virtual_Environment.png)
+![](/images/2016/07/proxmox01_-_Proxmox_Virtual_Environment.png)
 
 By setting the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) suffix to **32** it was only routing traffic from that particular IP. Changing it to **24** (or indeed, DHCP) fixed the problem and traffic began flowing freely. 
 

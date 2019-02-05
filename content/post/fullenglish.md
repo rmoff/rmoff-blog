@@ -13,7 +13,7 @@ title = "#FullEnglish"
 
 Thanks to the power of twitter, I can look back on all the many and varied Full English breakfasts that I've (mostly) enjoyed: https://twitter.com/search?q=rmoff%20%23fullenglish&src=typd
 
-![](/content/images/2016/02/fullenglish.jpg)
+![](/images/2016/02/fullenglish.jpg)
 
 What makes a good Full English? 
 

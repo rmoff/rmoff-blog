@@ -30,7 +30,7 @@ From this point, I'll now walk through configuring OGG-BD with the Kafka Connect
 
 The OGG-BD replicat takes the trail file of events written by the `extract` job, and replays those events to the target. In our case, the target is the Kafka Connect handler.
 
-![](/content/images/2018/02/oggkaf01sm.jpg)
+![](/images/2018/02/oggkaf01sm.jpg)
 
 You can find full documentation for the OGG-BD replicat [here](http://docs.oracle.com/goldengate/bd123110/gg-bd/GADBD/using-kafka-connect-handler.htm#GADBD-GUID-81730248-AC12-438E-AF82-48C7002178EC). Each replicat has three configuration files:
 

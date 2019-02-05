@@ -22,30 +22,30 @@ With [KSQL I denormalised the two sets of data](https://www.confluent.io/blog/re
 
 From the Kibana dashboard I built, I noticed an interesting pattern. Around 29th April, there is a huge peak in activity relative to the rest of the time.
 
-![ubnt_analyse_01.png](/content/images/2018/06/ubnt_analyse_01.png)
+![ubnt_analyse_01.png](/images/2018/06/ubnt_analyse_01.png)
 
 I wonder what's causing this? Let's drill into the data a bit more. Looking closely at the device type and Access Point, we can see it's the "Attic" AP, and "Espressi" device types
 
-![images/ubnt_analyse_02.png](/content/images/2018/06/ubnt_analyse_02.png)
-![images/ubnt_analyse_03.png](/content/images/2018/06/ubnt_analyse_03.png)
+![images/ubnt_analyse_02.png](/images/2018/06/ubnt_analyse_02.png)
+![images/ubnt_analyse_03.png](/images/2018/06/ubnt_analyse_03.png)
 
 Using Kibana's filtering to isolate the data to just these two facets, it's clear that it's just a particular device that's so busy
 
-![images/ubnt_analyse_04.png](/content/images/2018/06/ubnt_analyse_04.png)
+![images/ubnt_analyse_04.png](/images/2018/06/ubnt_analyse_04.png)
 
 "Attic lights plug" is, as the name suggests, a wifi plug that I have controlling the lights in the attic of my house. But why's it got so much activity, compared to usual? Let's look at the times again:
 
-![images/ubnt_analyse_05.png](/content/images/2018/06/ubnt_analyse_05.png)
+![images/ubnt_analyse_05.png](/images/2018/06/ubnt_analyse_05.png)
 
 Roughly 10:00 on the 28th April, through to c.18:00 on the 30th April. The missing data here necessary for the automatic correlation is the howls of complaint from my kids when Netflix wouldn't work this weekend—my home internet connection was down!
 
 So from the looks of it, this wifi plug is not at all happy when it can't 'phone home', and so tries reconnecting to the AP again…and again…and again!
 
-![images/ubnt_analyse_07.png](/content/images/2018/06/ubnt_analyse_07.png)
+![images/ubnt_analyse_07.png](/images/2018/06/ubnt_analyse_07.png)
 
 The frequency works out at just under one connection attempt per minute, as can be seen from this graph:
 
-![images/ubnt_analyse_06.png](/content/images/2018/06/ubnt_analyse_06.png)
+![images/ubnt_analyse_06.png](/images/2018/06/ubnt_analyse_06.png)
 
 So yay for dataviz and analytics. But—what can we do with this new-found knowledge? Watching a dashboard to look for this happening again is not so useful. Since we know what the pattern is, perhaps we can encode this into an application, and have an automatic alert tell me when it looks like my broadband's gone offline?
 
@@ -85,6 +85,6 @@ HAVING COUNT(*)>2;
 
 Now I have a Kafka topic (`OFFLINE_WARNING_SIGNAL`) that I can do something like hook up to a Python driven alert as [illustrated here](https://www.confluent.io/blog/real-time-syslog-processing-with-apache-kafka-and-ksql-part-2-event-driven-alerting-with-slack/). All this driven with a simple SQL expression, in effect giving us a full-blown stream processing application!
 
-![iOS Slack Alert](/content/images/2018/06/slack_notify_01.jpg)
+![iOS Slack Alert](/images/2018/06/slack_notify_01.jpg)
 
 How cool is that: expressing patterns of interest in data, and building it into a real-time stream processing application, all using SQL!

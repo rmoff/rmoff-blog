@@ -204,7 +204,7 @@ You can even see the mappings ("schema") defined within each index:
 
 All this faffing about with `curl` is fine, but if you're doing proper poking with Elasticsearch you may well find [kopf](https://github.com/lmenezes/elasticsearch-kopf) handy:
 
-![ogges01](/content/images/2016/04/ogges01.png)
+![ogges01](/images/2016/04/ogges01.png)
 
 It's easy to install:  (modify the path if your Elasticsearch binary is in a different location):
 
@@ -214,11 +214,11 @@ After installation, restart Elasticsearch and then go to http://localhost:9200/_
 
 If you're using Elasticsearch, you may well be doing so for the whole Elastic experience, using Kibana to view the data:
 
-![ogges02](/content/images/2016/04/ogges02.png)
+![ogges02](/images/2016/04/ogges02.png)
 
 and even start doing quick profiling:
 
-![ogges03](/content/images/2016/04/ogges03.png)
+![ogges03](/images/2016/04/ogges03.png)
 
 One issue with the data that's come through in this example is that it is _all_ string - even the dates and numerics (AMOUNT, PRICE), which makes instant-analysis in Kibana less possible.
 

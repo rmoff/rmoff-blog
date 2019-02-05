@@ -15,7 +15,7 @@ This question comes up on StackOverflow and such places a **lot**, so here's som
 
 **tl;dr** : You need to set `advertised.listeners` (or `KAFKA_ADVERTISED_LISTENERS` if you're using Docker images) to the external address (host/IP) so that clients can correctly connect to it. Otherwise they'll try to connect to the internal host address–and if that's not reachable then problems ensue.
 
-![images/docker01.png](/content/images/2018/08/docker01.png)
+![images/docker01.png](/images/2018/08/docker01.png)
 
 In this post I'll talk about _why_ this is necessary, and then show _how_ to do it, based on a couple of scenarios - Docker, and AWS. 
 
@@ -160,7 +160,7 @@ Much better is to understand and actually fix the `advertised.listeners` setting
 
 ### HOWTO: Connecting to Kafka on Docker
 
-![images/docker01.png](/content/images/2018/08/docker01.png)
+![images/docker01.png](/images/2018/08/docker01.png)
 
 Run within Docker, you will need to configure two listeners for Kafka: 
 
@@ -199,7 +199,7 @@ There are two approaches, depending on whether the external address through whic
 
 #### Option 1 - external address IS resolvable locally
 
-![images/aws01.png](/content/images/2018/08/aws01-1.png)
+![images/aws01.png](/images/2018/08/aws01-1.png)
 
 You can get by with one listener here. The existing listener, called `PLAINTEXT`, just needs overriding to set the advertised hostname (i.e. the one that is passed to inbound clients)
 
@@ -217,7 +217,7 @@ You will need to configure two listeners for Kafka:
 
 2. External AWS traffic. This could be testing connectivity from a laptop, or simply from machines not hosted in Amazon. In both cases, the external IP of the instance needs to be used (or hostname, if DNS is configured). 
 
-![images/aws02.png](/content/images/2018/08/aws02.png)
+![images/aws02.png](/images/2018/08/aws02.png)
 
 Here's an example configuration: 
 

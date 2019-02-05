@@ -78,7 +78,7 @@ I then created a new VM using the Proxmox web interface, specifying the disk to 
 
 and once created added the three remaining disks to the VM configuration. I removed the CD device so as to be able to sequence the four IDE disks as per the original OVF configuration.
 
-![](/content/images/2016/06/prox01.png)
+![](/images/2016/06/prox01.png)
 
 The config for the server looks like this:
 
@@ -110,11 +110,11 @@ time mv -f /data04/vms/bdl44/BigDataLite440-disk4.qcow2 /data01/images/100/vm-10
 
 From the Proxmox GUI I started the migrated VM, but it failed with the error `Unable to resolve 'LABEL=oracle_sw'`
 
-![](/content/images/2016/06/prox02.png)
+![](/images/2016/06/prox02.png)
 
 The reason being I'd got the disks wrong - look at the above configuration (1,2,4,5) and list of disk images (1-4). After fixing this the VM (a version of Big Data Lite 4.4) started up just fine. As did SampleApp v506:
 
-![](/content/images/2016/06/prox03.png)
+![](/images/2016/06/prox03.png)
 
 If you want you can tidy up by uninstalling the VirtualBox support modules:
 

@@ -15,7 +15,7 @@ Installing CDH 5.7 on Linux Containers (LXC) hosted on Proxmox 4. Everything was
 
     Completed only 0/1 steps. First failure: Failed to execute command Start on service YARN (MR2 Included)
 
-![](/content/images/2016/06/cdh-yarn-01-1.png)
+![](/images/2016/06/cdh-yarn-01-1.png)
 
 Log `/var/log/hadoop-yarn/hadoop-cmf-yarn-NODEMANAGER-cdh57-01-node-02.moffatt.me.log.out` showed:
 
@@ -50,7 +50,7 @@ Erm ... **SwapFree** is 16 **million petabytes**???
 
 In my LXC configuration in Proxmox I'd set zero swap, thinking that disabling swap would be a good idea. Evidently not.
 
-![](/content/images/2016/06/cdh-yarn-02.png)
+![](/images/2016/06/cdh-yarn-02.png)
 
 As soon as I updated the container Swap to 128Mb, the SwapFree looked better:
 

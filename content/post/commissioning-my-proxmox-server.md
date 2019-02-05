@@ -15,7 +15,7 @@ title = "Commissioning my Proxmox Server - OS and filesystems"
 
 With my server in place, I ran a memtest on it ... which with 128G took a while ;)
 
-![memtest](/content/images/2016/06/IMG_7889.jpg)
+![memtest](/images/2016/06/IMG_7889.jpg)
 
 And then installed [Proxmox 4](https://www.proxmox.com/en/), using a bootable USB that I'd created on my Mac from the ISO downloaded from Proxmox's website. To create the bootable USB, create the `img` file:
 

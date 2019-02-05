@@ -19,37 +19,37 @@ Installing Timelion is a piece of cake:
 
 After restarting Kibana, you'll see it as an option from the application picker 
 
-![](/content/images/2016/03/2016-03-29_23-13-49.png)
+![](/images/2016/03/2016-03-29_23-13-49.png)
 
 There's a bit of a learning curve with Timelion, but it's worth it. [The blog](https://www.elastic.co/blog/timelion-timeline) gives some basics, and the built-in help is really good too: 
 
-![](/content/images/2016/03/2016-03-29_23-12-28-1.png)
+![](/images/2016/03/2016-03-29_23-12-28-1.png)
 
 Best of all is the built-in context completion when you're building up your expression:
 
-![](/content/images/2016/03/2016-03-29_23-16-18.png)
+![](/images/2016/03/2016-03-29_23-16-18.png)
 
 The default expression, `.es(*)` shows a count of everything in Elasticsearch: 
 
-![](/content/images/2016/03/2016-03-29_23-31-40.png)
+![](/images/2016/03/2016-03-29_23-31-40.png)
 
 We can access metrics and perform aggregations on them. In this example I'm using OS data collected from [Topbeat](https://www.elastic.co/products/beats/topbeat), and showing the system 1-minute load average: 
 
     .es(metric='max:load.load1')
 
-![](/content/images/2016/03/2016-03-29_23-37-23.png)
+![](/images/2016/03/2016-03-29_23-37-23.png)
 
 You can specify multiple metrics to plot, by comma-separating each expression: 
 
     .es(metric='max:load.load1'), .es(metric='max:load.load5')
 
-![](/content/images/2016/03/2016-03-29_23-39-53.png)
+![](/images/2016/03/2016-03-29_23-39-53.png)
 
 It starts to get really cool when you consider the chaining you can do with the Timelion functions within each expression. For example, adding a moving average to the data is as simple as including the function on the end of the expression: 
 
     .es(index=logstash-*).movingaverage(12)
 
-![](/content/images/2016/03/2016-03-29_23-43-44.png)
+![](/images/2016/03/2016-03-29_23-43-44.png)
 
 As well as data manipulation you can do formatting and labelling too, for example here with the `.label` function, and combined with the second time series to plot the actual and the moving average: 
 
@@ -57,7 +57,7 @@ As well as data manipulation you can do formatting and labelling too, for exampl
 
 In this syntax you can also see how you restrict the timeseries to a given set of Elasticsearch indices. 
 
-![](/content/images/2016/03/2016-03-29_23-45-18.png)
+![](/images/2016/03/2016-03-29_23-45-18.png)
 
 So that's data from Elasticsearch - but Timelion does more than that. It has support for pulling in data from other sources, including [Quandl](https://www.quandl.com/). This is useful as it provides a great way to access complex datasets for experimenting with Timelion. 
 
@@ -82,43 +82,43 @@ Add your API key into the `quandl` part of the configuration:
 
 Restart Kibana, and you're good to go. To use Quandl find the timeseries of interest on the Quandl website. In this example we've got the stock price of [Heineken](https://www.quandl.com/data/EURONEXT/HEIA). In the top-right you'll see the Quandl API code (in this example, it's `EURONEXT/HEIA`): 
 
-![](/content/images/2016/03/2016-03-30_00-00-13.png)
+![](/images/2016/03/2016-03-30_00-00-13.png)
 
 Head over to Timelion and create a new timeseries expression, using the Quandl API code you just got and the Timelion `.quandl` function: 
 
     .quandl('EURONEXT/HEIA')
 
-![](/content/images/2016/03/2016-03-30_00-03-25.png)
+![](/images/2016/03/2016-03-30_00-03-25.png)
 
 As before, you can plot multiple series on the same chart (note the use of the `.yaxis` function here to put the second series on the right-hand y-axis: 
 
     .quandl('EURONEXT/HEIA'), .quandl('DY2/I3020000060').yaxis(2)
 
-![](/content/images/2016/03/2016-03-30_00-07-36.png)
+![](/images/2016/03/2016-03-30_00-07-36.png)
 
 Multiple charts can be included on the same sheet, using the "Add Chart" button available from the options menu on the top-right of the page: 
 
-![](/content/images/2016/03/2016-03-30_00-08-28-1.png)
+![](/images/2016/03/2016-03-30_00-08-28-1.png)
 
 With multiple charts note that the hover-over cursor is mirrored on all charts for aiding comprehension:
 
-![](/content/images/2016/03/timelion01.gif)
+![](/images/2016/03/timelion01.gif)
 
 ---
 
 The Timelion plugin as seen above is a good place to start for trying it out, but as of 4.4.2 release of Kibana once you've installed Timelion it's available within Kibana itself: 
 
-![](/content/images/2016/03/2016-03-30_00-22-33.png)
+![](/images/2016/03/2016-03-30_00-22-33.png)
 
 You can build up the visualisation using the same syntax as before: 
 
     .quandl('EURONEXT/HEIA'),.quandl('GOOG/NASDAQ_MLHR')
 
-![](/content/images/2016/03/2016-03-30_00-23-18-1.png)
+![](/images/2016/03/2016-03-30_00-23-18-1.png)
 
 Since it's a native visualisation object in Kibana, this means that you can include Timelion in your Kibana dashboards too: 
 
-![](/content/images/2016/03/2016-03-30_00-26-39-1.png)
+![](/images/2016/03/2016-03-30_00-26-39-1.png)
 
 (_Just in case you ever want to show CPU performance against the stock price of a beer company..._)
 

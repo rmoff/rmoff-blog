@@ -16,7 +16,7 @@ After checking and re-checking the **Manage Privileges** option, and even the Ap
 
 Apparently, it is a _bug_ (go figure) that this option shows up when you use the SampleAppLite BAR file, and that the only proper way to upload datasets is through Visual Analyzer. 
 
-![Add Data Source](/content/images/2016/05/Pasted_Image_27_05_2016__10_30.png)
+![Add Data Source](/images/2016/05/Pasted_Image_27_05_2016__10_30.png)
 
 This is on version 12.2.1.0.0; perhaps the option will be formally added (or properly removed) in the future.
 

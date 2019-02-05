@@ -20,16 +20,16 @@ title = "Quick 'n Easy Population of Realistic Test Data into Kafka"
 Three things I love…Kafka, `kafkacat`, and Mockaroo. And in this post I get to show all three 😁 
 
 [Mockaroo](https://mockaroo.com/) is a very cool online service that lets you quickly mock up test data. 
-![](/content/images/2018/05/2018-05-10_14-59-03.png)
+![](/images/2018/05/2018-05-10_14-59-03.png)
 
 What sets it apart from `SELECT RANDOM(100) FROM DUMMY;` is that it has lots of different classes of test data for you to choose from. Wanting to simulate some users? Here you go: 
-![](/content/images/2018/05/2018-05-10_15-00-57.png)
+![](/images/2018/05/2018-05-10_15-00-57.png)
 
 So you can build up realistic datasets at a few clicks of the mouse, and then export them to a bunch of formats, including CSV, JSON, and even SQL `INSERT INTO` statements (and, of course, it also provides the `CREATE TABLE` DDL!). 
 
 I've used Mockaroo many times over the years, often as a source for analytics visualisation tools that I've been working with. Now I'm doing a bunch of work with [KSQL](https://www.confluent.io/product/ksql/), and want some useful test data with which to demonstrate certain queries and concepts. KSQL is the streaming SQL engine for Apache Kafka, and so as such I needed to get a bunch of test data into Kafka topics. First up, create my schema: 
 
-![](/content/images/2018/05/2018-05-10_15-03-51.png)
+![](/images/2018/05/2018-05-10_15-03-51.png)
 
 Set the output to `JSON` (make sure it's **not** as a JSON array). 
 

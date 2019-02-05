@@ -23,36 +23,36 @@ First, our starter series, simply showing a count of all documents across all in
 
     .es()
 
-![](/content/images/2016/05/Timelion_-_Kibana.png)
+![](/images/2016/05/Timelion_-_Kibana.png)
 
 Now let's check out the `offset` function, showing the same data but for the previous week: 
 
     .es(offset=-1w)
 
-![](/content/images/2016/05/Timelion_-_Kibana-1.png)
+![](/images/2016/05/Timelion_-_Kibana-1.png)
 
 We can combine the two on the same chart: 
 
     .es(*),.es(offset=-1w)
 
-![](/content/images/2016/05/Timelion_-_Kibana-2.png)
+![](/images/2016/05/Timelion_-_Kibana-2.png)
 
 And then we can subtract one from the other: 
 
     .es().subtract(.es(offset=-1w))
 
-![](/content/images/2016/05/Timelion_-_Kibana-3.png)
+![](/images/2016/05/Timelion_-_Kibana-3.png)
 
 Tarting it up a bit, we can show all three series, adding `label` for each, and formatting the difference series as bars instead of lines clearly to identify it better: 
 
     .es().label("Original"),.es(offset=-1w).label("One week offset"),.es().subtract(.es(offset=-1w)).label("Difference").bars()
 
-![](/content/images/2016/05/Timelion_-_Kibana-4.png)
+![](/images/2016/05/Timelion_-_Kibana-4.png)
 
 Mucking about with the `lines` syntax, setting a `fill` and zero-`width` lines, we can show bars but with width of each data point (1 day): 
 
     .es().label("Original"),.es(offset=-1w).label("One week offset"),.es().subtract(.es(offset=-1w)).label("Difference").lines(steps=1,fill=2,width=0)
 
-![](/content/images/2016/05/Timelion_-_Kibana-5.png)
+![](/images/2016/05/Timelion_-_Kibana-5.png)
 
 So there you have it - the difference calculation between two time points in Timelion, with a bit of formatting fun thrown in for a bonus.

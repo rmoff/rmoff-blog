@@ -99,7 +99,7 @@ Using the Kafka console shell we can observe what Oracle GoldenGate sends to Kaf
 
 In a separate session (or even better, in the same session but using `screen` as in the demo below) modify data in the `MOVIEDEMO.MOVIE` table on Oracle. You should see the change come through to Kafka after a few moments. 
 
-![](/content/images/2016/03/ogg-kafka.gif)
+![](/images/2016/03/ogg-kafka.gif)
 
 #### Always RTFM…
 
@@ -338,7 +338,7 @@ when I ran Logstash with Elasticsearch output option, to which a quick Google pr
 
 With the data in Elasticsearch it's a matter of moments to get set up in Kibana and to start poking around it: 
 
-![](/content/images/2016/03/2016-03-17_21-49-15.png)
+![](/images/2016/03/2016-03-17_21-49-15.png)
 
 ---
 

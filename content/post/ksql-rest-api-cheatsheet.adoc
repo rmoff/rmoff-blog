@@ -16,6 +16,8 @@ Full reference is https://docs.confluent.io/current/ksql/docs/developer-guide/ap
 
 <!--more-->
 
+NOTE: **The REST API has two different endpoints**: `ksql` and `query` - make sure you use the correct one. If you don't you'll run into problems and errors like `Statement type `io.confluent.ksql.parser.tree.CreateStream' not supported for this resource`.
+
 
 * https://docs.confluent.io/current/ksql/docs/developer-guide/api.html#run-a-query-and-stream-back-the-output[Run a query]
 +
@@ -39,11 +41,12 @@ Remember, KSQL is a continuous query so this will keep executing; use `LIMIT x` 
 * Run a statement, use jq to format the output 
 +
 {{< highlight shell >}}
-$ curl -s -X "POST" "http://localhost:8088/ksql" \
+$ curl -s -X POST \
+       http://localhost:8088/ksql \
        -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
        -d '{
-    "ksql": "LIST TABLES;"
-  }'| jq '.'
+              "ksql": "LIST TABLES;"
+            }'| jq '.'
 [
   {
     "@type": "tables",
@@ -85,3 +88,6 @@ $ curl -s -X "POST" "http://localhost:8088/ksql" \
   }'| jq '.[].sourceDescription.statistics'
 "consumer-messages-per-sec:         0 consumer-total-bytes:       193 consumer-total-messages:         3     last-message: 2019-01-17T11:54:08.593Z"
 {{< /highlight >}}
+
+
+NOTE: To use single quotes in a `curl` argument (e.g. `-d`) you need to escape them correctly. For `KAFKA_TOPIC='pageviews'` you need to use `KAFKA_TOPIC='\''pageviews'\''`

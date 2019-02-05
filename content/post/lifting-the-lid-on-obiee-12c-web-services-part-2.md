@@ -94,11 +94,11 @@ Taking the same method, but via a web page, we can run this HTML file anywhere w
 
 Load it into a web browser, enter a password for the generated RPD:
 
-![](/content/images/2016/05/rpd_download_html.png)
+![](/images/2016/05/rpd_download_html.png)
 
 and enter your credentials for OBIEE when prompted:
 
-![](/content/images/2016/05/rpddl02.png)
+![](/images/2016/05/rpddl02.png)
 
 The RPD file is downloaded as `downloadrpd`, which you can rename to whatever you want.
 

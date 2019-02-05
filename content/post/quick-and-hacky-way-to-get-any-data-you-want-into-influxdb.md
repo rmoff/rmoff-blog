@@ -44,17 +44,17 @@ Note the `\` line continuation characters - the `du` pipes to `sed` (twice), the
 
 Heading over to InfluxDB's admin interface we can see the data's been received: 
 
-![](/content/images/2016/02/2016-02-27_20-52-09.png)
+![](/images/2016/02/2016-02-27_20-52-09.png)
 
 And from there on into displaying it in Grafana: 
 
-![](/content/images/2016/02/2016-02-27_20-55-10.png)
+![](/images/2016/02/2016-02-27_20-55-10.png)
 
 Similarly, for collecting `iotop` data, this time as a one-liner: 
 
 ```language-bash
 while [ 1 -eq 1 ]; do sudo iotop -n 1 -k -qqq -o|awk '{print "io_read_kbs,pid="$1",process="$12" value="$4"\nio_write_kbs,pid="$1",process="$12" value="$6}'|curl -i -XPOST 'http://localhost:8086/write?db=io' --data-binary @-;sleep 1;done
 ```
-![](/content/images/2016/02/2016-02-27_21-01-43.png)
+![](/images/2016/02/2016-02-27_21-01-43.png)
 
 Even if proper metrics collection tools like `collectl` can get this information, for point-in-time digging without needing to reconfigure and restart services, this is a handy trick to have up one's sleeve.

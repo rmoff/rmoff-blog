@@ -21,7 +21,7 @@ As I [wrote about last year](http://www.rittmanmead.com/2015/10/forays-into-kafk
 
 The simplest form of the pipeline I was using looks like this:
 
-![](/content/images/2016/04/kd01.png)
+![](/images/2016/04/kd01.png)
 
 A logstash configuration ([`logstash-irc.conf`](https://gist.github.com/rmoff/862d0ceea223aa7283244b1b27594941#file-01-logstash-irc-conf)) gets Logstash to connect to the IRC server and send messages received to Elasticsearch. From here they can be displayed and analysed within Kibana. [Read more about the details here](http://rmoff.net/2016/03/24/my-latest-irc-client-kibana/) if you're interested.
 
@@ -29,7 +29,7 @@ From a "pipeline" point of view this is a pretty typical pattern. A tool (Logsta
 
 Let's think a bit more about what a pipeline does, as this will give us the basis for understanding why and how Kafka fits in so nicely. Overlaying some labels onto the above diagram shows all the processing that we're doing:
 
-![](/content/images/2016/04/kd01a-1.png)
+![](/images/2016/04/kd01a-1.png)
 
 If any of this needs reconfiguring, restarting, or rerunning, it's an all-or-nothing job. Given that we're streaming data in near-real-time (or conceptually, designing something that _could_ if needed with minimal-to-no rework), shutting down the pipeline just to change one of these bits is a problem because we'll lose the data that the source system is spitting out whether we're there to gather it or not.
 
@@ -40,7 +40,7 @@ Why would we need to change the pipeline configuration? Consider:
 
 So I decoupled the source extract from any subsequent processing with a very simple Logstash configuration ([`logstash-irc-kafka.conf`](https://gist.github.com/rmoff/862d0ceea223aa7283244b1b27594941#file-02-logstash-irc-kafka-conf)) that pulls the data from IRC as before and **just** sends it straight to Kafka:
 
-![](/content/images/2016/04/kd02a.png)
+![](/images/2016/04/kd02a.png)
 
 The data lands in Kafka, which becomes our 'staging' area in effect, taking advantage of Kafka's "durable buffer" concept. The data extracted is ideally as raw as possible - because we don't know what subsequent processing we want to do with it, maybe now, or at some future date. Kafka can be configured to retain data based on age or volume - since the data I was working with was low volume I set the topic to retain it for 90 days:
 
@@ -48,7 +48,7 @@ The data lands in Kafka, which becomes our 'staging' area in effect, taking adva
 
 With the data streaming into Kafka and building up there we can then set up one or more consumers of that data. _Note that I'm using consumers in the logical sense, not the Kafka "Consumer" specific terminology_. My consumer here is Logstash using [`logstash-kafka-es.conf`](https://gist.github.com/rmoff/862d0ceea223aa7283244b1b27594941#file-03-logstash-kafka-es-conf), which is a variant of the original configuration, this time pulling from Kafka instead of the live IRC feed. And since Kafka is so low-latency, a side-benefit of this setup is that I can both catch up on and replay past records, as well as stream live ones in near-real-time. Result!
 
-![](/content/images/2016/04/kd03a.png)
+![](/images/2016/04/kd03a.png)
 
 At this point I'm [where I was before](http://rmoff.net/2016/03/24/my-latest-irc-client-kibana/); streaming IRC content in near-real-time to Elasticsearch and analysing it with Kibana. The only difference is that I've added in Kafka as a buffer, decoupling the reading messages from IRC with the processing and subsequent storage of them.
 
@@ -59,7 +59,7 @@ Now here's the money shot -- I can add new consumers of this data that's in Kafk
 
 In both of these cases **the existing original consumer remains running and untouched**. This kind of concurrent running is a great way to work with a single feed from the source system, keep the data pipeline running for subsequent analytics, whilst also developing and validating new functionality.
 
-![kd05a](/content/images/2016/04/kd05a.png)
+![kd05a](/images/2016/04/kd05a.png)
 
 ### Consumer Groups and Offsets ##
 

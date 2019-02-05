@@ -25,23 +25,23 @@ Now you can pass it a file:
 
 and get some nice output: 
 
-![](/content/images/2018/06/2018-06-20_17-25-43.png)
+![](/images/2018/06/2018-06-20_17-25-43.png)
 
 There's [different styles](https://help.farbox.com/pygments.html) to chose from: 
 
     pygmentize -l json -f terminal256 -O style=emacs
 
-![](/content/images/2018/06/2018-06-20_17-26-37.png)
+![](/images/2018/06/2018-06-20_17-26-37.png)
 
 Just a tip - black background looks l33t, but sucks for being able to read from a projector. Use iTerm's multiple profiles option to set up a white background for whenever you're projecting your screen or copying formatting text like this. 
 
-![](/content/images/2018/06/2018-06-20_17-28-31.png)
+![](/images/2018/06/2018-06-20_17-28-31.png)
 
 ### Getting it into Keynote (or PPTX, if you must)
 
 If you're using iTerm you can select the text and then use the **Copy with Styles** option from the Edit menu (press Alt to access this option), and paste the results directly into Keynote with the formatting preserved. 
 
-![](/content/images/2018/06/2018-06-20_17-29-25.png)
+![](/images/2018/06/2018-06-20_17-29-25.png)
 
 From here you can change the font, size, line spacing etc etc - much easier than having to re-do the screengrab each time. 
 
@@ -49,7 +49,7 @@ If you also want to format your JSON with linebreaks, run it through `jq` first:
 
     cat /tmp/foo.json | jq '.' | pygmentize -l json
 
-![](/content/images/2018/06/2018-06-20_20-09-22.png)
+![](/images/2018/06/2018-06-20_20-09-22.png)
 
 ### Output to HTML 
 
@@ -77,7 +77,7 @@ Which looks like:
 
 There's other [formatters](http://pygments.org/docs/formatters/), including generating images, which is quite nifty.  
 
-![](/content/images/2018/06/json.png)
+![](/images/2018/06/json.png)
 
 _For images, run `pip install PILLOW` for the required library first._
 

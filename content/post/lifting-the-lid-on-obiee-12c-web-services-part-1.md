@@ -58,15 +58,15 @@ Cookie: JSESSIONID=ZzzePh4y0-JXAQqQZiSl9RyVKCeD2MFurbj-SQt3BdTLa-ThG3kW!-9460651
 
 Which presumably drives this in the UI: 
 
-![va_storage_01.png](/content/images/2016/05/va_storage_01.png)
+![va_storage_01.png](/images/2016/05/va_storage_01.png)
 
 So we've got an endpoint (`/va/api/v1/dataset/limits`), but can we use it ourselves, just by requesting that address? Yep:
 
-![va_rest_01.png](/content/images/2016/05/va_rest_01.png)
+![va_rest_01.png](/images/2016/05/va_rest_01.png)
 
 But what happens if I try it on another machine, or from a clean browsing session? If I do that I just get dumped back to the VA login page. Using Chrome's Developer Tools I can see that I'm getting served a `302 Moved Temporarily` which tells the browser that the document I've asked for (`limits`) has moved somewhere else - or in plain speak, there's nothing to see here, move along now...
 
-![va_login_01.png](/content/images/2016/05/va_login_01.png)
+![va_login_01.png](/images/2016/05/va_login_01.png)
 
 So I'm guessing my first attempt worked because I was in the same session as my "real" VA session, and had some cookies that identified me as such, whereas on my re-started browser session I didn't. This is obviously a Good Thing, because we don't want VA giving out information to non-authorised users.
 
@@ -74,7 +74,7 @@ Let's see now what we do actually need in order to call this REST API ourselves.
 
 Looking at VA traffic in Chrome's dev tools again, we can see two cookies are submitted as part of a successful call to the `limits` API: 
 
-![va_rest_02.png](/content/images/2016/05/va_rest_02.png)
+![va_rest_02.png](/images/2016/05/va_rest_02.png)
 
 There's also a bunch of other headers in here too, such as User Agent. We can't assume that just cookies alone will do the job - for example, from past hacking on OBIEE I've seen Presentation Services behave differently based on User Agent (presumably to detect whether JavaScript was available?). So here we want to work out the minimum set of headers that we need to send across in order for the request to be valid. Enter [Paw](https://luckymarmot.com/paw). 
 
@@ -84,7 +84,7 @@ There's also a bunch of other headers in here too, such as User Agent. We can't 
 
 2. Right-click on the request and select **Copy as cURL**
 
-  ![va_rest_03.png](/content/images/2016/05/va_rest_03.png)
+  ![va_rest_03.png](/images/2016/05/va_rest_03.png)
 
     [cURL](https://curl.haxx.se/) is a tool in its own right for making HTTP (and other) requests from the command line, and we'll revisit it later on in this article. For our use here, cURL is sometimes used as a common format of HTTP requests across tools, enabling us to transport it from Chrome to Paw
 
@@ -92,39 +92,39 @@ There's also a bunch of other headers in here too, such as User Agent. We can't 
 
 Now you've got the HTTP request in Paw you can work with it in a great more detail. First up, go to the **Request** menu and hit **Send**. You should get a successful response - because this is the same request as you fired from Chrome. That it's a different program sending it makes no difference - it's only the HTTP request headers and body that actually get sent to and parsed by the receiving web server. Note how Paw automagically presents the response as formatted JSON:
 
-![paw01.png](/content/images/2016/05/paw01.png)
+![paw01.png](/images/2016/05/paw01.png)
 
 Now we can start whittling down the base request that we can send in order for it still to be valid. Firstly untick *every header*, and resend the request. You'll see the HTML source code for the "302 Moved Temporarily" response, which if you followed the URL would give you the VA login page
 
-![paw02.png](/content/images/2016/05/paw02-1.png)
+![paw02.png](/images/2016/05/paw02-1.png)
 
 So, we definitely need some headers. Let's add back in the Cookie header; it still works. Now looking at the Cookies, there are two; `ADMINCONSOLESESSION` and `JSESSIONID`. Trying the request with just `JSESSIONID` still works. Bingo! So we've got a minimum viable REST request - it just needs a valid `JSESSIONID` cookie. 
 
 Now in Paw go to the **View** menu and select **Show Code Generator**. You might need to install another addin here, but you can then see the cURL equivalent for the current request: 
 
-![paw03.png](/content/images/2016/05/paw03-1.png)
+![paw03.png](/images/2016/05/paw03-1.png)
 
 Taking this cURL and running it from the terminal gives...
 
-![rest01.png](/content/images/2016/05/rest01.png)
+![rest01.png](/images/2016/05/rest01.png)
 
 ...an error?! Wat? And what's "event not found"? [Bash quoting](https://en.wikipedia.org/wiki/Representational_state_transfer) fun times ... replace the double quotes (which bash will parse the contents of and get upset at the `!`) with single quotes (bash [shall not pass](https://www.youtube.com/watch?v=2eMkth8FWno)): 
 
-![rest02.png](/content/images/2016/05/rest02.png)
+![rest02.png](/images/2016/05/rest02.png)
 
 Job's a good 'un. And for bonus points, let's use the excellent  [`jq`](https://stedolan.github.io/jq/) to format the JSON: 
 
-![rest03.png](/content/images/2016/05/rest03-1.png)
+![rest03.png](/images/2016/05/rest03-1.png)
 
 or even parse out specific values from it (*use [jqplay](https://jqplay.org/) to help figure out the syntax of filters*)
 
-![rest04.png](/content/images/2016/05/rest04.png)
+![rest04.png](/images/2016/05/rest04.png)
 
 And why's this useful? Because we can now programatically do things with the data that we can access. Like, check a user's remaining quota: 
 
     echo 'User has ' $(curl -s -X 'GET' 'http://192.168.56.101:7780/va/api/v1/dataset/limits' -H 'Cookie: JSESSIONID=Dp3h6i4FcuIfoTYAYsvb8Z8TYDOcnuxDl52KVdRREYlNfn8w1D49!-946065168' | jq '.limits."user-remaining-quota-kilobytes"') ' KB remaining in their quota'
 
-![rest05.png](/content/images/2016/05/rest05.png)
+![rest05.png](/images/2016/05/rest05.png)
 
 Sure, you need the user's session cookie to literally do this, but it still gives you an idea of what's possible. A final mention for now for Paw -- as well as exporting to cURL, you can generate code to many formats, not least including Python: 
 
@@ -168,7 +168,7 @@ So all we need to call the `va` web service is a valid `JSESSIONID` cookie, and 
 
 We've got to assume that it gets set as part of the authentication process when we login to VA. Let's stick Chrome Dev Tools on and see what we get: 
 
-![va_login_02.png](/content/images/2016/05/va_login_02.png)
+![va_login_02.png](/images/2016/05/va_login_02.png)
 
 You can see from this the URL that gets called, how it's called (HTTP `POST`), the format of the body with the username/password we're logging in as -- and the all-important response header that gives us our `JSESSIONID` value. 
 
@@ -176,11 +176,11 @@ You can see from this the URL that gets called, how it's called (HTTP `POST`), t
 
 Using the same trick as above (Copy as cURL from Chrome, import to Paw), I can run the same request in Paw: 
 
-![paw04.png](/content/images/2016/05/paw04.png)
+![paw04.png](/images/2016/05/paw04.png)
 
 Clicking on the **Headers** option in the response pane shows the cookie being set:
 
-![paw05.png](/content/images/2016/05/paw05-2.png)
+![paw05.png](/images/2016/05/paw05-2.png)
 
 Using the Paw Code Generator, I can run this as a cURL command - but by default cURL won't give me the cookie: 
 

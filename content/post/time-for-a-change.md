@@ -15,7 +15,7 @@ After 5 years at Rittman Mead, [126 blog posts](https://www.rittmanmead.com/blog
 
 Later this month I'll be joining [**Confluent**](https://confluent.io) as a **Partner Technology Evangelist**, helping spread the good word of Apache Kafka and the [Confluent platform](https://www.confluent.io/product/). 
 
-![I'm so excited!](/content/images/2017/03/66021689.jpg)
+![I'm so excited!](/images/2017/03/66021689.jpg)
 
 
 --- 

@@ -13,7 +13,7 @@ title = "A New Arrival"
 
 After a long and painful delivery, I'm delighted to announce the arrival of a new addition to my household ... : 
 
-![](/content/images/2016/06/IMG_3813.jpg)
+![](/images/2016/06/IMG_3813.jpg)
 
 This [custom-build from Scan 3XS](https://www.scan.co.uk/3xs/shared/98f6ed5b-7fc4-492c-b66c-3c0e4117dd9c) is sat in my study quietly humming away. I'm going to use it for hosting VMs for R&D on OBIEE, Big Data Lite, Elastic, InfluxDB, Kafka, etc. 
 I'll blog various installations that I've done on it as a reference for myself, and anyone else interested. Which I guess means, myself ;)
@@ -27,4 +27,4 @@ I'm running [Proxmox 4](https://www.proxmox.com/en/) on it, which is a bare-meta
 
 Earlier versions of Proxmox used OpenVZ containers and a custom kernel that I sometimes hit issues with not being compatible (e.g. with [sysdig](https://github.com/draios/sysdig/issues/415)). Proxmox 4 uses the mainstream Linux Containers (LXC), and also supports Docker which is something I've yet to get to grips with but I think could be useful. 
 
-![](/content/images/2016/06/proxmox01.png)
+![](/images/2016/06/proxmox01.png)

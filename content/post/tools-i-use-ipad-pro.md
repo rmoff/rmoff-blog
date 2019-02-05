@@ -46,13 +46,13 @@ I went with the Apple keyboard and haven't regretted it once. It's lovely to typ
 
 My only gripe with the keyboard is that there is an utterly pointless (for me) Keyboard key in the bottom left, whose only purpose is to throw up an emoji keyboard when I hit it by mistake 
 
-![](/content/images/2018/12/emoji-keyboard.png.JPG)
+![](/images/2018/12/emoji-keyboard.png.JPG)
 
 ### The pencil
 
 I used a bog standard stylus with my iPad Mini previously, and so from that my expectations for the Apple Pencil were pretty low. I thought I'd be able to write on the screen but only at a low resolution, kind of fun but ultimately useless. The Apple Pencil is anything but useless. It's amazingly high resolution, responsive, and a pleasure to use. It integrates with Notes for note taking (duh!), and you can pretty credibly leave your notebook behind and use this instead (or pair it with the keyboard for written notes and the pencil for sketching diagrams etc). 
 
-![](/content/images/2018/12/pencil-notes.JPG)
+![](/images/2018/12/pencil-notes.JPG)
 
 It also integrates with Keynote which is pretty nifty for sketching diagrams directly into slide decks. 
 A colleague recommended putting a matte screen protector on the iPad to make it nicer to draw on, and I'd second this advice. It makes it feel more 'papery' and less like a glass screen. 

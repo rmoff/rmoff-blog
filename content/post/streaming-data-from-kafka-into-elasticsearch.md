@@ -19,7 +19,7 @@ This post shows how we take data streaming in from an Oracle transactional syste
 
 We'll use Kafka Connect to stream the Avro topics directly into Elasticsearch. Because we're using Avro and the schema registry all of our Elasticsearch mappings will be created automagically and with the correct datatypes. You can read more about using Kafka Connect to build pipelines in an earlier blog series here: [1](https://www.confluent.io/blog/simplest-useful-kafka-connect-data-pipeline-world-thereabouts-part-1/) [2](https://www.confluent.io/blog/blogthe-simplest-useful-kafka-connect-data-pipeline-in-the-world-or-thereabouts-part-2/) [3](https://www.confluent.io/blog/simplest-useful-kafka-connect-data-pipeline-world-thereabouts-part-3/).
 
-![](/content/images/2018/02/connectsrwin.png)
+![](/images/2018/02/connectsrwin.png)
 
 Create the Connect sink configuration file—note that we're using Single Message Transforms (SMT) to set Timestamp datatype for `op_ts` and `current_ts`. We're doing this to get around a limitation in the current release of GoldenGate in which date/timestamps are simply passed as strings. In order for Elasticsearch to work seamlessly, we want the Kafka Connect sink to pass the datatype as a timestamp—which using the SMT will enable.
 
@@ -44,13 +44,13 @@ Check Elasticsearch doc count:
 
 From here, with the data now in Elasticsearch, you can go and build Kibana dashboards to your heart's content.
 
-![](/content/images/2018/02/ogg01.png)
+![](/images/2018/02/ogg01.png)
 
-![](/content/images/2018/02/ogg02.png)
+![](/images/2018/02/ogg02.png)
 
 Here's a very simple one of median/max Order values and counts over time, along with a histogram plot showing the distribution of order values.
 
-![](/content/images/2018/02/oggkib01.png)
+![](/images/2018/02/oggkib01.png)
 
 Remember that this is based on data streaming through from our source transactional system, with two particular benefits:
 

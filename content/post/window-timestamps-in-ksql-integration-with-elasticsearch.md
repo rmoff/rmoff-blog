@@ -66,7 +66,7 @@ is required to give it any context. Otherwise it's just a number!
 An example of using the window timestamp is in streaming KSQL aggregates
 into Elasticsearch for visualisation:
 
-![](/content/images/2018/09/ksqlsoe08.png)
+![](/images/2018/09/ksqlsoe08.png)
 
 There are [plans](https://github.com/confluentinc/ksql/issues/1674) to create a function in KSQL that will expose the window start timestamp again.
 
@@ -83,9 +83,9 @@ field(s) plus the window start + end timestamp) as the Elasticsearch
 document id. The effect of this is that you'll end up with one document
 per aggregation in Elasticsearch, updated in place.
 
-![kib es keys01](/content/images/2018/09/kib-es-keys01.png)
+![kib es keys01](/images/2018/09/kib-es-keys01.png)
 
-![kib es keys02](/content/images/2018/09/kib-es-keys02.png)
+![kib es keys02](/images/2018/09/kib-es-keys02.png)
 
 The timestamp value will not be on the beginning of the window but it
 will be within it - and you can use Kibana's visualisation which will

@@ -75,7 +75,7 @@ rmoff@proxmox01:~$ sudo docker run -d --name Sync   -p $WEBUI_PORT:8888 -p 55555
 
 It was as simple that that. I pointed my web browser at port 8888 on my Proxmox server (the Docker host), and it worked perfectly.
 
-![](/content/images/2016/06/Sync___c7415250d7a3.png)
+![](/images/2016/06/Sync___c7415250d7a3.png)
 
 To see what Docker containers are running use `ps`: 
 
