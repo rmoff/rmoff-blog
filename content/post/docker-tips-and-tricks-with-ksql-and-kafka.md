@@ -34,9 +34,9 @@ done
 
     {{< highlight shell >}}
 
-echo "Waiting for Kafka Connect to start listening on kafka-connect-worker ⏳"
-while [ $(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) -eq 000 ] ; do 
-  echo -e $(date) " Kafka Connect listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) " (waiting for 200)"
+echo "Waiting for Kafka Connect to start listening on kafka-connect ⏳"
+while [ $(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) -eq 000 ] ; do 
+  echo -e $(date) " Kafka Connect listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) " (waiting for 200)"
   sleep 5 
 done
 {{< /highlight >}}
@@ -116,12 +116,12 @@ kafka-connect:
     - -c 
     - |
       /etc/confluent/docker/run & 
-      echo "Waiting for Kafka Connect to start listening on kafka-connect-worker ⏳"
-      while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) -eq 000 ] ; do 
-        echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect-worker:8083/connectors) " (waiting for 200)"
+      echo "Waiting for Kafka Connect to start listening on kafka-connect ⏳"
+      while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) -eq 000 ] ; do 
+        echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) " (waiting for 200)"
         sleep 5 
       done
-      nc -vz kafka-connect-worker 8083
+      nc -vz kafka-connect 8083
       echo -e "\n--\n+> Creating Kafka Connect Elasticsearch sink"
       /scripts/create-es-sink.sh 
       sleep infinity
