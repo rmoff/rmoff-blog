@@ -11,7 +11,8 @@ title = "Exploring JMX with jmxterm"
 
 +++
 
-Check out the [jmxterm repository](https://github.com/jiaqi/jmxterm/) / Download jmxterm from [http://wiki.cyclopsgroup.org/jmxterm/](http://wiki.cyclopsgroup.org/jmxterm/)
+* Check out the [jmxterm repository](https://github.com/jiaqi/jmxterm/)
+* Download jmxterm from [https://docs.cyclopsgroup.org/jmxterm](https://docs.cyclopsgroup.org/jmxterm)
 
 <!--more-->
 

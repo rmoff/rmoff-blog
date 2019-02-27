@@ -12,6 +12,12 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 
 ---
 
+### The Changing Face of ETL: Event-Driven Architectures for Data Engineers
+
+* 📖 [Slides](https://speakerdeck.com/rmoff/the-changing-face-of-etl-event-driven-architectures-for-data-engineers)
+
+---
+
 ### ATM Fraud detection with Kafka and KSQL
 
 * 📖 [Slides](https://speakerdeck.com/rmoff/atm-fraud-detection-with-kafka-and-ksql)
