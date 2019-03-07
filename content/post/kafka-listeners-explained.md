@@ -15,6 +15,12 @@ This question comes up on StackOverflow and such places a **lot**, so here's som
 
 **tl;dr** : You need to set `advertised.listeners` (or `KAFKA_ADVERTISED_LISTENERS` if you're using Docker images) to the external address (host/IP) so that clients can correctly connect to it. Otherwise they'll try to connect to the internal host address–and if that's not reachable then problems ensue.
 
+Put another way, courtesy of Spencer Ruport: 
+
+> `LISTENERS` are what interfaces Kafka binds to. `ADVERTISED_LISTENERS`  are how clients can connect. 
+
+<!--more-->
+
 ![images/docker01.png](/images/2018/08/docker01.png)
 
 In this post I'll talk about _why_ this is necessary, and then show _how_ to do it, based on a couple of scenarios - Docker, and AWS. 
