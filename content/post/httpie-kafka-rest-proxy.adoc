@@ -1,0 +1,155 @@
+---
+title: 'Using httpie with the Kafka REST Proxy'
+date: "2019-03-08T15:37:42Z"
+description: ""
+tldr: ""
+image: "/images/2019/03/DSCF2707.JPG"
+credit: ""
+thumbnail: "/images/2019/03/IMG_8649.jpg"
+categories:
+- httpie
+- kafka rest proxy
+---
+
+This shows how to use https://httpie.org/[httpie] with the https://docs.confluent.io/current/kafka-rest/docs/index.html[Confluent REST Proxy].
+
+## Send data
+
+{{< highlight shell >}}
+echo '{"records":[{"value":{"foo":"bar"}}]}' | \
+  http POST http://localhost:8082/topics/jsontest \
+  Content-Type:application/vnd.kafka.json.v2+json Accept:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+Response: 
+
+{{< highlight shell >}}
+HTTP/1.1 200 OK
+Content-Encoding: gzip
+Content-Length: 100
+Content-Type: application/vnd.kafka.v2+json
+Date: Fri, 08 Mar 2019 15:24:53 GMT
+Server: Jetty(9.4.12.v20180830)
+Vary: Accept-Encoding, User-Agent
+
+{
+    "key_schema_id": null,
+    "offsets": [
+        {
+            "error": null,
+            "error_code": null,
+            "offset": 3,
+            "partition": 0
+        }
+    ],
+    "value_schema_id": null
+}
+{{< /highlight >}}
+
+## Consume data
+
+### Create a consumer
+
+{{< highlight shell >}}
+echo '{"name": "rmoff_consumer_instance", "format": "json", "auto.offset.reset": "earliest"}' | \
+  http POST http://localhost:8082/consumers/rmoff_consumer_group \
+  Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+Response: 
+
+{{< highlight shell >}}
+HTTP/1.1 200 OK
+Content-Encoding: gzip
+Content-Length: 109
+Content-Type: application/vnd.kafka.v2+json
+Date: Fri, 08 Mar 2019 15:28:13 GMT
+Server: Jetty(9.4.12.v20180830)
+Vary: Accept-Encoding, User-Agent
+
+{
+    "base_uri": "http://rest-proxy:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance",
+    "instance_id": "rmoff_consumer_instance"
+}
+{{< /highlight >}}
+
+### Create a subscription for the consumer
+
+{{< highlight shell >}}
+echo '{"topics":["jsontest"]}' | \
+http POST http://localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance/subscription \
+Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+Response 
+
+{{< highlight shell >}}
+HTTP/1.1 204 No Content
+Date: Fri, 08 Mar 2019 15:30:33 GMT
+Server: Jetty(9.4.12.v20180830)
+{{< /highlight >}}
+
+### Read all available messages
+
+{{< highlight shell >}}
+http http://localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance/records \
+Accept:application/vnd.kafka.json.v2+json
+{{< /highlight >}}
+
+Response: 
+
+{{< highlight shell >}}
+HTTP/1.1 200 OK
+Content-Encoding: gzip
+Content-Length: 113
+Content-Type: application/vnd.kafka.json.v2+json
+Date: Fri, 08 Mar 2019 15:31:42 GMT
+Server: Jetty(9.4.12.v20180830)
+Vary: Accept-Encoding, User-Agent
+
+[
+    {
+        "key": null,
+        "offset": 0,
+        "partition": 0,
+        "topic": "jsontest",
+        "value": {
+            "foo": "bar"
+        }
+    }
+]    
+{{< /highlight >}}
+
+### Change the offset for the consumer
+
+This is useful if you want to reconsume messages, or maybe seek past a bad message. 
+
+{{< highlight shell >}}
+echo '{ "offsets": [ { "topic": "jsontest", "partition": 0, "offset": 1 } ] }' | \
+http POST localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance/positions \
+Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+Response:
+
+{{< highlight shell >}}
+HTTP/1.1 204 No Content
+Date: Fri, 08 Mar 2019 15:54:48 GMT
+Server: Jetty(9.4.12.v20180830)
+{{< /highlight >}}
+
+### Delete the consumer 
+
+{{< highlight shell >}}
+http DELETE http://localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance \
+Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+Response: 
+
+{{< highlight shell >}}
+HTTP/1.1 204 No Content
+Date: Fri, 08 Mar 2019 15:33:06 GMT
+Server: Jetty(9.4.12.v20180830)
+{{< /highlight >}}
+
