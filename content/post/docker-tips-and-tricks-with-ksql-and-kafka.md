@@ -98,13 +98,35 @@ Now the additional bits will run, and _then_ the container's intended process wi
 
 The `- |` is some YAML magic; we're passing in three arguments to `command`, and the `|` tells YAML that the following lines are all part of the same entry. It makes for a much neater and easier to read file than trying to put everything into a single line as is sometimes done with `command`. 
 
+### Install a Kafka Connect plugin automatically
+
+If you want to use a connector plugin that's not part of the existing docker image, you can install it from Confluent Hub - and script it as follows: 
+
+{{< highlight yaml "hl_lines=10-25">}}
+kafka-connect:
+  image: confluentinc/cp-kafka-connect:5.1.2
+  environment:
+    CONNECT_REST_PORT: 18083
+    CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+    […]
+  volumes:
+    - $PWD/scripts:/scripts
+  command: 
+    - bash 
+    - -c 
+    - |
+      confluent-hub install --no-prompt neo4j/kafka-connect-neo4j:1.0.0
+      /etc/confluent/docker/run
+{{< /highlight >}}
+
+
 ### Deploy a Kafka Connect connector automatically
 
 In the above example, we run some code _before_ the container's payload (the KSQL Server) starts because of a dependency on it. In the next example we'll do it the other way around; launch the service and wait for it to start, and then run some more code. This is the pattern we need for deploying a Kafka Connect connector. 
 
 {{< highlight yaml "hl_lines=10-25">}}
 kafka-connect:
-  image: confluentinc/cp-kafka-connect:5.0.1
+  image: confluentinc/cp-kafka-connect:5.1.2
   environment:
     CONNECT_REST_PORT: 18083
     CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
@@ -175,7 +197,7 @@ Two techniques here, depending on whether the JDBC driver is available from a UR
 
 {{< highlight yaml "hl_lines=7-15">}}
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:5.1.0
+    image: confluentinc/cp-kafka-connect:5.1.2
 …
     environment:
 …
@@ -198,7 +220,7 @@ Assuming you have the JAR locally, you can just mount it into the Kafka Connect 
 
 {{< highlight yaml "hl_lines=7-15">}}
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:5.1.0
+    image: confluentinc/cp-kafka-connect:5.1.2
 …
     volumes:
       - /my/local/folder/with/jdbc-driver/:/usr/share/java/kafka-connect-jdbc/jars/
