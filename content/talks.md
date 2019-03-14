@@ -33,7 +33,7 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
   * [Devoxx Belgium](https://www.youtube.com/watch?v=bapHWhtf6fE)
      * Rated [32](https://twitter.com/Devoxx/status/1064452715034669056) out of all the conference talks 
      * Scored {{< math >}}4.31/5{{< /math >}}, 134 votes
-
+  * [London Java Community](https://skillsmatter.com/skillscasts/13644-embrace-the-anarchy-apache-kafka-s-role-in-modern-data-architectures)
   * [Oracle CODE London](https://www.youtube.com/watch?v=Y5qeKmL5xMg)
 * 📖 [Slides](https://speakerdeck.com/rmoff/embrace-the-anarchy-apache-kafkas-role-in-modern-data-architectures)
 
