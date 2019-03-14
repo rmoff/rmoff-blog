@@ -102,12 +102,13 @@ The `- |` is some YAML magic; we're passing in three arguments to `command`, and
 
 If you want to use a connector plugin that's not part of the existing docker image, you can install it from Confluent Hub - and script it as follows: 
 
-{{< highlight yaml "hl_lines=10-25">}}
+{{< highlight yaml "hl_lines=6 10-25">}}
 kafka-connect:
   image: confluentinc/cp-kafka-connect:5.1.2
   environment:
-    CONNECT_REST_PORT: 18083
+    CONNECT_REST_PORT: 8083
     CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+    CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
     […]
   volumes:
     - $PWD/scripts:/scripts
@@ -119,6 +120,7 @@ kafka-connect:
       /etc/confluent/docker/run
 {{< /highlight >}}
 
+Note that you must also set `CONNECT_PLUGIN_PATH` to include the path into which the plugin is being installed, otherwise it won't be picked up by Kafka Connect. 
 
 ### Deploy a Kafka Connect connector automatically
 
