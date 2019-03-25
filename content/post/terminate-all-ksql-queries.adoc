@@ -1,0 +1,28 @@
+---
+title: 'Terminate All KSQL Queries'
+date: "2019-03-25T16:45:40Z"
+description: ""
+tldr: ""
+image: ""
+credit: ""
+thumbnail: ""
+categories:
+- KSQL
+- rest
+---
+
+Before you can drop a stream or table that's populated by a query in KSQL, you have to terminate any queries upon which the object is dependent. Here's a bit of `jq` & `xargs` magic to terminate *all* queries that are currently running
+
+<!--more-->
+
+{{< highlight shell >}}
+ curl -s -X "POST" "http://localhost:8088/ksql" \
+         -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+         -d '{"ksql": "SHOW QUERIES;"}' | \
+  jq '.[].queries[].id' | \
+  xargs -Ifoo curl -X "POST" "http://localhost:8088/ksql" \
+           -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+           -d '{"ksql": "TERMINATE 'foo';"}'
+{{< /highlight >}}
+
+For more notes on the KSQL REST API see https://docs.confluent.io/current/ksql/docs/developer-guide/api.html[the docs] and link:/2019/01/17/ksql-rest-api-cheatsheet/[this cheatsheet].
