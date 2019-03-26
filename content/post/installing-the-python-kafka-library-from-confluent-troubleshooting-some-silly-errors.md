@@ -102,6 +102,8 @@ So let's fix that!
     sudo apt-get update
     sudo apt-get install librdkafka-dev
 
+> Courtesy of Spencer Ruport : The deb dev package for librdkafka is suffixed with `-dev` while the RPM is `-devel`.
+
 And now the package comes from the horse's mouth, as it were: 
 
     https://packages.confluent.io/deb/4.0/ stable/main librdkafka-dev amd64 0.11.1~1confluent4.0.0-1 [412 kB]
