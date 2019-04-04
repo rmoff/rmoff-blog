@@ -1,0 +1,80 @@
+---
+title: 'Debezium & MySQL : Communications Link Failure / Public Key Retrieval Is Not Allowed'
+date: "2019-04-03T21:54:51-04:00"
+description: ""
+tldr: ""
+image: "/images/2019/04/IMG_3685.JPG"
+credit: ""
+thumbnail: "/images/2019/04/IMG_9090.jpg"
+categories:
+- Debezium
+- MySQL
+---
+
+I've hit these errors when creating a connector with Debezium against MySQL a couple of times now, and seen them asked about on StackOverflow too. *In essence it means that you've not configured MySQL correctly for Debezium to be able to connect to it.*
+
+<!--more-->
+
+== Errors
+
+The error differs depending on the version of Debezium. 
+
+* 0.8.3
++
+Kafka Connect REST response: 
++
+{{< highlight shell >}}
+{
+  "error_code": 400,
+  "message": "Connector configuration is invalid and contains the following 1 error(s):
+              Unable to connect: Communications link failure
+              
+              The last packet sent successfully to the server was 0 milliseconds ago. The driver has not received any packets from the server.
+              
+              You can also find the above list of errors at the endpoint `/{connectorType}/config/validate`"
+}
+{{< /highlight >}}
++
+Corresponding Kafka Connect worker entry: 
++
+{{< highlight shell >}}
+INFO   ||  Failed testing connection for jdbc:mysql://mysql:3306/?useInformationSchema=true&nullCatalogMeansCurrent=false&useSSL=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull with user 'debezium'   [io.debezium.connector.mysql.MySqlConnector]
+{{< /highlight >}}
+
+
+* 0.9.3
++
+Kafka Connect REST response: 
++
+{{< highlight shell >}}
+{
+  "error_code": 400,
+  "message": "Connector configuration is invalid and contains the following 1 error(s):
+              
+              Unable to connect: Public Key Retrieval is not allowed
+
+              You can also find the above list of errors at the endpoint `/{connectorType}/config/validate`"
+}
+{{< /highlight >}}
++
+Corresponding Kafka Connect worker entry: 
++
+{{< highlight shell >}}
+ INFO   ||  Failed testing connection for jdbc:mysql://mysql:3306/?useInformationSchema=true&nullCatalogMeansCurrent=false&useSSL=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=CONVERT_TO_NULL with user 'debezium'   [io.debezium.connector.mysql.MySqlConnector]
+{{< /highlight >}}
+
+== How to fix
+
+If you're using Docker, you can use a pre-configured MySQL image `debezium/example-mysql`. Alternatively make sure that you configure the instance with a user granted the appropriate permissions: 
+
+{{< highlight sql >}}
+GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT  ON *.* TO 'debezium' IDENTIFIED BY 'dbz';
+{{< /highlight >}}
+
+and then per database too: 
+
+{{< highlight sql >}}
+GRANT ALL PRIVILEGES ON demo.* TO 'debezium'@'%';
+{{< /highlight >}}
+
+Refer to https://debezium.io/docs/connectors/mysql/#create-a-mysql-user-for-the-connector[the Debezium docs] for specific privilege levels required. 
