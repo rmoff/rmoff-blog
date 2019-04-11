@@ -27,6 +27,16 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 
 --- 
 
+### No More Silos: Integrating Databases and Apache Kafka
+
+* 📖 [Slides](https://talks.rmoff.net/eGacLb/no-more-silos-integrating-databases-and-apache-kafka)
+* 📽 Recording
+  * [Online talk](https://www.confluent.io/online-talks/no-more-silos-integrating-databases-apache-kafka)
+* 👾 [Code (MySQL)](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos/no-more-silos.adoc)
+* 👾 [Code (Oracle)](https://github.com/confluentinc/demo-scene/tree/master/no-more-silos-oracle)
+
+--- 
+
 ### Embrace the Anarchy: Apache Kafka's Role in Modern Data Architectures
 
 * 📽 Recording
@@ -50,14 +60,6 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
   * [Madrid meetup](https://www.youtube.com/watch?v=SvaMFCT_6GI)
 * 📖 [Slides](https://speakerdeck.com/rmoff/apache-kafka-and-ksql-in-action-lets-build-a-streaming-data-pipeline)
 * 👾 [Code](https://github.com/confluentinc/demo-scene/blob/master/mysql-debezium-ksql-elasticsearch/)
-
---- 
-
-### No More Silos: Integrating Databases and Apache Kafka
-
-* 📖 [Slides](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)
-* 👾 [Code (MySQL)](https://github.com/confluentinc/demo-scene/tree/master/no-more-silos-mysql)
-* 👾 [Code (Oracle)](https://github.com/confluentinc/demo-scene/tree/master/no-more-silos-oracle)
 
 --- 
 
