@@ -33,6 +33,7 @@ Slides & Recordings: http://rmoff.net/talks/
 * [SpeakerDeck](https://speakerdeck.com/rmoff)
 * [GitHub](https://github.com/rmoff)
 * [Telegram](https://t.me/rmoff)
+* [Instagram](https://www.instagram.com/rnmoffatt/)
 * [Keybase](https://keybase.io/rmoff/) 🔑
 * [Untappd](https://untappd.com/user/rmoff) 🍻
 * [last.fm](http://www.last.fm/user/themoff) 🎵
