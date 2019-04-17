@@ -31,6 +31,7 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 
 * 📖 [Slides](https://talks.rmoff.net/eGacLb/no-more-silos-integrating-databases-and-apache-kafka)
 * 📽 Recording
+  * [Kafka Summit New York 2019](https://www.confluent.io/kafka-summit-ny19/no-more-silos-integrating-db-into-apache-kafka)
   * [Online talk](https://www.confluent.io/online-talks/no-more-silos-integrating-databases-apache-kafka)
 * 👾 [Code (MySQL)](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos/no-more-silos.adoc)
 * 👾 [Code (Oracle)](https://github.com/confluentinc/demo-scene/tree/master/no-more-silos-oracle)
