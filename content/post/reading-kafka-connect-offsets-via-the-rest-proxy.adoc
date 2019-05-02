@@ -1,0 +1,80 @@
+---
+title: 'Reading Kafka Connect Offsets via the REST Proxy'
+date: "2019-05-02T10:58:27+01:00"
+url: "/post/reading-kafka-connect-offsets-via-the-rest-proxy"
+description: ""
+tldr: ""
+image: "/images/2019/05/IMG_9475.jpg"
+credit: ""
+thumbnail: "/images/2019/05/IMG_9571.jpg"
+categories:
+- Kafka Connect
+- Kafka REST Proxy
+---
+
+= Reading Kafka Connect offsets via the REST proxy
+
+When you run Kafka Connect in distributed mode it uses a Kafka topic to store the offset information for each connector. 
+
+It may be that you want to query this information. You can use a CLI tool like kafkacat: 
+
+{{< highlight shell >}}
+$ kafkacat -b localhost:9092 -t docker-kafka-connect-offsets -C -K:
+["source-debezium-orders-00",{"server":"asgard"}]:{"file":"mysql-bin.000003","pos":154}
+["source-debezium-orders-00",{"server":"asgard"}]:{"ts_sec":1556791017,"file":"mysql-bin.000003","pos":9041,"row":1,"server_id":223344,"event":2}
+{{< /highlight >}}
+
+<!--more-->
+
+You may want to access this information over HTTP though. Here's how, using the https://docs.confluent.io/current/kafka-rest/index.html[Confluent REST Proxy]. For more cheat-sheet of the REST proxy https://rmoff.net/2019/03/08/using-httpie-with-the-kafka-rest-proxy/[see here]. 
+
+* Create a consumer
++
+{{< highlight shell >}}
+echo '{"name": "rmoff_consumer_instance", "format": "json", "auto.offset.reset": "earliest"}' | \
+  http POST http://localhost:8082/consumers/rmoff_consumer_group \
+  Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+* Create a subscription to the offset topic for the consumer. Make sure you put the correct topic name here
++
+{{< highlight shell >}}
+echo '{"topics":["docker-kafka-connect-offsets"]}' | \
+  http POST http://localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance/subscription \
+  Content-Type:application/vnd.kafka.v2+json
+{{< /highlight >}}
+
+* Read any new messages from the topic
++
+{{< highlight shell >}}
+http http://localhost:8082/consumers/rmoff_consumer_group/instances/rmoff_consumer_instance/records \
+  Accept:application/vnd.kafka.json.v2+json
+{{< /highlight >}}
++
+{{< highlight shell >}}
+HTTP/1.1 200 OK
+Content-Encoding: gzip
+Content-Length: 154
+Content-Type: application/vnd.kafka.json.v2+json
+Date: Thu, 02 May 2019 09:50:27 GMT
+Server: Jetty(9.4.14.v20181114)
+Vary: Accept-Encoding, User-Agent
+
+[
+    {
+        "key": [
+            "source-debezium-orders-00",
+            {
+                "server": "asgard"
+            }
+        ],
+        "offset": 0,
+        "partition": 20,
+        "topic": "docker-kafka-connect-offsets",
+        "value": {
+            "file": "mysql-bin.000003",
+            "pos": 154
+        }
+    }
+]
+{{< /highlight >}}
