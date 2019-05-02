@@ -19,7 +19,7 @@ _I also write on my [employer's blog](https://www.confluent.io/blog/author/robin
 
 ### Speaking experience
 
-Speaker since 2009 at conferences including QCon, Devoxx, USENIX LISA, Kafka Summit, Oracle OpenWorld, JavaZone, Big Data LDN, UKOUG, Oracle CODE, PGConf, etc plus numerous meetups.
+Speaker since 2009 at conferences including QCon, Devoxx, O'Reilly Strata, USENIX LISA, Kafka Summit, Oracle OpenWorld, JavaZone, Big Data LDN, UKOUG, Oracle CODE, PGConf, etc plus numerous meetups.
 
 Slides & Recordings: http://rmoff.net/talks/
 

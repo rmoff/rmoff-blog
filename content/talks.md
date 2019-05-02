@@ -14,7 +14,8 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 
 ### The Changing Face of ETL: Event-Driven Architectures for Data Engineers
 
-* 📖 [Slides](https://speakerdeck.com/rmoff/the-changing-face-of-etl-event-driven-architectures-for-data-engineers)
+* 📖 [Slides](http://go.rmoff.net/strata19-the-changing-face-of-etl)
+* 📽 [Recording](https://videos.confluent.io/watch/JPAnk3i2enPodLh5UhZ2Xf?) (Paris Apache Kafka Meetup @ DataDog)
 
 ---
 
