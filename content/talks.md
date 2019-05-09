@@ -23,6 +23,7 @@ You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rm
 
 * 📖 [Slides](https://speakerdeck.com/rmoff/atm-fraud-detection-with-kafka-and-ksql)
 * 👾 [Code](https://github.com/confluentinc/demo-scene/blob/master/ksql-atm-fraud-detection/ksql-atm-fraud-detection-README.adoc)
+* 📽 [Recording](https://skillsmatter.com/skillscasts/13885-apache-kafka-london-april-meetup) (live @ London Apache Kafka Meetup)
 * 📽 [Recording](https://www.youtube.com/watch?v=3jn2OnQHLbw) (live @ Milan Apache Kafka Meetup)
 * 📽 [Recording](https://www.confluent.io/online-talks/atm-fraud-detection-with-apache-kafka-and-ksql) (webinar)
 
