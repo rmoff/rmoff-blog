@@ -8,9 +8,16 @@ classes:
 - feature-math
 ---
 
-You can find most of my slide decks on [Speaker Deck](https://speakerdeck.com/rmoff/). Below are links to particular talks I've done recently, along with recordings where available. 
+You can find all my recent talks at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). Below are links to particular talks I've done recently, along with recordings where available. 
 
 ---
+
+### From Zero to Hero with Kafka Connect
+
+* 📖 [Slides](https://talks.rmoff.net/QZ5nsS/from-zero-to-hero-with-kafka-connect)
+* 👾 [Code](https://github.com/confluentinc/demo-scene/tree/master/kafka-connect-zero-to-hero)
+* 📽 Recording : soon.
+
 
 ### The Changing Face of ETL: Event-Driven Architectures for Data Engineers
 
