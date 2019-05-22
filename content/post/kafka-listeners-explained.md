@@ -178,16 +178,7 @@ Run within Docker, you will need to configure two listeners for Kafka:
 
     Here's the docker-compose snippet: 
 
-        kafka0:
-            image: "confluentinc/cp-enterprise-kafka:5.0.0-rc3"
-            ports:
-            - '9092:9092'
-            depends_on:
-            - zookeeper
-            environment:
-            KAFKA_ADVERTISED_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://localhost:9092
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_BOB:PLAINTEXT,LISTENER_FRED:PLAINTEXT
-            […]
+    <script src="https://gist.github.com/rmoff/da2e882a49a55740b242df893e48734f.js"></script>
 
 * Clients _within_ the Docker network connect using listener "BOB", with port 29092 and hostname `kafka0`. In doing so, they get back the hostname `kafka0` to which to connect. Each docker container will resolve `kafka0` using Docker's internal network, and be able to reach the broker. 
 * Clients _external_ to the Docker network connect using listener "FRED", with port 9092 and hostname `localhost`. Port 9092 is exposed by the Docker container and so available to connect to. When clients connect, they are given the hostname `localhost` for the broker's metadata, and so connect to this when reading/writing data. 
@@ -238,20 +229,18 @@ Take a look at https://github.com/rmoff/kafka-listeners. This includes a docker-
 
 * Listener `BOB` (port 29092) for internal traffic on the Docker network
 
-        $ docker run -t --network kafka-listeners_default \
-                    confluentinc/cp-kafkacat \
-                    kafkacat -b kafka0:29092 \
-                            -L
+        $ docker-compose exec kafkacat \
+                kafkacat -b kafka0:29092 \
+                -L
         Metadata for all topics (from broker 0: kafka0:29092/0):
         1 brokers:
           broker 0 at kafka0:29092
 
 * Listener `FRED` (port 9092) for traffic from the Docker-host machine (`localhost`)
 
-        $ docker run -t --network kafka-listeners_default \
-                    confluentinc/cp-kafkacat \
-                    kafkacat -b kafka0:9092 \
-                            -L
+        $ docker-compose exec kafkacat \
+                kafkacat -b kafka0:9092 \
+                        -L
         Metadata for all topics (from broker -1: kafka0:9092/bootstrap):
         1 brokers:
           broker 0 at localhost:9092
