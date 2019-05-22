@@ -25,4 +25,17 @@ Before you can drop a stream or table that's populated by a query in KSQL, you h
            -d '{"ksql": "TERMINATE 'foo';"}'
 {{< /highlight >}}
 
+You can use a similar technique to drop all streams: 
+
+{{< highlight shell >}}
+curl -s -X "POST" "http://localhost:8088/ksql" \
+           -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+           -d '{"ksql": "SHOW STREAMS;"}' | \
+    jq '.[].streams[].name' | \
+    xargs -Ifoo curl -X "POST" "http://localhost:8088/ksql" \
+             -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+             -d '{"ksql": "DROP STREAM 'foo';"}'
+{{< /highlight >}}
+
+
 For more notes on the KSQL REST API see https://docs.confluent.io/current/ksql/docs/developer-guide/api.html[the docs] and link:/2019/01/17/ksql-rest-api-cheatsheet/[this cheatsheet].

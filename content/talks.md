@@ -8,7 +8,7 @@ classes:
 - feature-math
 ---
 
-You can find all my recent talks at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). Below are links to particular talks I've done recently, along with recordings where available. 
+You can find all my recent talks on Notist at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). Below are links to particular talks I've done recently, along with recordings where available. 
 
 ---
 
@@ -18,11 +18,14 @@ You can find all my recent talks at https://talks.rmoff.net/. Older ones are on 
 * 👾 [Code](https://github.com/confluentinc/demo-scene/tree/master/kafka-connect-zero-to-hero)
 * 📽 Recording : soon.
 
+---
 
 ### The Changing Face of ETL: Event-Driven Architectures for Data Engineers
 
 * 📖 [Slides](http://go.rmoff.net/strata19-the-changing-face-of-etl)
-* 📽 [Recording](https://videos.confluent.io/watch/JPAnk3i2enPodLh5UhZ2Xf?) (Paris Apache Kafka Meetup @ DataDog)
+* 📽 Recording
+  * Strata London 2019 (available soon)
+  * [Paris Apache Kafka Meetup @ DataDog](https://videos.confluent.io/watch/JPAnk3i2enPodLh5UhZ2Xf?)
 
 ---
 
@@ -50,6 +53,7 @@ You can find all my recent talks at https://talks.rmoff.net/. Older ones are on 
 ### Embrace the Anarchy: Apache Kafka's Role in Modern Data Architectures
 
 * 📽 Recording
+  * [Devoxx UK](https://www.youtube.com/watch?v=Z8_O0wEIafw)
   * [Devoxx Belgium](https://www.youtube.com/watch?v=bapHWhtf6fE)
      * Rated [32](https://twitter.com/Devoxx/status/1064452715034669056) out of all the conference talks 
      * Scored {{< math >}}4.31/5{{< /math >}}, 134 votes
