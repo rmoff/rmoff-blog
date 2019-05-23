@@ -16,7 +16,7 @@ You can find all my recent talks on Notist at https://talks.rmoff.net/. Older on
 
 * 📖 [Slides](https://talks.rmoff.net/QZ5nsS/from-zero-to-hero-with-kafka-connect)
 * 👾 [Code](https://github.com/confluentinc/demo-scene/tree/master/kafka-connect-zero-to-hero)
-* 📽 Recording : soon.
+* 📽 [Recording](https://videos.confluent.io/watch/nfJb4GiJFLnR3rrxEwNNA2?)
 
 ---
 
