@@ -1,0 +1,78 @@
+---
+title: 'Automatically restarting failed Kafka Connect tasks'
+date: "2019-06-06T17:51:44+01:00"
+image: "/images/2019/06/DSCF3097.jpg"
+thumbnail: "/images/2019/06/DSCF3132.jpg"
+categories:
+- Kafka Connect
+---
+
+Here's a hacky way to automatically restart Kafka Connect connectors if they fail. Restarting automatically only makes sense if it's a transient failure; if there's a problem with your pipeline (e.g. bad records or a mis-configured server) then you don't gain anything from this. You might want to check out https://www.confluent.io/blog/kafka-connect-deep-dive-error-handling-dead-letter-queues[Kafka Connect's error handling and dead letter queues] too.
+
+<!--more-->
+
+Let's say you've got a couple of connectors set up, pulling data from MySQL with Debezium and streaming it to Elasticsearch. The MySQL source is a bit flaky and goes offline periodically. You can view the status of all your connectors and tasks: 
+
+{{< highlight shell >}}
+curl -s "http://localhost:8083/connectors"| \
+  jq '.[]'| \
+  xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| \
+  jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| \
+  column -s : -t| sed 's/\"//g'| sort
+
+sink-elastic-orders-00     |  RUNNING  |  RUNNING
+source-debezium-orders-00  |  RUNNING  |  FAILED
+{{< /highlight >}}
+
+If a connector's task(s) are failed you can restart them using the https://docs.confluent.io/current/connect/references/restapi.html#post--connectors-(string-name)-tasks-(int-taskid)-restart[REST API]: 
+
+{{< highlight shell >}}
+curl -X POST http://localhost:8083/connectors/source-debezium-orders-00/tasks/0/restart
+{{< /highlight >}}
+
+after which it comes back
+
+{{< highlight shell >}}
+curl -s "http://localhost:8083/connectors"| \
+  jq '.[]'| \
+  xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| \
+  jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| \
+  column -s : -t| sed 's/\"//g'| sort
+
+sink-elastic-orders-00     |  RUNNING  |  RUNNING
+source-debezium-orders-00  |  RUNNING  |  RUNNING
+{{< /highlight >}}
+
+But, manually watching and restarting tasks isn't fun, so let's automate it. Here's a bit of bash that will restart any failed tasks. It's the same pattern as above for iterating through the connectors on Kafka Connect's REST API, coupled with `jq` 's ability to filter data (`select(.tasks[].state=="FAILED")`)
+
+{{< highlight shell >}}
+#!/usr/bin/env bash
+# @rmoff / June 6, 2019
+
+echo '----'
+# Set the path so cron can find jq, necessary for cron depending on your default PATH
+export PATH=$PATH:/usr/local/bin/
+
+# What time is it Mr Wolf? 
+date 
+
+# List current connectors and status
+curl -s "http://localhost:8083/connectors"| jq '.[]'| xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| column -s : -t| sed 's/\"//g'| sort
+
+# Restart any connector tasks that are FAILED
+curl -s "http://localhost:8083/connectors" | \
+  jq '.[]' | \
+  xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status" | \
+  jq -c -M '[select(.tasks[].state=="FAILED") | .name,"§±§",.tasks[].id]' | \
+  grep -v "\[\]"| \
+  sed -e 's/^\[\"//g'| sed -e 's/\",\"§±§\",/\/tasks\//g'|sed -e 's/\]$//g'| \
+  xargs -I{connector_and_task} curl -v -X POST "http://localhost:8083/connectors/"{connector_and_task}"/restart"
+{{< /highlight >}}
+
+Which as any hacky admin will know can be scheduled to run with a crontab such as this: 
+
+{{< highlight shell >}}
+*/5 * * * * /u01/connectors/restart_failed_connector_tasks.sh 2>&1 >> /u01/connectors/connect_monitor.log
+{{< /highlight >}}
+
+Now every five minutes the script will look for any `FAILED` tasks and send a REST call to restart them. 
