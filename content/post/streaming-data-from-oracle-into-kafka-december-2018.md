@@ -461,6 +461,25 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
       * Completely bespoke code to develop and maintain.
       * Tightly coupled to source application
 
+    ----
+
+    A contribution from reader **ynux** about triggers:
+
+    > Thanks for your article which I found very helpful. Many people are interested, and many underestimate the complexity of this.
+    > 
+    > I'd like to add some "cons" to the self-built trigger solution because I was part of a team that built one (originally to feed changes into Elasticsearch).
+    > 
+    > * Can only be done per table
+    > * Creates load on the Oracle database, because there are more writes and, more importantly, more locks. We had to put the trigger on the central table that had a very high change rate, and the locks it produced were small but summing up, especially as more applications asking for changes were added.
+    > * People have to be very cautious if they want to retain the order of events. I don't remember the details, but we put a materialized view on top of the table filled by the trigger, and I think the reasoning was: If you have the source table -> change table -> application, consider this case. There's a commit to the source table, and change 1, say, "insert item A", asks for a timestamp t1 and updates the change table at time t1'. Change 2, "update item A", gets timestamp t2 and updates the change table at time t2', but overtakes change 1: t1 < t2, but t1' > t2' . (Can that happen? Does Oracle guarantee that it won't?). As Murphy rules, between t2' and t1' the application fetches the changes. And is understandably confused since it has to update an item that doesn't exist.
+    > So I assume the materialized view between the change table and the application was added to fix this.
+    > Note that the source table had both a date and an incrementing ID per item.
+    > 
+    > My takeaway from this experience was:
+    > - Streams and Tables may be dual, but reconstructing a stream from a table is expensive
+    > - When you think of ordering and consistency, think hard
+
+
 * **Flashback**
 
   * Pro + Con:
