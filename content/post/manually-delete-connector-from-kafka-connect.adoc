@@ -1,0 +1,44 @@
+---
+title: 'Manually delete a connector from Kafka Connect'
+date: "2019-06-23T11:39:46+02:00"
+image: "/images/2019/06/IMG_0579.jpg"
+thumbnail: "/images/2019/06/IMG_0644.jpg"
+categories:
+- Kafka Connect
+- kafkacat
+---
+
+Kafka Connect has as https://docs.confluent.io/current/connect/references/restapi.html[REST API] through which all config should be done, including removing connectors that have been created. Sometimes though, you might have reason to want to manually do this—and since Kafka Connect running in distributed mode uses Kafka as its persistent data store, you can achieve this by manually writing to the topic yourself. 
+
+<!--more-->
+
+1. Stop the Kafka Connect workers. Inspect the Kafka Connect config to determine the name of the `config` topic, e.g. 
++
+{{< highlight shell >}}
+config.storage.topic=connect-configs
+{{< /highlight >}}
+
+2. Look at the existing topic contents (I like to use `kafkacat` because of its rich functionality when you go beyond simple consumption/production of data): 
++
+{{< highlight shell >}}
+kafkacat -b localhost:9092 -t connect-configs -C -K#
+{{< /highlight >}}
++
+{{< highlight shell >}}
+connector-replicator-source#{"properties":{"connector.class":"io.confluent.connect.replicator.ReplicatorSourceConnector","key.converter":"io.confluent.connect.replicator.util.ByteArrayConverter","value.converter":"io.confluent.connect.replicator.util.ByteArrayConverter","header.converter":"io.confluent.connect.replicator.util.ByteArrayConverter","src.kafka.bootstrap.servers":"kafka:29092","dest.kafka.bootstrap.servers":"172.27.230.24:9092","topic.whitelist":"test_topic","name":"replicator-source"}}
+% Reached end of topic connect-configs [0] at offset 1
+{{< /highlight >}}
++
+Note here there is a single connector, named `connector-replicator-source`. The config topic is a compacted one, and the message key is the name of the connector. I'm using `-K#` to tell kafkacat to delimit the key and value with a `#` symbol. 
+
+3. Emit a tombstone (null) message to the topic for the key of the connector which you want to remove. 
++
+To do this with kafkacat you simply use the `-Z` operator ("_send empty messages as NULL messages_"), and pass an empty message after the key. As above I'm using `#` as my key/value delimiter (and specifying this with `-K#`). 
++
+{{< highlight shell >}}
+echo 'connector-replicator-source#' | \
+  kafkacat -b localhost:9092 -t connect-configs -P -Z -K#
+{{< /highlight >}}
+
+4. Restart the connect worker.
+
