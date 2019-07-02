@@ -2,7 +2,6 @@
 author = "Robin Moffatt"
 categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "flashback", "licence", "ksql"]
 date = 2018-12-12T09:49:04Z
-description = ""
 draft = false
 image = "/images/2018/12/IMG_7464.jpg"
 slug = "streaming-data-from-oracle-into-kafka-december-2018"
@@ -379,7 +378,7 @@ However you do this, it should be in a way that integrates with the broader Kafk
 
 ### Overview of the Pros and Cons of each technique
 
-_Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections in the comment function below welcomed!_
+_Some of these are objective, others subjective. Others may indeed be plain false ;-) Discussion, comments, and corrections via [Twitter](https://twitter.com/rmoff/) or [LinkedIn](https://www.linkedin.com/in/robinmoffatt/) welcomed!_
 
 * **Query-based CDC**
   * Pros:
@@ -391,7 +390,7 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
       * No guarantee that _all_ events are captured; only the state at the time of polling
       * Increased load on the source DB due to polling (and/or unacceptable latency in capturing the events if polling interval too high)
 
-  <blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="en" dir="ltr">Another con one could add to query-based CDC is that it needs support by the model (update column); I&#39;ve blogged about here: <a href="https://t.co/DDYV62DIVF">https://t.co/DDYV62DIVF</a>. Log-based CDC also can give you additional metadata like TX ids, causing queries (for some DBs) etc.</p>&mdash; Gunnar Morling (@gunnarmorling) <a href="https://twitter.com/gunnarmorling/status/1073323155370987521?ref_src=twsrc%5Etfw">December 13, 2018</a></blockquote>
+          <blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="en" dir="ltr">Another con one could add to query-based CDC is that it needs support by the model (update column); I&#39;ve blogged about here: <a href="https://t.co/DDYV62DIVF">https://t.co/DDYV62DIVF</a>. Log-based CDC also can give you additional metadata like TX ids, causing queries (for some DBs) etc.</p>&mdash; Gunnar Morling (@gunnarmorling) <a href="https://twitter.com/gunnarmorling/status/1073323155370987521?ref_src=twsrc%5Etfw">December 13, 2018</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 * **Log-based CDC**
@@ -463,6 +462,12 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
 
     ----
 
+    A contribution from another reader, **Janne Keskitalo**, who has implemented a CDC solution using triggers and is very happy with it: 
+
+    [Change data capture from Oracle to Kafka with triggers](https://medium.com/@janne.keskitalo/change-data-capture-from-oracle-to-kafka-with-triggers-5af6f116793)
+
+    ----
+
     A contribution from reader **ynux** about triggers:
 
     > Thanks for your article which I found very helpful. Many people are interested, and many underestimate the complexity of this.
@@ -479,7 +484,6 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
     > - Streams and Tables may be dual, but reconstructing a stream from a table is expensive
     > - When you think of ordering and consistency, think hard
 
-
 * **Flashback**
 
   * Pro + Con:
@@ -491,7 +495,7 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
       * Impact on the DB from polling?
       * Unclear how much bespoke coding this would require per integration?
 
-  <blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="en" dir="ltr">There are 2 flashback features:<br>Flashback transaction query shows transactions from redo, similar to log miner.<br>Flashback version query shows previous versions, from undo, within undo_retention. Allowed in all editions. I think this is the one you mention.</p>&mdash; Franck Pachot (@FranckPachot) <a href="https://twitter.com/FranckPachot/status/1073323013750317056?ref_src=twsrc%5Etfw">December 13, 2018</a></blockquote>
+    <blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="en" dir="ltr">There are 2 flashback features:<br>Flashback transaction query shows transactions from redo, similar to log miner.<br>Flashback version query shows previous versions, from undo, within undo_retention. Allowed in all editions. I think this is the one you mention.</p>&mdash; Franck Pachot (@FranckPachot) <a href="https://twitter.com/FranckPachot/status/1073323013750317056?ref_src=twsrc%5Etfw">December 13, 2018</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 ### References

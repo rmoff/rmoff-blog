@@ -11,6 +11,10 @@ title = "Kafka Listeners - Explained"
 
 +++
 
+_(This was cross-posted on the [Confluent.io blog](https://www.confluent.io/blog/kafka-listeners-explained))_
+
+----
+
 This question comes up on StackOverflow and such places a **lot**, so here's something to try and help.
 
 **tl;dr** : You need to set `advertised.listeners` (or `KAFKA_ADVERTISED_LISTENERS` if you're using Docker images) to the external address (host/IP) so that clients can correctly connect to it. Otherwise they'll try to connect to the internal host address–and if that's not reachable then problems ensue.

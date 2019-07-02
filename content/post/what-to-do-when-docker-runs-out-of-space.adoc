@@ -13,10 +13,11 @@ categories:
 
 I use Docker and Docker Compose _a lot_. Like, every day. It's a fantastic way to build repeatable demos and examples, that can be torn down and spun up in a repeatable way. But…what happens when the demo that was working is spun up and then tail spins down in a blaze of flames? 
 
+<!--more-->
+
 Here's the excerpt of a log from my Oracle container: 
 
-[source,bash]
-----
+{{< highlight shell >}}
 $ docker-compose up -d  ; docker-compose logs -f oracle
 Recreating connect-jdbc_oracle_1_4be0ad4479f8 ...
 connect-jdbc_mssql_1_eb2a015c90b2 is up-to-date
@@ -53,21 +54,20 @@ oracle_1_4be0ad4479f8 | DATABASE SETUP WAS NOT SUCCESSFUL!
 oracle_1_4be0ad4479f8 | Please check output for further info!
 oracle_1_4be0ad4479f8 | ########### E R R O R ###############
 oracle_1_4be0ad4479f8 | #####################################
-----
+{{< /highlight >}}
 
 Argh! It was working just yesterday! 
 
 If you check out the space that Docker's using, you'll see it can be quite a hog
 
-[source,bash]
-----
+{{< highlight shell >}}
 $ docker system df
 TYPE                TOTAL               ACTIVE              SIZE                RECLAIMABLE
 Images              86                  7                   36.87GB             35.87GB (97%)
 Containers          13                  0                   76.66MB             76.66MB (100%)
 Local Volumes       586                 9                   36.88GB             36.67GB (99%)
 Build Cache         0                   0                   0B                  0B
-----
+{{< /highlight >}}
 
 That's over 70Gb of space! 
 
@@ -81,8 +81,7 @@ NOTE: You can do `docker system prune -af` but this trashes **everything**. I'd 
 
 Pruning the unused volumes and stopped containers is easy: 
 
-[source,bash]
-----
+{{< highlight shell >}}
 $ docker volume prune
 WARNING! This will remove all local volumes not used by at least one container.
 Are you sure you want to continue? [y/N] y
@@ -92,10 +91,9 @@ dc502ff65c2dc5b51272834d7a6c58a36e8560876125b0b74f6024162fb28186
 93d2e9fa57442a2f1a1837a7ecf14b069179bb814351e2888bdd0cfcd12d19dd
 
 Total reclaimed space: 36.67GB
-----
+{{< /highlight >}}
 
-[source,bash]
-----
+{{< highlight shell >}}
 $ docker container prune
 WARNING! This will remove all stopped containers.
 Are you sure you want to continue? [y/N] y
@@ -104,7 +102,7 @@ Deleted Containers:
 bf8b43823b644c238b3d1e8722a6ad9383b2162a6d0a4d80bcc5c661c91ade32
 
 Total reclaimed space: 76.66MB
-----
+{{< /highlight >}}
 
 You can do the same with images, but I don't want to trash _all_ my images, so I cheat and use a GUI - the excellent https://www.portainer.io/[Portainer] (which itself can be run under Docker 😃)
 
@@ -112,13 +110,19 @@ image::/images/2019/01/2019-01-09_10-25-34.png[]
 
 Now my Docker has a bit more space to breathe: 
 
-[source,bash]
-----
+{{< highlight shell >}}
 $ docker system df
 TYPE                TOTAL               ACTIVE              SIZE                RECLAIMABLE
 Images              33                  1                   17.2GB              17.15GB (99%)
 Containers          1                   1                   0B                  0B
 Local Volumes       1                   1                   33.57kB             0B (0%)
 Build Cache         0                   0                   0B                  0B
-----
+{{< /highlight >}}
 
+''''
+
+This same problem can cause Elasticsearch to stop working also, if it runs out of space the index becomes read-only: 
+
+{{< highlight shell >}}
+{"error":{"root_cause":[{"type":"cluster_block_exception","reason":"blocked by: [FORBIDDEN/12/index read-only / allow delete (api)];"}],"type":"cluster_block_exception","reason":"blocked by: [FORBIDDEN/12/index read-only / allow delete (api)];"},"status":403}
+{{< /highlight >}}
