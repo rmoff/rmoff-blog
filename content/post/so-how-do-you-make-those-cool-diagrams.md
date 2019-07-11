@@ -17,6 +17,16 @@ I [write](https://www.confluent.io/blog/author/robin/) and [speak](http://rmoff.
 
 So here's a short, and longer, answer! 
 
+----
+
+## Update July 2019
+
+I've moved away from Paper -> [read more here](/2019/07/11/so-how-do-you-make-those-cool-diagrams-july-2019-update/)
+
+----
+----
+
+
 ### tl;dr
 
 An iOS app called [Paper, from a company called FiftyThree](https://paper.bywetransfer.com/)
