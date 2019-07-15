@@ -14,6 +14,8 @@ _This is a short summary discussing what the options are for integrating Oracle 
 
 ### What techniques & tools are there? 
 
+*Franck Pachot has written up an excellent analysis of the options available [here](https://medium.com/@FranckPachot/ideas-for-event-sourcing-in-oracle-d4e016e90af6)*.
+
 As of December 2018, this is what the line-up looks like: 
 
 * **Query-based CDC**
@@ -33,6 +35,7 @@ As of December 2018, this is what the line-up looks like:
       * DBVisit Replicate is no longer developed. 
 * **Triggers** to capture changes made to a table, write details of those changes to another database table, ingest that table into Kafka (e.g. with JDBC connector).
 * **Flashback** to show all changes to a given table between two points in time. [Implemented as a PoC by Stewart Bryson and Björn Rost](https://blog.pythian.com/streaming-oracle-kafka-stories-message-bus-stop/).
+
 
 ### What do they look like in action? 
 
