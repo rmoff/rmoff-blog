@@ -51,3 +51,32 @@ curl -s -X "POST" "http://localhost:8088/ksql" \
 
 
 For more notes on the KSQL REST API see https://docs.confluent.io/current/ksql/docs/developer-guide/api.html[the docs] and link:/2019/01/17/ksql-rest-api-cheatsheet/[this cheatsheet].
+
+''''
+
+Courtesy of Evelyn Munkel via the http://cnfl.io/slack[💬 Confluent Community Slack group], a way to target just a particular stream: 
+
+{{< highlight shell >}}
+echo Terminating the write query for the FOO stream
+curl -s -X "POST" ${ksql.url} \
+    -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+    -d '{"ksql": "DESCRIBE FOO;"}' \ |
+    jq '.[].sourceDescription.writeQueries[].id' | \
+ xargs -Iq1 curl -X "POST" ${ksql.url} \
+          -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+          -d '{"ksql": "TERMINATE 'q1';"}' | jq
+
+echo Terminating the read query for the FOO stream
+curl -s -X "POST" ${ksql.url} \
+    -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+    -d '{"ksql": "DESCRIBE FOO;"}' \ |
+    jq '.[].sourceDescription.readQueries[].id' | \
+ xargs -Iq3 curl -X "POST" ${ksql.url} \
+          -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+          -d '{"ksql": "TERMINATE 'q3';"}' | jq
+
+echo Dropping the FOO stream
+curl -X "POST" ${ksql.url} \
+            -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \
+            -d '{"ksql": "DROP TABLE FOO;"}' | jq
+{{< /highlight >}}
