@@ -156,7 +156,7 @@ Let's walk this through step by step.
         $ kafkacat -b ec2-54-191-84-122.us-west-2.compute.amazonaws.com:9092 -C -t test
         % ERROR: Local: Host resolution failure: ip-172-31-18-160.us-west-2.compute.internal:9092/0: Failed to resolve 'ip-172-31-18-160.us-west-2.compute.internal:9092': nodename nor servname provided, or not known
 
-    Here we're using `kafkacat` in producer mode (`-C`) from our local machine to try and read from the topic. As before, because we're getting the _internal_ listener hostname back from the broker in the metadata, the client cannot resolve that hostname to read/write from.
+    Here we're using `kafkacat` in consumer mode (`-C`) from our local machine to try and read from the topic. As before, because we're getting the _internal_ listener hostname back from the broker in the metadata, the client cannot resolve that hostname to read/write from.
 
 
 
