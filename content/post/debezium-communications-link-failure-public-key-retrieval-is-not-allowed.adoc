@@ -1,6 +1,6 @@
 ---
-title: 'Debezium & MySQL : Communications Link Failure / Public Key Retrieval Is Not Allowed'
-date: "2019-04-03T21:54:51-04:00"
+title: 'Debezium & MySQL v8 : Public Key Retrieval Is Not Allowed'
+date: "2019-10-23T11:54:51-04:00"
 description: ""
 tldr: ""
 image: "/images/2019/04/IMG_3685.JPG"
@@ -11,70 +11,68 @@ categories:
 - MySQL
 ---
 
-I've hit these errors when creating a connector with Debezium against MySQL a couple of times now, and seen them asked about on StackOverflow too. *In essence it means that you've not configured MySQL correctly for Debezium to be able to connect to it.*
+I started hitting problems when trying Debezium against MySQL v8. When creating the connector: 
 
-<!--more-->
-
-== Errors
-
-The error differs depending on the version of Debezium. 
-
-* 0.8.3
-+
-Kafka Connect REST response: 
-+
 {{< highlight shell >}}
+curl -i -X PUT -H "Accept:application/json" \
+    -H  "Content-Type:application/json" http://localhost:8083/connectors/source-debezium-mysql-00/config \
+    -d '{
+          "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+          "database.hostname": "mysql",
+          "database.port": "3306",
+          "database.user": "debezium",
+          "database.password": "dbz",
+          "database.server.id": "42",
+          "database.server.name": "asgard",
+          "table.whitelist": "demo.customers",
+          "database.history.kafka.bootstrap.servers": "kafka:29092",
+          "database.history.kafka.topic": "asgard.dbhistory.demo" ,
+          "include.schema.changes": "true"
+    }'
+{{< /highlight >}}
+
+I'd get the error
+
+{{< highlight json >}}
 {
-  "error_code": 400,
-  "message": "Connector configuration is invalid and contains the following 1 error(s):
-              Unable to connect: Communications link failure
-              
-              The last packet sent successfully to the server was 0 milliseconds ago. The driver has not received any packets from the server.
-              
-              You can also find the above list of errors at the endpoint `/{connectorType}/config/validate`"
+    "error_code": 400,
+    "message": "Connector configuration is invalid and contains the following 1 error(s):\nUnable to connect: Public Key Retrieval is not allowed\nYou can also find the above list of errors at the endpoint `/{connectorType}/config/validate`"
 }
 {{< /highlight >}}
-+
-Corresponding Kafka Connect worker entry: 
-+
+
+The fix for this, courtesy of Jiri on the https://gitter.im/debezium/user[Debezium gitter.im chat room], is to add to the connector configuraton `database.allowPublicKeyRetrieval=true`: 
+
 {{< highlight shell >}}
-INFO   ||  Failed testing connection for jdbc:mysql://mysql:3306/?useInformationSchema=true&nullCatalogMeansCurrent=false&useSSL=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull with user 'debezium'   [io.debezium.connector.mysql.MySqlConnector]
+curl -i -X PUT -H "Accept:application/json" \
+    -H  "Content-Type:application/json" http://localhost:8083/connectors/source-debezium-mysql-00/config \
+    -d '{
+          "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+          "database.hostname": "mysql",
+          "database.port": "3306",
+          "database.user": "debezium",
+          "database.password": "dbz",
+          "database.server.id": "42",
+          "database.allowPublicKeyRetrieval":"true",
+          "database.server.name": "asgard",
+          "table.whitelist": "demo.customers",
+          "database.history.kafka.bootstrap.servers": "kafka:29092",
+          "database.history.kafka.topic": "asgard.dbhistory.demo" ,
+          "include.schema.changes": "true"
+    }'
 {{< /highlight >}}
 
+After this the connector was created successfully, but immediately `FAILED` with the following error in the Kafka Connect worker log: 
 
-* 0.9.3
-+
-Kafka Connect REST response: 
-+
-{{< highlight shell >}}
-{
-  "error_code": 400,
-  "message": "Connector configuration is invalid and contains the following 1 error(s):
-              
-              Unable to connect: Public Key Retrieval is not allowed
-
-              You can also find the above list of errors at the endpoint `/{connectorType}/config/validate`"
-}
-{{< /highlight >}}
-+
-Corresponding Kafka Connect worker entry: 
-+
-{{< highlight shell >}}
- INFO   ||  Failed testing connection for jdbc:mysql://mysql:3306/?useInformationSchema=true&nullCatalogMeansCurrent=false&useSSL=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=CONVERT_TO_NULL with user 'debezium'   [io.debezium.connector.mysql.MySqlConnector]
+{{< highlight shell >}} 
+org.apache.kafka.connect.errors.ConnectException: Failed to authenticate to the MySQL database at mysql:3306 with user 'debezium'
+[…]
+com.github.shyiko.mysql.binlog.network.AuthenticationException: Client does not support authentication protocol requested by server; consider upgrading MySQL client
 {{< /highlight >}}
 
-== How to fix
-
-If you're using Docker, you can use a pre-configured MySQL image `debezium/example-mysql`. Alternatively make sure that you configure the instance with a user granted the appropriate permissions: 
+A bit of Googling threw up https://github.com/shyiko/mysql-binlog-connector-java/issues/240[this issue on GitHub] with a solution that worked—add `WITH mysql_native_password` to the authentication settings for the Debezium user: 
 
 {{< highlight sql >}}
-GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT  ON *.* TO 'debezium' IDENTIFIED BY 'dbz';
+ALTER USER 'debezium'@'%' IDENTIFIED WITH mysql_native_password BY 'dbz';
 {{< /highlight >}}
 
-and then per database too: 
-
-{{< highlight sql >}}
-GRANT ALL PRIVILEGES ON demo.* TO 'debezium'@'%';
-{{< /highlight >}}
-
-Refer to https://debezium.io/docs/connectors/mysql/#create-a-mysql-user-for-the-connector[the Debezium docs] for specific privilege levels required. 
+After that, the connector ran successfully 👍 
