@@ -14,7 +14,7 @@ title = "HOWTO: Oracle GoldenGate + Apache Kafka + Schema Registry + Swingbench"
 _This is the detailed step-by-step if you want to recreate the process I describe in the [Confluent blog here](https://www.confluent.io/blog/ksql-in-action-real-time-streaming-etl-from-oracle-transactional-data)_
 
 ---
-I used Oracle's [Oracle Developer Days VM](http://www.oracle.com/technetwork/database/enterprise-edition/databaseappdev-vm-161299.html), which comes preinstalled with Oracle 12cR2. You can see the notes on [how to do this here](https://rmoff.net/2017/11/21/installing-oracle-goldengate-for-big-data-12-3-1-with-kafka-connect-and-confluent-platform/). These notes take you through installing and configuring:
+I used Oracle's [Oracle Developer Days VM](http://www.oracle.com/technetwork/database/enterprise-edition/databaseappdev-vm-161299.html), which comes preinstalled with Oracle 12cR2. You can see the notes on [how to do this here](https://rmoff.net/2017/11/21/installing-oracle-goldengate-for-big-data-12.3.1-with-kafka-connect-and-confluent-platform/). These notes take you through installing and configuring:
 
 * Swingbench, to create a sample "Order Entry" schema and simulate events on the Oracle database
 * Oracle GoldenGate (OGG, forthwith) and Oracle GoldenGate for Big Data (OGG-BD, forthwith)
