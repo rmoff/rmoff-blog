@@ -70,31 +70,49 @@ $ ccloud kafka cluster list
 $ ccloud kafka cluster use lkc-42p8m
 {{< /highlight >}}
 
-* Create the topics - one for the DDL, plus one per source table. 
+* Create the required topics:
 +
-The topic name is defined by : 
+** **https://debezium.io/documentation/reference/0.10/connectors/mysql.html#database-schema-history[Database history]**.
 +
-** an optional Single Message Transform used in the example which prepends a `mysql-01-` prefix
-** the `database.server.name` (`asgard`)
-** the database name (`demo`) plus table name
+Name is set in the configuration property `database.history.kafka.topic`. Must not be partitioned.
 +
 {{< highlight shell >}}
-# Schema DDL goes in this topic - it must not be partitioned
-# Thanks to Terry Franklin for this 👍
-# See https://debezium.io/documentation/reference/0.10/connectors/mysql.html#schema-change-topic
+ccloud kafka topic create --partitions 1 dbz_dbhistory.asgard-01
+{{< /highlight >}}
++
+_If you don't create this topic in advance, Debezium will do so for you, but with a hardcoded timeout of 3 seconds which is often not long enough in a Cloud environment—hence it's best to create it in advance._
++
+** **https://debezium.io/documentation/reference/0.10/connectors/mysql.html#schema-change-topic[Schema changes]**.
++
+Enabled by default, set `include.schema.changes` to false if not required. 
++
+Name is taken from the configuration property `database.server.name` (`asgard`). In this example I'm using the `RegexRouter` Single Message Transform which prepends a `mysql-01-` prefix to the topic name too. This is optional.
++
+_Note that this topic must not be partitioned - Thanks to Terry Franklin for this 👍_
++
+{{< highlight shell >}}
 ccloud kafka topic create --partitions 1 mysql-01-asgard
-# Table-specific topics: 
+{{< /highlight >}}
++
+** One topic per table ingested. The topic name is made up by the `database.server.name` (`asgard`), the database name (`demo`), and the table name. 
++
+In this example I'm using the `RegexRouter` Single Message Transform which prepends a `mysql-01-` prefix to the topic name too. This is optional.
++
+{{< highlight shell >}}
 ccloud kafka topic create mysql-01-asgard.demo.customers
 ccloud kafka topic create mysql-01-asgard.demo.transactions
 {{< /highlight >}}
-+
-If you don't do this, you'll get repeating errors in your Kafka Connect worker log:
-+
+
+[NOTE]
+====
+If you don't pre-create your topics, you'll get repeating errors in your Kafka Connect worker log:
+
 {{< highlight shell >}}
 Error while fetching metadata with correlation id … : {<…topic…>=UNKNOWN_TOPIC_OR_PARTITION} 
 {{< /highlight >}}
-+
-You can create the topics afterwards if you forget, but it's easier up-front
+
+You can create the topics afterwards if you forget, but it's easier up-front.
+====
 
 == Create the connector
 
