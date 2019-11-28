@@ -57,6 +57,34 @@ export PATH=$PATH:/usr/local/bin/
 date 
 
 # List current connectors and status
+curl -s "http://localhost:8083/connectors?expand=info&expand=status" | \
+           jq '. | to_entries[] | [ .value.info.type, .key, .value.status.connector.state,.value.status.tasks[].state,.value.info.config."connector.class"]|join(":|:")' | \
+           column -s : -t| sed 's/\"//g'| sort
+
+# Restart any connector tasks that are FAILED
+# Works for Apache Kafka >= 2.3.0 
+# Thanks to @jocelyndrean for this enhanced code snippet that also supports 
+#  multiple tasks in a connector
+curl -s "http://localhost:8083/connectors?expand=status" | \
+  jq -c -M 'map({name: .status.name } +  {tasks: .status.tasks}) | .[] | {task: ((.tasks[]) + {name: .name})}  | select(.task.state=="RUNNING") | {name: .task.name, task_id: .task.id|tostring} | ("/connectors/"+ .name + "/tasks/" + .task_id + "/restart")' | \
+  xargs -I{connector_and_task} curl -v -X POST "http://localhost:8083"\{connector_and_task\}
+{{< /highlight >}}
+
+Which as any hacky admin will know can be scheduled to run with a crontab such as this: 
+
+{{< highlight shell >}}
+*/5 * * * * /u01/connectors/restart_failed_connector_tasks.sh 2>&1 >> /u01/connectors/connect_monitor.log
+{{< /highlight >}}
+
+Now every five minutes the script will look for any `FAILED` tasks and send a REST call to restart them. 
+
+
+''''
+
+If you're using Apache Kafka < 2.3.0 then the enhanced REST API for `connectors` is not available so you will need something like this: 
+
+{{< highlight shell >}}
+# List current connectors and status
 curl -s "http://localhost:8083/connectors"| jq '.[]'| xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| column -s : -t| sed 's/\"//g'| sort
 
 # Restart any connector tasks that are FAILED
@@ -67,12 +95,5 @@ curl -s "http://localhost:8083/connectors" | \
   grep -v "\[\]"| \
   sed -e 's/^\[\"//g'| sed -e 's/\",\"§±§\",/\/tasks\//g'|sed -e 's/\]$//g'| \
   xargs -I{connector_and_task} curl -v -X POST "http://localhost:8083/connectors/"{connector_and_task}"/restart"
+
 {{< /highlight >}}
-
-Which as any hacky admin will know can be scheduled to run with a crontab such as this: 
-
-{{< highlight shell >}}
-*/5 * * * * /u01/connectors/restart_failed_connector_tasks.sh 2>&1 >> /u01/connectors/connect_monitor.log
-{{< /highlight >}}
-
-Now every five minutes the script will look for any `FAILED` tasks and send a REST call to restart them. 
