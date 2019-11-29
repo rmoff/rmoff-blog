@@ -1,0 +1,42 @@
+---
+title: "Kafka Connect - Request timed out"
+date: 2019-11-29T14:37:24Z
+categories:
+- Kafka Connect
+- Kafka
+---
+
+A short & sweet blog post to help people Googling for this error, and me next time I encounter it. 
+
+The scenario: trying to create a connector in Kafka Connect (running in distributed mode, one worker) failed with the `curl` response
+
+{{< highlight shell >}}
+HTTP/1.1 500 Internal Server Error
+Date: Fri, 29 Nov 2019 14:33:53 GMT
+Content-Type: application/json
+Content-Length: 48
+Server: Jetty(9.4.18.v20190429)
+
+{"error_code":500,"message":"Request timed out"}
+{{< /highlight >}}
+
+<!--more-->
+
+But, no error in the Kafka Connect worker log (at `INFO` level anyway). Most puzzling. After a lot of back & forth comparing my config with a working environment I tracked this down to a mis-configuration of my Kafka broker. Running a single broker, I had not specified an override value for the configuration `offsets.topic.replication.factor`, which meant that it took the default of three. Three replicas, but only one broker…that's not going to be a good situation, and well it wasn't on checking my broker log which was full of continually repeating errors: 
+
+{{< highlight shell >}}
+[2019-11-29 14:40:46,841] ERROR [KafkaApi-1] Number of alive brokers '1' does not meet the required replication factor '3' for the offsets topic (configured via 'offsets.topic.replication.factor'). This error can be ignored if the cluster is starting up and not all brokers are up yet. (kafka.server.KafkaApis)
+[2019-11-29 14:40:46,945] ERROR [KafkaApi-1] Number of alive brokers '1' does not meet the required replication factor '3' for the offsets topic (configured via 'offsets.topic.replication.factor'). This error can be ignored if the cluster is starting up and not all brokers are up yet. (kafka.server.KafkaApis)
+[2019-11-29 14:40:47,048] ERROR [KafkaApi-1] Number of alive brokers '1' does not meet the required replication factor '3' for the offsets topic (configured via 'offsets.topic.replication.factor'). This error can be ignored if the cluster is starting up and not all brokers are up yet. (kafka.server.KafkaApis)
+[…]
+{{< /highlight >}}
+
+Presumably since Kafka Connect uses the offsets topic for its https://rmoff.net/2019/11/22/common-mistakes-made-when-configuring-multiple-kafka-connect-workers/[own internal load balancing] the absence of it caused Kafka Connect to not be able to create a connector. 
+
+The solution? Configure Kafka correctly :) Since I was using Docker Compose for my cluster I set: 
+
+{{< highlight shell >}}
+KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+{{< /highlight >}}
+
+After bouncing the Kafka broker, Kafka Connect worked fine. 
