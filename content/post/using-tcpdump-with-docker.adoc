@@ -1,0 +1,109 @@
+---
+title: "Using tcpdump With Docker"
+date: 2019-11-29T11:17:24Z
+image: "/images/2019/11/IMG_1336.jpeg"
+thumbnail: "/images/2019/11/IMG_1337.jpeg"
+categories:
+- Docker
+- tcpdump
+---
+
+:source-highlighter: rouge
+
+= Using tcpdump with Docker
+
+I was doing some troubleshooting between two services recently and wanting to poke around to see what was happening in the REST calls between them. Normally I'd reach for `tcpdump` to do this but imagine my horror when I saw: 
+
+{{< highlight shell >}}
+root@ksqldb-server:/# tcpdump
+bash: tcpdump: command not found
+{{< /highlight >}}
+
+<!--more-->
+
+Of course, being Docker containers and being built with the correct philosophy of not including the kitchen sink, `tcpdump` wasn't present. 
+
+My https://twitter.com/rmoff/status/1195382425536348165[erstwhile companion on my IT career, Google], soon pointed me to the answer courtesy of https://twitter.com/xxradar[Philippe Bogaerts] in his blog post https://medium.com/@xxradar/how-to-tcpdump-effectively-in-docker-2ed0a09b5406[How to TCPdump effectively in Docker]. Here I'll shamelessly plagiarise the salient points and apply them to my Docker situation. 
+
+First up, you can build Docker images using http://tldp.org/LDP/abs/html/here-docs.html[Here Documents] which is pretty cool: 
+
+{{< highlight shell >}}
+docker build -t tcpdump - <<EOF 
+FROM ubuntu 
+RUN apt-get update && apt-get install -y tcpdump 
+CMD tcpdump -i eth0 
+EOF
+{{< /highlight >}}
+
+So that's built me a local image with `tcpdump` on: 
+
+{{< highlight shell >}}
+$ docker images
+REPOSITORY   TAG      IMAGE ID      CREATED             SIZE
+tcpdump      latest   eebe12b8051f  31 minutes ago      98.3MB
+{{< /highlight >}}
+
+I'm interested in the communication between these two containers: 
+
+{{< highlight shell >}}
+$ docker ps
+CONTAINER ID        IMAGE                                          COMMAND                   CREATED             STATUS                  PORTS                              NAMES
+20a7bb264c82        confluentinc/ksqldb-server:0.6.0               "/usr/bin/docker/run"     17 hours ago        Up 42 minutes           0.0.0.0:8088->8088/tcp             ksqldb-server
+df2be147f1ef        confluentinc/cp-kafka-connect:5.4.0-beta1      "bash -c 'echo \"Inst…"   17 hours ago        Up 17 hours (healthy)   0.0.0.0:8083->8083/tcp, 9092/tcp   kafka-connect-01
+{{< /highlight >}}
+
+Using Docker's ability to run a container that https://docs.docker.com/engine/reference/run/#network-container[attaches to the network of another] with the `--network=container:<container_name>` option we can now run `tcpdump` "piggybacked" on my container of interest: 
+
+{{< highlight shell >}}
+docker run --tty --net=container:ksqldb-server tcpdump
+{{< /highlight >}}
+
+From this we can see all the network chatter going on: 
+
+{{< highlight shell >}}
+$ docker run --tty --net=container:ksqldb-server tcpdump
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
+11:11:11.547672 IP kafka.ksqldb-twitter_default.29092 > ksqldb-server.59926: Flags [P.], seq 373631892:373631900, ack 22720794, win 15552, options [nop,nop,TS val 65125468 ecr 65125418], length 8
+11:11:11.547806 IP kafka.ksqldb-twitter_default.29092 > ksqldb-server.59926: Flags [P.], seq 8:22, ack 1, win 15552, options [nop,nop,TS val 65125468 ecr 65125418], length 14
+11:11:11.547955 IP ksqldb-server.59926 > kafka.ksqldb-twitter_default.29092: Flags [.], ack 22, win 32044, options [nop,nop,TS val 65125468 ecr 65125468], length 0[…]
+{{< /highlight >}}
+
+What we can see here is our container (https://ksqldb.io[ksqlDB server]) talking to the Kafka broker `kafka.ksqldb-twitter_default.29092`. 
+
+* `kafka` is the broker's hostname
+* `ksqldb-twitter_default` the name of the Docker network (that in this case Docker Compose has created)
+* `29092` the https://rmoff.net/2018/08/02/kafka-listeners-explained/[Kafka broker's listener port]. 
+
+I'm not interested in this traffic, so instead of using the default runtime arguments for `tcpdump` that were defined in the `CMD` section when we built the Docker image above, we can override it: 
+
+{{< highlight shell >}}
+docker run --tty --net=container:ksqldb-server tcpdump tcpdump -N -A 'port 8083'
+{{< /highlight >}}
+
+* The first `tcpdump` is the name of the Docker image to run
+* The second `tcpdump` overrides the command to execute (bypassing the `CMD` default of the image), and calls `tcpdump` with arguments: 
+** `-N` - Don't include the domain qualifications (in this case the `ksqldb-twitter_default` network name)
+** `-A` - render in ASCII
+** `'port 8083'` - Only show traffic on port 8083
+
+Now we get to see the stuff we're interested in, like the ksqlDB server sending a REST call to create a connector
+
+{{< highlight shell >}}
+11:15:02.394620 IP ksqldb-server.52086 > kafka-connect-01.8083: Flags [P.], seq 1:898, ack 1, win 229, options [nop,nop,TS val 65148580 ecr 65148580], length 897
+E.....@.@..9.........v...^..7..............
+........POST /connectors HTTP/1.1
+Content-Length: 662
+Content-Type: application/json; charset=UTF-8
+Host: kafka-connect-01:8083
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.3 (Java/1.8.0_222)
+Accept-Encoding: gzip,deflate
+
+{"name":"SOURCE_TWITTER_01","config":{"connector.class":"com.github.jcustenborder.kafka.connect.twitter.TwitterSourceConnector","twitter.oauth.accessToken":"${file:/data/credentials.pro
+[…]
+{{< /highlight >}}
+
+''''
+
+_My thanks to https://twitter.com/xxradar[Philippe Bogaerts] for his excellent blog post https://medium.com/@xxradar/how-to-tcpdump-effectively-in-docker-2ed0a09b5406[How to TCPdump effectively in Docker] on which this one is entirely based_. 
