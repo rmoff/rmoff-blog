@@ -1,0 +1,98 @@
+---
+title: "Copy MongoDB collections from remote to local instance"
+date: 2019-12-17T20:23:49Z
+image: "/images/2019/12/IMG_1607.jpeg"
+thumbnail: "/images/2019/12/IMG_1581.jpeg"
+draft: true
+categories:
+- unifi
+- ubiquiti
+- mongoDB
+- ssh
+- hacks
+---
+
+This is revisiting https://rmoff.net/2018/03/27/cloning-ubiquitis-mongodb-instance-to-a-separate-server/[the blog I wrote a while back], which showed using `mongodump` and `mongorestore` to copy a MongoDB database from one machine (a Unifi CloudKey) to another. This time instead of a manual lift and shift, I wanted a simple way to automate the update of the target with changes made on the source. 
+
+The source is as before, https://www.ui.com/unifi/unifi-cloud-key/[Unifi's CloudKey], which runs MongoDB to store its data about the network - devices, access points, events, and so on. 
+
+== Why?
+
+So that I can get this interesting data from somewhere that I cannot mess with into a place from which I can easily stream it into Kafka. 
+
+== The constraints
+
+* Unifi uses MongoDB **v2.4.10** which is pretty darn old
+* I must not break the source - it runs my home network and my kids will be mad if it stops working just so that I can hack around on it. I want the least-impact option, and I definitely don't want to start reconfiguring MongoDB with replicas and stuff like that
+* My target MongoDB is running in Docker
+
+== The solution
+
+It's as hacky as they come. Instead of `mongodump` to a file which I then copy to the target and repopulate with `mongorestore`, I use Linux pipes and remote command execution with SSH to stream the dump from the source directly into the target. 
+
+First bring up a MongoDB container: 
+
+{{< highlight shell >}}
+docker run --rm \
+           --publish 27017 \
+           --name mongodb \
+           mongo:4.2.2
+{{< /highlight >}}
+
+Then copy across the data: 
+
+{{< highlight shell >}}
+ssh robin@unifi \
+    mongodump --port 27117 --db=ace --collection=device --out=- | \
+docker exec mongodb \
+    mongorestore --dir=- --db=ace --collection=device
+{{< /highlight >}}
+
+In detail: 
+
+* `ssh robin@unifi` connects remotely to the Unifi cloudkey server (using existing https://www.rittmanmead.com/blog/2014/12/linux-cluster-sysadmin-ssh-keys/[SSH keys] for password-less authentication)
+* `\` is the line continuation character just to make all of this easier to read
+* `mongodump` is called and the important point here is that I specify `--out=-` which instead of dumping to file dumps to `stdout`
+* `|` the magic pipe! This routes the `stdout` from `mongodump` into…
+* `docker exec` runs the following command on the MongoDB container. Because I specify the `--interactive` argument it passes the stdout of the previous step as `stdin` into…
+* `mongorestore` which reads from `stdin` because I've specified `--dir=-`
+
+The rest of the parameters are just specifying the database and collection that I want to copy. When this runs you can see the documents get created: 
+
+{{< highlight shell >}}
+[…]
+2019-12-17T22:10:51.609+0000    restoring ace.device from -
+connected to: 127.0.0.1:27117
+2019-12-17T22:10:51.807+0000    no indexes to restore
+2019-12-17T22:10:51.807+0000    finished restoring ace.device (5 documents, 0 failures)
+2019-12-17T22:10:51.807+0000    5 document(s) restored successfully. 0 document(s) failed to restore.
+{{< /highlight >}}
+
+If you re-run it you just get duplicate key violations, which is to be expected, and means that in theory I can just rerun this process on a timed loop and pick up any new documents whilst ignoring existing ones. Not very efficient, but fairly effective :)  
+
+{{< highlight shell >}}
+2019-12-17T22:12:18.253+0000    continuing through error: E11000 duplicate key error collection: ace.device index: _id_ dup key: { _id: ObjectId('583854cde4b001431e4e4982') }
+2019-12-17T22:12:18.253+0000    continuing through error: E11000 duplicate key error collection: ace.device index: _id_ dup key: { _id: ObjectId('5d77b7a8cf2b2b01c42811b5') }
+2019-12-17T22:12:18.253+0000    continuing through error: E11000 duplicate key error collection: ace.device index: _id_ dup key: { _id: ObjectId('58385328e4b001431e4e497a') }
+2019-12-17T22:12:18.254+0000    continuing through error: E11000 duplicate key error collection: ace.device index: _id_ dup key: { _id: ObjectId('58b3fb48e4b0b79e50242621') }
+2019-12-17T22:12:18.254+0000    continuing through error: E11000 duplicate key error collection: ace.device index: _id_ dup key: { _id: ObjectId('58b406f1e4b0e334d74c46e4') }
+2019-12-17T22:12:18.254+0000    no indexes to restore
+2019-12-17T22:12:18.254+0000    finished restoring ace.device (0 documents, 5 failures)
+2019-12-17T22:12:18.254+0000    0 document(s) restored successfully. 5 document(s) failed to restore.
+{{< /highlight >}}
+
+== Iterating across collections
+
+Because we're using stdout/stdin we have to specify the database and collection. To loop over them you can just use a https://www.cyberciti.biz/faq/bash-for-loop/[for loop in bash]: 
+
+{{< highlight shell >}}
+for c in collection_foo collection_bar
+do
+    ssh robin@unifi \
+        mongodump --port 27117 --db=ace --collection=$c --out=- | \
+    docker exec --interactive mongodb \
+        mongorestore --dir=- --db=ace --collection=$c
+done
+{{< /highlight >}}
+
+This will run the same import/export for `collection_foo` and `collection_bar`.

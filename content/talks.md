@@ -8,93 +8,20 @@ classes:
 - feature-math
 ---
 
-You can find all my recent talks on Notist at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). Below are links to particular talks I've done recently, along with recordings where available. 
+You can find all my recent talks on Notist at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). 
 
 ---
 
-### From Zero to Hero with Kafka Connect
+I have a variety of talks, around several different aspects of Apache Kafka and related technologies. 
 
-* 📖 [Slides](https://talks.rmoff.net/QZ5nsS/from-zero-to-hero-with-kafka-connect)
-* 👾 [Code](https://github.com/confluentinc/demo-scene/tree/master/kafka-connect-zero-to-hero)
-* 📽 [Recording](https://videos.confluent.io/watch/nfJb4GiJFLnR3rrxEwNNA2?)
+* Kafka 101 / introductory talk : "Kafka as a Platform: the Ecosystem from the Ground Up"
+* Introduction to ksqlDB and stream processing principles and semantics - with lots of live demos. "An introduction to ksqlDB"
+* Live demo showing use of Kafka Connect and ksqlDB: "Apache Kafka in Action : Let’s Build a Streaming Data Pipeline!"
+* Architectural view of Kafka and its implications for data engineering & data warehousing: "The Changing Face of ETL: Event-Driven Architectures for Data Engineers"
+* Deep-dive on Kafka Connect: "From Zero to Hero with Kafka Connect"
+* Nitty-gritty examining options of how you get data into Kafka from RDBMS "No More Silos: Integrating Databases and Apache Kafka"
+* PoC showing how to build streaming ETL/data platform around live data feeds: "🚂On Track with Apache Kafka: Building a Streaming Platform solution with Rail Data"
+* Example of integrating IoT data over MQTT into Kafka and processing it: "Building IoT applications with Kafka and ksqlDB"
 
----
-
-### The Changing Face of ETL: Event-Driven Architectures for Data Engineers
-
-* 📖 [Slides](http://go.rmoff.net/strata19-the-changing-face-of-etl)
-* 📽 Recording
-  * Strata London 2019 (available soon)
-  * [Paris Apache Kafka Meetup @ DataDog](https://videos.confluent.io/watch/JPAnk3i2enPodLh5UhZ2Xf?)
-
----
-
-### ATM Fraud detection with Kafka and KSQL
-
-* 📖 [Slides](https://speakerdeck.com/rmoff/atm-fraud-detection-with-kafka-and-ksql)
-* 👾 [Code](https://github.com/confluentinc/demo-scene/blob/master/ksql-atm-fraud-detection/ksql-atm-fraud-detection-README.adoc)
-* 📽 [Recording](https://skillsmatter.com/skillscasts/13885-apache-kafka-london-april-meetup) (live @ London Apache Kafka Meetup)
-* 📽 [Recording](https://www.youtube.com/watch?v=3jn2OnQHLbw) (live @ Milan Apache Kafka Meetup)
-* 📽 [Recording](https://www.confluent.io/online-talks/atm-fraud-detection-with-apache-kafka-and-ksql) (webinar)
-
---- 
-
-### No More Silos: Integrating Databases and Apache Kafka
-
-* 📖 [Slides](https://talks.rmoff.net/eGacLb/no-more-silos-integrating-databases-and-apache-kafka)
-* 📽 Recording
-  * [Kafka Summit New York 2019](https://www.confluent.io/kafka-summit-ny19/no-more-silos-integrating-db-into-apache-kafka)
-  * [Online talk](https://www.confluent.io/online-talks/no-more-silos-integrating-databases-apache-kafka)
-* 👾 [Code (MySQL)](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos/no-more-silos.adoc)
-* 👾 [Code (Oracle)](https://github.com/confluentinc/demo-scene/tree/master/no-more-silos-oracle)
-
---- 
-
-### Embrace the Anarchy: Apache Kafka's Role in Modern Data Architectures
-
-* 📽 Recording
-  * [Devoxx UK](https://www.youtube.com/watch?v=Z8_O0wEIafw)
-  * [Devoxx Belgium](https://www.youtube.com/watch?v=bapHWhtf6fE)
-     * Rated [32](https://twitter.com/Devoxx/status/1064452715034669056) out of all the conference talks 
-     * Scored {{< math >}}4.31/5{{< /math >}}, 134 votes
-  * [London Java Community](https://skillsmatter.com/skillscasts/13644-embrace-the-anarchy-apache-kafka-s-role-in-modern-data-architectures)
-  * [Oracle CODE London](https://www.youtube.com/watch?v=Y5qeKmL5xMg)
-* 📖 [Slides](https://speakerdeck.com/rmoff/embrace-the-anarchy-apache-kafkas-role-in-modern-data-architectures)
-
---- 
-
-### Apache Kafka and KSQL in Action : Let’s Build a Streaming Data Pipeline!
-
-* 📽 Recording 
-  * [Devoxx Belgium](https://www.youtube.com/watch?v=RJtEacDX4Oc)
-     * Rated [17](https://twitter.com/Devoxx/status/1064452715034669056) out of all the conference talks
-     * Scored {{< math >}}4.55/5{{< /math >}}, 102 votes
-  * [USENIX LISA18](https://www.youtube.com/watch?v=FD2z3bdN1Jw)
-  * [Kraków meetup](https://www.youtube.com/watch?v=hZE409e1tlg&feature=youtu.be)
-  * [Madrid meetup](https://www.youtube.com/watch?v=SvaMFCT_6GI)
-* 📖 [Slides](https://speakerdeck.com/rmoff/apache-kafka-and-ksql-in-action-lets-build-a-streaming-data-pipeline)
-* 👾 [Code](https://github.com/confluentinc/demo-scene/blob/master/mysql-debezium-ksql-elasticsearch/)
-
---- 
-
-### Look Ma, no Code! Building Streaming Data Pipelines with Apache Kafka and KSQL
-
-🥇 **Top-rated session at Kafka Summit London 2018!** 🥇
-
-* [📽 Recording](https://www.confluent.io/kafka-summit-london18/look-ma-no-code-building-streaming-data-pipelines-with-apache-kafka-and-ksql)
-* 📖 [Slides](https://www.confluent.io/kafka-summit-london18/look-ma-no-code-building-streaming-data-pipelines-with-apache-kafka-and-ksql)
-
----
-
-### Steps to Building a Streaming ETL Pipeline with Apache Kafka and KSQL
-
-* [📽 Recording](https://videos.confluent.io/watch/4cVXUQ2jCLgJNmg4kjCRqo)
-* 📖 [Slides](https://www.slideshare.net/ConfluentInc/steps-to-building-a-streaming-etl-pipeline-with-apache-kafka-and-ksql)
-
----
-
-### Live Coding a KSQL Application
-
-* [📽 Recording](https://videos.confluent.io/watch/m1LpiDwQo4Vvd4YHWKcszs)
-* [📝 Code](https://gist.github.com/rmoff/7efa882dfd808dbab4eb7b8e6f9eda16)
+Detailed abstracts are available on request for these. Recordings and slides for many can be seen at https://talks.rmoff.net/
 
