@@ -67,6 +67,8 @@ _I'm using the Docker config names—the equivalents if you're configuring `serv
 * `KAFKA_LISTENER_SECURITY_PROTOCOL_MAP` defines key/value pairs for the security protocol to use, per listener name. 
     * `listener.security.protocol.map`
 
+Note: The [script that configures the Docker image](https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/configure#L65) uses the listener name to determine whether to include the SSL configuration items. If you want to use SSL, you need to include SSL in your listener name (e.g. `LISTENER_BOB_SSL`). Thanks to [Russ Sayers](https://twitter.com/russaus) for pointing this out. 
+
 *Kafka brokers communicate between themselves*, usually on the internal network (e.g. Docker network, AWS VPC, etc). To define which listener to use, specify `KAFKA_INTER_BROKER_LISTENER_NAME` (`inter.broker.listener.name`). The host/IP used must be accessible from the broker machine to others. 
 
 Kafka _clients_ may well not be local to the broker's network, and this is where the additional listeners come in. 
