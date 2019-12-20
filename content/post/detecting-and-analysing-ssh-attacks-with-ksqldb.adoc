@@ -13,13 +13,13 @@ categories:
 - Neo4j
 ---
 
-I've https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-part-1-filtering/[written previously] about ingesting syslog into Kafka and using KSQL to analyse it. I want to revisit the subject since it's nearly two years since I wrote about it and some things have changed since then. 
+I've https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-part-1-filtering/[written previously] about ingesting Syslog into Kafka and using KSQL to analyse it. I want to revisit the subject since it's nearly two years since I wrote about it and some things have changed since then. 
 
 ksqlDB now includes the ability to define connectors from within it, which makes setting things up loads easier. 
 
 You can find the https://github.com/confluentinc/demo-scene/tree/master/syslog[full rig to run this on GitHub]. 
 
-== Create and configure the syslog connector 
+== Create and configure the Syslog connector 
 
 To start with, create a source connector: 
 
@@ -57,7 +57,7 @@ WorkerId             : kafka-connect-01:8083
 ksql>
 {{< /highlight >}}
 
-And now test it out by sending a dummy syslog message from the shell prompt via netcat (`nc`): 
+And now test it out by sending a dummy Syslog message from the shell prompt via netcat (`nc`): 
 
 {{< highlight shell >}}
 echo "<34>1 2019-12-18T22:14:15.003Z asgard.example.com su - ID47 - Your tea is brewing" | nc -u localhost 42514
@@ -65,7 +65,7 @@ echo "<34>1 2019-12-18T22:14:15.003Z asgard.example.com su - ID47 - Your tea is 
 
 Don't forget your networking in all this - if you're running Kafka Connect in a container then you need to open up the inbound port. Also note that I'm using UDP so you have to use `-u` with netcat (`nc`). 
 
-You can examine the Kafka topic that the syslog message is written to with `PRINT`: 
+You can examine the Kafka topic that the Syslog message is written to with `PRINT`: 
 
 {{< highlight sql >}}
 ksql> PRINT syslog FROM BEGINNING;
@@ -73,7 +73,7 @@ Format:AVRO
 12/18/19 10:14:15 PM UTC, $asgard.example.com, {"name": null, "type": "RFC5424", "message": "Your tea is brewing", "host": "asgard.example.com", "version": 1, "level": 2, "tag": null, "extension": null, "severity": null, "appName": "su", "facility": 4, "remoteAddress": "172.25.0.1", "rawMessage": "<34>1 2019-12-18T22:14:15.003Z asgard.example.com su - ID47 - Your tea is brewing\n", "processId": null, "messageId": "ID47", "structuredData": null, "deviceVendor": null, "deviceProduct": null, "deviceVersion": null, "deviceEventClassId": null, "date": 1576707255003}
 {{< /highlight >}}
 
-Assuming this is working you can now update your actual devices to route their syslog data to the machine on which Kafka Connect is running. Here's an example of the necessary configuration for `rsyslog`: 
+Assuming this is working you can now update your actual devices to route their Syslog data to the machine on which Kafka Connect is running. Here's an example of the necessary configuration for `rsyslog`: 
 
 {{< highlight shell >}}
 *.* @proxmox01.moffatt.me:42514
@@ -83,7 +83,7 @@ As before, pay attention to your network. If the machines are external to the ho
 
 image::/images/2019/12/syslog.png[]
 
-== Working with syslog data in ksqlDB
+== Working with Syslog data in ksqlDB
 
 The first thing to do is register this Kafka topic with ksqlDB: 
 
@@ -118,7 +118,7 @@ ksql> SELECT * FROM SYSLOG EMIT CHANGES;
 
 === Selecting specific fields from a Kafka message
 
-There's a lot of columns in here that we're not so interested in. Because we're in the land of SQL and schemas, we can just specify the columns that we do want (pulling from the live Kafka topic of syslog data as it arrives): 
+There's a lot of columns in here that we're not so interested in. Because we're in the land of SQL and schemas, we can just specify the columns that we do want (pulling from the live Kafka topic of Syslog data as it arrives): 
 
 {{< highlight sql >}}
 ksql> SELECT TIMESTAMPTOSTRING(DATE, 'yyyy-MM-dd HH:mm:ss') AS SYSLOG_TS, 
@@ -137,7 +137,7 @@ ksql> SELECT TIMESTAMPTOSTRING(DATE, 'yyyy-MM-dd HH:mm:ss') AS SYSLOG_TS,
 
 === Enriching Kafka messages with joins in ksqlDB
 
-We can also make things easier to understand by building a reference table for the `FACILITY` code based on https://tools.ietf.org/html/rfc5424[the syslog RFC]. This creates and populates a Kafka topic, with a ksqlDB table registered on top of it.  
+We can also make things easier to understand by building a reference table for the `FACILITY` code based on https://tools.ietf.org/html/rfc5424[the Syslog RFC]. This creates and populates a Kafka topic, with a ksqlDB table registered on top of it.  
 
 {{< highlight sql >}}
 CREATE TABLE FACILITY (ROWKEY STRING KEY, DESCRIPTION VARCHAR) 
@@ -334,7 +334,7 @@ ksql> SELECT SYSLOG_TS, HOST, ATTACK_USER, ATTACK_IP FROM SSH_ATTACKS EMIT CHANG
 …
 {{< /highlight >}}
 
-Let's take a moment to appreciate what we've built here. We've taken a stream of syslog events… 
+Let's take a moment to appreciate what we've built here. We've taken a stream of Syslog events… 
 
 {{< highlight shell >}}
 …
@@ -421,7 +421,7 @@ image::/images/2019/12/neo_ssh_04.png[]
 
 == Aggregates and Pull Queries
 
-Let's get back to ksqlDB to finish with. We've got a stream of syslog events coming in, as well as the existing events stored. What else can we do with this data? We can build a stateful aggregation on it: 
+Let's get back to ksqlDB to finish with. We've got a stream of Syslog events coming in, as well as the existing events stored. What else can we do with this data? We can build a stateful aggregation on it: 
 
 {{< highlight sql >}}
 CREATE TABLE SSH_ATTACKS_BY_USER AS
@@ -511,7 +511,7 @@ ksql>
 {{< /highlight >}}
 
 
-== ksqlDB & syslog processing : Recap
+== ksqlDB & Syslog processing : Recap
 
 * It's near real-time. 
 * It's streaming. 

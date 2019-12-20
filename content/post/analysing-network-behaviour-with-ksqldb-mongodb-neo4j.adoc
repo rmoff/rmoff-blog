@@ -13,11 +13,11 @@ categories:
 - Neo4j
 ---
 
-In this post I want to build on https://rmoff.net/2019/12/18/detecting-and-analysing-ssh-attacks-with-ksqldb/[my previous one] and show another use of the syslog data that I'm capturing. Instead of looking for https://rmoff.net/2019/12/18/detecting-and-analysing-ssh-attacks-with-ksqldb/[SSH attacks], I'm going to analyse the behaviour of my networking components. 
+In this post I want to build on https://rmoff.net/2019/12/18/detecting-and-analysing-ssh-attacks-with-ksqldb/[my previous one] and show another use of the Syslog data that I'm capturing. Instead of looking for https://rmoff.net/2019/12/18/detecting-and-analysing-ssh-attacks-with-ksqldb/[SSH attacks], I'm going to analyse the behaviour of my networking components. 
 
 NOTE: You can find all the code to run this on https://github.com/confluentinc/demo-scene/tree/master/syslog[GitHub].
 
-== Getting syslog data into Kafka
+== Getting Syslog data into Kafka
 
 As before, let's create ourselves a https://www.confluent.io/hub/confluentinc/kafka-connect-syslog[syslog connector] in ksqlDB: 
 
@@ -54,9 +54,9 @@ WorkerId             : kafka-connect-01:8083
 ksql>
 {{< /highlight >}}
 
-=== Configuring Unifi devices to send syslog data to Kafka
+=== Configuring Unifi devices to send Syslog data to Kafka
 
-Now configure my networking equipment (switches, access points, routers) to route their syslogs to this machine 
+Now configure my networking equipment (switches, access points, routers) to route their syslog data to this machine 
 
 image::/images/2019/12/syslog_networking.png[]
 
@@ -64,7 +64,7 @@ I'm using https://www.ui.com/[Ubiquiti]'s https://unifi-network.ui.com/[UniFi] n
 
 image::/images/2019/12/unifi01.png[]
 
-Now if I dump the syslog Kafka topic to screen I can see it being populated with messages from my network devices: 
+Now if I dump the Syslog Kafka topic to screen I can see it being populated with messages from my network devices: 
 
 {{< highlight sql >}}
 ksql> PRINT syslog;
@@ -73,9 +73,9 @@ Format:AVRO
 12/20/19 10:25:52 AM UTC, usgmoffattme, {"name": null, "type": "RFC3164", "message": "[WAN_IN-3006-A]IN=eth0 OUT=eth1 MAC=f0:9f:c2:12:a8:f4:04:2a:e2:c7:4c:1a:08:00 SRC=x.x.x.x DST=192.168.10.105 LEN=60 TOS=0x00 PREC=0x00 TTL=51 ID=30052 DF PROTO=TCP SPT=35214 DPT=22 WINDOW=29200 RES=0x00 SYN URGP=0 ", "host": "usgmoffattme", "version": null, "level": 4, "tag": "kernel", "extension": null, "severity": null, "appName": null, "facility": 0, "remoteAddress": "192.168.10.1", "rawMessage": "<4>Dec 20 10:25:52 usgmoffattme kernel: [WAN_IN-3006-A]IN=eth0 OUT=eth1 MAC=f0:9f:c2:12:a8:f4:04:2a:e2:c7:4c:1a:08:00 SRC=x.x.x.x DST=192.168.10.105 LEN=60 TOS=0x00 PREC=0x00 TTL=51 ID=30052 DF PROTO=TCP SPT=35214 DPT=22 WINDOW=29200 RES=0x00 SYN URGP=0 ", "processId": null, "messageId": null, "structuredData": null, "deviceVendor": null, "deviceProduct": null, "deviceVersion": null, "deviceEventClassId": null, "date": 1576837552000}
 {{< /highlight >}}
 
-=== Analysing syslog hosts with ksqlDB
+=== Analysing Syslog hosts with ksqlDB
 
-**Let's have a look at which devices we've got syslog data for**. First off we'll declare a ksqlDB stream on top of the topic.  
+**Let's have a look at which devices we've got Syslog data for**. First off we'll declare a ksqlDB stream on top of the topic.  
 
 [source,sql]
 ----
@@ -104,7 +104,7 @@ ksql> SELECT HOST, COUNT(*) AS SYSLOG_MESSAGE_COUNT FROM SYSLOG GROUP BY HOST EM
 …
 {{< /highlight >}}
 
-You might look at that query and think it looks pretty like any other SQL you've seen, except for the `EMIT CHANGES`. All that means is that ksqlDB will keep sending us the changes to the data as it occurs - so each new syslog event that arrives will increase the aggregate value of the `COUNT(*)` per host, and so it is re-emitted: 
+You might look at that query and think it looks pretty like any other SQL you've seen, except for the `EMIT CHANGES`. All that means is that ksqlDB will keep sending us the changes to the data as it occurs - so each new Syslog event that arrives will increase the aggregate value of the `COUNT(*)` per host, and so it is re-emitted: 
 
 image::/images/2019/12/ksqldb_syslog_01.gif[]
 
@@ -134,9 +134,9 @@ image::/images/2019/12/ksqldb_syslog_02.gif[]
 
 Note that the query says `Query terminated` since it returns back to the user. It's called a "pull query" - the user requests the state of a key from ksqlDB, which is returned. Contrast that to the above "push query" in which `EMIT CHANGES` tells ksqlDB to keep sending us the changes to the state as it occurs. 
 
-== Creating a dedicated Unifi syslog stream
+== Creating a dedicated Unifi Syslog stream
 
-So…we've got syslog data for a bunch of different hosts. Let's create a new Kafka topic that's populated in realtime with syslog messages just for our network devices. Which are my network devices? These ones: 
+So…we've got Syslog data for a bunch of different hosts. Let's create a new Kafka topic that's populated in realtime with Syslog messages just for our network devices. Which are my network devices? These ones: 
 
 {{< highlight shell >}}
 BZ2,24a43cde91a0,v4.0.69.10871:  
@@ -233,7 +233,7 @@ ksql> SELECT S_HOST, COUNT(*) AS SYSLOG_MESSAGE_COUNT
 
 == Access point usage
 
-I want to revisit https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-enriching-events-with-external-data/[this example] to show how we can easily wrangle and enrich the raw syslog data. When I come home and my iPhone connects to my network, the Access Point logs this, with a raw syslog message that looks like this: 
+I want to revisit https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-enriching-events-with-external-data/[this example] to show how we can easily wrangle and enrich the raw Syslog data. When I come home and my iPhone connects to my network, the Access Point logs this, with a raw Syslog message that looks like this: 
 
 {{< highlight sql >}}
 <30>Dec 13 17:02:59 BZ2,dc9fdbec6a10,v4.0.69.10871: hostapd: ath1: STA 50:c7:bf:da:db:5e IEEE 802.11: associated
@@ -463,7 +463,7 @@ ksql> CREATE STREAM AP_CLIENT_EVENTS_ENRICHED AS
         EMIT CHANGES;
 {{< /highlight >}}
 
-Finally, we have a stream of access point events, enriched with the name of the access point and the user device connecting or disconnecting from it. It's processing all the _existing_ events on the Kafka topic, as well as new ones _as they arrive_. With a handful of SQL statements we've filtered and parsed a raw syslog into a really useful stream of data. 
+Finally, we have a stream of access point events, enriched with the name of the access point and the user device connecting or disconnecting from it. It's processing all the _existing_ events on the Kafka topic, as well as new ones _as they arrive_. With a handful of SQL statements we've filtered and parsed a raw Syslog into a really useful stream of data. 
 
 {{< highlight sql >}}
 ksql> SELECT EVENT_TIME, AP_NAME, CLIENT_NAME, ACTION
@@ -581,7 +581,7 @@ Format:AVRO
 
 == Visualising the relationship between Access Points and Clients
 
-Having built this streaming pipeline in ksqlDB that takes the raw syslog and generates a Kafka topic with a list of Access Points events, we can also use this to stream into Neo4j: 
+Having built this streaming pipeline in ksqlDB that takes the raw Syslog and generates a Kafka topic with a list of Access Points events, we can also use this to stream into Neo4j: 
 
 {{< highlight sql >}}
 CREATE SINK CONNECTOR SINK_NEO4J_UNIFI_AP_01 WITH (
