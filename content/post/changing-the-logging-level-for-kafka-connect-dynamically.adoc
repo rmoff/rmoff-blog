@@ -1,0 +1,120 @@
+---
+title: "Changing the Logging Level for Kafka Connect Dynamically"
+date: 2020-01-16T22:50:45Z
+draft: true
+image: "/images/2020/01/DSCF3139.jpeg"
+thumbnail: "/images/2020/01/IMG_0102.jpeg"
+categories:
+- Kafka Connect
+- Troubleshooting
+- Log4j
+- Logging
+---
+
+Logs are magical things. They tell us what an application is doing—or not doing. They help us debug problems. As it happens, they also underpin the https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying[entire philosophy of Apache Kafka], but that's a story for another day. Today we're talking about logs written by Kafka Connect, and how we can change the amount of detail written. 
+
+By default, Kafka Connect will write logs at `INFO` and above. So when it starts up, the settings that it's using, and any `WARN` or `ERROR` messages along the way - a missing configuration, a broken connector, and so on. If you want to peer under the covers of what's happening, perhaps in a given connector, you'd want to see `DEBUG` or even `TRACE` messages too. 
+
+Until Apache Kafka 2.4 it was necessary to bring down the Kafka Connect worker, https://rmoff.net/post/kafka-connect-change-log-level-and-write-log-to-file/[change the log configuration file], and restart the worker. There are a few problems with this approach: 
+
+* Where's the log configuration file? It can be fiddly to find, especially if you're not regularly working with it
+* If you're troubleshooting a connector with an issue that's intermittent, restarting the worker may clear the problem, so you lose the opportunity to see the more detailed log
+* If you're trying to get the log files for just a certain element of the logs generated it can be trial-and-error to get the configuration for this, and thus a really long-winded process with stopping and starting the worker each time until you get it right
+
+== Changing the log level of Kafka Connect
+
+With the implementation of https://cwiki.apache.org/confluence/display/KAFKA/KIP-495%3A+Dynamically+Adjust+Log+Levels+in+Connect[KIP-495] it's possible to leave the Kafka Connect worker running and change log levels dynamically. This is *VERY* useful. Let me show you why. 
+
+To start with Kafka Connect is running at the default `INFO` level. We can confirm this by querying the new `admin/logger` API: 
+
+{{< highlight shell >}}
+$ curl -s http://localhost:8083/admin/loggers/ | jq
+{
+  "org.apache.kafka.connect.runtime.rest": {
+    "level": "WARN"
+  },
+  "org.reflections": {
+    "level": "ERROR"
+  },
+  "root": {
+    "level": "INFO"
+  }
+}
+{{< /highlight >}}
+
+For reference, this corresponds to the three loggers that are configured in log4j: 
+
+{{< highlight shell >}}
+$ cat /etc/kafka/connect-log4j.properties
+
+log4j.rootLogger=INFO, stdout
+[…]
+log4j.logger.org.reflections=ERROR
+log4j.logger.org.apache.kafka.connect.runtime.rest=WARN
+{{< /highlight >}}
+
+You can reference any particular logger that you want. Imagine you've got a connector that you want to inspect, but without the noise of `TRACE` logging throughout. You can target just this set of logs: 
+
+{{< highlight shell >}}
+$ curl -s -X PUT -H "Content-Type:application/json" \
+    http://localhost:8083/admin/loggers/org.apache.kafka.connect.runtime.WorkerSourceTask \
+    -d '{"level": "TRACE"}' \
+    | jq '.'
+{{< /highlight >}}
+
+++++
+<script id="asciicast-rrTTMT9Bb3jpss0IhSsqIhJsT" src="https://asciinema.org/a/rrTTMT9Bb3jpss0IhSsqIhJsT.js" async></script>
+++++
+
+To revert the logging you just re-issue the API call with a different `level` set: 
+
+{{< highlight shell >}}
+$ curl -s -X PUT -H "Content-Type:application/json" \
+    http://localhost:8083/admin/loggers/org.apache.kafka.connect.runtime.WorkerSourceTask \
+    -d '{"level": "INFO"}' \
+    | jq '.'
+{{< /highlight >}}
+
+== Dynamic log levels in action for troubleshooting Debezium 
+
+I had great use for this just today when I was https://stackoverflow.com/a/59756354/350613[debugging a problem that someone was having with Debezium]. In this case, I spun up Kafka Connect with its default config, and simply bumped up the logs for Debezium so that I could see in detail what it was doing: 
+
+{{< highlight shell >}}
+$ curl -s -X PUT -H "Content-Type:application/json" \
+    http://localhost:8083/admin/loggers/io.debezium \
+    -d '{"level": "TRACE"}' \
+    | jq '.'
+[
+  "io.debezium",
+  "io.debezium.connector.mysql.MySqlConnector",
+  "io.debezium.connector.postgresql.PostgresConnector",
+  "io.debezium.util.IoUtil"
+]
+{{< /highlight >}}
+
+Now I can see exactly what's going on
+
+{{< highlight shell >}}
+…
+[2020-01-16 22:47:26,864] TRACE Polling for events (io.debezium.connector.mysql.MySqlConnectorTask)
+[2020-01-16 22:47:26,864] TRACE Polling for next batch of records (io.debezium.connector.mysql.BinlogReader)
+[2020-01-16 22:47:26,866] INFO Creating thread debezium-mysqlconnector-asgard-binlog-client (io.debezium.util.Threads)
+[2020-01-16 22:47:26,913] DEBUG Rotating logs: Event{header=EventHeaderV4{timestamp=0, eventType=ROTATE, serverId=1, headerLength=19, dataLength=25, nextPosition=0, flags=32}, data=RotateEventData{binlogFilename='binlog.000002', binlogPosition=155}} (io.debezium.connector.mysql.BinlogReader)
+[2020-01-16 22:47:26,914] DEBUG Clearing table converters (io.debezium.connector.mysql.RecordMakers)
+[2020-01-16 22:47:26,916] TRACE Received event: Event{header=EventHeaderV4{timestamp=0, eventType=ROTATE, serverId=1, headerLength=19, dataLength=25, nextPosition=0, flags=32}, data=RotateEventData{binlogFilename='binlog.000002', binlogPosition=155}} (io.debezium.connector.mysql.BinlogReader)
+[2020-01-16 22:47:26,918] TRACE Ignoring event due to missing handler: Event{header=EventHeaderV4{timestamp=1579212895000, eventType=FORMAT_DESCRIPTION, serverId=1, headerLength=19, dataLength=101, nextPosition=0, flags=0}, data=FormatDescriptionEventData{binlogVersion=4, serverVersion='8.0.18', headerLength=19, dataLength=96, checksumType=CRC32}} (io.debezium.connector.mysql.BinlogReader)
+[2020-01-16 22:47:26,918] TRACE Received event: Event{header=EventHeaderV4{timestamp=1579212895000, eventType=FORMAT_DESCRIPTION, serverId=1, headerLength=19, dataLength=101, nextPosition=0, flags=0}, data=FormatDescriptionEventData{binlogVersion=4, serverVersion='8.0.18', headerLength=19, dataLength=96, checksumType=CRC32}} (io.debezium.connector.mysql.BinlogReader)
+[2020-01-16 22:47:31,929] TRACE Completed batch of 0 records (io.debezium.connector.mysql.BinlogReader)
+…
+{{< /highlight >}}
+
+and when I'm done troubleshooting I can leave the stack undisturbed and simple dial down the logging: 
+
+{{< highlight shell >}}
+$ curl -s -X PUT -H "Content-Type:application/json" \
+    http://localhost:8083/admin/loggers/io.debezium \
+    -d '{"level": "INFO"}' \
+    | jq '.'
+{{< /highlight >}}
+
+No more restarting workers, no more fiddling with logging configuration files - just simple and straightforward dynamic log levels 😍
