@@ -1,0 +1,46 @@
+---
+title: "UnsupportedClassVersionError: `<x>` has been compiled by a more recent version of the Java Runtime"
+date: 2020-01-21T22:26:00Z
+image: "/images/2020/01/IMG_2076.jpeg"
+thumbnail: "/images/2020/01/IMG_2114.jpeg"
+categories:
+- maven
+- jdk
+---
+
+This article is just for Googlers and my future self encountering this error. Recently I was building a Docker image from the ksqlDB code base, and whilst it built successfully the ksqlDB server process in the Docker container when instantiated failed with a `UnsupportedClassVersionError`: 
+
+<!--more-->
+
+{{< highlight shell >}}
+java.lang.UnsupportedClassVersionError: javafx/beans/value/ObservableValue has been compiled by a more recent version of the Java Runtime (class file version 54.0), this version of the Java Runtime only recognizes class file versions up to 52.0
+{{< /highlight >}}
+
+
+Here's how I fixed it, courtesy of help from my colleagues Colin and Tim. 
+
+1. Download https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html[JDK 8 ("Java SE")] and install it
++
+** On my Mac I had an existing Java, https://medium.com/@devkosal/switching-java-jdk-versions-on-macos-80bc868e686a[this article] showed how to list them and switch between them
++
+{{< highlight shell >}}
+$ /usr/libexec/java_home -V
+
+Matching Java Virtual Machines (2):
+    12.0.2, x86_64:	"OpenJDK 12.0.2"	/Library/Java/JavaVirtualMachines/adoptopenjdk-12.0.2.jdk/Contents/Home
+    1.8.0_241, x86_64:	"Java SE 8"	/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home
+{{< /highlight >}}
+
+2. Set the `JAVA_HOME` for your current shell to JDK 8
++
+{{< highlight shell >}}
+export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+{{< /highlight >}}
+
+3. In the same shell, run 
++
+{{< highlight shell >}}
+`mvn clean`
+{{< /highlight >}}
+
+4. In the same shell, run the actual Maven build, which will now be done under Java 8 and should work 🤞

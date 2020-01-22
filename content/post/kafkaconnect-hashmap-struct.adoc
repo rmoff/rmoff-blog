@@ -1,0 +1,222 @@
+---
+title: "Kafka Connect - ClassCastException"
+date: 2020-01-22T00:26:03Z
+draft: true
+image: "/images/2020/01/IMG_2076.jpeg"
+thumbnail: "/images/2020/01/IMG_2114.jpeg"
+categories:
+- Kafka Connect
+- Converters
+- Schemas
+---
+
+Here's a fun one that Kafka Connect can sometimes throw out: 
+
+{{< highlight shell >}}
+java.lang.ClassCastException: 
+java.util.HashMap cannot be cast to org.apache.kafka.connect.data.Struct
+{{< /highlight >}}
+
+HashMap? Struct? HUH?
+
+<!--more-->
+
+++++
+<div class="tenor-gif-embed" data-postid="9286799" data-share-method="host" data-width="100%" data-aspect-ratio="1.0"><a href="https://tenor.com/view/confused-confusing-noidea-cat-gif-9286799">GIF</a> from <a href="https://tenor.com/search/confused-gifs">Confused GIFs</a></div><script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+== What went wrong? 
+
+The connector you're using relies on the data having a *declared schema*, and you didn't pass it one. 
+
+=== Schemas? In my data? 
+
+There are currently (January 2020) two ways that this can happen: 
+
+* Avro with the Confluent Schema Registry (the best option IMO) 
+* JSON with an embedded schema per message
+** This is not just JSON that you glance at and can say "yeah I reckon I know the schema", or JSON with your own funky schema definition embedded in your own funky bespoke way. This is JSON that looks like this, with `schema` and `payload` root elements:
++
+{{< highlight javascript >}}
+{
+  "schema": {
+    "type": "struct", "optional": false, "version": 1, "fields": [
+      { "field": "ID", "type": "string", "optional": true },
+      { "field": "Artist", "type": "string", "optional": true },
+      { "field": "Song", "type": "string", "optional": true }
+    ] },
+  "payload": {
+    "ID": 1,
+    "Artist": "Rick Astley",
+    "Song": "Never Gonna Give You Up"
+  }
+}
+{{< /highlight >}}
++
+Read more about it https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-schemas[here].
+
+=== So what went wrong? 
+
+You've got JSON data in your Kafka topic, so you told Kafka Connect to use the JSON converter. Makes sense: 
+
+{{< highlight javascript >}}
+"value.converter" : "org.apache.kafka.connect.json.JsonConverter"
+{{< /highlight >}}
+
+**BUT** then you set this: 
+
+{{< highlight javascript >}}
+"value.converter.schemas.enable":"false",
+{{< /highlight >}}
+
+Now the JSON _converter_ will read the data, but the connector (e.g. the Influx DB Sink) relies on there being a declared schema—which there isn't (and we told the JSON converter not to parse for one, by setting `"value.converter.schemas.enable":"false"`). 
+
+== How do I fix it? 
+
+If you've got JSON data with a schema embedded like this: 
+
+{{< highlight javascript >}}
+{
+  "schema": {
+    "type": "struct", "optional": false, "version": 1, "fields": [
+      { "field": "ID", "type": "string", "optional": true },
+      { "field": "Artist", "type": "string", "optional": true },
+      { "field": "Song", "type": "string", "optional": true }
+    ] },
+  "payload": {
+    "ID": 1,
+    "Artist": "Rick Astley",
+    "Song": "Never Gonna Give You Up"
+  }
+}
+
+{{< /highlight >}}
+
+then you can just fix the configuration of your converter, by setting: 
+
+{{< highlight javascript >}}
+"value.converter.schemas.enable":"false"
+{{< /highlight >}}
+
+If you get `JsonDeserializer with schemas.enable requires "schema" and "payload" fields and may not contain additional fields` check http://rmoff.net/2017/09/06/kafka-connect-jsondeserializer-with-schemas.enable-requires-schema-and-payload-fields/[this link]
+
+But if you don't actually have a schema present, then you're going to need to declare one and make it available as part of your Kafka message - either embedded in the JSON, or using Avro (a better solution). 
+
+== Sounds like a good idea! How do I add a schema to my Kafka message? 
+
+Let's assume that you can't just fix this at source, and have your producer write data that's got the schema declared already (since this is the overall best solution). Your source data looks like this: 
+
+{{< highlight javascript >}}
+{
+  "ID": "1",
+  "Artist": "Rick Astley",
+  "Song": "Never Gonna Give You Up"
+}
+{{< /highlight >}}
+
+You've got a couple of approaches to fixing this. 
+
+=== Option 1 : Stream Processing—the right way
+
+Use ksqlDB, Kafka Streams, or another stream processing to read your source messages from a topic, apply the schema, and write the message to a new topic. That new topic is then the one that you consume from Kafka Connect (and anywhere else that will benefit from a declared schema). 
+
+Here's an example of doing it using ksqlDB: 
+
+1. Declare the schema on the existing topic
++
+{{< highlight sql >}}
+CREATE STREAM TESTDATA_JSON (ID VARCHAR, ARTIST VARCHAR, SONG VARCHAR) \
+        WITH (KAFKA_TOPIC='testdata-json', VALUE_FORMAT='JSON');
+{{< /highlight >}}
+
+2. Reserialise the data to Avro
++
+{{< highlight sql >}}
+CREATE STREAM TESTDATA 
+        WITH (VALUE_FORMAT='AVRO', KAFKA_TOPIC='testdata-avro') 
+        AS SELECT * FROM TESTDATA_JSON;
+{{< /highlight >}}
+
+If you're going to use Avro make sure you change your converter config in the connector: 
+
+{{< highlight javascript >}}
+"value.converter": "io.confluent.connect.avro.AvroConverter"
+"value.converter.schema.registry.url": "http://schema-registry:8081"
+{{< /highlight >}}
+
+Read more about this technique https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#applying-schema[here]
+
+=== Option 2 : Stream processing the hacky way
+
+Sometimes needs must. We know we should do it the right way, but we need a dirty little fix. Here's that. 
+
+Let's assume that we don't care about: 
+
+* Message timestamps
+* Message headers
+* Message keys
+* Message partitions
+
+not to mention
+
+* Maintainability
+* Supportability
+
+The hack here is to interpolate the JSON-with-schema template with the payload value from the source, using kafkacat. `kafkacat` reads from the topic, pipes it into `jq` which adds the schema definition, and then pipes it to another instance of `kafkacat` which writes it to a new topic. 
+
+{{< highlight shell >}}
+kafkacat -b localhost:9092 -q -u -X auto.offset.reset=earliest -G rmoff_cg_01 testdata-json | \
+jq --compact-output --unbuffered \
+    '. |
+    {   schema: { type: "struct", optional: false, version: 1, fields: [
+                { field: "ID", type: "string", optional: true},
+                { field: "Artist", type: "string", optional: true},
+                { field: "Song", type: "string", optional: true}]},
+        payload: {
+            ID: .ID,
+            Artist: .Artist,
+            Song: .Song
+            }
+    }' | \
+kafkacat -b localhost:9092 -t testdata-json-with-schema -P -T -u | jq --unbuffered '.'
+{{< /highlight >}}
+
+It runs using a consumer group so can be stopped and started, and even scaled out if you have more than one partition. It also dumps to screen the transformed message - remove the final `jq` if you don't want that. 
+
+The transformed message looks like this: 
+
+{{< highlight javascript >}}
+{
+  "schema": {
+    "type": "struct",
+    "optional": false,
+    "version": 1,
+    "fields": [
+      {
+        "field": "ID",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "Artist",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "Song",
+        "type": "string",
+        "optional": true
+      }
+    ]
+  },
+  "payload": {
+    "ID": 1,
+    "Artist": "Rick Astley",
+    "Song": "Never Gonna Give You Up"
+  }
+}
+{{< /highlight >}}
+
+== Wouldn't it be easier if the JSON Converter could just infer the schema? 
+
+Probably - and that's why https://cwiki.apache.org/confluence/display/KAFKA/KIP-301%3A+Schema+Inferencing+for+JsonConverter[KIP-301] exists. PRs are open if you want to contribute :) 
