@@ -32,6 +32,7 @@ Slides & Recordings: http://rmoff.net/talks/
 * [LinkedIn](https://www.linkedin.com/in/robinmoffatt)
 * [SpeakerDeck](https://speakerdeck.com/rmoff)
 * [GitHub](https://github.com/rmoff)
+* [Dev.to](https://dev.to/rmoff/)
 * [Telegram](https://t.me/rmoff)
 * [Instagram](https://www.instagram.com/rnmoffatt/)
 * [Keybase](https://keybase.io/rmoff/) 🔑
