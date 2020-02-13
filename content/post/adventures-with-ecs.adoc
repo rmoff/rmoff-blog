@@ -1,0 +1,738 @@
+---
+title: "Adventures in the Cloud, Part 94: ECS"
+date: 2020-02-13T00:12:23Z
+draft: false
+image: "/images/2020/02/IMG_2354.jpeg"
+thumbnail: "/images/2020/02/IMG_2382.jpeg"
+categories:
+- Docker Compose
+- AWS ECS
+- Kafka
+- ksqlDB
+- Elasticsearch
+---
+
+My name's Robin, and I'm a Developer Advocate. What that means in part is that I build a ton of demos, and Docker Compose is my jam. I love using Docker Compose for the same reasons that many people do:
+
+* Spin up and tear down fully-functioning multi-component environments with ease. No bespoke builds, no cloning of VMs to preserve "that magic state where everything works"
+* Repeatability. It's the same each time. 
+* Portability. I can point someone at a `docker-compose.yml` that I've written and they can run the same on their machine with the same results almost guaranteed. 
+
+<!--more-->
+
+So, I use Docker Compose all the time. And soon I have a https://qconlondon.com/london2020/workshop/kafka[workshop to run] which is exciting but daunting as now I have fifty people to coach through using Docker on their laptops. Laptops which are guaranteed not to all be the lovely piece of 15" 32GB MacBook Pro hardware that Confluent equip their staff with. Instead there'll also be Linux (fine but figure it out yourself), and Windows. Ah, Windows. And not only Windows, but often corporate laptops running Windows with the inevitable security provisions in place to mean that they're bugger all use for running anything other than MS Excel—and definitely not Docker. 
+
+What to do? Well, Cloud. Cloud is always the answer, if you ask the right question. And here I feel Cloud *should* be the answer. Can't I provision a bunch of containers up in the Cloud that people can then connect to simply from their laptops, and all they need then is a SSH client? 
+
+But here's the rub: 
+
+I build all my material in Docker Compose, locally, on my laptop. Docker is _perfect_ for that. *I don't want to build something twice*. I realise there's _Terraform and chef and ansible and puppet and kerplunk and uno and a bunch of others tools that I could use and only some of which I've made up_. But the moment I start building something with them, I am now maintaining two code bases. One locally to run Docker Compose on my laptop, one in `<other tool>` for spinning up the stack in the Cloud. 
+
+So join me on this adventure, as I figure out how to take this Docker Compose which runs beautifully on my laptop, and get it to run in Amazon's Elastic Container Service (ECS). What's more, at the end of it all, it still runs on my laptop too!
+
+== ECS, wossat? 
+
+> https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html[Amazon Elastic Container Service (Amazon ECS) is a highly scalable, fast, container management service that makes it easy to run, stop, and manage Docker containers on a cluster.].
+
+Sounds fancy, and it probably is. I'm going to bastardise it and abuse it and get it to not really do what it was intended for, but pretty much works at doing anyway. Because in amongst the ECS functionality is this little gem: https://aws.amazon.com/about-aws/whats-new/2018/06/amazon-ecs-cli-supports-docker-compose-version-3/[Amazon ECS CLI Supports Docker Compose Version 3]. By using the provided command-line tool, you can use an existing Docker Compose file and have ECS run it for you. 
+
+ECS takes Docker images and runs and orchestrates them for you (i.e. makes sure stuff is running in the place and quantity that you want and manages that process). It can run the Docker containers on an EC2 instance that you provision and can access, or it can run them on https://aws.amazon.com/fargate/[Fargate]. I'm using EC2; my spidey-sense tells me that what I'm trying to do only just works with EC2 and almost certainly wouldn't with Fargate. 
+
+Within ECS you provision a **Cluster**, which has one or more **Container instances** (such as an EC2 machine) on which stuff runs. The stuff that runs is called **Tasks**, and these are translated from **Task Definitions**. The secret-sauce that we have here is that ECS can take a Docker Compose file and translate it into task definitions, which it then runs. 
+
+image::/images/2020/02/ecs01.png[]
+
+How does this help my workshop provisioning? Because from my Docker Compose I can provision numerous instances of it executing in the Cloud :) One Container Instance (EC2 in this case) per Cluster means that all of the Docker containers of the task will end up on the same EC2 instance. 
+
+image::/images/2020/02/ecs02.png[]
+
+Users can then SSH into the instance of a given cluster and will find that the full set of containers is running within that host. 
+
+== Getting started with ECS
+
+Make sure you've got both the https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html[AWS CLI] and the https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_installation.html[ECS CLI]. 
+
+NOTE: Whilst you can manage ECS using the AWS CLI, there is some magic stuff in the ECS CLI that isn't in the AWS CLI 🤪
+
+You'll need the access key and secret key for your AWS account. Run `aws2 configure` to set this up in the AWS CLI, and then run this to configure the ECS CLI: 
+
+{{< highlight shell >}}
+$ ecs-cli configure profile --access-key XXXXXX --secret-key YYYYY
+{{< /highlight >}}
+
+Since we're using EC2 on which to run these Docker containers, we'll probably want to SSH onto the machine to have a poke around and see what's what. For that, we'll need an SSH keypair. Let's create one now. 
+
+{{< highlight shell >}}
+$ aws2 ec2 create-key-pair --key-name rmoff-qcon-ldn-workshop
+{{< /highlight >}}
+
+You'll get back the private key - keep this safe and don't share it with anyone. Note that there are `\n` control characters that you'll need to convert into actual line breaks when you write this as a private key file to use with SSH. 
+
+{{< highlight shell >}}
+{
+    "KeyFingerprint": "72:1a:c9:51:f4:de:7a:3f:c5:f3:90:c4:c9:a2:44:a2:1f:2b:38:27",
+    "KeyMaterial": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAhu5Di4NJHlpFXrduVN7SMqz8xGN3g4uaVVfzVJ8lYGjGg5F+yObrBlcvrrcG\nZd14KQt8+zANB2afLWczqhdD4ccHrHzoK0zwXJXmUklYawJ5ScP4EvkqmFyNfXyAmi7sELC2ND9e\nI5eheU1FweYyDSea3B8IGgA+QWyVY5VEHfo5vZq9FRDkitczM2vG0K331mlw7HvjKem2CjYjw4Pp\na8d+ie7+m1okBs0uXuX0CWJ0Fw5AtBeKcb3fYkhT45fem2FXxDP3EUT6BDNyUL1hmR3h9nA3dCWi\niRdv9dmUYt81yWtqNBm+4IwpM7YRQIXKsvTXgm5VNikNXmhh+UjDqwIDAQABAoIBAEG5f5dOjOhH\nCnFXolue6f6bOsiits2Ry8x0eeenWbp7bu8ZiQttR+Afye8t4eTumyBLI0brof0P5Mtl8MmSaZNp\nsng3o5Or94zxy24bogEGBHSFC6qaSkBLHPSaF76CyqRan3YVw9JMgvAmTqtjaM/1kb5VM0oPAkQ2\nExKd279Js+wHakpvzsP3IrUI61XQl0H3A7CPTOZOkyOHZ2G9jgsAbUD4vRyDCcIoSbkiwO2ePFMP\nqfyt5pke4OeXYCP8ONt7msVIcJRqL1TaMEk7TewQk2Chi2mSHufiDRZ5KtaxP1itLRvNrtSWilCt\nxEjCOxtheCjv8rkuLtjdT2SqZ+ECgYEA1MPyMyumQSGMVN9m8r++uq11JhkEGrg9/PWy2mgIt8H5\n+p6RiMXJinL9fcHahnDoDNWdGTuCOzxVsKH9csbS/JUV8eWrtGuGT1C+lme6NLPgzCv+3zhb80bT\nhFK9ImXVt5Njx1fbBa9beyg2ttkr40vpCnk+Nq2sJk4nyotyAHsCgYEAollboY/XGQIRoR2UL7Z6\nOpC2uRANw6K2h4cvNoTUSDeUhzRApXNoTw1wiKyIuqZqE5aCw6DG39xK76CjWbIV4QpjgHx4er5b\nn1yF7EhAuvJCCZmMuu8ilzmYx+gv8hkKLq8uYQ3csMDw61GPuIeuTNFSOuWhKXhvG/NLGk3eGpEC\ngYEAj0O1tXEBzL9rP8cCChjEs+ySgmm70sYWr1s96ES/AgTybygQtPkBYWFWgTRkEby689FurAvf\nAEX7KSmagIuSjBNTKIPO33i7gnLLMnl773rjtnc1clb/y0r4qBQSWLQbeTYcrKDi0Own/ECyvuJy\n4+U8cRn8o1LEJTLhJkhJJjsCgYAVdSYNRouxfHqEBvrNC5tAHlxoPVz0XI8vfoiY9hlwqhfxftCE\njapduHMFPXic4t3mVOBXpupiMCWfYmX0tvr5UXwxQUJTRtGpUHtK7YnQq7BawHa/RlgWEMDGu0OL\nBhA4d2Lz5PckTXwKPi92vkglUw1BR5RzfL2CvjdQ9LXEYQKBgQCPzAEFVWR4nRKuXwGAvbpeksKj\ncJyPNonQXt6kMsDrErX5hfG8RDYtoQE0wRraOv3pnFDeeBJ1fdodYdXqVTq16Q55c7t4qyiB8d/I\nl6lhT0pYMPYPgZkF8PRjsbgHGcECz04FYEzE0DGxm+aX0KKY4p41X8qWDstM/wNc+MiZPw==\n-----END RSA PRIVATE KEY-----",
+    "KeyName": "rmoff-qcon-ldn-workshop",
+    "KeyPairId": "key-02cde9bafdf2762c9"
+}
+{{< /highlight >}}
+
+Now let's provision some tin on which our containers can run. 
+
+{{< highlight shell >}}
+$ ecs-cli up --cluster qcon-ldn-workshop \
+             --keypair rmoff-qcon-ldn-workshop \
+             --capability-iam \
+             --instance-type m5.xlarge \
+             --port 22 \
+             --tags owner=rmoff,workshop=qcon_london,deleteafter=20200305 \
+             --launch-type EC2
+{{< /highlight >}}
+
+NOTE: Choose your instance type carefully - initially, I just picked one that sounded good and ended up with `a1.xlarge`. Unfortunately for me this has an ARM-based processor and some of the Docker images that I was using wouldn't work on this architecture (they error with `STOPPED Reason: CannotPullContainerError: no matching manifest for linux/arm64/v8 in the manifest list entries`)
+
+This ECS CLI command does two things: 
+
+* Create an _ECS Cluster_ - a logical thing into which we'll deploy and manage our Docker containers
+* Create one or more _Container instances_ — the EC2 boxes on which the Docker containers will run
+** These are provisioned via a CloudFormation stack - comprising EC2 instance(s), VPCs, Security Groups, Internet Gateways and all the other stuff that makes AWS tick
+
+{{< highlight shell >}}
+INFO[0001] Using recommended Amazon Linux 2 AMI with ECS Agent 1.36.1 and Docker version 18.09.9-ce
+INFO[0002] Created cluster                               cluster=qcon-ldn-workshop region=us-east-1
+INFO[0004] Waiting for your cluster resources to be created...
+INFO[0004] Cloudformation stack status                   stackStatus=CREATE_IN_PROGRESS
+INFO[0066] Cloudformation stack status                   stackStatus=CREATE_IN_PROGRESS
+VPC created: vpc-02f6b2c8501a92f47
+Security Group created: sg-0385e8d8893e00cf3
+Subnet created: subnet-0a2c391d4ffdefbb0
+Subnet created: subnet-06c2dd5442d8a89c5
+Cluster creation succeeded.
+{{< /highlight >}}
+
+This will take a few minutes but after which you can see for yourself the results from the AWS CLI: 
+
+{{< highlight shell >}}
+$ aws2 ecs list-clusters|jq '.'
+
+{
+  "clusterArns": [
+    "arn:aws:ecs:us-east-1:523370736235:cluster/qcon-ldn-workshop"
+  ]
+}
+
+$ aws2 cloudformation list-stacks |jq '.'
+
+{
+  "StackSummaries": [
+    {
+      "StackId": "arn:aws:cloudformation:us-east-1:523370736235:stack/amazon-ecs-cli-setup-qcon-ldn-workshop/7bfde660-4d24-11ea-8356-0a6641f83659",
+      "StackName": "amazon-ecs-cli-setup-qcon-ldn-workshop",
+      "TemplateDescription": "AWS CloudFormation template to create resources required to run tasks on an ECS cluster.",
+      "CreationTime": "2020-02-11T23:16:08.477000+00:00",
+      "StackStatus": "CREATE_COMPLETE",
+      "DriftInformation": {
+        "StackDriftStatus": "NOT_CHECKED"
+      }
+    }
+  ]
+}
+{{< /highlight >}}
+
+So we've now built ourselves an ECS cluster, ready to run our Docker containers—the definitions for which come from a Docker Compose
+
+== Running Docker Compose on ECS
+
+Let's start with a simple example, taken from the ECS CLI docs. Create a new folder (e.g. `ecs-compose-test`) and a `docker-compose.yml` file within it:
+
+{{< highlight yaml >}}
+version: '2'
+services:
+  web:
+    image: amazon/amazon-ecs-sample
+    ports:
+     - "80:80"
+{{< /highlight >}}
+
+For fun, run it locally first just to show that it works: 
+
+{{< highlight shell >}}
+$ docker-compose up
+Creating network "ecs-compose-test_default" with the default driver
+Pulling web (amazon/amazon-ecs-sample:)...
+latest: Pulling from amazon/amazon-ecs-sample
+72d97abdfae3: Pull complete
+9db40311d082: Pull complete
+991f1d4df942: Pull complete
+9fd8189a392d: Pull complete
+Digest: sha256:36c7b282abd0186e01419f2e58743e1bf635808231049bbc9d77e59e3a8e4914
+Status: Downloaded newer image for amazon/amazon-ecs-sample:latest
+Creating ecs-compose-test_web_1 ... done
+Attaching to ecs-compose-test_web_1
+web_1  | AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 192.168.32.2. Set the 'ServerName' directive globally to suppress this message
+{{< /highlight >}}
+
+Go to `localhost` in your web browser and 🎉
+
+image::/images/2020/02/ecs-compose-test_local.png[]
+
+Now let's run it in the cloud. Whilst you can just use `ecs-cli compose up` we're going to run it in two stages here to understand what's going on. 
+
+1. Use `ecs-cli compose create` to parse the Docker Compose into an ECS https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html[_task definition_]. This doesn't execute anything yet.
++
+{{< highlight shell >}}
+$ ecs-cli compose create
+INFO[0001] Using ECS task definition                     TaskDefinition="ecs-compose-test:1"
+{{< /highlight >}}
++
+This has created a task definition which we can inspect: 
++
+{{< highlight shell >}}
+$ aws2 ecs list-task-definitions|jq '.'
+{
+  "taskDefinitionArns": [
+    "arn:aws:ecs:us-east-1:523370736235:task-definition/ecs-compose-test:1"
+  ]
+}
+
+$ aws2 ecs describe-task-definition \
+  --task-definition arn:aws:ecs:us-east-1:523370736235:task-definition/ecs-compose-test:1
+{
+    "taskDefinition": {
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:523370736235:task-definition/ecs-compose-test:1",
+        "containerDefinitions": [
+            {
+                "name": "web",
+                "image": "amazon/amazon-ecs-sample",
+                "cpu": 0,
+                "memory": 512,
+                "links": [],
+                "portMappings": [
+                    {
+                        "containerPort": 80,
+                        "hostPort": 80,
+                        "protocol": "tcp"
+                    }
+                ],
+…                
+{{< /highlight >}}
++
+So it's taken the Docker Compose and translated it into a https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html[task definition].
+
+2. With this task definition created, we can now set it to run on the ECS cluster that we created above: 
++
+{{< highlight shell >}}
+$ ecs-cli compose start --cluster qcon-ldn-workshop
+INFO[0001] Using ECS task definition                     TaskDefinition="ecs-compose-test:1"
+INFO[0001] Starting container...                         container=5c1e40ca-88c2-4463-949e-91c68e103f3f/web
+INFO[0001] Describe ECS container status                 container=5c1e40ca-88c2-4463-949e-91c68e103f3f/web desiredStatus=RUNNING lastStatus=PENDING taskDefinition="ecs-compose-test:1"
+INFO[0014] Started container...                          container=5c1e40ca-88c2-4463-949e-91c68e103f3f/web desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="ecs-compose-test:1"
+{{< /highlight >}}
++
+Notice here that it says **`desiredStatus`** and **`lastStatus`** - that's the _orchestration_ at work, because ECS isn't just going to fire & forget. It knows what _should_ be running, and it'll keep an eye on things to make sure that they are. 
++
+Let's check that the test worked. When we created the ECS cluster and associated EC2 instance above we specified `--port 22` to be opened up on the firewall for inbound connections. So that we can check the test web site is working we need to access port 80 on the EC2 instance, so we'll use the wonderful SSH port forwarding function: 
++
+{{< highlight shell >}}
+ssh  -L 8080:localhost:80 \
+     -i rmoff-qcon-ldn-workshop.rsa \
+     ec2-user@34.201.131.235
+{{< /highlight >}}
++
+image::/images/2020/02/ecs-compose-test_ecs.png[]
+
+=== How did you get that EC2 IP address? 
+
+You can either click through the ECS web UI to get to the EC2 instance, or you can navigate the AWS CLI. 
+
+1. Find out the container instances that exist for the ECS cluster: 
++
+{{< highlight shell >}}
+$ aws2 ecs list-container-instances --cluster qcon-ldn-workshop|jq '.'
+{
+  "containerInstanceArns": [
+    "arn:aws:ecs:us-east-1:523370736235:container-instance/bfedb3c3-ace9-4476-a119-d234ce59dfda"
+  ]
+}
+{{< /highlight >}}
+
+2. Find details of said container instance: 
++
+{{< highlight shell >}}
+$ aws2 ecs describe-container-instances \
+    --container-instances arn:aws:ecs:us-east-1:523370736235:container-instance/bfedb3c3-ace9-4476-a119-d234ce59dfda \
+    --cluster qcon-ldn-workshop|jq '.'
+{
+  "containerInstances": [
+    {
+      "containerInstanceArn": "arn:aws:ecs:us-east-1:523370736235:container-instance/bfedb3c3-ace9-4476-a119-d234ce59dfda",
+      "ec2InstanceId": "i-0b59c0f85fe1eea7c",
+      "version": 6,
+      "versionInfo": {
+        "agentVersion": "1.36.1",
+        "agentHash": "f199a183",
+        "dockerVersion": "DockerVersion: 18.09.9-ce"
+      },
+      "remainingResources": [
+        {
+          "name": "CPU",
+          "type": "INTEGER",
+          "doubleValue": 0,
+          "longValue": 0,
+          "integerValue": 4096
+        },
+{{< /highlight >}}
+
+3. Find IP of said EC2 instance:
++
+{{< highlight shell >}}
+$ aws2 ec2 describe-instances \
+    --filter "Name=instance-id,Values=i-0b59c0f85fe1eea7c" |\
+    jq '.Reservations[].Instances[].PublicIpAddress'
+"34.201.131.235"
+{{< /highlight >}}
+
+Or if you want to be a bit fancy about it: 
+
+{{< highlight shell >}}
+$ aws2 ecs list-container-instances --cluster qcon-ldn-workshop|jq '.containerInstanceArns[]'|\
+    xargs -IFOO aws2 ecs describe-container-instances --container-instances FOO \
+        --cluster qcon-ldn-workshop|\
+    jq '.containerInstances[].ec2InstanceId'|\
+    xargs -IFOO aws2 ec2 describe-instances --filter "Name=instance-id,Values=FOO" | \
+    jq '.Reservations[].Instances[].PublicIpAddress'
+"34.201.131.235"
+{{< /highlight >}}
+
+=== A poke under the covers? Can we? 
+
+With all this magical orchestration, it's possible to forget about where this stuff runs. But if you SSH onto the EC2 `container instance` you'll find it's "just" a box running Docker - but with some clever ECS bits to make it all work: 
+
+{{< highlight shell >}}
+$ ssh  -i rmoff-qcon-ldn-workshop.rsa ec2-user@34.201.131.235
+Last login: Tue Feb 11 23:48:52 2020 from foo.bar.somewhere
+
+   __|  __|  __|
+   _|  (   \__ \   Amazon Linux 2 (ECS Optimized)
+ ____|\___|____/
+
+For documentation, visit http://aws.amazon.com/documentation/ecs
+4 package(s) needed for security, out of 20 available
+Run "sudo yum update" to apply all updates.
+[ec2-user@ip-10-0-0-135 ~]$ 
+{{< /highlight >}}
+
+You can use `docker ps` to see all containers that are running: 
+
+{{< highlight shell >}}
+[ec2-user@ip-10-0-0-135 ~]$ docker ps
+CONTAINER ID        IMAGE                            COMMAND                  CREATED             STATUS                       PORTS                NAMES
+2a93fd8eb058        amazon/amazon-ecs-sample         "/usr/sbin/apache2 -…"   33 minutes ago      Up 33 minutes                0.0.0.0:80->80/tcp   ecs-ecs-compose-test-1-web-dc899799ec95ecf42100
+5f4c1d77376c        amazon/amazon-ecs-agent:latest   "/agent"                 About an hour ago   Up About an hour (healthy)                        ecs-agent
+{{< /highlight >}}
+
+And if things aren't working as you want them to, you can inspect the logs for each container: 
+
+{{< highlight shell >}}
+[ec2-user@ip-10-0-0-135 ~]$ docker logs -f ecs-ecs-compose-test-1-web-dc899799ec95ecf42100
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message
+{{< /highlight >}}
+
+You can even install your own stuff, not that you should except for helping with troubleshooting early stages and figuring out what's going on 
+
+{{< highlight shell >}}
+$ sudo yum install -y htop
+{{< /highlight >}}
+
+image::/images/2020/02/htop.png[]
+
+== Let's run some stuff for real now! 
+
+OK, let's. You can find the Docker Compose that I had built https://github.com/confluentinc/demo-scene/blob/streaming-jan2020-update/build-a-streaming-pipeline/docker-compose.yml[here], in its initial incarnation. It spins up a stack made up of: 
+
+* Zookeeper 
+* Kafka broker
+* Schema Registry
+* Kafka Connect worker
+* ksqlDB server
+* mySQL
+* Elasticsearch
+
+Each of the distributed components (Kafka, etc) just have a single node—this is a sandbox, after all. 
+
+First let's see it succeed, and then let's understand what that journey looked like. Spin the stack up using my https://github.com/confluentinc/demo-scene/blob/streaming-jan2020-update/build-a-streaming-pipeline/docker-compose.yml[docker-compose.yml]: 
+
+{{< highlight shell >}}
+$ cd ~/git/demo-scene/build-a-streaming-pipeline
+$ ecs-cli compose up --cluster qcon-ldn-workshop
+WARN[0000] Skipping unsupported YAML option for service...  option name=container_name service name=elasticsearch
+WARN[0000] Skipping unsupported YAML option for service...  option name=container_name service name=kafka
+WARN[0000] Skipping unsupported YAML option for service...  option name=depends_on service name=kafka
+WARN[0000] Skipping unsupported YAML option for service...  option name=container_name service name=kafka-connect-01
+…
+INFO[0003] Using ECS task definition                     TaskDefinition="build-a-streaming-pipeline:50"
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/elasticsearch
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka-connect-01
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafkacat
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/kibana
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/ksqldb
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/mysql
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/schema-registry
+INFO[0004] Starting container...                         container=345ebb39-a936-41e6-b3bc-fb8911fff187/zookeeper
+INFO[0004] Describe ECS container status                 container=345ebb39-a936-41e6-b3bc-fb8911fff187/elasticsearch desiredStatus=RUNNING lastStatus=PENDING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0004] Describe ECS container status                 container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka-connect-01 desiredStatus=RUNNING lastStatus=PENDING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0004] Describe ECS container status                 container=345ebb39-a936-41e6-b3bc-fb8911fff187/schema-registry desiredStatus=RUNNING lastStatus=PENDING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0004] Describe ECS container status                 container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka desiredStatus=RUNNING lastStatus=PENDING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0004] Describe ECS container status                 container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafkacat desiredStatus=RUNNING lastStatus=PENDING taskDefinition="build-a-streaming-pipeline:50"
+…
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/elasticsearch desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka-connect-01 desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/schema-registry desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafka desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/kafkacat desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/kibana desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/ksqldb desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/mysql desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+INFO[0095] Started container...                          container=345ebb39-a936-41e6-b3bc-fb8911fff187/zookeeper desiredStatus=RUNNING lastStatus=RUNNING taskDefinition="build-a-streaming-pipeline:50"
+{{< /highlight >}}
+
+Now if I SSH onto the EC2 host I can see the containers running: 
+
+{{< highlight shell >}}
+[ec2-user@ip-10-0-0-135 ~]$ docker ps
+CONTAINER ID        IMAGE                                                 COMMAND                   CREATED             STATUS                            PORTS                               NAMES
+15de955540df        rmoff/ksqldb-server:master-20200210-12f4317           "/usr/bin/docker/run"     2 minutes ago       Up 2 minutes                      0.0.0.0:8088->8088/tcp              ecs-build-a-streaming-pipeline-50-ksqldb-f6dfb1ede8fcc0e7c901
+592c1798425e        confluentinc/cp-kafka-connect:5.4.0                   "bash -c 'echo \"Inst…"   2 minutes ago       Up 2 minutes (health: starting)   0.0.0.0:8083->8083/tcp, 9092/tcp    ecs-build-a-streaming-pipeline-50-kafka-connect-01-ae8afda6bde3e2a66800
+a90ff81d290c        edenhill/kafkacat:1.5.0                               "/bin/sh -c 'apk add…"    2 minutes ago       Up 2 minutes                                                          ecs-build-a-streaming-pipeline-50-kafkacat-f891f4a4fecac5d77400
+ebe6a4917748        docker.elastic.co/kibana/kibana:7.5.0                 "/usr/local/bin/dumb…"    2 minutes ago       Up 2 minutes                      0.0.0.0:5601->5601/tcp              ecs-build-a-streaming-pipeline-50-kibana-80c8e09e9a8d92841800
+0939c0a63a8d        confluentinc/cp-schema-registry:5.4.0                 "/etc/confluent/dock…"    2 minutes ago       Up 2 minutes                      0.0.0.0:8081->8081/tcp              ecs-build-a-streaming-pipeline-50-schema-registry-c298d3f3a3ead6ed4700
+6097e70ca417        confluentinc/cp-enterprise-kafka:5.4.0                "bash -c 'echo '127.…"    3 minutes ago       Up 3 minutes                      0.0.0.0:9092->9092/tcp              ecs-build-a-streaming-pipeline-50-kafka-b6a9a5dfa29f80ce5e00
+42395ba12925        docker.elastic.co/elasticsearch/elasticsearch:7.5.0   "/usr/local/bin/dock…"    3 minutes ago       Up 3 minutes                      0.0.0.0:9200->9200/tcp, 9300/tcp    ecs-build-a-streaming-pipeline-50-elasticsearch-9ab3c6a4ef92d8b00300
+8cabb0de9648        confluentinc/cp-zookeeper:5.4.0                       "/etc/confluent/dock…"    3 minutes ago       Up 3 minutes                      2181/tcp, 2888/tcp, 3888/tcp        ecs-build-a-streaming-pipeline-50-zookeeper-b8c2c1ce9ae48b821500
+75279ad553bf        mysql:8.0                                             "docker-entrypoint.s…"    3 minutes ago       Up 3 minutes                      0.0.0.0:3306->3306/tcp, 33060/tcp   ecs-build-a-streaming-pipeline-50-mysql-96f3c78287d1a6985b00
+5f4c1d77376c        amazon/amazon-ecs-agent:latest                        "/agent"                  About an hour ago   Up About an hour (healthy)                                            ecs-agent
+[ec2-user@ip-10-0-0-135 ~]$
+{{< /highlight >}}
+
+and I can get the prompt up for ksqlDB, ready to go and https://github.com/confluentinc/demo-scene/blob/master/build-a-streaming-pipeline/demo_build-a-streaming-pipeline.adoc[build a streaming data pipeline]!
+
+{{< highlight shell >}}
+$ docker exec -it $(docker ps|grep ksqldb|awk '{print $11}') ksql http://localhost:8088
+
+                  ===========================================
+                  =       _              _ ____  ____       =
+                  =      | | _____  __ _| |  _ \| __ )      =
+                  =      | |/ / __|/ _` | | | | |  _ \      =
+                  =      |   <\__ \ (_| | | |_| | |_) |     =
+                  =      |_|\_\___/\__, |_|____/|____/      =
+                  =                   |_|                   =
+                  =  Event Streaming Database purpose-built =
+                  =        for stream processing apps       =
+                  ===========================================
+
+Copyright 2017-2019 Confluent Inc.
+
+CLI v6.0.0-SNAPSHOT, Server v6.0.0-SNAPSHOT located at http://localhost:8088
+
+Having trouble? Type 'help' (case-insensitive) for a rundown of how things work!
+
+ksql>
+{{< /highlight >}}
+
+== What needed to change from Docker Compose on the Mac to Docker Compose running on ECS? 
+
+_😈👹 The devil is always in the detail 👹😈_
+
+=== Networking and hostnames
+
+Under Docker Compose I specify a `container_name` which the container takes as its hostname, and then each container can address others, and itself. So `kafka` can reach `zookeeper`, but `kafka` can also reach `kafka` too (which is important for how the broker operates and communicates). This is standard https://docs.docker.com/compose/networking/[Docker Compose networking], and took a bit of figuring out with ECS. 
+
+There are two important changes that I had to make. 
+
+==== Inter-container communication 
+
+Any container that you want to be able to reach another, you must define with a `link:`. So 
+
+{{< highlight yaml >}}
+  kafka:
+    image: confluentinc/cp-enterprise-kafka:5.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+{{< /highlight >}}
+
+becomes in an ECS-compatible Docker Compose (assuming the `kafka` needs to reach `zookeeper`, which it does):
+
+{{< highlight yaml >}}
+  kafka:
+    image: confluentinc/cp-enterprise-kafka:5.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+{{< /highlight >}}
+
+Strictly speaking, you could use:
+
+{{< highlight yaml >}}
+  kafka:
+    image: confluentinc/cp-enterprise-kafka:5.4.0
+    links:
+      - zookeeper
+{{< /highlight >}}
+
+Since ECS ignores `container_name` and `depends_on` (per the warnings shown in the `ecs-cli compose up` above).
+
+IMPORTANT: It's worth restating this to be clear: any container that you want to be able to address another *must* be defined in `links:`. If it's not, it's not added to the `/etc/hosts` file of the container when it's provisioned and trying to resolve it will fail. 
+
+==== Containers cannot resolve their own hostname
+
+Containers cannot access themselves by their own hostname. Under Docker Compose a container with `container_name` of `kafka` would be able to use `kafka` as a resolvable hostname (it would resolve to itself). With ECS this doesn't happen - you have to use `localhost` if you want to loopback. 
+
+This causes a problem with Kafka because https://rmoff.net/2018/08/02/kafka-listeners-explained/[per standard listeners configuration] you may have a listener configured using the *hostname* (and not localhost). 
+
+{{< highlight shell >}}
+WARN [RequestSendThread controllerId=1] Controller 1's connection to broker kafka:29092 (id: 1 rack: null) was unsuccessful (kafka.controller.RequestSendThread)
+java.io.IOException: Connection to kafka:29092 (id: 1 rack: null) failed.
+        at org.apache.kafka.clients.NetworkClientUtils.awaitReady(NetworkClientUtils.java:71)
+        at kafka.controller.RequestSendThread.brokerReady(ControllerChannelManager.scala:296)
+        at kafka.controller.RequestSendThread.doWork(ControllerChannelManager.scala:250)
+        at kafka.utils.ShutdownableThread.run(ShutdownableThread.scala:96)
+WARN [Controller id=1, targetBrokerId=1] Error connecting to node kafka:29092 (id: 1 rack: null) (org.apache.kafka.clients.NetworkClient)
+java.net.UnknownHostException: kafka
+        at java.net.InetAddress.getAllByName0(InetAddress.java:1281)
+        at java.net.InetAddress.getAllByName(InetAddress.java:1193)
+        at java.net.InetAddress.getAllByName(InetAddress.java:1127)
+{{< /highlight >}}
+
+Whilst it may be possible to jiggle the listener config to avoid this, I ended up hacking the hosts file to append an entry for the hostname. Why? This was preferable to butchering my existing config, since the driving force behind all of this exercise is to retain a Docker Compose which works locally, rather than to build something which is specialised for ECS alone.
+
+{{< highlight yaml >}}
+  kafka:
+    image: confluentinc/cp-enterprise-kafka:5.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+…
+    command:
+      - bash
+      - -c 
+      - |
+        echo '127.0.0.1 kafka' >> /etc/hosts
+        /etc/confluent/docker/run
+        sleep infinity  
+{{< /highlight >}}
+
+This adds the entry to the hosts file and then invokes the container's default startup routine. You can find out what a container does at launch time by inspecting its Docker image:
+
+{{< highlight shell >}}
+$ docker inspect --format='{{.Config.Cmd}}' confluentinc/cp-enterprise-kafka:5.4.0
+[/etc/confluent/docker/run]
+$ docker inspect --format='{{.Config.Entrypoint}}' confluentinc/cp-enterprise-kafka:5.4.0
+[]
+{{< /highlight >}}
+
+==== Security Groups
+
+Not Docker Compose differences as such, but important to note that `ecs-cli up` lets you specify just a single port to open with `--port`. If you want to access other ports exposed by the Docker containers you need to either use SSH port forwarding (as shown above), or amend the EC2 security group to open up the required port. Here's an example of doing that: 
+
+{{< highlight shell >}}
+aws2 ec2 describe-security-groups --filters Name=tag:workshop,Values=qcon_london |\
+  jq '.SecurityGroups[].GroupId' | xargs -IFOO \
+  aws2 ec2 authorize-security-group-ingress \
+        --group-id FOO \
+        --protocol tcp \
+        --port 5601 \
+        --cidr 0.0.0.0/0 | jq '.'
+{{< /highlight >}}
+
+This finds every security group that's tagged with `workshop:qcon_london` and opens it up for inbound TCP traffic on port 5601 from any address. 
+
+=== Memory allocation
+
+With Docker I just let the containers do what they want with my laptop's memory, and it all kinda works out. Since ECS is envisaged as a more large-scale environment than just my laptop, it requires you to give some consideration to your container's memory requirements. 
+
+If you don't, you'll probably find that stuff starts up, and then dies. If you take a look at `/var/log/messages` you'll see this kind of fun going on: 
+
+{{< highlight shell >}}
+Feb 10 12:37:38 ip-10-0-1-43 kernel: Memory cgroup out of memory: Kill process 10103 (java) score 1018 or sacrifice child
+Feb 10 12:37:38 ip-10-0-1-43 kernel: java invoked oom-killer: gfp_mask=0x14000c0(GFP_KERNEL), nodemask=(null),  order=0, oom_score_adj=0                                                                                                                                           [18/560]
+Feb 10 12:37:38 ip-10-0-1-43 kernel: Killed process 10103 (java) total-vm:1557648kB, anon-rss:521148kB, file-rss:11888kB, shmem-rss:0kB
+Feb 10 12:37:38 ip-10-0-1-43 kernel: oom_reaper: reaped process 10103 (java), now anon-rss:0kB, file-rss:0kB, shmem-rss:0kB
+{{< /highlight >}}
+
+I created a `ecs-params.yml` file in the same folder as `docker-compose.yml` and defined some memory allocations for each service. This was a rough guesstimate, and it seems to have worked so far…
+
+{{< highlight yaml >}}
+version: 1
+task_definition:
+  services:
+    elasticsearch:
+      mem_limit: 2g
+    kafka:
+      mem_limit: 2g
+    kafka-connect-01:
+      mem_limit: 2g
+    kafkacat:
+      mem_limit: 1g
+    kibana:
+      mem_limit: 1g
+    ksqldb:
+      mem_limit: 2g
+    mysql:
+      mem_limit: 1g
+    schema-registry:
+      mem_limit: 1g
+    zookeeper:
+      mem_limit: 1g
+{{< /highlight >}}
+
+=== Elasticsearch
+
+Elasticsearch needed a bit of fiddling with to get working. First up the server failed to start with this fairly common error: 
+
+{{< highlight shell >}}
+max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+{{< /highlight >}}
+
+The interesting one about this is that it's usually fixed by setting a parameter on the _host machine_ - but with something ephemeral like ECS' container instances that's less than practical. The answer was to tell Elasticsearch not to use that type of storage `node.store.allow_mmap: "false"` (https://www.elastic.co/guide/en/elasticsearch/reference/master/index-modules-store.html[ref]). 
+
+The second issue was the server was simply getting killed by the OOM manager process (even with `ecs-params.yml` defined). The last line in the log file before the process died was: 
+
+{{< highlight javascript >}}
+{
+    "type": "server",
+    "timestamp": "2020-02-11T11:08:00,969Z",
+    "level": "INFO",
+    "component": "o.e.x.m.p.NativeController",
+    "cluster.name": "docker-cluster",
+    "node.name": "3cf8b25ae6b8",
+    "message": "Native controller process has stopped - no new native processes can be started",
+    "cluster.uuid": "VnuiuD08QciN8JXo5AbDxg",
+    "node.id": "TkvmyUW0TiOGGmGRmSUtKw"
+}
+{{< /highlight >}}
+
+To fix this I modified my existing Docker Compose: 
+
+{{< highlight yaml >}}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.5.0
+…
+    environment:
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      discovery.type: "single-node"
+{{< /highlight >}}
+
+To add in some `ulimits` as well as the `node.store.allow_mmap` config: 
+
+{{< highlight yaml >}}
+  elasticsearch:
+…
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      memlock:
+        soft: -1
+        hard: -1        
+    environment:
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      xpack.security.enabled: "false"
+      discovery.type: "single-node"
+      node.store.allow_mmap: "false"
+{{< /highlight >}}
+
+== Files
+
+I've not even tried to work out how to mount an external file or folder into a container on ECS. For better or worse, I tend to embed stuff inline in `command` section anyway, such as this to pre-create Elasticsearch dynamic mappings: 
+
+{{< highlight yaml >}}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.5.0
+…
+    command: 
+      - bash 
+      - -c 
+      - |
+        # Start up Elasticsearch
+        /usr/local/bin/docker-entrypoint.sh & 
+        #
+        echo "Waiting for Elasticsearch to start ⏳"
+        while [ $$(curl -s -o /dev/null -w %{http_code} http://localhost:9200/) -ne 200 ] ; do 
+          echo -e $$(date) " Elasticsearch listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://localhost:9200/) " (waiting for 200)"
+          sleep 5 
+        done
+        # Create dynamic mapping
+        curl -s -XPUT "http://localhost:9200/_template/kafkaconnect/" -H 'Content-Type: application/json' -d'
+                  {
+                    "template": "*",
+                    "settings": { "number_of_shards": 1, "number_of_replicas": 0 },
+                    "mappings": { "dynamic_templates": [ { "dates": { "match": "*_TS", "mapping": { "type": "date" } } } ]  }
+                  }'
+        # Don't die cos then the container stops 🤦‍♂️
+        sleep infinity
+{{< /highlight >}}
+
+In the case of some SQL that I needed to run on MySQL (and previously mounted externally) I ended up using a http://tldp.org/LDP/abs/html/here-docs.html[here-doc], which is not so pretty but it works: 
+
+{{< highlight yaml >}}
+  mysql:
+    # *-----------------------------*
+    # To connect to the DB: 
+    #   docker exec -it mysql bash -c 'mysql -u root -p$MYSQL_ROOT_PASSWORD'
+    # or
+    #   docker exec -it mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD demo'
+    # *-----------------------------*
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - 3306:3306
+    environment:
+     - MYSQL_ROOT_PASSWORD=Admin123
+     - MYSQL_USER=connect_user
+     - MYSQL_PASSWORD=asgard
+    command: 
+      - bash 
+      - -c 
+      - |
+        cat>/docker-entrypoint-initdb.d/z99_dump.sql <<EOF
+        create table CUSTOMERS (
+                id INT PRIMARY KEY,
+                first_name VARCHAR(50)
+        );
+        insert into CUSTOMERS (id, first_name) values (1, 'Rick');
+        EOF
+        # Launch mysql
+        docker-entrypoint.sh mysqld
+        #
+        sleep infinity
+{{< /highlight >}}
+
+In this case note that the command to launch MySQL requires both the original `Cmd` and `EntryPoint` of the image: 
+
+{{< highlight shell >}}
+$ docker inspect --format='{{.Config.Entrypoint}}' mysql:8.0
+[docker-entrypoint.sh]
+$ docker inspect --format='{{.Config.Cmd}}' mysql:8.0
+[mysqld]
+{{< /highlight >}}
+
+Thus, `docker-entrypoint.sh mysqld`
+
+== Conclusion
+
+Is ECS the answer to my dreams? Not entirely. It's still a bit fiddly and I've definitely got that feeling that I'm using it for something it's not really intended for. But for now I think it's _OK enough_. 
+
+If I take a step back, *I can now take a Docker Compose that runs locally and also run it on <x> number of instances in the cloud*, and that's pretty useful. 
+
+image::/images/2020/02/notbad.gif[]
+
+''''
+
+*Interested in learning ksqlDB? Check out https://ksqldb.io, and come to my https://qconlondon.com/london2020/workshop/kafka[QCon workshop] or https://kafka-tutorials.confluent.io/?utm_campaign=rmoff&utm_term=ecs-rmoff-blog[try it out for yourself now]!*
