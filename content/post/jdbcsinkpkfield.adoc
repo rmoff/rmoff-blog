@@ -1,0 +1,62 @@
+---
+title: "Kafka Connect JDBC Sink - setting the key field name"
+date: 2020-02-25T14:37:12+01:00
+draft: false
+image: "/images/2020/02/IMG_2632.jpeg"
+thumbnail: "/images/2020/02/IMG_3118.jpeg"
+categories:
+- Kafka Connect
+- JDBC Sink
+---
+
+I wanted to get some data from a Kafka topic: 
+
+{{< highlight sql >}}
+ksql> PRINT PERSON_STATS FROM BEGINNING;
+Key format: KAFKA (STRING)
+Value format: AVRO
+rowtime: 2/25/20 1:12:51 PM UTC, key: robin, value: {"PERSON": "robin",
+ "LOCATION_CHANGES":1, "UNIQUE_LOCATIONS": 1}
+{{< /highlight >}}
+
+into Postgres, so did the easy thing and used Kafka Connect with the https://docs.confluent.io/current/connect/kafka-connect-jdbc/sink-connector/index.html[JDBC Sink connector]. 
+
+<!--more-->
+
+I wanted to use `UPSERT` behaviour based on the key of the Kafka message (as shown above, `robin`), so set `pk.mode = record_key`. Unfortunately this didn't work and errored out with: 
+
+    Need exactly one PK column defined since the key schema for records is a primitive type, defined columns are: []
+
+Hmmmmm, I was puzzled. How can I specify a field name for something that's the message key? 
+
+Turns out that if you've got a primitive field, *you* need to specify the field name _that is to be created on the target table._
+
+So this works: 
+
+{{< highlight shell >}}
+…
+pk.mode = record_key
+pk.fields = 'PERSON'
+…
+{{< /highlight >}}
+
+Which then creates a table in the target database like this: 
+
+{{< highlight sql >}}
+postgres=# \d "PERSON_STATS"
+                Table "public.PERSON_STATS"
+      Column      |  Type  | Collation | Nullable | Default
+------------------+--------+-----------+----------+---------
+ PERSON           | text   |           | not null |
+ LOCATION_CHANGES | bigint |           |          |
+ UNIQUE_LOCATIONS | bigint |           |          |
+Indexes:
+    "PERSON_STATS_pkey" PRIMARY KEY, btree ("PERSON")
+{{< /highlight >}}
+
+with data that updates in place as changes are made to the topic in Kafka
+
+++++
+<script id="asciicast-304631" src="https://asciinema.org/a/304631.js" async></script>
+++++
+
