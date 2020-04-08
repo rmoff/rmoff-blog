@@ -40,7 +40,7 @@ rmoff@proxmox01 ~> cat /etc/hosts
 192.168.10.250 proxmox01.moffatt.me proxmox01 
 ```
 
-Thus, Kafka was listening on one IP (192.168.10.25): 
+Thus, Kafka was listening on one IP (192.168.10.250): 
 
 ```
 rmoff@proxmox01 ~> sudo netstat -plnt|grep 9092
