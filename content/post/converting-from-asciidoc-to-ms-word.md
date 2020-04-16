@@ -1,12 +1,12 @@
 +++
 author = "Robin Moffatt"
-categories = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown"]
+categories = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown" , "Google Docs"]
 date = 2018-08-22T18:50:53Z
 description = ""
 draft = false
 image = "/images/2018/08/IMG_4821-1.jpg"
 slug = "converting-from-asciidoc-to-ms-word"
-tag = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown"]
+tag = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown", "Google Docs"]
 title = "Converting from AsciiDoc to MS Word"
 
 +++
@@ -33,7 +33,7 @@ open $INPUT_ADOC.docx
 ```
 
 
-## Customising code highlighting 
+## Customising code block highlighting 
 
 You can customise the syntax highlighting used for code sections by setting `--highlight-style` when calling `pandoc`, e.g.: 
 
@@ -41,7 +41,6 @@ You can customise the syntax highlighting used for code sections by setting `--h
 asciidoctor --backend docbook --out-file - $INPUT_ADOC| \
 pandoc --from docbook --to docx --output $INPUT_ADOC.docx \
        --highlight-style espresso
-open $INPUT_ADOC.docx
 ```
 
 ![](/images/2020/04/docx.png)
@@ -52,8 +51,35 @@ Use `pandoc --list-highlight-styles` to get a list of available styles. You can 
 asciidoctor --backend docbook --out-file - $INPUT_ADOC| \
 pandoc --from docbook --to docx --output $INPUT_ADOC.docx \
        --highlight-style my.theme
-open $INPUT_ADOC.docx
 ```
+
+## Customising other styles (e.g. inline code / literal)
+
+The above `--highlight-style` works great for code blocks, but what about other styles that you want to customise? Perhaps you want to change the formatting used for code that's inline in a paragraph too, not just blocks. To do this with `.docx` output from pandoc you use the `--reference-doc` parameter, and pass in a `.docx` file with the styles set up as you want. 
+
+To create a `.docx` file with all the styles that pandoc may use in translating your source asciidoc, run: 
+
+```
+pandoc -o my-custom-styles.docx \
+       --print-default-data-file reference.docx
+       
+```
+
+Open `my-custom-styles.docx` in Word and modify the style definitions as required
+
+![](/images/2020/04/docx1.png)
+
+Now add this argument to pandoc when you invoke it: 
+
+```
+asciidoctor --backend docbook --out-file - $INPUT_ADOC| \
+pandoc --from docbook --to docx \
+       --output $INPUT_ADOC.docx \
+       --highlight-style my.theme \
+       --reference-doc=my-custom-styles.docx
+```
+
+![](/images/2020/04/docx2.png)
 
 ## Converting Asciidoc to Google Docs format
 
