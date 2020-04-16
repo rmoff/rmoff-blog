@@ -5,9 +5,9 @@ date = 2018-08-22T18:50:53Z
 description = ""
 draft = false
 image = "/images/2018/08/IMG_4821-1.jpg"
-slug = "converting-from-asciidoc-to-ms-word"
+slug = "converting-from-asciidoc-to-ms-word-and-google-docs"
 tag = ["adoc", "asciidoc", "ms word", "docx", "pandoc", "markdown", "Google Docs"]
-title = "Converting from AsciiDoc to MS Word"
+title = "Converting from AsciiDoc to MS Word (and Google Docs)"
 
 +++
 
