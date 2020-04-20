@@ -1,0 +1,74 @@
+---
+title: 'Using Confluent Cloud when there is no Cloud (or internet)'
+date: "2020-04-17T15:55:46+01:00"
+image: "/images/2020/04/"
+thumbnail: "/images/2020/04/"
+credit: "@rmoff"
+draft: true
+categories:
+- Confluent Cloud
+- Replicator
+---
+
+https://confluent.cloud/signup[☁️Confluent Cloud] is a great solution for a hosted and managed Apache Kafka service, with the additional benefits of Confluent Platform such as ksqlDB and managed Kafka Connect connectors. But as a developer, you won't always have a reliable internet connection. Train, planes, and automobiles—not to mention crappy hotel or conference Wi-Fi. Wouldn't it be useful if you could have a replica of your Cloud data on your local machine? That just pulled down new data automagically, without needing to be restarted each time you got back on the network? 
+
+Let me show you here how you can go about doing this, to replicate one (or more) topics from Confluent Cloud onto your local machine. It's also a really useful thing if you want to develop something locally without perhaps being ready to deploy it against your cloud environment. 
+
+== How? 
+
+Confluent Replicator is a Kafka Connect plugin, acting as a consumer from one Kafka cluster (Confluent Cloud) and producer to another (your local Kafka cluster). I use Docker Compose to run Kafka locally, almost exclusively. It's a piece of cake to provision, spin up - and tear down new environments, in isolation from others. 
+
+== Setup
+
+Create a `.env` file with your Confluent Cloud broker details and credentials in it: 
+
+{{< highlight shell >}}
+CCLOUD_BROKER_HOST=foo.bar.bork.bork.bork.us-central1.gcp.confluent.cloud
+CCLOUD_API_KEY=yyy
+CCLOUD_API_SECRET=xxx
+{{< /highlight >}}
+
+Use these environment variables in your local shell (we'll use them with Docker later, hence writing them to a file for re-use)
+
+{{< highlight shell >}}
+source .env
+{{< /highlight >}}
+
+Chuck some dummy data into a Confluent Cloud topic: 
+
+{{< highlight shell >}}
+echo $(date) | \
+    kafkacat -b $CCLOUD_BROKER_HOST \
+             -X security.protocol=SASL_SSL -X sasl.mechanisms=PLAIN \
+             -X sasl.username="$CCLOUD_API_KEY" -X sasl.password="$CCLOUD_API_SECRET" \
+             -X api.version.request=true \
+             -t test_topic -P
+{{< /highlight >}}
+
+Verify that it's there: 
+
+{{< highlight shell >}}
+➜ kafkacat -b $CCLOUD_BROKER_HOST \
+              -X security.protocol=SASL_SSL -X sasl.mechanisms=PLAIN \
+              -X sasl.username="$CCLOUD_API_KEY" -X sasl.password="$CCLOUD_API_SECRET" \
+              -X api.version.request=true \
+              -t test_topic -C -e
+Fri 17 Apr 2020 18:03:17 BST
+{{< /highlight >}}
+
+
+Now spin up yourself a local Kafka cluster using this Docker Compose
+
+{{< highlight shell >}}
+➜ docker-compose up -d
+➜ docker-compose ps
+   Name               Command            State                      Ports
+---------------------------------------------------------------------------------------------
+kafka-1      /etc/confluent/docker/run   Up      0.0.0.0:9092->9092/tcp
+kafka-2      /etc/confluent/docker/run   Up      0.0.0.0:19092->19092/tcp, 9092/tcp
+kafka-3      /etc/confluent/docker/run   Up      0.0.0.0:29092->29092/tcp, 9092/tcp
+replicator   /etc/confluent/docker/run   Up      0.0.0.0:58083->58083/tcp, 8083/tcp, 9092/tcp
+zookeeper    /etc/confluent/docker/run   Up      2181/tcp, 2888/tcp, 3888/tcp
+{{< /highlight >}}
+
+
