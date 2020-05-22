@@ -1,0 +1,61 @@
+---
+title: 'Viewing Kafka messages bytes as hex'
+date: "2020-05-22T14:16:36+01:00"
+image: "/images/2020/05/IMG_4473.jpeg"
+thumbnail: "/images/2020/05/IMG_4466.jpeg"
+draft: false
+credit: "@rmoff"
+categories:
+- kafkacat
+- hexdump
+---
+
+I've been playing around with the new SerDes (serialisers/deserialisers) that shipped with Confluent Platform 5.5 - https://docs.confluent.io/current/schema-registry/serdes-develop/index.html[Protobuf, and JSON Schema] (these were added to the existing support for Avro). The serialisers (and associated https://docs.confluent.io/current/schema-registry/connect.html[Kafka Connect converters]) take a payload and serialise it into bytes for sending to Kafka, and I was interested in what those bytes look like. For that I used my favourite Kafka swiss-army knife: kafkacat. 
+
+<!--more-->
+
+Here's a message serialised to JSON Schema: 
+
+{{< highlight shell >}}
+$ kafkacat -b kafka:29092 -t pageviews-js -C -c1
+
+{"viewtime":1,"userid":"User_9","pageid":"Page_57"}
+{{< /highlight >}}
+
+Looks just like a message from another topic serialised as regular JSON, right? 
+
+{{< highlight shell >}}
+$ kafkacat -b kafka:29092 -t pageviews-j -C -c1
+
+{"viewtime":1,"userid":"User_3","pageid":"Page_77"}
+{{< /highlight >}}
+
+Except it's not! We can confirm this by looking at the raw bytes on the message itself by piping the output from kafkacat into hexdump. 
+
+Check out these magical, pesky, bytes on the front of the JSON Schema-encoded message, and note that they're not there on the JSON message: 
+
+{{< highlight shell >}}
+$ kafkacat -b kafka:29092 -t pageviews-js -C -c1 | hexdump -C
+
+00000000  00 00 00 00 02 7b 22 76  69 65 77 74 69 6d 65 22  |.....{"viewtime"|
+00000010  3a 31 2c 22 75 73 65 72  69 64 22 3a 22 55 73 65  |:1,"userid":"Use|
+00000020  72 5f 39 22 2c 22 70 61  67 65 69 64 22 3a 22 50  |r_9","pageid":"P|
+00000030  61 67 65 5f 35 37 22 7d  0a                       |age_57"}.|
+00000039
+{{< /highlight >}}
+
+{{< highlight shell >}}
+$ kafkacat -b kafka:29092 -t pageviews-j -C -c1 | hexdump -C
+
+00000000  7b 22 76 69 65 77 74 69  6d 65 22 3a 31 2c 22 75  |{"viewtime":1,"u|
+00000010  73 65 72 69 64 22 3a 22  55 73 65 72 5f 33 22 2c  |serid":"User_3",|
+00000020  22 70 61 67 65 69 64 22  3a 22 50 61 67 65 5f 37  |"pageid":"Page_7|
+00000030  37 22 7d 0a                                       |7"}.|
+00000034
+{{< /highlight >}}
+
+The five extra bytes (`00 00 00 00 02`) are defined in the https://docs.confluent.io/current/schema-registry/serdes-develop/index.html#wire-format[wire format] used by the Schema Registry serdes: 
+
+* *Byte 0*: Magic Byte - Confluent serialization format version number; currently always 0.
+* *Bytes 1-4*: 4-byte schema ID as returned by Schema Registry.
+

@@ -1,25 +1,51 @@
 ---
-title: 'Searching_alfred_clipboard'
+title: 'Searching Alfred''s Clipboard history programatically'
 date: "2020-05-18T12:46:02+01:00"
-image: "/images/2020/04/"
-thumbnail: "/images/2020/04/"
-draft: true
+image: "/images/2020/05/IMG_4485.jpeg"
+thumbnail: "/images/2020/05/IMG_4456.jpeg"
+draft: false
 credit: "@rmoff"
 categories:
-- Uncategorized
+- Alfred
+- Productivity
 ---
 
-➜ sqlite3 clipboard.alfdb ".schema clipboard"
+https://www.alfredapp.com/[Alfred] is one of my favourite productivity apps for the Mac. It's a file indexer, a clipboard manager, a snippet expander - and that's just scratching the surface really. I recently got a new machine without it installed and realised _just how much_ I rely on Alfred, particularly its clipboard manager. 
+
+<!--more-->
+
+With the clipboard manager Alfred keeps a history of the text (and images, cool huh!) that I put on my clipboard, and I can recall any of them using a simple shortcut
+
+image::/images/2020/05/alfred01.png[]
+
+The clipboard itself is stored in a file by Alfred, and is just a SQLite database. Since it's that, you can query it using SQL!
+
+To find your clipboard history file go to Alfred's preferences pane and Advanced. Click the `Reveal in Finder` in the bottom right of the window, and in the resulting folder there should be a `Databases` sub-folder and within that a `clipboard.alfdb` file. 
+
+NOTE: This is not intended as a user-servicable file! Don't blame me if opening it in SQLite knackers it, and definitely don't try running `UPDATE`s against it…
+
+With the file located, you can query it by opening it up with SQLite: 
+
+{{< highlight shell >}}
+$ sqlite3 clipboard.alfdb
+{{< /highlight >}}
+
+Here's the clipboard history table's schema: 
+
+{{< highlight sql >}}
+.schema clipboard
+
 CREATE TABLE clipboard(item, ts decimal, app, apppath, dataType integer, dataHash);
 CREATE INDEX clipboard_items ON clipboard (item);
 CREATE INDEX clipboard_ts ON clipboard (ts);
 CREATE INDEX clipboard_app ON clipboard (app);
 CREATE INDEX clipboard_datatype ON clipboard (dataType);
 CREATE INDEX clipboard_datahash ON clipboard (dataHash);
+{{< /highlight >}}
 
+You can query individual rows: 
 
-
-➜ sqlite3 clipboard.alfdb
+{{< highlight sql >}}
 sqlite> .header on
 sqlite> .mode column
 sqlite> SELECT * FROM clipboard LIMIT 1;
@@ -27,7 +53,11 @@ sqlite> SELECT * FROM clipboard LIMIT 1;
 item                                                                                 ts          app            apppath                          dataType    dataHash
 -----------------------------------------------------------------------------------  ----------  -------------  -------------------------------  ----------  ----------
 https://get.slack.help/hc/en-us/articles/202288908-Format-your-messages#code-blocks  610489734   Google Chrome  /Applications/Google Chrome.app  0
+{{< /highlight >}}
 
+and you can run aggregations on it, here showing which application I most frequently copy content from: 
+
+{{< highlight sql >}}
 sqlite> select app,count(*) from clipboard group by app order by 2 desc;
 app            count(*)
 -------------  ----------
@@ -36,6 +66,13 @@ Visual Studio  2996
 iTerm          1473
 Emacs          152
 Telegram       105
+{{< /highlight >}}
 
+or even how many times I've copied a link from my blog to send to someone :-)
 
-sqlite3 clipboard.alfdb "SELECT item FROM clipboard WHERE item LIKE \"%utm%\";" > /tmp/utm.txt
+{{< highlight sql >}}
+sqlite> SELECT count(*) FROM clipboard WHERE item LIKE '%rmoff.net%';
+99
+{{< /highlight >}}
+
+NOTE: This is not intended as a user-servicable file! Don't blame me if opening it in SQLite knackers it, and definitely don't try running `UPDATE`s against it…
