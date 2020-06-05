@@ -1,0 +1,62 @@
+---
+title: 'How to list and create Kafka topics using the REST Proxy API'
+date: "2020-06-05T09:46:06+01:00"
+image: "/images/2020/06/IMG_4746.jpeg"
+thumbnail: "/images/2020/06/IMG_4737.jpeg"
+draft: false
+credit: "@rmoff"
+categories:
+- Kafka REST Proxy
+- Kafka topics
+---
+
+In v5.5 of Confluent Platform the REST Proxy added new Admin API capabilities, including functionality to list, and create, topics on your cluster. 
+
+Check out the https://docs.confluent.io/current/kafka-rest/api.html#crest-api-v3[docs here] and https://www.confluent.io/download/#confluent-platform[download Confluent Platform] here. The REST proxy is https://www.confluent.io/confluent-community-license-faq/[Confluent Community Licenced]. 
+
+<!--more-->
+
+To start with, you need the cluster ID:
+
+
+{{< highlight javascript >}}
+➜ curl -s -X GET 'localhost:8082/v3/clusters'| jq '.data[0].attributes.cluster_id'
+"rgfnzs2RS3O65A7VSpNatg"
+{{< /highlight >}}
+
+You can get this along with the direct URL for the topics endpoint like this: 
+
+{{< highlight javascript >}}
+➜ curl -s -X GET 'localhost:8082/v3/clusters'| jq '.data[0].relationships.topics.links.related'
+"http://localhost:8082/v3/clusters/rgfnzs2RS3O65A7VSpNatg/topics"
+{{< /highlight >}}
+
+Using that topics endpoint URL you can list topics: 
+
+{{< highlight javascript >}}
+➜ curl -s -X GET 'http://localhost:8082/v3/clusters/rgfnzs2RS3O65A7VSpNatg/topics' |jq '.data[].attributes.topic_name'
+"__confluent.support.metrics"
+"_confluent-ksql-confluent_rmoff_01_command_topic"
+"_kafka-connect-01-configs"
+"_kafka-connect-01-offsets"
+"_kafka-connect-01-status"
+"_schemas"
+"confluent_rmoff_01ksql_processing_log"
+"ratings"
+{{< /highlight >}}
+
+And you can create topics too: 
+
+{{< highlight javascript >}}
+➜ curl -s -X POST 'http://localhost:8082/v3/clusters/rgfnzs2RS3O65A7VSpNatg/topics' \
+--header 'Content-Type: application/vnd.api+json' \
+--data-raw '{
+  "data": {
+    "attributes": {
+      "topic_name": "rmoff_topic03",
+      "partitions_count": 12,
+      "replication_factor": 1
+    }
+  }
+}'
+{{< /highlight >}}
