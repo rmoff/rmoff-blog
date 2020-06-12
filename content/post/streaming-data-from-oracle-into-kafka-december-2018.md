@@ -47,7 +47,7 @@ I did a recent talk at UK Oracle User Group TECH18 conference, presenting my tal
 You can find all of the code on the [demo-scene](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/no-more-silos-oracle.adoc) repository, runnable through Docker and Docker Compose. Simply clone the repo, and then run 
 
     cd no-more-silos-oracle
-    ./scripts/setup.sh
+    ./setup.sh
 
 The setup script does all of the rest, including bringing up Confluent Platform, and configuring the connectors. _You do have to [build the Oracle database docker image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) first_.
 
