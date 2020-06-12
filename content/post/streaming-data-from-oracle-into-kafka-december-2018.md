@@ -5,6 +5,9 @@ date = 2018-12-12T09:49:04Z
 draft = false
 image = "/images/2018/12/IMG_7464.jpg"
 slug = "streaming-data-from-oracle-into-kafka"
+aliases = [
+    "/2018/12/12/streaming-data-from-oracle-into-kafka-december-2018/"
+]
 title = "Streaming data from Oracle into Kafka"
 
 +++
