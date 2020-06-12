@@ -1,22 +1,21 @@
 +++
 author = "Robin Moffatt"
-categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "flashback", "licence", "ksql"]
+categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "ksqldb"]
 date = 2018-12-12T09:49:04Z
 draft = false
 image = "/images/2018/12/IMG_7464.jpg"
-slug = "streaming-data-from-oracle-into-kafka-december-2018"
-tag = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "flashback", "licence", "ksql"]
-title = "Streaming data from Oracle into Kafka (December 2018)"
+slug = "streaming-data-from-oracle-into-kafka"
+title = "Streaming data from Oracle into Kafka"
 
 +++
 
-_This is a short summary discussing what the options are for integrating Oracle RDBMS into Kafka, as of December 2018. For a more detailed background to why and how at a broader level for all databases (not just Oracle) see [this blog](http://cnfl.io/kafka-cdc) and [these slides](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)._
+_This is a short summary discussing what the options are for integrating Oracle RDBMS into Kafka, as of December 2018 (refreshed June 2020). For a more detailed background to why and how at a broader level for all databases (not just Oracle) see [this blog](http://cnfl.io/kafka-cdc) and [this talk](http://rmoff.dev/ksny19-no-more-silos)._
 
 ### What techniques & tools are there? 
 
 *Franck Pachot has written up an excellent analysis of the options available [here](https://medium.com/@FranckPachot/ideas-for-event-sourcing-in-oracle-d4e016e90af6)*.
 
-As of December 2018, this is what the line-up looks like: 
+As of June 2020, this is what the line-up looks like: 
 
 * **Query-based CDC**
   * The [JDBC Connector](https://docs.confluent.io/current/connect/kafka-connect-jdbc/source-connector/source_config_options.html) for Kafka Connect, polls the database for new or changed data based on an incrementing ID column and/or update timestamp
@@ -35,6 +34,7 @@ As of December 2018, this is what the line-up looks like:
       * DBVisit Replicate is no longer developed. 
 * **Triggers** to capture changes made to a table, write details of those changes to another database table, ingest that table into Kafka (e.g. with JDBC connector).
 * **Flashback** to show all changes to a given table between two points in time. [Implemented as a PoC by Stewart Bryson and Björn Rost](https://blog.pythian.com/streaming-oracle-kafka-stories-message-bus-stop/).
+* **Other commercial tools** including Qlik Replicate (nee Attunity Replicate‎), Precisely/SyncSort/SQData, Striim, IBM IIDR, etc
 
 
 ### What do they look like in action? 
@@ -43,7 +43,7 @@ I did a recent talk at UK Oracle User Group TECH18 conference, presenting my tal
 
 You can find all of the code on the [demo-scene](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/no-more-silos-oracle.adoc) repository, runnable through Docker and Docker Compose. Simply clone the repo, and then run 
 
-    cd docker-compose
+    cd no-more-silos-oracle
     ./scripts/setup.sh
 
 The setup script does all of the rest, including bringing up Confluent Platform, and configuring the connectors. _You do have to [build the Oracle database docker image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) first_.
@@ -53,27 +53,25 @@ The setup script does all of the rest, including bringing up Confluent Platform,
 Some notes on setup of each option: 
 
 * JDBC connector
-  * The main thing you need here is the Oracle JDBC driver in the correct folder for the Kafka Connect JDBC connector. 
-    * In the Docker Compose I use a pass-through volume (`db-leach`) mounted from the database container to [copy the JDBC driver directly from the database container onto the Kafka Connect container](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/docker-compose.yml#L77-L83).
+  * The main thing you need here is the Oracle JDBC driver in the correct folder for the Kafka Connect JDBC connector. The JDBC driver can be [downloaded directly from Maven](https://blogs.oracle.com/developers/oracle-database-client-libraries-for-java-now-on-maven-central) and this is done as part of the container's start up. 
+    * Check out [this video](https://rmoff.dev/fix-jdbc-driver-video) to learn more about how to install JDBC driver for Kafka Connect.
   * You also need to make sure that the source table has an incrementing ID column and/or update timestamp column that can be used to identify changed rows. Without that you can only do a bulk load of the data each time. 
 * Debezium connector
-  * Requires a bunch of libraries (instant client and others), [copied from the database container using the same pass-through volume as above](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/docker-compose.yml#L146-L165). 
+  * Requires a bunch of libraries (instant client and others), installed at runtime in the container (now that Instant Client can be downloaded without a click-through 🙌).
   * This requires config work on the database, covered by the [Debezium docs](https://github.com/debezium/debezium-examples/blob/master/tutorial/README.md#using-oracle) and done by the Docker script [here](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/ora-setup-scripts/01_xstreams-setup.sh)
   * Each table needs to be configured (script [here](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/ora-startup-scripts/01_create_customers.sh#L36-L37))
   * I hit problems with the Capture stopping with permission errors so [automated its restart](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/ora-startup-scripts/03_restart_capture.sh) (hacky, I know)
 
-The actual config of the two connectors is done in separate calls to Kafka Connect's REST API ([JDBC](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/scripts/create-ora-source-jdbc.sh) / [Debezium](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/scripts/create-ora-source-debezium-xstream.sh)). I run separate instances of Kafka Connect (in distributed mode, single node) just to keep troubleshooting simple, but in theory they could be in the same worker. 
+The actual config of the two connectors is done in separate calls to Kafka Connect's REST API ([JDBC](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/setup.sh#L53-L77) / [Debezium](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/setup.sh#L24-L51)). 
 
-The invocation of the above REST configuration scripts is managed by the master `setup.sh` script, with [some logic in it](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/docker-compose/scripts/setup.sh#L14-L18) to wait until Kafka Connect is available before launching the config.
+You can validate that each connector is running by querying the REST API:
 
-You can validate that each connector is running by querying the REST API for the two Kafka Connect worker instances: 
+    curl -s "http://localhost:8083/connectors?expand=info&expand=status" | \
+          jq '. | to_entries[] | [ .value.info.type, .key, .value.status.connector.state,.value.status.tasks[].state,.value.info.config."connector.class"]|join(":|:")' | \
+          column -s : -t| sed 's/\"//g'| sort
 
-    $ curl -s "http://localhost:18083/connectors"| jq '.[]'| xargs -I{connector_name} curl -s "http://localhost:18083/connectors/"{connector_name}"/status"| jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| column -s : -t| sed 's/\"//g'| sort
-    ora-source-jdbc  |  RUNNING  |  RUNNING
-
-
-    $ curl -s "http://localhost:8083/connectors"| jq '.[]'| xargs -I{connector_name} curl -s "http://localhost:8083/connectors/"{connector_name}"/status"| jq -c -M '[.name,.connector.state,.tasks[].state]|join(":|:")'| column -s : -t| sed 's/\"//g'| sort
-    ora-source-debezium-xstream  |  RUNNING  |  RUNNING
+    source  |  ora-source-debezium-xstream  |  RUNNING  |  RUNNING  |  io.debezium.connector.oracle.OracleConnector
+    source  |  ora-source-jdbc              |  RUNNING  |  RUNNING  |  io.confluent.connect.jdbc.JdbcSourceConnector
 
 #### Initial data load
 
@@ -95,11 +93,11 @@ In Oracle, check the source data:
       4 Hashim          Rumke           platinum     11-DEC-18 05.16.00.000000 PM
       5 Hansiain        Coda            platinum     11-DEC-18 05.16.00.000000 PM
 
-Now let's see what's in Kafka. I'm using KSQL here to inspect the data; you could use other Kafka console consumers if you'd rather. 
+Now let's see what's in Kafka. I'm using [ksqlDB](https://ksqldb.io/) here to inspect the data; you could use other Kafka console consumers if you'd rather. 
 
-Launch KSQL: 
+Launch ksqlDB: 
 
-    docker-compose exec ksql-cli ksql http://ksql-server:8088
+    docker exec -it ksqldb ksql http://ksqldb:8088
 
 Inspect the topics on the Kafka cluster: 
 
@@ -117,19 +115,21 @@ Dump the contents:
 
 * Debezium/XStreams: 
 
-        ksql> PRINT 'asgard.DEBEZIUM.CUSTOMERS' FROM BEGINNING;
-        Format:AVRO
-        12/11/18 5:16:40 PM UTC, , {"before": null, "after": {"ID": 1, "FIRST_NAME": "Rica", "LAST_NAME": "Blaisdell", "EMAIL": "rblaisdell0@rambler.ru", "GENDER": "Female", "CLUB_STATUS": "bronze", "COMMENTS": "Universal optimal hierarchy", "CREATE_TS": 1544548560283613, "UPDATE_TS": 1544548560000000}, "source": {"version": "0.9.0.Alpha2", "connector": "oracle", "name": "asgard", "ts_ms": 1544548595164, "txId": null, "scn": 3014605, "snapshot": true}, "op": "r", "ts_ms": 1544548595189, "messagetopic": "asgard.DEBEZIUM.CUSTOMERS", "messagesource": "Debezium CDC from Oracle on asgard"}
+        ksql> PRINT 'asgard.DEBEZIUM.CUSTOMERS' FROM BEGINNING;                                                                                                                                  
+        Key format: AVRO or KAFKA_STRING                                                                                                                                                         
+        Value format: AVRO                                                                                                                                                                       
+        rowtime: 2020/06/12 11:28:50.877 Z, key: {"ID": 1}, value: {"before": null, "after": {"ID": 1, "FIRST_NAME": "Rica", "LAST_NAME": "Blaisdell", "EMAIL": "rblaisdell0@rambler.ru", "GENDER": "Female", "CLUB_STATUS": "bronze", "COMMENTS": "Universal optimal hierarchy", "CREATE_TS": 1591960461011878, "UPDATE_TS": 1591960461000000}, "source": {"version": "1.2.0-SNAPSHOT", "connector": "oracle", "name": "asgard", "ts_ms": 1591961330293, "snapshot": "true", "db": "ORCLPDB1", "schema": "DEBEZIUM", "table": "CUSTOMERS", "txId": null, "scn": 1483831, "lcr_position": null}, "op": "r", "ts_ms": 1591961330303, "transaction": null, "messagetopic": "asgard.DEBEZIUM.CUSTOMERS", "messagesource": "Debezium CDC from Oracle on asgard"}
         …
 
 * JDBC connector
 
         ksql> PRINT 'ora-CUSTOMERS-jdbc' FROM BEGINNING;
-        Format:AVRO
-        12/11/18 5:16:55 PM UTC, null, {"ID": 1, "FIRST_NAME": "Rica", "LAST_NAME": "Blaisdell", "EMAIL": "rblaisdell0@rambler.ru", "GENDER": "Female", "CLUB_STATUS": "bronze", "COMMENTS": "Universal optimal hierarchy", "CREATE_TS": 1544548560283, "UPDATE_TS": 1544548560000, "messagetopic": "ora-CUSTOMERS-jdbc", "messagesource": "JDBC Source Connector from Oracle on asgard"}
+        Key format: ¯\_(ツ)_/¯ - no data processed
+        Value format: AVRO
+        rowtime: 2020/06/12 11:20:01.770 Z, key: <null>, value: {"ID": 1, "FIRST_NAME": "Rica", "LAST_NAME": "Blaisdell", "EMAIL": "rblaisdell0@rambler.ru", "GENDER": "Female", "CLUB_STATUS": "bronze", "COMMENTS": "Universal optimal hierarchy", "CREATE_TS": 1591960461011, "UPDATE_TS": 1591960461000, "messagetopic": "ora-CUSTOMERS-jdbc", "messagesource": "JDBC Source Connector from Oracle on asgard"}
         …
 
-Each has the full contents of the source table (5 records, only first is shown above). We can actually use KSQL to easily query the topic directly if we want. First we declare each topic as the source for a stream: 
+Each has the full contents of the source table (5 records, only first is shown above). We can actually use ksqlDB to easily query the topic directly if we want. First we declare each topic as the source for a stream: 
 
     SET 'auto.offset.reset' = 'earliest';
     CREATE STREAM CUSTOMERS_STREAM_DBZ_SRC WITH (KAFKA_TOPIC='asgard.DEBEZIUM.CUSTOMERS', VALUE_FORMAT='AVRO');
@@ -137,25 +137,33 @@ Each has the full contents of the source table (5 records, only first is shown a
 
 and then query the JDBC-sourced Kafka topic: 
 
-    ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC LIMIT 5;
-    1 | Rica | Blaisdell | bronze
-    2 | Ruthie | Brockherst | platinum
-    5 | Hansiain | Coda | platinum
-    4 | Hashim | Rumke | platinum
-    3 | Mariejeanne | Cocci | bronze
+    ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC EMIT CHANGES LIMIT 5;
+
+    +---------------------+---------------------+---------------------+---------------------+
+    |ID                   |FIRST_NAME           |LAST_NAME            |CLUB_STATUS          |
+    +---------------------+---------------------+---------------------+---------------------+
+    |1                    |Rica                 |Blaisdell            |bronze               |
+    |2                    |Ruthie               |Brockherst           |platinum             |
+    |5                    |Hansiain             |Coda                 |platinum             |
+    |4                    |Hashim               |Rumke                |platinum             |
+    |3                    |Mariejeanne          |Cocci                |bronze               |
 
 and the one from Debezium: 
 
-    ksql> SELECT AFTER->ID AS ID, AFTER->FIRST_NAME AS FIRST_NAME, AFTER->LAST_NAME AS LAST_NAME, AFTER->CLUB_STATUS AS CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC;
-    1 | Rica | Blaisdell | bronze
-    2 | Ruthie | Brockherst | platinum
-    3 | Mariejeanne | Cocci | bronze
-    4 | Hashim | Rumke | platinum
-    5 | Hansiain | Coda | platinum
+    ksql> SELECT AFTER->ID AS ID, AFTER->FIRST_NAME AS FIRST_NAME, AFTER->LAST_NAME AS LAST_NAME, AFTER->CLUB_STATUS AS CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC EMIT CHANGES;
+
+    +---------------------+---------------------+---------------------+---------------------+
+    |ID                   |FIRST_NAME           |LAST_NAME            |CLUB_STATUS          |
+    +---------------------+---------------------+---------------------+---------------------+
+    |1                    |Rica                 |Blaisdell            |bronze               |
+    |2                    |Ruthie               |Brockherst           |platinum             |
+    |3                    |Mariejeanne          |Cocci                |bronze               |
+    |4                    |Hashim               |Rumke                |platinum             |
+    |5                    |Hansiain             |Coda                 |platinum             |
 
 Note that I'm accessing nested attributes of the `AFTER` object here using the `->` operator.
 
-The schema for both topics come from the Schema Registry, in which Kafka Connect automatically stores the schema for the data coming from Oracle and serialises the data into Avro. The great thing about this is in a consuming application, such as KSQL, the schema is already available and doesn't have to be manually entered. 
+The schema for both topics come from the Schema Registry, in which Kafka Connect automatically stores the schema for the data coming from Oracle and serialises the data into Avro (or Protobuf, or JSON Schema). The great thing about this is in a consuming application, such as ksqlDB, the schema is already available and doesn't have to be manually entered. 
 
 #### INSERT
 
@@ -173,23 +181,29 @@ Straight away in the Kafka topics you'll see a new row (in fact, if you have lef
 
 * JDBC 
 
-        ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC;
-        1 | Rica | Blaisdell | bronze
-        2 | Ruthie | Brockherst | platinum
-        5 | Hansiain | Coda | platinum
-        4 | Hashim | Rumke | platinum
-        3 | Mariejeanne | Cocci | bronze
-        42 | Rick | Astley | Bronze
+        ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC EMIT CHANGES;
+        +---------------------+---------------------+---------------------+---------------------+
+        |ID                   |FIRST_NAME           |LAST_NAME            |CLUB_STATUS          |
+        +---------------------+---------------------+---------------------+---------------------+
+        |1                    |Rica                 |Blaisdell            |bronze               |
+        |2                    |Ruthie               |Brockherst           |platinum             |
+        |5                    |Hansiain             |Coda                 |platinum             |
+        |4                    |Hashim               |Rumke                |platinum             |
+        |3                    |Mariejeanne          |Cocci                |bronze               |
+        |42                   |Rick                 |Astley               |Bronze               |
 
 * Debezium/XStream 
 
-        ksql> SELECT AFTER->ID AS ID, AFTER->FIRST_NAME AS FIRST_NAME, AFTER->LAST_NAME AS LAST_NAME, AFTER->CLUB_STATUS AS CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC;
-        1 | Rica | Blaisdell | bronze
-        2 | Ruthie | Brockherst | platinum
-        3 | Mariejeanne | Cocci | bronze
-        4 | Hashim | Rumke | platinum
-        5 | Hansiain | Coda | platinum
-        42 | Rick | Astley | Bronze
+        ksql> SELECT AFTER->ID AS ID, AFTER->FIRST_NAME AS FIRST_NAME, AFTER->LAST_NAME AS LAST_NAME, AFTER->CLUB_STATUS AS CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC EMIT CHANGES;
+        +---------------------+---------------------+---------------------+---------------------+
+        |ID                   |FIRST_NAME           |LAST_NAME            |CLUB_STATUS          |
+        +---------------------+---------------------+---------------------+---------------------+
+        |1                    |Rica                 |Blaisdell            |bronze               |
+        |2                    |Ruthie               |Brockherst           |platinum             |
+        |3                    |Mariejeanne          |Cocci                |bronze               |
+        |4                    |Hashim               |Rumke                |platinum             |
+        |5                    |Hansiain             |Coda                 |platinum             |
+        |42                   |Rick                 |Astley               |Bronze               |
 
 
 So far, so same. Each captures an insert. Debezium from XStream and the database's redo log, JDBC by polling the database for any rows with a newer `UPDATE_TS` or higher `ID` than the previous request.
@@ -209,25 +223,31 @@ Now check out the data in Kafka.
 
 * JDBC is as before; the changed data row is available to us: 
 
-        ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC;
-        1 | Rica | Blaisdell | bronze
-        2 | Ruthie | Brockherst | platinum
-        5 | Hansiain | Coda | platinum
-        4 | Hashim | Rumke | platinum
-        3 | Mariejeanne | Cocci | bronze
-        42 | Rick | Astley | Bronze
-        42 | Rick | Astley | Platinum
+        ksql> SELECT ID, FIRST_NAME, LAST_NAME, CLUB_STATUS FROM CUSTOMERS_STREAM_JDBC_SRC EMIT CHANGES;
+        +---------------------+---------------------+---------------------+---------------------+
+        |ID                   |FIRST_NAME           |LAST_NAME            |CLUB_STATUS          |
+        +---------------------+---------------------+---------------------+---------------------+
+        |1                    |Rica                 |Blaisdell            |bronze               |
+        |2                    |Ruthie               |Brockherst           |platinum             |
+        |5                    |Hansiain             |Coda                 |platinum             |
+        |4                    |Hashim               |Rumke                |platinum             |
+        |3                    |Mariejeanne          |Cocci                |bronze               |
+        |42                   |Rick                 |Astley               |Bronze               |
+        |42                   |Rick                 |Astley               |Platinum             |
 
 * Debezium/XStream now comes into its own. As well as the new row of data, we can see what it was previously, through the `BEFORE` nested object: 
 
-        ksql> SELECT OP, AFTER->ID, BEFORE->CLUB_STATUS, AFTER->CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC;
-        r | 1 | null | bronze
-        r | 2 | null | platinum
-        r | 3 | null | bronze
-        r | 4 | null | platinum
-        r | 5 | null | platinum
-        c | 42 | null | Bronze
-        u | 42 | Bronze | Platinum
+        ksql> SELECT OP, AFTER->ID, BEFORE->CLUB_STATUS AS STATUS_BEFORE, AFTER->CLUB_STATUS AS STATUS_AFTER FROM CUSTOMERS_STREAM_DBZ_SRC EMIT CHANGES;
+        +---------------------+---------------------+---------------------+---------------------+
+        |OP                   |ID                   |STATUS_BEFORE        |STATUS_AFTER         |
+        +---------------------+---------------------+---------------------+---------------------+
+        |r                    |1                    |null                 |bronze               |
+        |r                    |2                    |null                 |platinum             |
+        |r                    |3                    |null                 |bronze               |
+        |r                    |4                    |null                 |platinum             |
+        |r                    |5                    |null                 |platinum             |
+        |c                    |42                   |null                 |Bronze               |
+        |u                    |42                   |Bronze               |Platinum             |
 
       I'm just showing the before/after `CLUB_STATUS` but all the other fields are also available. There's also metadata about the change, including the type of operation in the `OP` field (`r`=read, i.e the initial snapshot, `c`=create, `u`=update)
 
@@ -257,7 +277,7 @@ Now check out the data in Kafka.
             "UPDATE_TS": 1544000742000000
           },
           "source": {
-            "version": "0.9.0.Alpha2",
+            "version": "1.2.0-SNAPSHOT",
             "connector": "oracle",
             "name": "asgard",
             "ts_ms": 1544000742000,
@@ -288,15 +308,18 @@ Now check out the data in Kafka.
 JDBC is unchanged; it's not captured any change to the source table. If you think about it, this is perfectly reasonable. How you query a database for a row that doesn't exist? 
 Debezium/XStream, on the other hand, reports the data change precisely: 
 
-    ksql> SELECT OP, AFTER->ID, BEFORE->CLUB_STATUS, AFTER->CLUB_STATUS FROM CUSTOMERS_STREAM_DBZ_SRC;
-    r | 1 | null | bronze
-    r | 2 | null | platinum
-    r | 3 | null | bronze
-    r | 4 | null | platinum
-    r | 5 | null | platinum
-    c | 42 | null | Bronze
-    u | 42 | Bronze | Platinum
-    d | null | Platinum | null
+    ksql> SELECT OP, AFTER->ID, BEFORE->CLUB_STATUS AS STATUS_BEFORE, AFTER->CLUB_STATUS AS STATUS_AFTER FROM CUSTOMERS_STREAM_DBZ_SRC EMIT CHANGES;
+    +---------------------+---------------------+---------------------+---------------------+
+    |OP                   |ID                   |STATUS_BEFORE        |STATUS_AFTER         |
+    +---------------------+---------------------+---------------------+---------------------+
+    |r                    |1                    |null                 |bronze               |
+    |r                    |2                    |null                 |platinum             |
+    |r                    |3                    |null                 |bronze               |
+    |r                    |4                    |null                 |platinum             |
+    |r                    |5                    |null                 |platinum             |
+    |c                    |42                   |null                 |Bronze               |
+    |u                    |42                   |Bronze               |Platinum             |
+    |d                    |null                 |Platinum             |null                 |
 
 Note the `d` record on the last row. This has captured the `DELETE` operation perfectly. The `null` in the right-most column is the current value for `AFTER->CLUB_STATUS`, and since the record is deleted, it has no value. We can see this even more clearly if we look at the raw payload for the whole record: 
 
@@ -314,7 +337,7 @@ Note the `d` record on the last row. This has captured the `DELETE` operation pe
       },
       "after": null,
       "source": {
-        "version": "0.9.0.Alpha2",
+        "version": "1.2.0-SNAPSHOT",
         "connector": "oracle",
         "name": "asgard",
         "ts_ms": 1544563479000,
@@ -332,37 +355,45 @@ The full record that has been deleted is present in the `BEFORE` object, but `AF
 
 ---- 
 
-Bonus KSQL : 
+Bonus ksqlDB : 
 
-We're working with data in a Kafka topic. As it happens, KSQL is kinda useful for interogating that data, but at the end of the day it's still just a Kafka topic. We can use KSQL to also help monitor the lag between the event in the source system (`source->ms_ms` as provided by Debezium) and the time recorded on the Kafka broker (the Kafka message timestamp, exposed in `ROWTIME`): 
+👉 [Introduction to ksqlDB](https://rmoff.dev/ljc-kafka-03)
 
-    ksql> SELECT TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss Z'), \
-    >         OP, \
-    >         ROWTIME - SOURCE->TS_MS AS LAG_MS \
-    > FROM CUSTOMERS_STREAM_DBZ_SRC;
-    2018-12-11 17:16:40 +0000 | r | 5829
-    2018-12-11 17:16:40 +0000 | r | 5806
-    2018-12-11 17:16:40 +0000 | r | 5802
-    2018-12-11 17:16:41 +0000 | r | 5805
-    2018-12-11 17:16:41 +0000 | r | 5805
-    2018-12-11 21:09:07 +0000 | c | 4104
-    2018-12-11 21:13:51 +0000 | u | 40734
-    2018-12-11 21:28:10 +0000 | d | 211438
+We're working with data in a Kafka topic. As it happens, ksqlDB is kinda useful for interogating that data, but at the end of the day it's still just a Kafka topic. We can use ksqlDB to also help monitor the lag between the event in the source system (`source->ms_ms` as provided by Debezium) and the time recorded on the Kafka broker (the Kafka message timestamp, exposed in `ROWTIME`): 
+
+    ksql> SELECT TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss Z'), 
+                 OP, 
+                 ROWTIME - SOURCE->TS_MS AS LAG_MS 
+            FROM CUSTOMERS_STREAM_DBZ_SRC EMIT CHANGES;
+    +----------------------------+----------------------------+----------------------------+
+    |KSQL_COL_0                  |OP                          |LAG_MS                      |
+    +----------------------------+----------------------------+----------------------------+
+    |2020-06-12 11:28:50 +0000   |r                           |584                         |
+    |2020-06-12 11:28:50 +0000   |r                           |570                         |
+    |2020-06-12 11:28:50 +0000   |r                           |570                         |
+    |2020-06-12 11:28:50 +0000   |r                           |571                         |
+    |2020-06-12 11:28:50 +0000   |r                           |570                         |
+    |2020-06-12 12:34:53 +0000   |c                           |4720                        |
+    |2020-06-12 12:35:18 +0000   |u                           |18686                       |
+    |2020-06-12 13:11:36 +0000   |d                           |62802                       |
 
 Some of these lag times are pretty high; [DBZ-1018 Oracle connector is laggy](https://issues.jboss.org/projects/DBZ/issues/DBZ-1018) is a JIRA currently tracking it. 
 
 You can get the same data out of the JDBC connector, based on the `UPDATE_TS` of the record itself: 
 
-    ksql> SELECT TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss Z'), \
-    >          ROWTIME - UPDATE_TS AS LAG_MS \
-    > FROM CUSTOMERS_STREAM_JDBC_SRC;
-    2018-12-11 17:16:55 +0000 | 55612
-    2018-12-11 17:16:55 +0000 | 55613
-    2018-12-11 17:16:55 +0000 | 55614
-    2018-12-11 17:16:55 +0000 | 55615
-    2018-12-11 17:16:55 +0000 | 55615
-    2018-12-11 21:09:04 +0000 | 1330
-    2018-12-11 21:13:12 +0000 | 1384
+    ksql> SELECT TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss Z'), 
+                 ROWTIME - UPDATE_TS AS LAG_MS 
+            FROM CUSTOMERS_STREAM_JDBC_SRC  EMIT CHANGES;
+    +--------------------------------------------+--------------------------------------------+
+    |KSQL_COL_0                                  |LAG_MS                                      |
+    +--------------------------------------------+--------------------------------------------+
+    |2020-06-12 11:20:01 +0000                   |340770                                      |
+    |2020-06-12 11:20:01 +0000                   |340774                                      |
+    |2020-06-12 11:20:01 +0000                   |340775                                      |
+    |2020-06-12 11:20:01 +0000                   |340776                                      |
+    |2020-06-12 11:20:01 +0000                   |340777                                      |
+    |2020-06-12 12:34:51 +0000                   |3195                                        |
+    |2020-06-12 13:08:01 +0000                   |1046                                        |
 
 You'll note here no available `OP` information, and no row for the corresponding `DELETE` action in the source database.
 
@@ -374,7 +405,7 @@ When you're bringing data into Kafka, you need to remember the bigger picture. D
 
 You want to ensure that the schema of the source data is preserved, and that you're using a serialisation method for the data that is suitable. Doing this means that developers can use the data without being tightly coupled to the producer of the data to understand how to use it. 
 
-However you do this, it should be in a way that integrates with the broader Kafka and Confluent Platform ecosystem. One option is the Schema Registry and Avro. **If you're using Kafka Connect then this is available by default**, since you just select the Avro converter when you set up Kafka Connect. 
+However you do this, it should be in a way that integrates with the broader Kafka and Confluent Platform ecosystem. One option is the Schema Registry and Avro (or Protobuf, or JSON Schema). **If you're using Kafka Connect then this is available by default**, since you just select the Avro converter when you set up Kafka Connect. 
 
 ----
 
