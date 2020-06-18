@@ -4,9 +4,12 @@ categories = ["docker", "Docker Compose", "ksql", "ksql-cli", "ksql-server", "ka
 date = 2018-12-15T22:00:55Z
 description = ""
 image = "/images/2018/12/IMG_7431.jpg"
-slug = "docker-tips-and-tricks-with-ksql-and-kafka"
+slug = "docker-tips-and-tricks-with-kafka-connect-ksqldb-and-kafka"
+aliases = [
+    "/2018/12/15/docker-tips-and-tricks-with-ksql-and-kafka/"
+]
 tag = ["docker", "Docker Compose", "ksql", "ksql-cli", "ksql-server", "kafka connect"]
-title = "Docker Tips and Tricks with KSQL and Kafka"
+title = "Docker Tips and Tricks with Kafka Connect, ksqlDB, and Kafka"
 
 +++
 
@@ -122,6 +125,34 @@ kafka-connect:
 
 Note that you must also set `CONNECT_PLUGIN_PATH` to include the path into which the plugin is being installed, otherwise it won't be picked up by Kafka Connect. 
 
+### Build a Kafka Connect image with a custom connector plugin
+
+Create a `Dockerfile`: 
+
+{{< highlight Dockerfile >}}
+FROM confluentinc/cp-kafka-connect-base:5.5.0
+ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
+RUN confluent-hub install --no-prompt jcustenborder/kafka-connect-spooldir:2.0.43
+{{< /highlight >}}
+
+1. This is based on `cp-kafka-connect-base`
+2. Sets the `plugin.path` environment variable correctly based on where the `confluent-hub` client installs the JARs
+3. Use as many `confluent-hub install` commands as connectors that you want to install (using `--no-prompt`)
+
+Build the image: 
+
+{{< highlight shell >}}
+docker build -t my-kafka-connect-image .
+{{< /highlight >}}
+
+Admire your new image
+
+{{< highlight shell >}}
+➜ docker images
+REPOSITORY               TAG       IMAGE ID            CREATED             SIZE
+my-kafka-connect-image   latest    fd44121b673e        17 minutes ago      1.07GB
+{{< /highlight >}}
+
 ### Deploy a Kafka Connect connector automatically
 
 In the above example, we run some code _before_ the container's payload (the KSQL Server) starts because of a dependency on it. In the next example we'll do it the other way around; launch the service and wait for it to start, and then run some more code. This is the pattern we need for deploying a Kafka Connect connector. 
@@ -194,6 +225,8 @@ Note that the `sleep infinity` is required, otherwise the container will exit si
 ### Install a JDBC driver for Kafka Connect
 
 Two techniques here, depending on whether the JDBC driver is available from a URL as a `tar` or `jar` (it needs to be a `jar`, and the Kafka Connect docker image doesn't have `unzip`)
+
+{{< youtube vI_L9irU9Pc >}}
 
 #### Option 1 : Download the JAR
 
