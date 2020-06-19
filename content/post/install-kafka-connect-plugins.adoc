@@ -1,0 +1,158 @@
+---
+title: 'How to install connector plugins in Kafka Connect'
+date: "2020-06-19T17:28:09+01:00"
+image: "/images/2020/06/IMG_5114.jpeg"
+thumbnail: "/images/2020/06/IMG_5119.jpeg"
+draft: false
+credit: "@rmoff"
+categories:
+- Kafka Connect
+- Docker
+---
+
+Kafka Connect (which is part of Apache Kafka) supports pluggable connectors, enabling you to stream data between Kafka and numerous types of system, including to mention just a few: 
+
+- Databases
+- Message Queues
+- Flat files
+- Object stores
+
+The appropriate plugin for the technology which you want to integrate can be found on https://www.confluent.io/hub/[Confluent Hub]. 
+
+<!--more-->
+
+{{< youtube 18gDPSOH3wU >}}
+
+You need to install the plugin on each Kafka Connect worker in the Kafka Connect cluster. After installing the plugin, you must restart the Kafka Connect worker. 
+
+NOTE: Plugins are JAR files that you will usually download directly from Confluent Hub, but in some cases may get from other places such as GitHub and need to build yourself. 
+
+
+See also https://docs.confluent.io/current/connect/userguide.html#installing-kconnect-plugins[Installing Connect Plugins]
+
+== Automagic installation using `confluent-hub`
+
+If you're running Confluent Platform you already have Confluent Hub client. If not, then you can download it from https://docs.confluent.io/current/connect/managing/confluent-hub/client.html#c-hub-client[the instructions here]. 
+
+Run the client on your Kafka Connect worker(s), and it does all the hard work for you. You just need the name of the connector and its version, which you can get from the plugin's page on https://www.confluent.io/hub/[Confluent Hub].
+
+{{< highlight shell >}}
+➜ confluent-hub install --no-prompt jcustenborder/kafka-connect-spooldir:2.0.43
+Running in a "--no-prompt" mode
+Implicit acceptance of the license below:
+Apache License 2.0
+https:/github.com/jcustenborder/kafka-connect-spooldir/LICENSE
+Implicit confirmation of the question: You are about to install 'kafka-connect-spooldir' from Jeremy Custenborder, as published on Confluent Hub.
+Downloading component Kafka Connect Spooldir 2.0.43, provided by Jeremy Custenborder from Confluent Hub and installing into /Users/rmoff/confluent-platform/share/confluent-hub-components
+Adding installation directory to plugin path in the following files:
+  /Users/rmoff/confluent-platform/etc/kafka/connect-distributed.properties
+  /Users/rmoff/confluent-platform/etc/kafka/connect-standalone.properties
+  /Users/rmoff/confluent-platform/etc/schema-registry/connect-avro-distributed.properties
+  /Users/rmoff/confluent-platform/etc/schema-registry/connect-avro-standalone.properties
+
+Completed
+
+{{< /highlight >}}
+
+== Manual installation
+
+Download the JAR file (usually from https://www.confluent.io/hub/[Confluent Hub] but perhaps built manually yourself from elsewhere), and place it in a folder on your Kafka Connect worker. For this example, we'll put it in `/opt/connectors`. The folder tree will look something like this: 
+
+{{< highlight shell >}}
+/opt/connectors
+└── jcustenborder-kafka-connect-spooldir
+    ├── doc
+    │   ├── LICENSE
+    │   └── README.md
+    ├── etc
+        …
+    ├── lib
+        …
+    │   ├── javassist-3.21.0-GA.jar
+    │   ├── jsr305-3.0.2.jar
+    │   ├── kafka-connect-spooldir-2.0.43.jar
+    │   ├── listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+        …
+    └── manifest.json
+
+4 directories, 34 files
+{{< /highlight >}}
+
+
+Locate your Kafka Connect worker's configuration (`.properties`) file, and open it in an editor. Search for `plugin.path` setting, and amend or create it to include the folder(s) in which you connectors reside
+
+{{< highlight shell >}}
+plugin.path=/opt/connectors
+{{< /highlight >}}
+
+Restart your Kafka Connect worker.
+
+== Docker 
+
+
+With Docker it can be a bit more tricky because you need to install the plugin *before* the worker starts. If you try to install it in the Docker container and then restart the worker, the container restarts and you lose the JAR that you installed. There are three approaches to use. 
+
+
+=== Docker (volume mapping)
+
+Download your plugin JARs to a local folder on the Docker host (e.g. `/path/on/docker/host/to/connector/folder`), and map these in to the container (e.g. to `/data/containers`), ensuring that they are included in the container's `plugin.path` environment variable. A Docker Compose would look like this: 
+
+{{< highlight yaml >}}
+    …
+    environment:
+      …
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/data/connectors/'
+    volumes:
+      - /path/on/docker/host/to/connector/folder:/data
+{{< /highlight >}}
+
+
+=== Docker (runtime installation)
+
+When a Docker container is run, it uses the `Cmd` or `EntryPoint` that was defined when the image was built. https://hub.docker.com/r/confluentinc/cp-kafka-connect-base[Confluent's Kafka Connect image] will—as you would expect—launch the Kafka Connect worker. 
+
+{{< highlight shell >}}
+➜ docker inspect --format='{{.Config.Cmd}}' confluentinc/cp-kafka-connect-base:5.5.0
+[/etc/confluent/docker/run]
+{{< /highlight >}}
+
+We can override that at runtime to install the plugins first. In Docker Compose this looks like this:
+
+{{< highlight yaml >}}
+    …
+    environment:
+      …
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components/'
+    command: 
+      - bash 
+      - -c 
+      - |
+        # Install connector plugins
+        # This will by default install into /usr/share/confluent-hub-components/ so make
+        #  sure that this path is added to the plugin.path in the environment variables 
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-spooldir:2.0.43
+        # Launch the Kafka Connect worker
+        /etc/confluent/docker/run &
+        # Don't exit
+        sleep infinity
+{{< /highlight >}}
+
+=== Docker (bake a custom image)
+
+For any non-trivial Docker deployment you're going to want to build and curate your own Docker image with the connector plugin(s) that you require for your environment. To do this create a Dockerfile: 
+
+{{< highlight Dockerfile >}}
+FROM confluentinc/cp-kafka-connect-base:5.5.0
+ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
+RUN confluent-hub install --no-prompt jcustenborder/kafka-connect-spooldir:2.0.43
+{{< /highlight >}}
+
+and then build it: 
+
+{{< highlight shell >}}
+docker build -t kafka-connect-spooldir .
+{{< /highlight >}}
+
+== Video Tutorial
+
+{{< youtube 18gDPSOH3wU >}}
