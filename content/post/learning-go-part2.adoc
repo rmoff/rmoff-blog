@@ -1,0 +1,380 @@
+---
+title: 'Learning Golang (some rough notes) - S01E02 - Slices'
+date: "2020-06-25T11:20:23+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: true
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Slices
+---
+
+NOTE: link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[Learning Go : Background]
+
+'''
+
+👉 https://tour.golang.org/moretypes/7[A Tour of Go : Slices]
+
+Slices made sense, until I got to https://tour.golang.org/moretypes/11[_Slice length and capacity_]. Two bits puzzled me in this code: 
+
+<!--more-->
+
+{{< highlight go "linenos=table">}}
+package main
+
+import "fmt"
+
+func main() {
+	s := []int{2, 3, 5, 7, 11, 13}
+	printSlice(s)
+	// len=6 cap=6 [2 3 5 7 11 13]
+
+	// --
+	// Slice the slice to give it zero length.
+	s = s[:0]
+	printSlice(s)
+	// len=0 cap=6 []
+
+
+	// --
+	// Extend its length.
+	s = s[:4]
+	printSlice(s)
+	// len=4 cap=6 [2 3 5 7]
+
+
+	// --
+	// Drop its first two values.
+	s = s[2:]
+	printSlice(s)
+	// len=2 cap=4 [5 7]
+}
+
+func printSlice(s []int) {
+	fmt.Printf("len=%d cap=%d %v\n", len(s), cap(s), s)
+}
+{{< /highlight >}}
+
+
+First up, and again this is my non-coding background coming through, but if `s` starts off as something
+
+{{< highlight go >}}
+s := []int{2, 3, 5, 7, 11, 13}
+// [2 3 5 7 11 13]
+{{< /highlight >}}
+
+and then we change it to something else
+
+{{< highlight go >}}
+s = s[:0]
+// []
+{{< /highlight >}}
+
+how can it revert to something based on its previous incarnation? 
+
+{{< highlight go >}}
+s = s[:4]
+// [2 3 5 7]
+{{< /highlight >}}
+
+
+Which eventually made sense to me once it was explained that because `s` is a slice, it is a pointer to the underlying array. This is explained https://tour.golang.org/moretypes/9[here], and so 
+
+{{< highlight go >}}
+s := []int{2, 3, 5, 7, 11, 13}
+{{< /highlight >}}
+
+is building an array *and* declaring a slice on it in the same statement. It's a more concise way of doing something like this: 
+
+{{< highlight go >}}
+myArray := [6]int{2, 3, 5, 7, 11, 13}
+s := myArray[:]
+{{< /highlight >}}
+
+When we appear to reassign `s` to a new value
+
+{{< highlight go >}}
+s = s[:0]
+{{< /highlight >}}
+
+It's actually declaring `s` as a slice as a before, *based on the pointer against the original array*. We can infer this from the fact that the _capacity_ of the slice remains as 6
+
+{{< highlight go >}}
+s = s[:0]
+// len=0 cap=6 []
+{{< /highlight >}}
+
+and thus when we extend it, it's still against the original array that we were pointing to: 
+
+{{< highlight go >}}
+s = s[:4]
+// len=4 cap=6 [2 3 5 7]
+{{< /highlight >}}
+
+So `s` is a slice on top of the same array each time, just with a different definition (thus the _length_ changes, not the _capacity_). 
+
+'''
+
+The second bit that puzzled me was, given the above explanation of `s` being a pointer to the same array, how can resizing it down and then up still retain the values and capacity…
+
+{{< highlight go >}}
+s = s[:0]
+// len=0 cap=6 []
+s = s[:4]
+// len=4 cap=6 [2 3 5 7]
+{{< /highlight >}}
+
+whilst also resizing it down and up _not_ retain the values and capacity…
+
+{{< highlight go >}}
+s = s[2:]
+// len=2 cap=4 [5 7]
+s = s[0:4]
+// len=4 cap=4 [5 7 11 13]
+{{< /highlight >}}
+
+The answer is related to the first point above - pointers. When we declare the slice and increase the lower bound (`[2:]`) we're actually *moving the offset of the pointer against the underlying array*. Any subsequent references are now based on the pointer to this offset, and not the original one. 
+
+Here's another example that I worked through to help figure it out: 
+
+(try it on https://play.golang.org/p/hO5QJzy2q2n[Go playground]) 
+
+{{< highlight go >}}
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	myArray := [6]int{2, 3, 5, 7, 11, 13}
+
+	// y is a slice on myArray
+	// With no bounds specified it defaults to the lowest (zero) and 
+	//  highest (five) of the array
+	// There are six entries (len=6) and the array that it points to 
+	//  has six entries (cap=6)
+	y := myArray[:]
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 6	cap 6	value [2 3 5 7 11 13]
+	// myArray len 6	cap 6	value [2 3 5 7 11 13]
+	
+
+	// y is a slice against the same array that y *pointed to* previously
+	// This time we take the first four entries (len=4). The slice is still
+	//  pointing to the same original array which has six entries (cap=6)
+	y = y[0:4]
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 4	cap 6	value [2 3 5 7]
+	// myArray len 6	cap 6	value [2 3 5 7 11 13]
+
+
+	// y is a slice against the same array that y *pointed to* previously
+	// This time we take no entries (len=0). The slice is still
+	//  pointing to the same original array which has six entries (cap=6)
+	y = y[:0]
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 0	cap 6	value []
+	// myArray len 6	cap 6	value [2 3 5 7 11 13]
+
+
+	// Now we do something different from the above pattern. We shift the 
+	//  point to which y points, and now it starts from the fifth position
+	//  of the underlying array (it's zero based so fifth position=4). 
+	// There are two entries (five and six) so len=2, and because we're now 
+	//  actually pointing to the array starting at the second entry the capacity
+	//  changes too (cap=2)
+	y = y[4:6]
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 2	cap 2	value [11 13]
+	// myArray len 6	cap 6	value [2 3 5 7 11 13]
+	
+
+	// Now that we've shifted the pointer to a different offset in the source array
+	//  our bounds have different references. 
+	// This refers to the second position (zero based, so 1) in the array but starting
+	//  from the redefined start offset that we created in the above slice 
+	y = y[1:2]
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 1	cap 1	value [13]
+	// myArray len 6	cap 6	value [2 3 5 7 11 13]
+	
+
+	// Since the slice is just a pointer to the underlying array we can change the array and 
+	// the slice will reflect this
+	myArray[5]=100
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 1	cap 1	value [100]
+	// myArray len 6	cap 6	value [2 3 5 7 11 100]
+	
+
+	// Conversely, changing the slice value reflects in the array too
+	y[0]=200
+	fmt.Printf("y       len %d\tcap %d\tvalue %v\n", len(y), cap(y),y)
+	fmt.Printf("myArray len %d\tcap %d\tvalue %v\n\n", len(myArray), cap(myArray),myArray)
+	// y       len 1	cap 1	value [200]
+	// myArray len 6	cap 6	value [2 3 5 7 11 200]
+
+}
+{{< /highlight >}}
+
+https://blog.golang.org/slices-intro[This blog post] goes into some lower-level stuff around Slices that was very useful. A concept it uses that I'd not come across yet was the underscore, which is explained well in https://stackoverflow.com/a/27764432/350613[this StackOverflow answer] (and then gets covered soon after in the Tour [https://tour.golang.org/moretypes/17[here]).
+
+Other references that were useful: 
+
+* https://www.callicoder.com/golang-slices/
+* https://stackoverflow.com/questions/50713681/extend-the-length-and-keep-the-value
+* https://stackoverflow.com/questions/43294449/decreasing-slice-capacity
+* https://stackoverflow.com/questions/47256103/golang-slice-variable-assign-from-tutorial
+
+== Appending to a slice - why doesn't the capacity match the length? 
+
+👉 https://tour.golang.org/moretypes/15[A Tour of Go : Appending to a slice]
+
+This all made sense, except for when I noticed the `cap` (6) wasn't in line with the `len` (5) in the final example. 
+
+{{< highlight go >}}
+func main() {
+	var s []int
+	// len=0 cap=0 []
+	
+	s = append(s, 0)
+	// len=1 cap=1 [0]
+
+	s = append(s, 1)
+	// len=2 cap=2 [0 1]
+
+	s = append(s, 2, 3, 4)
+	// len=5 cap=6 [0 1 2 3 4]
+}
+{{< /highlight >}}
+
+Poking around a bit more with this I saw that the capacity doubled each time it needed to be increased: 
+
+{{< highlight go >}}
+package main
+
+import "fmt"
+
+func main() {
+	var s []int
+	
+	for i:=0;i<20; i++ {
+		s = append(s,i)
+		printSlice(s)
+	}
+}
+
+
+func printSlice(s []int) {
+	fmt.Printf("len=%d \tcap=%d \n", len(s), cap(s))
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+len=1 	cap=1 
+len=2 	cap=2 
+len=3 	cap=4 
+len=4 	cap=4 
+len=5 	cap=8 
+len=6 	cap=8 
+len=7 	cap=8 
+len=8 	cap=8 
+len=9 	cap=16 
+len=10 	cap=16 
+len=11 	cap=16 
+len=12 	cap=16 
+len=13 	cap=16 
+len=14 	cap=16 
+len=15 	cap=16 
+len=16 	cap=16 
+len=17 	cap=32 
+len=18 	cap=32 
+len=19 	cap=32 
+len=20 	cap=32 
+{{< /highlight >}}
+
+This is discussed in this https://stackoverflow.com/a/23532202/350613[StackOverflow answer].
+
+== Exercise: Slices
+
+👉 https://tour.golang.org/moretypes/18 [A Tour of Go : Exercise: Slices]
+
+This dropped me in at the fairly deep end, and I only just kept my head above water ;-) 
+
+I went back to previous examples, particularly https://tour.golang.org/moretypes/13[Creating a slice with make] and https://tour.golang.org/moretypes/14[Slices of slices], but I couldn't figure out how to combine the two concepts. This kind of thing didn't work
+
+{{< highlight go >}}
+p := make([]make([]uint8,dx),dy)
+{{< /highlight >}}
+
+I'd have liked to see a hints or work answer for the exercise, but with the power of Google it was easy enough to find a few :) These answers got me on the right tracks to first create the slice and then create within it iteratively the additional slice (which to be fair the exercise text does specify, with hindsight)
+
+{{< highlight go >}}
+package main
+
+import "golang.org/x/tour/pic"
+
+func Pic(dx, dy int) [][]uint8 {
+	p := make([][]uint8,dy)
+	
+	for i := range p {
+		p[i] = make([]uint8,dx)
+	}
+
+	return p
+}
+
+func main() {
+	pic.Show(Pic)
+}
+{{< /highlight >}}
+
+When you run this you get a nice blue square. Now to add some pattern to it. 
+
+Just to experiment with what was going on I tried something, anything … :) 
+
+{{< highlight go >}}
+	for y := range p {
+		for x := range p[y] {
+			p[y][x]=(uint8(x)+uint8(y))
+		}
+	}
+{{< /highlight >}}
+
+image::/images/2020/06/slice01.png[]
+
+Casting `uint8` was necessary (and is mentioned as a hint in the exercise text) because otherwise it fails  with `./prog.go:14:11: cannot use x + y (type int) as type uint8 in assignment`
+
+* I thought that this would work, to declare the variable types first, but it didn't and threw the same error.
++
+{{< highlight go >}}
+	var x,y uint8
+	for y := range p {
+		for x := range p[y] {
+			p[y][x]=(x+y)
+		}
+	}
+{{< /highlight >}}
+
+
+Other patterns: 
+
+{{< highlight go >}}
+	for y := range p {
+		for x := range p[y] {
+			p[y][x]=(uint8(x)*uint8(y))
+		}
+	}
+{{< /highlight >}}
+
+image::/images/2020/06/slice02.png[]
