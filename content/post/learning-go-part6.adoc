@@ -1,0 +1,178 @@
+---
+title: 'Learning Golang (some rough notes) - S01E06 - Errors'
+date: "2020-07-01T10:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Errors
+---
+
+👉 https://tour.golang.org/methods/20[A Tour of Go : Exercise: Errors]
+
+Like Interfaces, the Tour didn't really do it for me on Errors either. Too absract, and not enough explanation of the code examples for my liking. It also doesn't cover the https://golang.org/pkg/errors/[`errors`] package which other tutorial do. I'm not clear if that's because the errors package isn't used much, or the Tour focusses only on teaching the raw basics.
+
+<!--more-->
+
+I'm quickly learning to head to `gobyexample.com` each time for more reference on things that aren't making sense (along with https://www.calhoun.io/ too). The https://gobyexample.com/errors[errors] page on GoByExample is a good one, and I like how it links through to the Go Playground with each example. The Go Blog's https://blog.golang.org/error-handling-and-go[Error handling and Go] is also a good reference, and https://blog.golang.org/go1.13-errors[this blog] has some recent updates for Go 1.13. 
+
+Once I'd gone through the additional links the errors exercise was OK to figure out: 
+
+{{< highlight go >}}
+package main
+
+import (
+	"fmt"
+)
+
+type ErrNegativeSqrt float64
+
+func (e ErrNegativeSqrt) Error() string {
+	return fmt.Sprintf("cannot Sqrt negative number: %v", float64(e))
+}
+
+func Sqrt(x float64) (float64, error) {
+	fmt.Printf("\n--\nSqrt called with value: %v\n", x)
+	if x < 0 {
+		fmt.Printf("\t%v is less than zero. Returning with error.\n", x)
+		return 0, ErrNegativeSqrt(x)
+	}
+	guess := 1.0
+	limit := 10
+	for i := 0; i < limit; i++ {
+		adj := (guess*guess - x) / (2 * guess)
+		if result := guess * guess; result == x {
+			fmt.Printf("\t✅Guess %d is correct:\t%g\n", i, guess)
+			return guess, nil
+		} else if result > x {
+			fmt.Printf("\t🔺Guess %d is too high:\t%g\n", i, guess)
+			guess -= adj
+		} else {
+			fmt.Printf("\t🔻Guess %d is too low:\t%g\n", i, guess)
+			guess -= adj
+		}
+	}
+	return guess, nil
+
+}
+
+func main() {
+	for _, x := range []float64{-9, 9} {
+		if result, ok := Sqrt(x); ok == nil {
+			fmt.Printf("-> result: %v\n", result)
+		} else {
+			fmt.Printf("** ERROR %v",ok.Error())
+		}
+	}
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+--
+Sqrt called with value: -9
+	-9 is less than zero. Returning with error.
+** ERROR cannot Sqrt negative number: -9
+--
+Sqrt called with value: 9
+	🔻Guess 0 is too low:	1
+	🔺Guess 1 is too high:	5
+	🔺Guess 2 is too high:	3.4
+	🔺Guess 3 is too high:	3.023529411764706
+	🔺Guess 4 is too high:	3.00009155413138
+	🔺Guess 5 is too high:	3.000000001396984
+	✅Guess 6 is correct:	3
+-> result: 3
+{{< /highlight >}}
+
+Try it out: https://play.golang.org/p/mLa5RqwYckb
+
+This bit had me puzzled: 
+
+> Note: A call to fmt.Sprint(e) inside the Error method will send the program into an infinite loop. You can avoid this by converting e first: fmt.Sprint(float64(e)). Why?
+
+If I changed it to 
+
+{{< highlight go  "hl_lines=2">}}
+func (e ErrNegativeSqrt) Error() string {
+	return fmt.Sprintf("cannot Sqrt negative number: %v",e)
+}
+{{< /highlight >}}
+
+then running it in the Tour window failed (as expected) 
+
+{{< highlight go >}}
+
+--
+Sqrt called with value: -9
+	-9 is less than zero. Returning with error.
+
+Program exited: status 2.
+{{< /highlight >}}
+
+Running it in VSCode gave another error: 
+
+{{< highlight go >}}
+runtime: goroutine stack exceeds 1000000000-byte limit
+fatal error: stack overflow
+{{< /highlight >}}
+
+and sticking a print debug into the function shows that it's recursively called: 
+
+{{< highlight go  "hl_lines=2">}}
+func (e ErrNegativeSqrt) Error() string {
+	fmt.Println("ErrNegativeSqrt.Error")
+	return fmt.Sprintf("cannot Sqrt negative number: %v",e)
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+
+--
+Sqrt called with value: -9
+	-9 is less than zero. Returning with error.
+ErrNegativeSqrt.Error
+ErrNegativeSqrt.Error
+ErrNegativeSqrt.Error
+ErrNegativeSqrt.Error
+ErrNegativeSqrt.Error
+ErrNegativeSqrt.Error
+[…]
+{{< /highlight >}}
+
+But… I don't understand why. StackOverflow turns up https://stackoverflow.com/questions/27474907/why-would-a-call-to-fmt-sprinte-inside-the-error-method-result-in-an-infinit[this explanation]
+
+> `fmt.Sprint(e)`` will call `e.Error()` to convert the value e to a string. If the `Error()`` method calls `fmt.Sprint(e`),` then the program recurses until out of memory.
+>
+> You can break the recursion by converting the e to a value without a String or Error method.
+
+Thus `e` is converted to `float64`: 
+
+{{< highlight go  "hl_lines=2">}}
+func (e ErrNegativeSqrt) Error() string {
+	return fmt.Sprintf("cannot Sqrt negative number: %v", float64(e))
+}
+{{< /highlight >}}
+
+https://stackoverflow.com/questions/27474907/why-would-a-call-to-fmt-sprinte-inside-the-error-method-result-in-an-infinit#comment86089457_27475316[This comment] offers a neat alternative too:
+
+> Isn't it enough to convert e to a type which may have a String/Error method that doesn't recurse infinitely?
+
+And hence specifying a different https://golang.org/pkg/fmt/[verb] works: 
+
+{{< highlight go  "hl_lines=2">}}
+func (e ErrNegativeSqrt) Error() string {
+	return fmt.Sprintf("cannot Sqrt negative number: %f",e)
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+
+--
+Sqrt called with value: -9
+	-9 is less than zero. Returning with error.
+** ERROR cannot Sqrt negative number: -9.000000
+{{< /highlight >}}

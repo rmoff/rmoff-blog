@@ -1,0 +1,266 @@
+---
+title: 'Learning Golang (some rough notes) - S01E05 - Interfaces'
+date: "2020-06-30T16:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Interfaces
+---
+
+👉 https://tour.golang.org/methods/9[A Tour of Go : Interfaces]
+
+This page really threw me, for several reasons: 
+
+- The text notes that there's an error (_so why don't they fix it?_)
+- The provided code doesn't run (presumably because of the above error)
+- It's not clear if this is a deliberate error to illustrate a point, or just a snafu
+
+<!--more-->
+
+NOTE: link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[Learning Go : Background]
+
+In addition, there's no indication as to the purpose of the code, so it's really hard to follow what it's supposed to be illustrating. Is the `type` interface declaration at the top deliberately before `main` and all the subsequent `type` and `func` declarations? What's the significance of this? Is there a significance of this? 
+
+A general confusion I've had with many of the Tour tutorials is the use of maths functions to illustrate concepts. I mean, I probably *should* know what this …
+
+{{< highlight go >}}
+func (v *Vertex) Abs() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+{{< /highlight >}}
+
+…should return, but it's an added mental overhead to grokking what's going on. Sometimes stuff has to be done with numbers but a lot of the illustrations around methods & functions could easily have been done with strings IMHO. 
+
+'''
+
+To get some kind of understanding of interfaces I found https://www.calhoun.io/how-do-interfaces-work-in-go/ and https://gobyexample.com/interfaces very good, and the latter links to https://jordanorelli.com/post/32665860244/how-to-use-interfaces-in-go which is also very useful and goes into a ton more detail. 
+
+The Golang Tour tutorials have been really clear up until this point, so I'm hoping that this was just an aberration :) 
+
+'''
+
+== Exercise: Stringers
+
+👉https://tour.golang.org/methods/18[A Tour of Go: Exercise: Stringers]
+
+I quite enjoyed this one, even though I still had to Google for some help. I got that I needed a function to implement the `String()` method for `IPAddr` (which is there in the help text too but I didn't notice, which goes to show I should spend longer reading the questions)
+
+{{< highlight go >}}
+func (i IPAddr) String() string {
+
+}
+{{< /highlight >}}
+
+Within this I needed to take the four parts of the IP address and concatenate them with a `.` separator. Feeling rather proud of myself I came up with this which nicely handled each part of the IP address: 
+
+{{< highlight go "hl_lines=3-5">}}
+func (i IPAddr) String() string {
+	a := ""
+	for v := range i {
+		a = a + v
+	}
+	return a
+}
+{{< /highlight >}}
+
+but failed: 
+
+{{< highlight go >}}
+./prog.go:15:9: invalid operation: a + v (mismatched types string and int)
+{{< /highlight >}}
+
+So let's try casting the type: 
+
+{{< highlight go "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for v := range i {
+		a = a + string(v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+This executed successfully, but didn't work: 
+
+{{< highlight go >}}
+loopback: 
+{{< /highlight >}}
+
+So let's add some debug: 
+
+{{< highlight go "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for v := range i {
+		fmt.Printf("Value: %v %v\n", v, string(v))
+		a = a + string(v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+This gives:
+
+{{< highlight go >}}
+Value: 
+Value: 
+Value: 
+Value: 
+loopback: 
+{{< /highlight >}}
+
+So the value is showing as empty, which is odd, because we know it's there. Let's try more debug: 
+
+{{< highlight go "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for v := range i {
+		fmt.Printf("value: %v \tstring(value): %v\n", v,  string(v))
+		a = a + string(v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+value: 0 	string(value): 
+value: 1 	string(value): 
+value: 2 	string(value): 
+value: 3 	string(value): 
+{{< /highlight >}}
+
+OK, so the value we're getting isn't the IP address pieces… because we made a mistake in the `for` statement and we're getting the _index_, not the _value_. We're also getting a blank for the string, but we'll worry about that in a moment. Let's fix the `for` statement first. Using the underscore we can ignore the index and store the actual value in `v`:
+
+{{< highlight go  "hl_lines=3">}}
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		fmt.Printf("value: %v \tstring(value): %v\n", v,  string(v))
+		a = a + string(v)
+	}
+{{< /highlight >}}
+
+{{< highlight go >}}
+value: 127 	string(value): 
+value: 0 	string(value): 
+value: 0 	string(value): 
+value: 1 	string(value): 
+{{< /highlight >}}
+
+We're getting somewhere. 
+
+What about this pesky blank string though when we try to cast the integer to a string? Courtesy of https://www.calhoun.io/6-tips-for-using-strings-in-go/[6 Tips for Using Strings in Go] and specifically the _Convert ints (or any data type) into strings_ section I realised that `string()` wasn't the way to do it. What `string()` is doing is returning the ASCII character of the given value. Check out the output if I bump up the value in the `string` value in the `Printf`: 
+
+{{< highlight go  "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		fmt.Printf("value: %v \tstring(value+64): %v\n", v,  string(v+64))
+		a = a + string(v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+value: 127 	string(value+64): ¿
+value: 0 	string(value+64): @
+value: 0 	string(value+64): @
+value: 1 	string(value+64): A
+{{< /highlight >}}
+
+Maybe this was mentioned in the Tour and I missed it, but in doing the type conversion I'd referred back to https://tour.golang.org/basics/13[Type conversions] and it's not covered there. 
+So instead of `string()` we can use https://golang.org/pkg/strconv/[strconv] or https://golang.org/pkg/fmt/#Sprintf[`Sprintf`]: 
+
+{{< highlight go  "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		fmt.Printf("value: %v \tfmt.Sprintf(value): %v\n", v, fmt.Sprintf("%d",v))
+		a = a + string(v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+value: 127 	fmt.Sprintf(value): 127
+value: 0 	fmt.Sprintf(value): 0
+value: 0 	fmt.Sprintf(value): 0
+value: 1 	fmt.Sprintf(value): 1
+{{< /highlight >}}
+
+Now we're getting somewhere! Let's use this `Sprintf` in building the `a` variable too, and add in a `.` in the format string: 
+
+{{< highlight go  "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		a = a + fmt.Sprintf("%d.",v)
+	}
+	return a
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+loopback: 127.0.0.1.
+{{< /highlight >}}
+
+Look at that! We're nearly there. Just the trailing `.` to get rid of now, which a perusal of the https://golang.org/pkg/strings/[`strings`] package turns up a function https://golang.org/pkg/strings/#TrimRight[`TrimRight`] that should do the trick: 
+
+{{< highlight go  "hl_lines=4">}}
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		a = a + fmt.Sprintf("%d.",v)
+	}
+	return strings.TrimRight(a,".")
+}
+{{< /highlight >}}
+
+So the final code looks like this: 
+
+{{< highlight go >}}
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type IPAddr [4]byte
+
+func (i IPAddr) String() string {
+	a := ""
+	for _, v := range i {
+		a = a + fmt.Sprintf("%d.",v)
+	}
+	return strings.TrimRight(a,".")
+}
+
+
+func main() {
+	hosts := map[string]IPAddr{
+		"loopback":  {127, 0, 0, 1},
+		"googleDNS": {8, 8, 8, 8},
+	}
+	for name, ip := range hosts {
+		fmt.Printf("%v: %v\n", name, ip)
+	}
+}
+{{< /highlight >}}
+
+And the output: 
+
+{{< highlight go >}}
+loopback: 127.0.0.1
+googleDNS: 8.8.8.8
+{{< /highlight >}}
+
+😃
