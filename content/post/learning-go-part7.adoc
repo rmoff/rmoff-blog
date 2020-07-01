@@ -1,0 +1,150 @@
+---
+title: 'Learning Golang (some rough notes) - S01E07 - Readers'
+date: "2020-07-01T15:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Readers
+---
+
+👉 https://tour.golang.org/methods/21[A Tour of Go : Readers]
+
+I'm not intending to pick holes in the Tour…but it's not helping itself ;-) 
+
+For an introductory text, it makes a ton of assumptions about the user. Here it introduces Readers, and the explanation is good—but the example code looks like this: 
+
+{{< highlight go "linenos=table, hl_lines=7-8">}}
+func main() {
+	r := strings.NewReader("Hello, Reader!")
+
+	b := make([]byte, 8)
+	for {
+		n, err := r.Read(b)
+		fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
+		fmt.Printf("b[:n] = %q\n", b[:n])
+		if err == io.EOF {
+			break
+		}
+	}
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+n = 8 err = <nil> b = [72 101 108 108 111 44 32 82]
+b[:n] = "Hello, R"
+n = 6 err = <nil> b = [101 97 100 101 114 33 32 82]
+b[:n] = "eader!"
+n = 0 err = EOF b = [101 97 100 101 114 33 32 82]
+b[:n] = ""
+{{< /highlight >}}
+
+Perhaps this alphabet-soup of symbols and characters is idiomatic, but for a learner text this would be a bit nicer: 
+
+{{< highlight go "linenos=table, hl_lines=7-8">}}
+func main() {
+	r := strings.NewReader("Hello, Reader!")
+
+	b := make([]byte, 8)
+	for {
+		n, err := r.Read(b)
+		fmt.Printf("--\nBytes populated = %v\tError = %v\tRaw bytes = %v\n", n, err, b)
+		fmt.Printf("Bytes string representation = %q\n", b[:n])
+		if err == io.EOF {
+			break
+		}
+	}
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+--
+Bytes populated = 8	Error = <nil>	Raw bytes = [72 101 108 108 111 44 32 82]
+Bytes string representation = "Hello, R"
+--
+Bytes populated = 6	Error = <nil>	Raw bytes = [101 97 100 101 114 33 32 82]
+Bytes string representation = "eader!"
+--
+Bytes populated = 0	Error = EOF	Raw bytes = [101 97 100 101 114 33 32 82]
+Bytes string representation = ""
+{{< /highlight >}}
+
+This has two benefits: 
+
+a. illustrates the values being populated each time and their role
+b. explains why `Printf` of `b` returns the raw bytes the first time (it uses the `%v` https://golang.org/pkg/fmt/[formatting verb] to show `the value in a default format`), and recognisable characters the second time (it uses `%q` to show `a double-quoted string safely escaped with Go syntax`)
+
+== Exercise: Readers
+
+👉 https://tour.golang.org/methods/22[A Tour of Go : Exercise: Readers]
+
+> Implement a Reader type that emits an infinite stream of the ASCII character 'A'.
+
+A bit of a head-scratcher this one, because the exercise didn't follow previous code examples that were the basis on which to write it. Took a bit of tinkering but here it is: 
+
+{{< highlight go >}}
+func (r MyReader) Read (b []byte) (n int, err error) {
+	b[0]='A'
+	return 1,nil
+}
+{{< /highlight >}}
+
+* Set the first offset of the byte slice that's passed to us to the required `A` value
+* Return the length populated (1) and `nil` which denotes that we're not at EOF and thus it acts as an infinite stream
+
+The exercise includes external code to validate, but we can also print the output - so long as we realise that it will never end! Here's a version where we deliberately return the wrong answer (repeating `AB` instead of just `A`): 
+
+{{< highlight go >}}
+package main
+
+import (
+	"fmt"
+	"io"
+
+	"golang.org/x/tour/reader"
+)
+
+type MyReader struct{}
+
+func (r MyReader) Read(b []byte) (n int, err error) {
+	b[0] = 'A'
+	b[1] = 'B'
+	return 2, nil
+}
+
+func main() {
+	r := MyReader{}
+
+	b := make([]byte, 2)
+	for {
+		n, err := r.Read(b)
+		fmt.Printf("--\nBytes populated = %v\tError = %v\tRaw bytes = %v\n", n, err, b)
+		fmt.Printf("Bytes string representation = %q\n", b[:n])
+		if err == io.EOF {
+			break
+		}
+	}
+	reader.Validate(MyReader{})
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+--
+Bytes populated = 2	Error = <nil>	Raw bytes = [65 66]
+Bytes string representation = "AB"
+--
+Bytes populated = 2	Error = <nil>	Raw bytes = [65 66]
+Bytes string representation = "AB"
+--
+Bytes populated = 2	Error = <nil>	Raw bytes = [65 66]
+Bytes string representation = "AB"
+--
+Bytes populated = 2	Error = <nil>	Raw bytes = [65 66]
+Bytes string representation = "AB"
+--
+[…………]
+{{< /highlight >}}
