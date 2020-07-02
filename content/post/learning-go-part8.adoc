@@ -1,0 +1,217 @@
+---
+title: 'Learning Golang (some rough notes) - S01E08 - Images'
+date: "2020-07-02T14:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Images
+---
+
+👉 https://tour.golang.org/methods/25[A Tour of Go : Exercise: Images]
+
+This is based on the Picture generator from the link:/2020/06/25/learning-golang-some-rough-notes-s01e02-slices/[Slices exercise].
+
+<!--more-->
+
+
+{{< highlight go >}}
+func Pic(dx, dy int) [][]uint8 {
+	p := make([][]uint8,dy)
+	
+	for i := range p {
+		p[i] = make([]uint8,dx)
+	}
+
+	 for y := range p {
+        for x := range p[y] {
+            p[y][x]=(uint8(x)*uint8(y))
+        }
+    }
+
+	return p
+}
+{{< /highlight >}}
+
+image::/images/2020/06/slice02.png[]
+
+> this time it will return an implementation of `image.Image` instead of a slice of data.
+
+So we need to implement the https://golang.org/pkg/image/#Image[interfaces defined]: 
+
+* `ColorModel`
+* `Bounds`
+* `At`
+
+Let's start off with one of these to see if we're on the right lines… 
+
+{{< highlight go  "hl_lines=4 10-12">}}
+package main
+
+import (
+	"image/color"
+	"golang.org/x/tour/pic"
+)
+
+type Image struct{}
+
+func (i Image) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func main() {
+	m := Image{}
+	pic.ShowImage(m)
+}
+{{< /highlight >}}
+
+This compiles (🙌) and fails (as we'd expect) with something that may or may not be validating that we've not screwed things up _yet_:
+
+{{< highlight go >}}
+./prog.go:17:15: cannot use m (type Image) as type image.Image in argument to pic.ShowImage:
+	Image does not implement image.Image (missing At method)
+{{< /highlight >}}
+
+Let's add in the other fixed value, `Bounds`: 
+
+{{< highlight go  "hl_lines=4 15-17">}}
+package main
+
+import (
+	"image"
+	"image/color"
+	"golang.org/x/tour/pic"
+)
+
+type Image struct{}
+
+func (i Image) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (i Image) Bounds() image.Rectangle {
+	return image.Rect(0, 0, 256, 256)
+}
+
+func main() {
+	m := Image{}
+	pic.ShowImage(m)
+}
+{{< /highlight >}}
+
+Now the final part - `At`. Building it up bit by bit, we know what the function definition should look like, based on the above pattern and the https://golang.org/pkg/image/#Image[interface definition]: 
+
+{{< highlight go >}}
+func (i Image) At(x,y int) color.Color {
+{{< /highlight >}}
+
+The value returned by this function is the colour (yes, I said colo_u_r! 🇬🇧) at the given coordinates. In the picture we created earlier this was using the expression x*y to describe the strength of the bluescale to plot. The `Color` type for the `RGBAModel` we're using is +++ https://golang.org/pkg/image/color/#RGBA[`RGBA`], which returns RGB plus alpha, so let's try this here: 
+
+{{< highlight go  "hl_lines=19-23">}}
+package main
+
+import (
+	"image"
+	"image/color"
+	"golang.org/x/tour/pic"
+)
+
+type Image struct{}
+
+func (i Image) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (i Image) Bounds() image.Rectangle {
+	return image.Rect(0, 0, 256, 256)
+}
+
+func (i Image) At(x,y int) color.Color {
+    var r,g,b,a uint8 = 25 ,0,0,0
+    b=uint8(x)*uint8(y)
+	return color.RGBA{r,g,b,a}
+}
+
+func main() {
+	m := Image{}
+	pic.ShowImage(m)
+}
+{{< /highlight >}}
+
+This not only compiles (🙌) but successfully runs (😅)…but doesn't display anything 😢 … or does it? 🤔
+
+In the Go execution window the `Program exited` is lower down the page: 
+
+image::/images/2020/07/image01.png[]
+
+and if you right-click over the blank space you can see there's an image there, and inspecting this with developer tools shows it's a 256x256 *transparent* image. That alpha thingy… setting it to zero means the image is transparent!
+
+Let's try again and set the alpha level this time: 
+
+{{< highlight go  "hl_lines=22">}}
+package main
+
+import (
+	"image"
+	"image/color"
+	"golang.org/x/tour/pic"
+)
+
+type Image struct{}
+
+func (i Image) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (i Image) Bounds() image.Rectangle {
+	return image.Rect(0, 0, 256, 256)
+}
+
+func (i Image) At(x,y int) color.Color {
+    var r,g,b,a uint8 = 0 ,0,0,0
+    b=uint8(x)*uint8(y)
+	a=b
+	return color.RGBA{r,g,b,a}
+}
+
+func main() {
+	m := Image{}
+	pic.ShowImage(m)
+}
+{{< /highlight >}}
+
+🎉 TADA! 🎉
+
+image::/images/2020/07/image02.png[]
+
+You can muck about with the other colour values too: 
+
+{{< highlight go "hl_lines=3-4" >}}
+func (i Image) At(x,y int) color.Color {
+    var r,g,b,a uint8 = 0 ,0,0,0
+	b=uint8(float64(y)*0.2) * uint8(x)
+	r=uint8(float64(y)*0.5)
+	a=b
+	
+	return color.RGBA{r,g,b,a}
+}
+{{< /highlight >}}
+
+image::/images/2020/07/image03.png[]
+
+{{< highlight go"hl_lines=3-4" >}}
+func (i Image) At(x,y int) color.Color {
+    var r,g,b,a uint8 = 0 ,0,0,0
+	b=uint8(float64(y)*4.25) * uint8(x*2) 
+	r=uint8(float64(y)*16)
+	a=b
+	
+	return color.RGBA{r,g,b,a}
+}
+{{< /highlight >}}
+
+image::/images/2020/07/image04.png[]
