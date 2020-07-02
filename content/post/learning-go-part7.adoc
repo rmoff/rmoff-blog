@@ -78,6 +78,54 @@ This has two benefits:
 a. illustrates the values being populated each time and their role
 b. explains why `Printf` of `b` returns the raw bytes the first time (it uses the `%v` https://golang.org/pkg/fmt/[formatting verb] to show `the value in a default format`), and recognisable characters the second time (it uses `%q` to show `a double-quoted string safely escaped with Go syntax`)
 
+Side note: `b := make([]byte, 8)` creates a slice of eight bytes, but this could be a larger or smaller amount; the source Reader will keep filling it until we've processed it all, e.g.
+
+* Bigger
++
+{{< highlight go >}}
+b := make([]byte, 32)
+{{< /highlight >}}
++
+{{< highlight go >}}
+--
+Bytes populated = 21	Error = <nil>	Raw bytes = [76 98 104 32 112 101 110 112 120 114 113 32 103 117 114 32 112 98 113 114 33 0 0 0 0 0 0 0 0 0 0 0]
+Bytes string representation = "Lbh penpxrq gur pbqr!"
+--
+Bytes populated = 0	Error = EOF	Raw bytes = [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+Bytes string representation = ""
+{{< /highlight >}}
+* Smaller
++
+{{< highlight go >}}
+b := make([]byte, 4)
+{{< /highlight >}}
++
+{{< highlight go >}}
+API server listening at: 127.0.0.1:21293
+--
+Bytes populated = 4	Error = <nil>	Raw bytes = [76 98 104 32]
+Bytes string representation = "Lbh "
+--
+Bytes populated = 4	Error = <nil>	Raw bytes = [112 101 110 112]
+Bytes string representation = "penp"
+--
+Bytes populated = 4	Error = <nil>	Raw bytes = [120 114 113 32]
+Bytes string representation = "xrq "
+--
+Bytes populated = 4	Error = <nil>	Raw bytes = [103 117 114 32]
+Bytes string representation = "gur "
+--
+Bytes populated = 4	Error = <nil>	Raw bytes = [112 98 113 114]
+Bytes string representation = "pbqr"
+--
+Bytes populated = 1	Error = <nil>	Raw bytes = [33 0 0 0]
+Bytes string representation = "!"
+--
+Bytes populated = 0	Error = EOF	Raw bytes = [0 0 0 0]
+Bytes string representation = ""
+{{< /highlight >}}
+
+
 == Exercise: Readers
 
 👉 https://tour.golang.org/methods/22[A Tour of Go : Exercise: Readers]
@@ -147,4 +195,289 @@ Bytes populated = 2	Error = <nil>	Raw bytes = [65 66]
 Bytes string representation = "AB"
 --
 […………]
+{{< /highlight >}}
+
+== Exercise: rot13Reader
+
+👉 https://tour.golang.org/methods/23[A Tour of Go : Exercise: rot13Reader]
+
+https://en.wikipedia.org/wiki/ROT13[ROT13] is a blast back to the past of my early days on the internet 8-) You take each character and offset it by 13. Since there are 26 letters in the alphabet if you ROT13 and ROT13'd phrase you end up with the original. 
+
+This part of the exercise is fine: 
+
+> modifying the stream by applying the rot13 substitution cipher to all alphabetical characters.
+
+The pseudo-code I want to do is: 
+
+* For each character in the input
+** Add 13 to the ASCII value 
+** If its > 26 then subtract 26
+
+But this bit had me a bit stuck
+
+> Implement a rot13Reader that implements io.Reader and reads from an io.Reader
+
+In the previous exercise I implemented a `Read` method for the `MyReader` type
+
+{{< highlight go >}}
+func (r MyReader) Read(b []byte) (n int, err error) {
+{{< /highlight >}}
+
+So let's try that same pattern again (TBH I'm flailing a bit here with my functions, methods, and implementations): 
+
+{{< highlight go >}}
+func (r rot13Reader) Read(b byte[]) (n int, err error) {
+{{< /highlight >}}
+
+{{< highlight go >}}
+# rot13
+./rot13.go:13:6: missing function body
+./rot13.go:13:33: syntax error: unexpected [, expecting comma or )
+{{< /highlight >}}
+
+Hmmm odd. Simple typo at fault (which is why copy & paste wins out over trying to memorise this stuff 😉) - `s/byte[]/[]byte`
+
+{{< highlight go >}}
+func (r rot13Reader) Read(b []byte) (n int, err error) {
+{{< /highlight >}}
+
+So here's the first working cut - it doesn't actually do anything about the ROT13 yet but it builds on the more verbose `Printf` that I show above to show a Reader reading a Reader: 
+
+{{< highlight go "linenos=table, hl_lines=16 18-19 21">}} >}}
+package main
+
+import (
+	"io"
+	"os"
+	"strings"
+)
+
+type rot13Reader struct {
+	r io.Reader
+}
+
+func (r rot13Reader) Read(b []byte) (n int, err error) {
+	for {
+		n, err := r.r.Read(b)
+		
+		if err == io.EOF {
+			return n,io.EOF
+		} else {
+			return n,nil
+		}
+	}
+	
+}
+
+func main() {
+	s := strings.NewReader("Lbh penpxrq gur pbqr!")
+	r := rot13Reader{s}
+	io.Copy(os.Stdout, &r)
+}
+{{< /highlight >}}
+
+
+* Line 16: invoke the `Read` function of the `io.Reader`, reading directly into the variable `b` that was passed to us. 
+** Note that `rot13Reader` is a `struct`, and so we invoke `r.r.Read`. If we invoke `r.Read` then we are just calling outself (r here being the `rot13Reader`, for which this function *is* the Reader!)
+* Line 18-19: If the source Reader has told us we reached the end then return the same - number of bytes populated, and an EOF error
+* Line 21: If there's more data to read then just return the number of bytes populated and `nil` error so that the caller will continue to Read from us until all the data's been processed
+
+The output of this is to `stdout` using https://golang.org/pkg/io/#Copy[io.Copy] which takes a Reader as its source, hence the output at this stage is the unmodified string: 
+
+    Lbh penpxrq gur pbqr!
+
+'''
+
+Now let's do the ROT13 bit. We want to take each byte we read and transform it: 
+
+* If it's an ASCII A-Za-z character add 13 to it. If it's >26 then subtract 26 to wrap around the value. 
+* https://en.wikipedia.org/wiki/ASCII#Printable_characters[ASCII values] are 65-90 (A-Z) and 97-122 (a-z).
+
+Here's the first cut of the code. It loops over each of the values in the returned slice from the Reader and applies the above logic to them. 
+
+{{< highlight go "linenos=table, hl_lines=4-24">}}
+func (r rot13Reader) Read(b []byte) (n int, err error) {
+	for {
+		n, err := r.r.Read(b)
+		for i := range b {
+			a := b[i]
+			if a != 0 {
+				fmt.Printf("\nSource byte %v\tascii: %q", a, a)
+				// * https://en.wikipedia.org/wiki/ASCII#Printable_characters[ASCII values] are 65-90 (A-Z) and 97-122 (a-z).
+				if (a >= 65) && (a <= 90) {
+					a = a + 13
+					if a > 90 {
+						a = a - 26
+					}
+					fmt.Printf("\tTRANSFORMED Upper case : Source byte %v\tascii: %q", a, a)
+				} else if (a >= 97) && (a <= 122) {
+					a = a + 13
+					if a > 122 {
+						a = a - 26
+					}
+					fmt.Printf("\tTRANSFORMED Lower case : Source byte %v\tascii: %q", a, a)
+				}
+			}
+			b[i] = a
+		}
+
+		if err == io.EOF {
+			return n, io.EOF
+		}
+		return n, nil
+	}
+
+}
+{{< /highlight >}}
+
+Applying this to a test string: 
+
+{{< highlight go >}}
+s := strings.NewReader("Why did the chicken cross the road? Gb trg gb gur bgure fvqr! / Jul qvq gur puvpxra pebff gur ebnq? To get to the other side!")
+{{< /highlight >}}
+
+works correctly: 
+
+{{< highlight go >}}
+Source byte 87	ascii: 'W'	TRANSFORMED Upper case : Source byte 74		ascii: 'J'
+Source byte 104	ascii: 'h'	TRANSFORMED Lower case : Source byte 117	ascii: 'u'
+Source byte 121	ascii: 'y'	TRANSFORMED Lower case : Source byte 108	ascii: 'l'
+Source byte 32	ascii: ' '
+Source byte 100	ascii: 'd'	TRANSFORMED Lower case : Source byte 113	ascii: 'q'
+Source byte 105	ascii: 'i'	TRANSFORMED Lower case : Source byte 118	ascii: 'v'
+Source byte 100	ascii: 'd'	TRANSFORMED Lower case : Source byte 113	ascii: 'q'
+Source byte 32	ascii: ' '
+Source byte 116	ascii: 't'	TRANSFORMED Lower case : Source byte 103	ascii: 'g'
+Source byte 104	ascii: 'h'	TRANSFORMED Lower case : Source byte 117	ascii: 'u'
+Source byte 101	ascii: 'e'	TRANSFORMED Lower case : Source byte 114	ascii: 'r'
+…
+{{< /highlight >}}
+
+And so the source
+
+{{< highlight go >}}
+Why did the chicken cross the road? Gb trg gb gur bgure fvqr! / Jul qvq gur puvpxra pebff gur ebnq? To get to the other side!
+{{< /highlight >}}
+
+is correctly translated into:
+
+{{< highlight go >}}
+Jul qvq gur puvpxra pebff gur ebnq? To get to the other side! / Why did the chicken cross the road? Gb trg gb gur bgure fvqr!
+{{< /highlight >}}
+
+'''
+
+Now let's see if we can tidy this up a little bit. 
+
+* Instead of iterating over the entire slice (`range b`): 
++
+{{< highlight go >}}
+n, err := r.r.Read(b)
+for i := range b {
+	a := b[i]
+	if a != 0 {
+{{< /highlight >}}
++
+We actually know how many bytes to process because this is returned by the Reader. This means we can also remove the check on a zero byte (which was spamming my debug output hence the check for it)
++
+{{< highlight go >}}
+n, err := r.r.Read(b)
+for i := 0; i <= n; i++ {
+	a := b[i]
+{{< /highlight >}}
+
+* Let's encapsulate the transformation out into its own function
++
+{{< highlight go  "hl_lines=5 16-31">}}
+func (r rot13Reader) Read(b []byte) (n int, err error) {
+	for {
+		n, err := r.r.Read(b)
+		for i := 0; i <= n; i++ {
+			b[i] = rot13(b[i])
+		}
+
+		if err == io.EOF {
+			return n, io.EOF
+		}
+		return n, nil
+	}
+
+}
+
+func rot13(a byte) byte {
+	// https://en.wikipedia.org/wiki/ASCII#Printable_characters
+	// ASCII values are 65-90 (A-Z) and 97-122 (a-z)
+	if (a >= 65) && (a <= 90) {
+		a = a + 13
+		if a > 90 {
+			a = a - 26
+		}
+	} else if (a >= 97) && (a <= 122) {
+		a = a + 13
+		if a > 122 {
+			a = a - 26
+		}
+	}
+	return a
+}
+{{< /highlight >}}
+
+So the final version (and I'd be interested to know if it can be optimised further) looks like this:
+
+{{< highlight go >}}
+package main
+
+import (
+	"io"
+	"os"
+	"strings"
+)
+
+type rot13Reader struct {
+	r io.Reader
+}
+
+func (r rot13Reader) Read(b []byte) (n int, err error) {
+	for {
+		n, err := r.r.Read(b)
+		for i := 0; i <= n; i++ {
+			b[i] = rot13(b[i])
+		}
+
+		if err == io.EOF {
+			return n, io.EOF
+		}
+		return n, nil
+	}
+
+}
+
+func rot13(a byte) byte {
+	// https://en.wikipedia.org/wiki/ASCII#Printable_characters
+	// ASCII values are 65-90 (A-Z) and 97-122 (a-z)
+	if (a >= 65) && (a <= 90) {
+		a = a + 13
+		if a > 90 {
+			a = a - 26
+		}
+	} else if (a >= 97) && (a <= 122) {
+		a = a + 13
+		if a > 122 {
+			a = a - 26
+		}
+	}
+	return a
+}
+
+func main() {
+	s := strings.NewReader("Lbh penpxrq gur pbqr!")
+	r := rot13Reader{s}
+	io.Copy(os.Stdout, &r)
+}
+{{< /highlight >}}
+
+and … 
+
+{{< highlight go >}}
+You cracked the code!
 {{< /highlight >}}
