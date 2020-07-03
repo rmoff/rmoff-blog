@@ -76,3 +76,329 @@ c := make(chan int, 5)
 
 
 image::/images/2020/07/select01.png[]
+
+== Default Selection / `time`
+
+👉 https://tour.golang.org/concurrency/6[A Tour of Go : Default Selection]
+
+For me, this made the mistake of illustrating a new concept (`default`) with code that relied on other as-yet unexplained concepts. The problem with this is that you hit `Run` and see what it does and it seems to make sense, but in grokking the lines of code it's not entirely clear. 
+
+We've been shown the `select` being used to choose which of the `case` statements can be run with the example of channels providing input - but in this code there's no apparent channel declared:
+
+{{< highlight go >}}
+func main() {
+	tick := time.Tick(100 * time.Millisecond)
+	boom := time.After(500 * time.Millisecond)
+	for {
+		select {
+		case <-tick:
+			fmt.Println("tick.")
+		case <-boom:
+			fmt.Println("BOOM!")
+			return
+		default:
+			fmt.Println("    .")
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+{{< /highlight >}}
+
+Maybe this is the Tour's way to prod people into RTFM ;) Prompted by my puzzlement I went and looked up the https://golang.org/pkg/time[`time`] package and https://golang.org/pkg/time/#Tick[`Tick`] function, which turns out to actually https://golang.org/pkg/time/#Ticker[ offer a channel] - so this now makes sense. 
+
+Every 100 ms a `Tick` is sent to the channel, in between the `default` condition kicks in and sleeps for 50ms, and after 500ms the final condition is met and returns. 
+
+== Exercise: Equivalent Binary Trees
+
+👉 https://tour.golang.org/concurrency/7[A Tour of Go : Exercise: Equivalent Binary Trees]
+
+There are times when I feel the link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[absence of a formal CompSci background]…and this is one of them :) 
+
+I found a https://www.youtube.com/watch?time_continue=3205&v=9HWBOHQRZIU[useful video] which explains Binary Trees in a good way (also https://www.youtube.com/watch?v=mFptHjTT3l8[this one], both linked to https://study.cs50.net/trees[from here]), which then set me up a bit more confidently to approach this exercise. 
+
+To start with I took the skeleton that the exercise provides and brought it into VSCode - it does useful things like code completion: 
+
+image::/images/2020/07/vscode01.png[]
+
+First up I commented out the `Same` function, set up a simple `for` loop in `main` and a debug print in the `Walk` function, just to see what was going on 
+
+{{< highlight go "hl_lines=11 19-26">}}
+package main
+
+import (
+	"fmt"
+	"golang.org/x/tour/tree"
+)
+
+// Walk walks the tree t sending all values
+// from the tree to the channel ch.
+func Walk(t *tree.Tree, ch chan int) {
+	fmt.Printf("Walk: %v\n", t.Value)
+}
+
+// // Same determines whether the trees
+// // t1 and t2 contain the same values.
+// func Same(t1, t2 *tree.Tree) bool
+
+func main() {
+	c := make(chan int)
+	go Walk(tree.New(1), c)
+	for i := 0; i < 10; i++ {
+		select {
+		case <-c:
+			fmt.Println(c)
+		}
+	}
+}
+{{< /highlight >}}
+
+You get to see the first value of the tree node printed by the function, and then a deadlock from the `select` because nothing's being written to the channel.
+
+{{< highlight go >}}
+Walk: 10
+fatal error: all goroutines are asleep - deadlock!
+{{< /highlight >}}
+
+If we add a `default` to the `select` 
+
+{{< highlight go >}}
+func main() {
+	c := make(chan int)
+	go Walk(tree.New(1), c)
+	for i := 0; i < 10; i++ {
+		select {
+		case <-c:
+			fmt.Println(c)
+		default:
+			fmt.Printf("default: %v\n", i)
+		}
+	}
+}
+{{< /highlight >}}
+
+then we get this
+
+{{< highlight go >}}
+default: 0
+default: 1
+default: 2
+default: 3
+default: 4
+default: 5
+default: 6
+default: 7
+default: 8
+default: 9
+Walk: 10
+{{< /highlight >}}
+
+What about passing the value back on the channel? You may notice the, _ahem_, 'deliberate' mistake that I made in the above code, where I did this
+
+{{< highlight go >}}
+case <-c:
+	fmt.Printf("Tree value: %v\n", c)
+{{< /highlight >}}
+
+If I put the value of the tree node on the channel in `Walk` it should get printed, right? Well… 
+
+{{< highlight go >}}
+function Walk: 10
+Tree value: 0xc0000200c0
+{{< /highlight >}}
+
+Huh? What's that `0xc0000200c0`? It's the *channel* itself, not the value that's been passed into it. Instead we need: 
+
+{{< highlight go >}}
+case x := <-c:
+	fmt.Printf("Tree value: %v\n", x)
+{{< /highlight >}}
+
+{{< highlight go >}}
+function Walk: 10
+Tree value: 10
+{{< /highlight >}}
+
+Now let's do some actual walking! As the exercise tells us, the tree is a struct: 
+
+{{< highlight go >}}
+type Tree struct {
+    Left  *Tree
+    Value int
+    Right *Tree
+}
+{{< /highlight >}}
+
+so as well as writing the `Value` to the channel, we will call the `Walk` function recursively on the child nodes of the current node—if there are any: 
+
+{{< highlight go "hl_lines=3-8">}}
+func Walk(t *tree.Tree, ch chan int) {
+	ch <- t.Value
+	if t.Left != nil {
+		go Walk(t.Left, ch)
+	}
+	if t.Right != nil {
+		go Walk(t.Right, ch)
+	}
+}
+{{< /highlight >}}
+
+This successfully walks the tree: 
+
+{{< highlight go >}}
+Tree value: 10
+Tree value: 5
+Tree value: 7
+Tree value: 9
+Tree value: 3
+Tree value: 6
+Tree value: 4
+Tree value: 1
+Tree value: 2
+Tree value: 8
+{{< /highlight >}}
+
+What I'm not clear about from the text is if this list should be strictly in order. Having solutions linked to from the Tour exercises definitely would be useful. 
+
+'''
+
+Let's carry on for now and look at the `Same` function. I got stuck on this one. Here's as far as I got to start with: 
+
+{{< highlight go >}}
+func Same(t1, t2 *tree.Tree) bool {
+	// Create a channel into which each tree's values will be written
+	c1 := make(chan int)
+	c2 := make(chan int)
+	// Declare two variables that will be used to collate the
+	// channel values
+	var x1 []int
+	var x2 []int
+	// Walk the two trees
+	go Walk(t1, c1)
+	go Walk(t2, c2)
+	// Receive the values
+	for i := 0; i < 10; i++ {
+		x := <-c1
+		x1 = append(x1, x)
+	}
+	for i := 0; i < 10; i++ {
+		x := <-c2
+		x2 = append(x2, x)
+	}
+
+	fmt.Printf("\nx1 is %v\n", x1)
+	fmt.Printf("\nx2 is %v\n", x2)
+
+	// Not even doing the comparison yet
+	return false
+{{< /highlight >}}
+
+This output:
+
+{{< highlight go >}}
+x1 is [7 4 2 1 3 5 6 9 8 10]
+
+x2 is [8 7 5 3 2 1 4 6 10 9]
+{{< /highlight >}}
+
+From this I need to return `true` if the two trees store the same values - which they do, but am I supposed to be sorting these results here? Flailing around somewhat, so off to Google to see what others have done. 
+
+_Some time later…_
+
+So, looking at the problem again, let's remind ourselves (me) what the tree can look like: 
+
+._Binary Sorted Tree illustration from https://tour.golang.org/concurrency/7_
+image::https://tour.golang.org/content/img/tree.png[]
+
+Since it is _sorted_, we know that the left child will always be the lower value than the right. So if we want to return the values in order, we can't take the simple approach that I tried above of simply dumping the values as we encountered them on the traversal of the tree from the *top-down*. Instead we need to traverse to the bottom down the left-hand side and then make our way back up. 
+
+I found these https://medium.com/@cooldeep25/solution-to-a-tour-of-go-exercise-equivalent-binary-trees-d1fff8d3cb6f[two] https://gist.github.com/kaipakartik/8120855[pages] a useful resource for explaining this clearly and providing code to +++<del>+++steal+++</del>+++ _inspire me._
+
+Both the solutions I found implemented a second function for walking, which now makes sense. It also makes clear how to use `close` which I'd been trying to fit in but couldn't figure out how to do so :) Here's the elegant solution from https://gist.github.com/kaipakartik[kaipakartik] with my commented annotations
+
+{{< highlight go "hl_lines=2 4-5 10 12 14-17 19">}}
+func Walk(t *tree.Tree, ch chan int) {
+	// Synchronously call the recursive function for the current node
+    WalkRecursive(t, ch)
+	// Once we've processed every node, close the channel to indicate 
+	// that we've finished (and thus allow range to be used)
+    close(ch)
+}
+
+func WalkRecursive(t *tree.Tree, ch chan int) {
+	// If this node isn't null
+    if t != nil {
+		// Keep traversing, down the left-hand side of the tree
+        WalkRecursive(t.Left, ch)
+		// Bearing in mind that this is a recursive function
+		// we will eventually hit the bottom of the left-hand side
+		// of the tree, and thus the above call to WalkRecursive will 
+		// return and we can put our node's value onto the channel
+        ch <- t.Value
+		// Navigate any right-hand nodes too
+        WalkRecursive(t.Right, ch)
+    }
+}
+{{< /highlight >}}
+
+with this in place the `Walk` function populates the channel in sequential order which thus results in: 
+
+{{< highlight go >}}
+func main() {
+	c := make(chan int)
+	go Walk(tree.New(1), c)
+	fmt.Printf("Tree value: ")
+	for i := 0; i < 10; i++ {
+		x := <-c
+		fmt.Printf("%v ", x)
+	}
+{{< /highlight >}}
+
+{{< highlight go >}}
+Tree value: 1 2 3 4 5 6 7 8 9 10 
+{{< /highlight >}}
+
+My existing `Same` code was based on the idea of filling two slices with the results and then comparing the final result, but a much smarter way again comes from these https://medium.com/@cooldeep25/solution-to-a-tour-of-go-exercise-equivalent-binary-trees-d1fff8d3cb6f[two] https://gist.github.com/kaipakartik/8120855[pages], in which the results are compared one by one, since as soon as they diverge we can declare them to not be the same. As above, here's https://gist.github.com/kaipakartik[kaipakartik]'s neat solution with my annotations: 
+
+{{< highlight go "hl_lines=2 4-5 10-11 14-15 17 20-21" >}}
+func Same(t1, t2 *tree.Tree) bool {
+	// Each tree is read into separate channels
+    ch1, ch2 := make(chan int), make(chan int)
+	// Asynchronously walk both trees into their
+	// respective channels
+    go Walk(t1, ch1)
+    go Walk(t2, ch2)
+	// Loop
+    for {
+		// Read the next value from each channel
+		// Note that these will block (what happens if the trees are different sizes and ch2 is empty?)
+        n1, ok1 := <- ch1
+        n2, ok2 := <- ch2
+		// If the values don't match, or one channel is closed whilst the 
+		// other is not then we know they are not the same
+        if ok1 != ok2 || n1 != n2 {
+			// Exit and return false
+        	return false
+        }
+		// If the first channel has closed then break out of the loop
+		// I guess you could just `return true` here directly? 
+        if !ok1 {
+        	break;
+        }
+    }
+    return true
+}
+{{< /highlight >}}
+    
+This works: 
+
+{{< highlight go >}}
+func main() {
+	fmt.Printf("\n-> Comparing trees with the same contents : %v", Same(tree.New(1), tree.New(1)))
+	fmt.Printf("\n-> Comparing trees with different contents: %v", Same(tree.New(1), tree.New(2)))
+}
+{{< /highlight >}}
+
+{{< highlight go >}}
+-> Comparing trees with the same contents : true
+-> Comparing trees with different contents: false
+{{< /highlight >}}
