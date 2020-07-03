@@ -1,0 +1,208 @@
+---
+title: 'Learning Golang (some rough notes) - S01E10 - Concurrency (Web Crawler)'
+date: "2020-07-03T16:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Wait Group
+- Mutex
+---
+
+👉 https://tour.golang.org/concurrency/9[A Tour of Go : sync.Mutex]
+
+In the link:/2020/07/02/learning-golang-some-rough-notes-s01e09-concurrency-channels-goroutines/[previous exercise] I felt my link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[absence of a formal CompSci background] with the introduction of Binary Sorted Trees, and now I am concious of it again with learning about mutex. I'd _heard_ of them before, mostly when Oracle performance folk were talking about wait types - TIL it stands for `mutual exclusion`! 
+
+<!--more-->
+
+
+> What if we … want to make sure only one goroutine can access a variable at a time to avoid conflicts?
+>
+> This concept is called mutual exclusion, and the conventional name for the data structure that provides it is *mutex*.
+
+== Exercise: Web Crawler
+
+👉 https://tour.golang.org/concurrency/10[A Tour of Go : Exercise: Web Crawler]
+
+This was quite a fun one once I wrapped my head around it. It gave a health dose of copy & paste advice in the form of the https://tour.golang.org/concurrency/9[previous example] which I used to implement the first requirement.
+
+=== Don't fetch the same URL twice
+
+I created a `URLs` struct to hold a map of URLs and a boolean of whether they have been crawled or not, and included a mutex so that it can be read and updated safely in concurrent execution
+
+{{< highlight go >}}
+type URLs struct {
+	c   map[string]bool
+	mux sync.Mutex
+}
+
+var u URLs = URLs{c: make(map[string]bool)}
+{{< /highlight >}}
+
+The `URLs` type implements two functions - one to check if a given URL has been crawled, and the other to mark it as such
+
+{{< highlight go >}}
+
+func (u URLs) IsCrawled(url string) bool {
+	fmt.Printf("\n👀 Checking if %v has been crawled…", url)
+	u.mux.Lock()
+	defer u.mux.Unlock()
+	if _, ok := u.c[url]; ok == false {
+		fmt.Printf("…it hasn't\t")
+		return false
+	}
+	fmt.Printf("…it has\t")
+	return true
+}
+
+func (u URLs) Crawled(url string) {
+	u.mux.Lock()
+	u.c[url] = true
+	u.mux.Unlock()
+}
+{{< /highlight >}}
+
+To the main `Crawl` function I then added calls to these functions and a conditional return: 
+
+{{< highlight go >}}
+// Check if the URL has been crawled already
+if u.IsCrawled(url) == true {
+    return
+}
+fmt.Printf("\n➡️ Crawling %v", url)
+body, urls, err := fetcher.Fetch(url)
+// Mark the URL as crawled (assumes that if there's an error you don't want to retry it)
+u.Crawled(url)
+{{< /highlight >}}
+
+As the comment notes, we assume that if a URL has been crawled, then we mark it as such, regardless of error status. If I was feeling adventurous I guess I could implement some kind of retry logic with incremental backoff…but I'm keeping it simple for now :) 
+
+=== Fetch URLs in parallel
+
+This one I assumed could be done by simply using a Go routine in calling the nested `Crawl` functions. What it actually did was just fetch the first URL and exit
+
+{{< highlight go >}}
+-> Checking if https://golang.org/ has been crawled……it hasn't	
+	found: https://golang.org/ "The Go Programming Language"
+{{< /highlight >}}
+
+Off to Google we went and found https://stackoverflow.com/a/12250366/350613[this answer on StackOverflow] which showed the use of https://golang.org/pkg/sync/#WaitGroup[WaitGroups] (nice https://gobyexample.com/waitgroups[example here]). I ripped this off shamelessly into my code and it _almost_ worked…
+
+{{< highlight go >}}
+
+👀 Checking if https://golang.org/ has been crawled……it hasn't	
+➡️ Crawling https://golang.org/
+	->✅ found: https://golang.org/ "The Go Programming Language"
+
+👀 Checking if https://golang.org/pkg/ has been crawled……it hasn't	
+➡��� Crawling https://golang.org/pkg/
+	->✅ found: https://golang.org/pkg/ "Packages"
+
+👀 Checking if https://golang.org/ has been crawled……it has	
+👀 Checking if https://golang.org/cmd/ has been crawled……it hasn't	
+➡️ Crawling https://golang.org/cmd/
+	->⚠️ not found: https://golang.org/cmd/
+
+👀 Checking if https://golang.org/pkg/fmt/ has been crawled……it hasn't	
+➡️ Crawling https://golang.org/pkg/fmt/
+	->✅ found: https://golang.org/pkg/fmt/ "Package fmt"
+
+👀 Checking if https://golang.org/ has been crawled……it has	
+👀 Checking if https://golang.org/pkg/ has been crawled……it has	
+👀 Checking if https://golang.org/pkg/os/ has been crawled……it hasn't	
+➡️ Crawling https://golang.org/pkg/os/
+	->✅ found: https://golang.org/pkg/os/ "Package os"
+
+👀 Checking if https://golang.org/ has been crawled……it has	
+👀 Checking if https://golang.org/pkg/ has been crawled……it has	
+👀 Checking if https://golang.org/cmd/ has been crawled……it has	
+{{< /highlight >}}
+
+but then threw a panic
+
+{{< highlight go >}}
+panic: sync: negative WaitGroup counter
+
+goroutine 1 [running]:
+sync.(*WaitGroup).Add(0xc0000a4010, 0xffffffffffffffff)
+	/usr/local/go/src/sync/waitgroup.go:74 +0x1ec
+sync.(*WaitGroup).Done(0xc0000a4010)
+	/usr/local/go/src/sync/waitgroup.go:99 +0x34
+main.Crawl(0x1100e8c, 0x13, 0x4, 0x110fb60, 0xc0000801b0, 0xc0000a4010)
+	/Users/rmoff/go/src/webcrawler/webcrawler.go:68 +0x676
+main.main()
+	/Users/rmoff/go/src/webcrawler/webcrawler.go:73 +0x98
+{{< /highlight >}}
+
+A bit of Googling showed that `panic: sync: negative WaitGroup counter` (as the error actually suggests) comes about because https://golang.org/pkg/sync/#WaitGroup.Done[Done] had been called to decrease the number of WaitGroups and taken them below zero. 
+
+This happened because every execution of `Crawl` includes
+
+{{< highlight go >}}
+defer wg.Done()
+{{< /highlight >}}
+
+but the corresponding 
+
+{{< highlight go >}}
+wg.Add(1)
+{{< /highlight >}}
+
+was only added in the _nested_ call to `Crawl` and not the initial invocation from `main()`. Adding this into `main()` then made everything work just great.
+
+{{< highlight go "hl_lines=1 2 23 25 31-34">}}
+func Crawl(url string, depth int, fetcher Fetcher, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	if depth <= 0 {
+		return
+	}
+
+	// Check if the URL has been crawled already
+	if u.IsCrawled(url) == true {
+		return
+	}
+	fmt.Printf("\n➡️ Crawling %v", url)
+	body, urls, err := fetcher.Fetch(url)
+	// Mark the URL as crawled (assumes that if there's an error you don't want to retry it)
+	u.Crawled(url)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("\n\t->✅ found: %s %q\n", url, body)
+	for _, z := range urls {
+		wg.Add(1)
+
+		Crawl(z, depth-1, fetcher, wg)
+	}
+
+}
+
+func main() {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	Crawl("https://golang.org/", 4, fetcher, wg)
+	wg.Wait()
+}
+{{< /highlight >}}
+
+'''
+== 📺 More Episodes…
+
+* link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[S01E00 - Background]
+* link:/2020/06/25/learning-golang-some-rough-notes-s01e01-pointers/[S01E01 - Pointers]
+* link:/2020/06/25/learning-golang-some-rough-notes-s01e02-slices/[S01E02 - Slices]
+* link:/2020/06/29/learning-golang-some-rough-notes-s01e03-maps/[S01E03 - Maps]
+* link:/2020/06/29/learning-golang-some-rough-notes-s01e04-function-closures/[S01E04 - Function Closures]
+* link:/2020/06/30/learning-golang-some-rough-notes-s01e05-interfaces/[S01E05 - Interfaces]
+* link:/2020/07/01/learning-golang-some-rough-notes-s01e06-errors/[S01E06 - Errors]
+* link:/2020/07/01/learning-golang-some-rough-notes-s01e07-readers/[S01E07 - Readers]
+* link:/2020/07/02/learning-golang-some-rough-notes-s01e08-images/[S01E08 - Images]
+* link:/2020/07/02/learning-golang-some-rough-notes-s01e09-concurrency-channels-goroutines/[S01E09 - Concurrency (Channels, Goroutines)]
+* *S01E10 - Concurrency (Web Crawler)*
