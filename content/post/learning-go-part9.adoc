@@ -1,0 +1,76 @@
+---
+title: 'Learning Golang (some rough notes) - S01E09 - Concurrency (Channels, Goroutines)'
+date: "2020-07-02T16:59:05+01:00"
+image: "/images/2020/06/IMG_5288.jpeg"
+thumbnail: "/images/2020/06/IMG_5277.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Channels
+- Goroutines
+---
+
+https://tour.golang.org/concurrency/1[A Tour of Go : Goroutines] was OK but as with some previous material I headed over to https://gobyexample.com/goroutines[Go by example] for clearer explanations. 
+
+<!--more-->
+
+
+https://tour.golang.org/concurrency/5[A Tour of Go : Select] definitely needed a bit more explanation for me. I've annotated it with some inline comments
+
+{{< highlight go "linenos=table, hl_lines=7 10 12 14 16 26 30 33-34 37">}}
+package main
+
+import "fmt"
+
+func fibonacci(c, quit chan int) {
+	x, y := 0, 1
+    // Loop forever
+	for {
+		select {
+        // Try to write the value of x to the channel c
+		case c <- x:
+            // If that works then do the fibonacci thing
+			x, y = y, x+y
+        // Try to read from the quit channel
+		case <-quit:
+            // If there's a value to be read then exit out of the function
+			fmt.Println("quit")
+			return
+		}
+	}
+}
+
+func main() {
+	c := make(chan int)
+	quit := make(chan int)
+    // Spin off a Goroutine
+	go func() {
+        // Do this ten times
+		for i := 0; i < 10; i++ {
+            // Print the next value from the channel
+			fmt.Println(<-c)
+		}
+        // Once we've done it ten times, put a value onto the quit channel
+        // which will cause the fibonacci function to return.
+		quit <- 0
+	}()
+    // Run the function, passing in the two channels
+	fibonacci(c, quit)
+}
+{{< /highlight >}}
+
+As you might expect, if you move the call to `fibonacci` _before_ the Goroutine then it blocks, since the function will be waiting forever to put a value onto the c channel or read from the quit channel. This causes the program to error:
+
+    fatal error: all goroutines are asleep - deadlock!
+
+I've been using VSCode to edit and run some of the Go exercises and found the step-into debugger useful for following some of the logic here. As you'd expect with a debugger, you can watch the value of variables as the code execution progresses, and do stuff like watch the contents of a channel. Here's an example from where I've modified the channel to give it a buffer
+
+{{< highlight go >}}
+c := make(chan int, 5)
+{{< /highlight >}}
+
+
+image::/images/2020/07/select01.png[]

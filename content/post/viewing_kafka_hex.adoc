@@ -1,5 +1,7 @@
 ---
-title: 'Viewing Kafka messages bytes as hex'
+title: 'Why JSON isn''t the same as JSONSchema (Viewing Kafka messages bytes as hex)'
+aliases:
+    - "/2020/05/22/viewing-kafka-messages-bytes-as-hex/"
 date: "2020-05-22T14:16:36+01:00"
 image: "/images/2020/05/IMG_4473.jpeg"
 thumbnail: "/images/2020/05/IMG_4466.jpeg"
@@ -8,6 +10,8 @@ credit: "@rmoff"
 categories:
 - kafkacat
 - hexdump
+- JSON
+- JSONSchema
 ---
 
 I've been playing around with the new SerDes (serialisers/deserialisers) that shipped with Confluent Platform 5.5 - https://docs.confluent.io/current/schema-registry/serdes-develop/index.html[Protobuf, and JSON Schema] (these were added to the existing support for Avro). The serialisers (and associated https://docs.confluent.io/current/schema-registry/connect.html[Kafka Connect converters]) take a payload and serialise it into bytes for sending to Kafka, and I was interested in what those bytes look like. For that I used my favourite Kafka swiss-army knife: kafkacat. 
@@ -34,8 +38,8 @@ Except it's not! We can confirm this by looking at the raw bytes on the message 
 
 Check out these magical, pesky, bytes on the front of the JSON Schema-encoded message, and note that they're not there on the JSON message: 
 
-{{< highlight shell >}}
-$ kafkacat -b kafka:29092 -t pageviews-js -C -c1 | hexdump -C
+{{< highlight shell "hl_lines=3">}}
+$ kafkacat -b kafka:29092 -t pageviews-jsonschema -C -c1 | hexdump -C
 
 00000000  00 00 00 00 02 7b 22 76  69 65 77 74 69 6d 65 22  |.....{"viewtime"|
 00000010  3a 31 2c 22 75 73 65 72  69 64 22 3a 22 55 73 65  |:1,"userid":"Use|
@@ -44,8 +48,8 @@ $ kafkacat -b kafka:29092 -t pageviews-js -C -c1 | hexdump -C
 00000039
 {{< /highlight >}}
 
-{{< highlight shell >}}
-$ kafkacat -b kafka:29092 -t pageviews-j -C -c1 | hexdump -C
+{{< highlight shell "hl_lines=3">}}
+$ kafkacat -b kafka:29092 -t pageviews-json -C -c1 | hexdump -C
 
 00000000  7b 22 76 69 65 77 74 69  6d 65 22 3a 31 2c 22 75  |{"viewtime":1,"u|
 00000010  73 65 72 69 64 22 3a 22  55 73 65 72 5f 33 22 2c  |serid":"User_3",|
@@ -59,3 +63,135 @@ The five extra bytes (`00 00 00 00 02`) are defined in the https://docs.confluen
 * *Byte 0*: Magic Byte - Confluent serialization format version number; currently always 0.
 * *Bytes 1-4*: 4-byte schema ID as returned by Schema Registry.
 
+== JSON != JSON Schema
+
+They may sound similar, but the above analysis shows that you can't just interchange `org.apache.kafka.connect.json.JsonConverter` and `io.confluent.connect.json.JsonSchemaConverter` - they are writing and expecting to read data with different wire formats. If you try to read data that's been serialised with one using the other, it's gonna break. 
+
+Here's an example of writing data in the two formats in Kafka Connect: 
+
+{{< highlight javascript >}}
+curl -s -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/source-datagen-jsonschema-01/config \
+            -d '{
+            "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "io.confluent.connect.json.JsonSchemaConverter",
+            "value.converter.schema.registry.url": "http://schema-registry:8081",
+            "quickstart": "ratings",
+            "iterations":1,
+            "kafka.topic": "test-jsonschema",
+            "tasks.max": 1
+        }'
+
+curl -s -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/source-datagen-json-01/config \
+            -d '{
+            "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+            "quickstart": "ratings",
+            "iterations":1,
+            "kafka.topic": "test-json",
+            "tasks.max": 1
+        }'
+{{< /highlight >}}
+
+From this we have two topics; `test-json` and `test-jsonschema`. Let's read the contents of these using a Kafka Connect sink with the correct converters: 
+
+{{< highlight javascript >}}
+curl -i -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-file-jsonschema-as-jsonschema/config \
+    -d '{
+            "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "io.confluent.connect.json.JsonSchemaConverter",
+            "value.converter.schema.registry.url": "http://schema-registry:8081",
+            "tasks.max": 1,
+            "file": "/jsonschema-as-jsonschema.txt",
+            "topics": "test-jsonschema"
+}'
+
+curl -i -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-file-json-as-json/config \
+    -d '{
+            "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+            "tasks.max": 1,
+            "file": "/json-as-json.txt",
+            "topics": "test-json"
+}'
+{{< /highlight >}}
+
+As expected, this works. But what about if we mix it up, and try to read JSON data using the JSONSchema deserialiser (through the `io.confluent.connect.json.JsonSchemaConverter` converter)?
+
+{{< highlight javascript >}}
+curl -i -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-file-json-as-jsonschema/config \
+    -d '{
+            "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "io.confluent.connect.json.JsonSchemaConverter",
+            "value.converter.schema.registry.url": "http://schema-registry:8081",
+            "tasks.max": 1,
+            "file": "/json-as-jsonschema.txt",
+            "topics": "test-json"
+}'
+{{< /highlight >}}
+
+⚠️ It fails!
+
+{{< highlight shell >}}
+org.apache.kafka.connect.errors.DataException: Converting byte[] to Kafka Connect data failed due to serialization error:
+        at io.confluent.connect.json.JsonSchemaConverter.toConnectData(JsonSchemaConverter.java:111)
+        at org.apache.kafka.connect.storage.Converter.toConnectData(Converter.java:87)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.lambda$convertAndTransformRecord$2(WorkerSinkTask.java:492)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndRetry(RetryWithToleranceOperator.java:128)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:162)
+        ... 13 more
+Caused by: org.apache.kafka.common.errors.SerializationException: Error deserializing JSON message for id -1
+Caused by: org.apache.kafka.common.errors.SerializationException: Unknown magic byte!
+{{< /highlight >}}
+
+What's this mean? Well `Unknown magic byte!` is the deserialiser's quirky way of say that the bytes on the front of the message that JSON Schema has (which we saw above) aren't there. Why aren't they there? Because it's just straight-up JSON that we're trying to read - and so we should be use the JSON deserialiser (provided for Kafka Connect by the `org.apache.kafka.connect.json.JsonConverter` converter). 
+
+* Actual (JSON)
++
+`00000000  7b 22 76 69 65 77 74 69  6d 65 22 3a 31 2c 22 75  |{"viewtime":1,"u|`
+* Expected (JSON Schema)
++
+`00000000  00 00 00 00 02 7b 22 76  69 65 77 74 69 6d 65 22  |.....{"viewtime"|`
+
+'''
+
+The final permutation here is trying to read JSON Schema messages using the JSON deserialiser: 
+
+{{< highlight javascript >}}
+curl -i -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-file-jsonschema-as-json/config \
+    -d '{
+            "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+            "tasks.max": 1,
+            "file": "/jsonschema-as-json.txt",
+            "topics": "test-jsonschema"
+}'
+{{< /highlight >}}
+
+As we might expect, this also fails
+
+{{< highlight shell >}}
+org.apache.kafka.connect.errors.DataException: Converting byte[] to Kafka Connect data failed due to serialization error:
+        at org.apache.kafka.connect.json.JsonConverter.toConnectData(JsonConverter.java:355)
+        at org.apache.kafka.connect.storage.Converter.toConnectData(Converter.java:87)                                                               
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.lambda$convertAndTransformRecord$2(WorkerSinkTask.java:492)                               
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndRetry(RetryWithToleranceOperator.java:128)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:162)                
+        ... 13 more                                                                                                                          
+Caused by: org.apache.kafka.common.errors.SerializationException: java.io.CharConversionException: Invalid UTF-32 character 0x27a2272 (above 0x0010ffff) at char #1, byte #7)
+Caused by: java.io.CharConversionException: Invalid UTF-32 character 0x27a2272 (above 0x0010ffff) at char #1, byte #7)
+{{< /highlight >}}
+
+Here the JSON deserialiser is trying to read JSON, but hitting the bytes that the JSON Schema serialiser writes to the front of each message, which are not valid JSON (`Invalid UTF-32 character 0x27a2272 (above 0x0010ffff) at char #1, byte #7`). If you've serialised your data using the Confluent Schema Registry JSON Schema serialiser, you've gotta deserialise it with that too. 
+
+* Actual (JSON Schema)
++
+`00000000  00 00 00 00 02 7b 22 76  69 65 77 74 69 6d 65 22  |.....{"viewtime"|`
+* Expected (JSON)
++
+`00000000  7b 22 76 69 65 77 74 69  6d 65 22 3a 31 2c 22 75  |{"viewtime":1,"u|`
