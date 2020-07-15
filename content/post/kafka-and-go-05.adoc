@@ -1,0 +1,170 @@
+---
+title: 'Learning Golang (some rough notes) - S02E05 - Kafka Go AdminClient'
+date: "2020-07-15T11:00:05+01:00"
+image: "/images/2020/07/IMG_5284.jpeg"
+thumbnail: "/images/2020/07/IMG_5126.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Kafka
+- Kafka AdminClient API
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Having ticked off the basics with an Apache Kafka link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[producer] and link:/2020/07/14/learning-golang-some-rough-notes-s02e03-kafka-go-consumer-channel-based/[consumer] in Go, let's now check out the AdminClient. This is useful for checking out metadata about the cluster, creating topics, and stuff like that. 
+
+<!--more-->
+
+== Contexts 
+
+To use some of the functions that the AdminClient provides I had to read up on https://golang.org/pkg/context/[`Context`], which I'd not encountered on my brief journey with link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[Go so far]. The tl;dr is that a context provides a clean way for functions to timeout or cancel their operation across function calls. Or to put it https://golang.org/pkg/context/#pkg-overview[another way]: 
+
+> Package context defines the Context type, which carries deadlines, cancellation signals, and other request-scoped values across API boundaries and between processes.
+
+This is what it looks like in operation. You define the context (in this with a timeout): 
+
+[source,go]
+----
+import (
+	"context"
+	"time"
+// …
+)
+
+// …
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+----
+
+Note that you can also do it like this…
+
+[source,go]
+----
+ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+----
+
+…but per the code comment in https://golang.org/pkg/context/#WithDeadline[the example given] it's good practice to make sure `cancel` is called as soon as the context is done with. 
+
+Another thing to note is the nice way to specify time periods in Go. Instead of having to check the API documentation each time as to whether you're specifying seconds, microseconds, etc, and then doing the necessary maths on the time period that you want to specify, you can instead just use human-friendly notation such as: 
+
+* `5*time.Microsecond`
+* `30*time.Second`
+
+So, having defined the context, we pass it when invoking a function call that requires it, such as `ClusterID()` in the AdminClient: 
+
+[source,go]
+----
+c, e := a.ClusterID(ctx)
+----
+
+More completely, the code looks something like this: 
+
+[source,go]
+----
+// Get the ClusterID
+if c, e := a.ClusterID(ctx); e != nil {
+    fmt.Printf("😢 Error getting ClusterID\n\tError: %v\n", e)
+} else {
+    fmt.Printf("✔️ ClusterID: %v\n", c)
+}
+----
+
+If the context times out then an error is returned:
+
+[source]
+----
+😢 Error getting ClusterID
+	Error: context.deadlineExceededError context deadline exceeded
+----
+
+Note that if you want to use the context in successive calls, the timeout does not reset on each use. So if you have something like this: 
+
+[source,go]
+----
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+
+// Call the first thing
+doSomething(ctx)
+
+// Call the second thing
+doSomethingElse(ctx)
+----
+
+The timeout of five seconds includes the execution of the second function. If you want to reset it in between then you'd do this: 
+
+[source,go]
+----
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+
+// Call the first thing
+doSomething(ctx)
+
+// Start the context timer again
+ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+
+// Call the second thing
+doSomethingElse(ctx)
+----
+
+== AdminClient
+
+The https://docs.confluent.io/5.5.1/clients/confluent-kafka-go/index.html#AdminClient[docs] list comprehensively the functions available from the AdminClient. Here's a simple example that shows using some of them to list information about the cluster:
+
+[source,go]
+----
+include::/Users/rmoff/git/rmoff-blog/content/code/go/kafka/adminclient01/adminclient.go[]
+----
+
+The output looks like this: 
+
+[source]
+----
+✔️ Created AdminClient
+✔️ ClusterID: hukPYvRVTF2nU8efMXUq6g
+✔️ ControllerID: 1
+✔️ Metadata [Originating broker]
+	[ID 1] localhost:9092/1
+✔️ Metadata [brokers]
+	[ID 1] localhost:9092
+✔️ Metadata [topics]
+	(5 partitions)	_kafka-connect-01-status
+	(1 partitions)	ratings
+	(1 partitions)	__confluent.support.metrics
+	(25 partitions)	_kafka-connect-01-offsets
+	(1 partitions)	_kafka-connect-01-configs
+	(50 partitions)	__consumer_offsets
+
+
+👋 … and we're done.
+----
+
+== 📺 More Episodes…
+
+* Kafka and Go
+** link:/2020/07/08/learning-golang-some-rough-notes-s02e00-kafka-and-go/[S02E00 - Kafka and Go]
+** link:/2020/07/08/learning-golang-some-rough-notes-s02e01-my-first-kafka-go-producer/[S02E01 - My First Kafka Go Producer]
+** link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[S02E02 - Adding error handling to the Producer]
+** link:/2020/07/14/learning-golang-some-rough-notes-s02e03-kafka-go-consumer-channel-based/[S02E03 - Kafka Go Consumer (Channel-based)]
+** link:/2020/07/14/learning-golang-some-rough-notes-s02e04-kafka-go-consumer-function-based/[S02E04 - Kafka Go Consumer (Function-based)]
+** 👉 link:/2020/07/14/learning-golang-some-rough-notes-s02e05-kafka-go-adminclient/[*S02E05 - Kafka Go AdminClient*]
+* Learning Go
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[S01E00 - Background]
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e01-pointers/[S01E01 - Pointers]
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e02-slices/[S01E02 - Slices]
+** link:/2020/06/29/learning-golang-some-rough-notes-s01e03-maps/[S01E03 - Maps]
+** link:/2020/06/29/learning-golang-some-rough-notes-s01e04-function-closures/[S01E04 - Function Closures]
+** link:/2020/06/30/learning-golang-some-rough-notes-s01e05-interfaces/[S01E05 - Interfaces]
+** link:/2020/07/01/learning-golang-some-rough-notes-s01e06-errors/[S01E06 - Errors]
+** link:/2020/07/01/learning-golang-some-rough-notes-s01e07-readers/[S01E07 - Readers]
+** link:/2020/07/02/learning-golang-some-rough-notes-s01e08-images/[S01E08 - Images]
+** link:/2020/07/02/learning-golang-some-rough-notes-s01e09-concurrency-channels-goroutines/[S01E09 - Concurrency (Channels, Goroutines)]
+** link:/2020/07/03/learning-golang-some-rough-notes-s01e10-concurrency-web-crawler/[S01E10 - Concurrency (Web Crawler)]

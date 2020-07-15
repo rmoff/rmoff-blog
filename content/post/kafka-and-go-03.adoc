@@ -1,0 +1,128 @@
+---
+title: 'Learning Golang (some rough notes) - S02E03 - Kafka Go Consumer (Channel-based)'
+date: "2020-07-14T11:59:05+01:00"
+image: "/images/2020/07/IMG_5284.jpeg"
+thumbnail: "/images/2020/07/IMG_5126.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Kafka
+- Kafka Consumer API
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Having written my first link:/2020/07/08/learning-golang-some-rough-notes-s02e01-my-first-kafka-go-producer/[Kafka producer in Go], and even link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[added error handling to it], the next step was to write a consumer. It follows closely the pattern of link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[Producer code I finished up with previously], using the channel-based approach for the https://docs.confluent.io/current/clients/confluent-kafka-go/index.html#Consumer[Consumer]:  
+
+<!--more-->
+
+* Create Consumer
+* Subscribe to topic
+* Read messages from the channel as the consumer receives them
+* When we've read all messages, exit
+
+NOTE: I've used the channel-based consumer because it fitted the most neatly with my existing code that I was adapting to work as a consumer, and the general concept of consuming from a channel also felt quite idiomatic. _However_, if you consult the https://github.com/confluentinc/confluent-kafka-go#channel-based-consumer-deprecated[client GitHub repo] you'll see that the channel-based consumer is marked as deprecated, and there is a https://github.com/confluentinc/confluent-kafka-go/blob/e266799b3bfbbaf8230a9a6f71e8c92f0e67341b/kafka/consumer.go#L369-L374[note in the code] as to why this is. I'll take a look in the next article at using the function-based consumer instead :)
+
+The main thing here is that we use the `.Events()` channel for which there's a Go Routine, and so this pattern to wait until we've finished with it:
+
+[source,go]
+----
+// For signalling termination from main to go-routine
+termChan := make(chan bool, 1)
+// For signalling that termination is done from go-routine to main
+doneChan := make(chan bool)
+
+go func() {
+    doTerm := false
+    for !doTerm {
+        select {
+
+            // channels that we're listening to
+
+        case <-termChan:
+            doTerm = true
+        }
+    }
+
+    close(doneChan)
+}()
+
+// … 
+
+// We're ready to finish
+termChan <- true
+// wait for go-routine to terminate
+<-doneChan
+// Now we can exit
+p.Close()
+----
+
+To know when to finish, we listen for `PartitionEOF` events, which we need to enable when creating the consumer
+
+[source,go]
+----
+"enable.partition.eof":     true
+----
+
+When we receive one we'll assume there's just the single partition (BIG assumption) and set the `doTerm` to true to break out of the `for` loop in the Go routine which then closes the `doneChan` and the program can exit
+
+[source,go]
+----
+case kafka.PartitionEOF:
+    // We've finished reading messages on this partition so let's wrap up
+    pe := ev.(kafka.PartitionEOF)
+    fmt.Printf("🌆 Got to the end of partition %v on topic %v at offset %v\n",
+        pe.Partition,
+        string(*pe.Topic),
+        pe.Offset)
+    termChan <- true
+----
+
+The full code looks like this: 
+
+[source,go]
+----
+include::/Users/rmoff/git/rmoff-blog/content/code/go/kafka/consumer01/consumer01.go[]
+----
+
+I run it using a link:/code/go/kafka/consumer01/docker-compose.yml[Docker Compose] which also runs a data generator in Kafka Connect populating a topic for the consumer to read from. When I shut down Kafka Connect the data generator stops, the consumer reads to the end of the topic, and exits:  
+
+[source]
+----
+…
+✅ Message 'Struct{ip=233.245.174.233,userid=13,remote_user=-,time=23811,_time=23811,request=GET /index.html HTTP/1.1,status=407,bytes=4006,referrer=-,agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36}' received from topic 'ratings' (partition 0 at offset 2381)
+✅ Message 'Struct{ip=122.145.8.244,userid=9,remote_user=-,time=23821,_time=23821,request=GET /images/track.png HTTP/1.1,status=302,bytes=4006,referrer=-,agent=Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)}' received from topic 'ratings' (partition 0 at offset 2382)
+✅ Message 'Struct{ip=111.145.8.144,userid=38,remote_user=-,time=23831,_time=23831,request=GET /site/user_status.html HTTP/1.1,status=406,bytes=4096,referrer=-,agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36}' received from topic 'ratings' (partition 0 at offset 2383)
+✅ Message 'Struct{ip=222.245.174.248,userid=36,remote_user=-,time=23841,_time=23841,request=GET /site/user_status.html HTTP/1.1,status=200,bytes=4096,referrer=-,agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36}' received from topic 'ratings' (partition 0 at offset 2384)
+🌆 Got to the end of partition 0 on topic ratings at offset 2385
+----
+
+
+
+== 📺 More Episodes…
+
+* Kafka and Go
+** link:/2020/07/08/learning-golang-some-rough-notes-s02e00-kafka-and-go/[S02E00 - Kafka and Go]
+** link:/2020/07/08/learning-golang-some-rough-notes-s02e01-my-first-kafka-go-producer/[S02E01 - My First Kafka Go Producer]
+** link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[S02E02 - Adding error handling to the Producer]
+** 👉 link:/2020/07/14/learning-golang-some-rough-notes-s02e03-kafka-go-consumer-channel-based/[*S02E03 - Kafka Go Consumer (Channel-based)*]
+** link:/2020/07/14/learning-golang-some-rough-notes-s02e04-kafka-go-consumer-function-based/[S02E04 - Kafka Go Consumer (Function-based)]
+** link:/2020/07/14/learning-golang-some-rough-notes-s02e05-kafka-go-adminclient/[S02E05 - Kafka Go AdminClient]
+* Learning Go
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[S01E00 - Background]
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e01-pointers/[S01E01 - Pointers]
+** link:/2020/06/25/learning-golang-some-rough-notes-s01e02-slices/[S01E02 - Slices]
+** link:/2020/06/29/learning-golang-some-rough-notes-s01e03-maps/[S01E03 - Maps]
+** link:/2020/06/29/learning-golang-some-rough-notes-s01e04-function-closures/[S01E04 - Function Closures]
+** link:/2020/06/30/learning-golang-some-rough-notes-s01e05-interfaces/[S01E05 - Interfaces]
+** link:/2020/07/01/learning-golang-some-rough-notes-s01e06-errors/[S01E06 - Errors]
+** link:/2020/07/01/learning-golang-some-rough-notes-s01e07-readers/[S01E07 - Readers]
+** link:/2020/07/02/learning-golang-some-rough-notes-s01e08-images/[S01E08 - Images]
+** link:/2020/07/02/learning-golang-some-rough-notes-s01e09-concurrency-channels-goroutines/[S01E09 - Concurrency (Channels, Goroutines)]
+** link:/2020/07/03/learning-golang-some-rough-notes-s01e10-concurrency-web-crawler/[S01E10 - Concurrency (Web Crawler)]
