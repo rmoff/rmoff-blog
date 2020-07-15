@@ -1,0 +1,266 @@
+---
+title: 'Learning Golang (some rough notes) - S02E06 - Putting the Producer in a function and handling errors in a Go routine'
+date: "2020-07-15T14:00:05+01:00"
+image: "/images/2020/07/IMG_5284.jpeg"
+thumbnail: "/images/2020/07/IMG_5126.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Kafka
+- Kafka Producer API
+- Go routine
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+When I set out to link:/2020/06/25/learning-golang-some-rough-notes-s01e00/[learn Go] one of the aims I had in mind was to write a version of https://github.com/rmoff/kafka-listeners/blob/master/python/python_kafka_test_client.py[this little Python utility] which accompanies a blog I wrote recently about https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc[understanding and diagnosing problems with Kafka advertised listeners]. Having successfully got link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[Producer], link:/2020/07/14/learning-golang-some-rough-notes-s02e04-kafka-go-consumer-function-based/[Consumer], and link:/2020/07/14/learning-golang-some-rough-notes-s02e05-kafka-go-adminclient/[AdminClient] API examples working, it is now time to turn to that task. 
+
+<!--more-->
+
+I'm quite keen to figure out how to do this _properly_ and take the opportunity to learn. It would be easy enough to copy & paste all my snippets together, ignore any error handling, and check the task off as done. But since I don't have a strong background in coding, now seems a good chance to try and instill a little bit of rigour in what I'm doing. 
+
+== Command line arguments
+
+Instead of hard coding the broker host and port, I want to be able to pass this as a commandline argument. This is easy enough using the https://golang.org/pkg/os/[OS] package, which behaves very similar to the Python equivalent: 
+
+[source,go]
+----
+import (
+	"os"
+)
+
+func main() {
+
+	// Read the first commandline argument to get the broker details
+	broker := os.Args[1]
+	fmt.Printf("Broker: %v", broker)
+----
+
+I'm using VSCode for my IDE as it works very nicely with Go - both for writing code, and debugging it. To pass an argument to the command line as part of debugging go to `Run` -> `Open Configurations` and in the JSON file set the argument(s) that you want to pass: 
+
+[source,javascript]
+----
+"args": ["localhost:9092"]
+----
+
+This works fine when the code is run 
+
+[source]
+----
+Broker: localhost:9092
+----
+
+But what if the user _doesn't_ specify the required commandline arguments? 
+
+[source]
+----
+panic: runtime error: index out of range [1] with length 1
+
+goroutine 1 [running]:
+main.main()
+	/Users/rmoff/git/rmoff-blog/content/code/go/kafka/producer_function/producer_function.go:15 +0x24e
+----
+
+So we need a bit of care here, and check for the length too
+
+[source,go]
+----
+var broker string
+if len(os.Args) == 2 {
+    broker = os.Args[1]
+} else {
+    fmt.Println("(No broker specifed on commandline; defaulting to localhost:9092)")
+    broker = "localhost:9092"
+}
+fmt.Printf("Broker: %v", broker)
+----
+
+== Functions
+
+The `main()` code is going to look something like this: 
+
+[source,go]
+----
+// Do init stuff to set vars etc
+// …
+
+// Create AdminClient connection to check metadata
+doAdmin(broker)
+// Produce message
+doProduce(broker,topic)
+// Consume message
+doConsume(broker,topic)
+// fin.
+----
+
+Each one is dependent on the other, so we need to know if there was an error…
+
+== Errors
+
+Following the same pattern as I explored link:/2020/07/10/learning-golang-some-rough-notes-s02e02-adding-error-handling-to-the-producer/[here] I'm expecting to have something that looks like this: 
+
+[source,go]
+----
+// Do init stuff to set vars etc
+// …
+
+// Create AdminClient connection to check metadata
+if e := doAdmin(broker); e != nil {
+    fmt.Printf("There was a problem with AdminClient :-(\n%v", e)
+} else {
+    // Produce message
+    if e := doProduce(broker, topic); e != nil {
+        fmt.Printf("There was a problem calling the producer :-(\n%v", e)
+    } else {
+        // Consume message
+        if e := doConsume(broker, topic); e != nil {
+            fmt.Printf("There was a problem calling the consumer :-(\n%v", e)
+        }
+    }
+}
+
+// fin.
+----
+
+To do this, each function needs to return an `error`, so the function looks like this: 
+
+[source,go]
+----
+func doProduce(broker, topic string) error {
+    // If you hit an error then
+    return errors.New("OH NO! THERE WAS AN ERROR")
+
+    // assuming everything has gone ok return no error
+    return nil
+}
+----
+
+Where we were previously dumping messages to the output:
+
+[source,go]
+----
+fmt.Printf("😢 Can't create the producer (Kafka error code %d)\n\tError: %v\n", ec, e)
+----
+
+We now want to take this and pass it back as the error. Since `errors.New()` takes a `string` it makes sense to replace our existing `fmt.Printf` with `fmt.Sprintf` and pass this to `errors.New()`: 
+
+[source,go]
+----
+return errors.New(fmt.Sprintf("😢 Can't create the producer (Kafka error code %d)\n\tError: %v\n", ec, e))
+----
+
+The Go linter in VSCode is brilliant here as it actively tells you this is not the best way to do it, with some nice orange underlining: 
+
+image::/images/2020/07/error01.png[]
+
+If you hover over it you get a nice tip of how to write the code better: 
+
+image::/images/2020/07/error02.png[]
+
+So, instead of 
+
+[source,go]
+----
+return errors.New(fmt.Sprintf("😢 Can't create the producer (Kafka error code %d)\n\tError: %v\n", ec, e))
+----
+
+We just replace 
+
+[source,go]
+----
+fmt.Printf("😢 Can't create the producer (Kafka error code %d)\n\tError: %v\n", ec, e)
+----
+
+with
+
+[source,go]
+----
+return fmt.Errorf("😢 Can't create the producer (Kafka error code %d)\n\tError: %v\n", ec, e)
+----
+
+=== Error in Go routines
+
+This all works, except in the Go routine within the function. In the case of the Producer code the Go routine is there to handle events such as message delivery reports, errors, etc. Since a Go routine is a function itself with no return variables, then we can't `return` an error from within it. If you try to, you get this: 
+
+[source]
+----
+too many arguments to return
+	have (error)
+	want ()
+----
+
+Now, maybe the code in your function will catch an error as a side effect of the error thrown in the Go routine, but it's not great to rely on that happening. Instead we can provide a channel that the Go routine can write to if there's an error, and then check that from our parent function and return an error if we find one. Something like this: 
+
+[source,go]
+----
+include::/Users/rmoff/git/rmoff-blog/content/code/go/kafka/go_routine_errors/go_routine_errors.go[]
+----
+
+When run this looks like: 
+
+[source]
+----
+doThisThing failed.
+here is an error from the go routine :(
+here is another error from the go routine :(
+----
+
+== The Producer 
+
+With this error handling in place, I can now call my `doProduce` function and get an error (or not) back from it successfully: 
+
+* It works! 
++
+[source]
+----
+ℹ️ No broker specified on commandline; defaulting to localhost:9092
+
+Broker: localhost:9092
+
+--
+✨ All messages flushed from the queue
+✅ Message 'foo / Thu, 16 Jul 2020 00:05:57 +0100' delivered to topic 'rmoff_test_00' (partition 0 at offset 11)
+
+-=-=
+Wrapping up…
+👋 … and we're done.
+Oh joy! Oh rejoice! Calling the producer worked *just fine*.
+----
+
+* It doesn't!
++
+[source]
+----
+ℹ️ No broker specified on commandline; defaulting to localhost:9092
+
+Broker: localhost:9092
+-=-=
+Wrapping up…
+❌ … returning an error
+
+There was a problem calling the producer :-(
+
+**☠️ Uh oh, caught an error:
+	localhost:9092/bootstrap: Connect to ipv6#[::1]:9092 failed: Connection refused (after 3ms in state CONNECT)
+
+**☠️ Uh oh, caught an error:
+	1/1 brokers are down
+
+--
+⚠️ Failed to flush all messages after 1000 milliseconds. 1 message(s) remain
+----
+
+Here's the full code, and a link:/code/go/kafka/producer_function/docker-compose.yml[Docker Compose] you can use to try it with.
+
+[source,go]
+----
+include::/Users/rmoff/git/rmoff-blog/content/code/go/kafka/producer_function/producer_function.go[]
+----
+
+include::/Users/rmoff/git/rmoff-blog/content/go-series.adoc[]
