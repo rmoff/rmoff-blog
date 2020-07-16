@@ -1,0 +1,166 @@
+---
+title: 'Learning Golang (some rough notes) - S02E07 - Splitting Go code into separate source files and building a binary executable'
+date: "2020-07-16T11:00:05+01:00"
+image: "/images/2020/07/IMG_5284.jpeg"
+thumbnail: "/images/2020/07/IMG_5126.jpeg"
+series: "Learning Go"
+draft: false
+credit: "@rmoff"
+categories:
+- Go
+- Golang
+- Packages
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+So far I've been running all my code either in the https://tour.golang.org/[Go Tour sandbox], using https://play.golang.org/[Go Playground], or from a single file in VS Code. My explorations in the link:/2020/07/15/learning-golang-some-rough-notes-s02e06-putting-the-producer-in-a-function-and-handling-errors-in-a-go-routine/[previous article] ended up with a a source file that was starting to get a little bit unwieldily, so let's take a look at how that can be improved. 
+
+Within my link:/2020/07/15/learning-golang-some-rough-notes-s02e06-putting-the-producer-in-a-function-and-handling-errors-in-a-go-routine/[most recent code], I have the `main` function and the `doProduce` function, which is fine when collapsed down:
+
+image::/images/2020/07/func01.png[]
+
+But as soon as it's not starts to get a bit long, so let's split that out into its own file. 
+
+The Go docs have a whole https://twitter.com/rmoff/status/1283723460934619139[section devoted to organising code], but I found it hard to follow. Part of it is probably because I've been living in VSCode and not using the Go environment with modules etc as the docs describe. https://verticalaxisbd.com/blog/code-splitting-go/[This article] helped clarify things a bit for me. Having played around I think I understand it a bit better now, thus: 
+
+* If *all you want to do is split a Go code file into separate ones*, put them all in the same folder with the same package name and use `go run .` to execute them (or continue to run them from within your IDE such as VSCode)
+* Files in the same folder with the same package name share access to their functions
+* You don't have to do anything with `import` or modules, or anything like that. 
+* Leave `package main` alone - you come to change the package name when you're actually building a package for import elsewhere
+** At some point you probably *should*, and I'll get onto that another time when I need to :)
+
+So I started with the link:/code/go/kafka/producer_function/producer_function.go[same file as previously], but in a new folder and new name: 
+
+[source,bash]
+----
+➜ ls -l listener_test_01 
+
+total 24
+-rw-r--r--  1 rmoff  staff  5256 16 Jul 11:17 main.go
+----
+
+From there I split `doProduce` into its own source file, giving us: 
+
+[source,bash]
+----
+➜ ls -l listener_test_01 
+total 32
+-rw-r--r--  1 rmoff  staff   741 16 Jul 11:44 main.go
+-rw-r--r--  1 rmoff  staff  4595 16 Jul 11:44 producer.go
+----
+
+The `main.go` file includes `main()` which then calls other functions
+
+* `main.go`
++
+[source,go]
+----
+package main
+
+import (
+        "fmt"
+        "os"
+)
+
+
+func main() {
+
+	if e := doProduce(broker, topic); e != nil {
+		fmt.Printf("\nThere was a problem calling the producer :-(\n%v", e)
+	} else {
+		fmt.Println("Oh joy! Oh rejoice! Calling the producer worked *just fine*.")
+	}
+----
+
+* `producer.go`
++
+[source,go]
+----
+package main
+
+import (
+        "errors"
+        "fmt"
+        "time"
+
+        "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+)
+
+// Produce a test message to given broker and topic
+func doProduce(broker, topic string) error {
+
+        // --
+        // Create Producer instance
+----
+
+If you try to just run the `main.go` file you'll get
+
+[source,bash]
+----
+➜ go run main.go 
+# command-line-arguments
+./main.go:26:10: undefined: doProduce
+----
+
+So instead you use this (https://stackoverflow.com/a/50593262/350613[h/t]): 
+
+[source,bash]
+----
+➜ go run *.go
+----
+
+Alternatively you can use
+
+[source,bash]
+----
+➜ go run .
+----
+
+== Building a binary executable
+
+Instead of compiling and running the code each time with `go run`, you can also build a binary executable which can then be invoking directly. For this simply run: 
+
+[source,bash]
+----
+go build
+----
+
+This builds an executable that takes the name of the parent folder by default
+
+[source,bash]
+----
+➜ ls -l listener_test_01 
+
+-rwxr-xr-x  1 rmoff  staff   6.6M 16 Jul 15:30 listener_test_01
+-rw-r--r--  1 rmoff  staff   741B 16 Jul 15:01 main.go
+-rw-r--r--  1 rmoff  staff   4.5K 16 Jul 15:01 producer.go
+----
+
+Now you can run it directly, passing commandline arguments as needed
+
+[source,bash]
+----
+./listener_test_01 localhost:9092
+----
+
+What about `go.mod` that you may have seen kicking about? For my very simple example here all it does is change the name of the executable that we build
+
+[source,bash]
+----
+➜ go mod init listenertest
+go: creating new go.mod: module listenertest
+
+➜ go build
+
+➜ ll
+total 27264
+-rwxr-xr-x  1 rmoff  staff   6.6M 16 Jul 15:37 listenertest
+----
+
+
+
+include::/Users/rmoff/git/rmoff-blog/content/go-series.adoc[]
