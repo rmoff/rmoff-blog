@@ -1,0 +1,165 @@
+---
+title: 'Loading from REST API into Kafka'
+date: "2020-07-28T10:00:05+01:00"
+image: "/images/2020/07/IMG_5284.jpeg"
+thumbnail: "/images/2020/07/IMG_5126.jpeg"
+draft: true
+credit: "@rmoff"
+categories:
+- REST
+- kafkacat
+- ksqlDB
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+
+----
+
+Also: Why Kafka REST Proxy doesn't fit
+Also: Can you hit the REST API source directly with CDC? 
+Also: Camel? 
+
+----
+
+
+Download & build the plugin
+
+[source,bash]
+----
+git clone https://github.com/llofberg/kafka-connect-rest.git
+cd kafka-connect-rest
+mvn clean package
+mkdir -p ../data/connectors
+cp kafka-connect-rest-plugin/target/kafka-connect-rest-plugin-*-shaded.jar ../data/connectors/ && \
+cp kafka-connect-transform-from-json/kafka-connect-transform-from-json-plugin/target/kafka-connect-transform-from-json-plugin-*-shaded.jar ../data/connectors/ && \
+cp kafka-connect-transform-add-headers/target/kafka-connect-transform-add-headers-*-shaded.jar ../data/connectors/ && \
+cp kafka-connect-transform-velocity-eval/target/kafka-connect-transform-velocity-eval-*-shaded.jar ../data/connectors/
+----
+
+Start the stack
+
+[source,bash]
+----
+docker-compose up -d
+----
+
+Check connector has been loaded 
+
+[source,bash]
+----
+➜ curl -s localhost:8083/connector-plugins|jq '.[].class'|egrep 'com.tm.kafka.connect.rest.RestSourceConnector'
+
+"com.tm.kafka.connect.rest.RestSourceConnector"
+----
+
+Create the source connector
+
+[source,javascript]
+----
+
+curl -i -X PUT -H "Accept:application/json" \
+          -H  "Content-Type:application/json" http://localhost:8083/connectors/source-rest-carpark-01/config \
+          -d '{
+      "connector.class": "com.tm.kafka.connect.rest.RestSourceConnector",
+      "key.converter":"org.apache.kafka.connect.storage.StringConverter",
+      "value.converter":"org.apache.kafka.connect.storage.StringConverter",
+      "tasks.max": "1",
+      "rest.source.poll.interval.ms": "300000",
+      "rest.source.method": "GET",
+      "rest.source.url": "https://datahub.bradford.gov.uk/ebase/api/getData/v2/Council/CarParkCurrent",
+      "rest.source.payload.converter.class": "com.tm.kafka.connect.rest.converter.StringPayloadConverter",
+      "rest.source.topic.selector": "com.tm.kafka.connect.rest.selector.SimpleTopicSelector",
+      "rest.source.destination.topics": "carpark-bradford"
+      }'
+----
+
+[source,sql]
+----
+
+
+ksql> show topics;
+
+ Kafka Topic      | Partitions | Partition Replicas
+----------------------------------------------------
+ carpark-bradford | 1          | 1
+----------------------------------------------------
+ksql> print 'carpark-bradford' from beginning;
+Key format: ¯\_(ツ)_/¯ - no data processed
+Value format: KAFKA_STRING
+rowtime: 2020/07/20 15:10:57.411 Z, key: <null>, value: date,time,name,capacity,empty_places,status,latitude,longitude,directionsURL
+2020-07-20,16:03,Westgate,116,80,Spaces,53.796291,-1.759143,"https://maps.google.com/?daddr=53.796291,-1.759143"
+2020-07-20,16:03,Burnett St,122,108,Spaces,53.795739,-1.744756,"https://maps.google.com/?daddr=53.795739,-1.744756"
+2020-07-20,16:03,Crown Court,142,112,Spaces,53.792179,-1.748466,"https://maps.google.com/?daddr=53.792179,-1.748466"
+2020-07-20,16:03,Leisure Exchange,996,951,Spaces,53.79222,-1.746683,"https://maps.google.com/?daddr=53.79222,-1.746683"
+2020-07-20,16:03,NCP Hall Ings,526,511,Spaces,53.791838,-1.752201,"https://maps.google.com/?daddr=53.791838,-1.752201"
+2020-07-20,16:03,Broadway,1181,982,Spaces,53.794175,-1.750107,"https://maps.google.com/?daddr=53.794175,-1.750107"
+2020-07-20,16:03,Kirkgate Centre,611,487,Spaces,53.795002,-1.755938,"https://maps.google.com/?daddr=53.795002,-1.755938"
+2020-07-20,16:03,Sharpe Street,98,75,Spaces,53.789785,-1.756187,"https://maps.google.com/?daddr=53.789785,-1.756187"
+----
+
+Note that single row has all messages, which makes it more difficult to work with. Instead, let's use `kafkacat`: 
+
+[source,bash]
+----
+while [ 1 -eq 1 ];
+do 
+    curl -s https://datahub.bradford.gov.uk/ebase/api/getData/v2/Council/CarParkCurrent | \
+        tail -n +2 | \
+        docker exec -i kafkacat kafkacat -b broker:29092 -t carparks -P -T
+    sleep 180
+done
+----
+
+Now we have each record in its own message
+
+[source,bash]
+----
+ksql> PRINT carparks FROM BEGINNING;
+Key format: ¯\_(ツ)_/¯ - no data processed
+Value format: KAFKA_STRING
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Westgate,116,92,Spaces,53.796291,-1.759143,"https://maps.google.com/?daddr=53.796291,-1.759143"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Burnett St,122,114,Spaces,53.795739,-1.744756,"https://maps.google.com/?daddr=53.795739,-1.744756"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Crown Court,142,121,Spaces,53.792179,-1.748466,"https://maps.google.com/?daddr=53.792179,-1.748466"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Leisure Exchange,996,966,Spaces,53.79222,-1.746683,"https://maps.google.com/?daddr=53.79222,-1.746683"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,NCP Hall Ings,526,516,Spaces,53.791838,-1.752201,"https://maps.google.com/?daddr=53.791838,-1.752201"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Broadway,1190,1009,Spaces,53.794175,-1.750107,"https://maps.google.com/?daddr=53.794175,-1.750107"
+rowtime: 2020/07/20 15:39:21.145 Z, key: <null>, value: 2020-07-20,16:33,Kirkgate Centre,611,516,Spaces,53.795002,-1.755938,"https://maps.google.com/?daddr=53.795002,-1.755938"
+rowtime: 2020/07/20 15:39:21.148 Z, key: <null>, value: 2020-07-20,16:33,Sharpe Street,98,77,Spaces,53.789785,-1.756187,"https://maps.google.com/?daddr=53.789785,-1.756187"
+----
+
+Let's apply a schema
+
+[source,bash]
+----
+curl -s https://datahub.bradford.gov.uk/ebase/api/getData/v2/Council/CarParkCurrent | head -n 1
+date,time,name,capacity,empty_places,status,latitude,longitude,directionsURL
+----
+
+
+
+[source,sql]
+----
+CREATE STREAM CARPARK_SRC (date          VARCHAR ,
+                           time          VARCHAR ,
+                           name          VARCHAR ,
+                           capacity      INT ,
+                           empty_places  INT ,
+                           status        VARCHAR ,
+                           latitude      VARCHAR ,
+                           longitude     VARCHAR ,
+                           directionsURL VARCHAR)
+                WITH (KAFKA_TOPIC='carparks', 
+                VALUE_FORMAT='DELIMITED');
+
+-- https://github.com/confluentinc/ksql/issues/3950
+CREATE STREAM CARPARK_EVENTS WITH (VALUE_FORMAT='PROTOBUF', PARTITIONS=4) AS 
+SELECT STRINGTOTIMESTAMP(DATE + ' ' + TIME ,'yyyy-MM-dd HH:mm','Europe/London' ) AS TS,
+       *,
+       STRUCT("lat" := LATITUDE, "lon":= LONGITUDE) AS "location"
+  FROM CARPARK_SRC 
+  EMIT CHANGES;
+----

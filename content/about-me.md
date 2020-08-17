@@ -13,7 +13,7 @@ _I also write on my [employer's blog](https://www.confluent.io/blog/author/robin
 
 ### `whoami`
 
-> Robin is a Senior Developer Advocate at Confluent, the company founded by the original creators of Apache Kafka®, as well as an Oracle ACE Director (alumnus). His career has always involved data, from the old worlds of COBOL and DB2, through the worlds of Oracle and Hadoop, and into the current world with Kafka. His particular interests are analytics, systems architecture, performance testing and optimization. He blogs at http://cnfl.io/rmoff and http://rmoff.net/ (and previously http://ritt.md/rmoff) and can be found tweeting grumpy geek thoughts as @rmoff. Outside of work he enjoys drinking good beer and eating fried breakfasts, although generally not at the same time.
+> Robin is a Senior Developer Advocate at Confluent, the company founded by the original creators of Apache Kafka, as well as an Oracle ACE Director (Alumnus). He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. You can find many of his talks online at http://rmoff.net/talks/, and his blog articles at http://cnfl.io/rmoff and http://rmoff.net/. Outside of work, Robin enjoys running, drinking good beer, and eating fried breakfasts—although generally not at the same time.
 
 --- 
 
@@ -49,7 +49,11 @@ Slides & Recordings: http://rmoff.net/talks/
 
 ---
 
-### Mugshots
+### Headshots
 
-![](/images/2018/05/ksldn18-01.jpg)
-![](/images/2018/05/robin-moffatt-600px.jpg)
+![](/images/headshots/Krakow 2020-02-26 90891099_3057762174242382_4307260123761344512_o.jpg)
+![](/images/headshots/bigdatatechwarsaw2019_01.jpg)
+![](/images/headshots/Robin_kafkasummit_headshot_1600px.jpg)
+![](/images/headshots/Kafka Summit 10.1.19 391.jpg)
+![](/images/headshots/ksldn18-rmoff-01-sq.jpg)
+![](/images/headshots/reitz-codetalks-2410-2019-128.jpg)
