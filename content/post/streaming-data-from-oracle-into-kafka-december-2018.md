@@ -14,6 +14,8 @@ title = "Streaming data from Oracle into Kafka"
 
 _This is a short summary discussing what the options are for integrating Oracle RDBMS into Kafka, as of December 2018 (refreshed June 2020). For a more detailed background to why and how at a broader level for all databases (not just Oracle) see [this blog](http://cnfl.io/kafka-cdc) and [this talk](http://rmoff.dev/ksny19-no-more-silos)._
 
+{{< youtube LAoepZTapMM >}}
+
 ### What techniques & tools are there? 
 
 *Franck Pachot has written up an excellent analysis of the options available [here](https://medium.com/@FranckPachot/ideas-for-event-sourcing-in-oracle-d4e016e90af6)*.
