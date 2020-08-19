@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["R", "dft", "kibana", "elasticsearch", "dplyr", "lubridate", "wrangling", "elastic"]
 date = 2016-04-24T12:22:12Z
 description = ""

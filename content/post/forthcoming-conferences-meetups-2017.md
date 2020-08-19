@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["conferences", "meetups", "speaking", "doag", "ukoug", "oow"]
 date = 2017-09-11T06:45:00Z
 description = ""

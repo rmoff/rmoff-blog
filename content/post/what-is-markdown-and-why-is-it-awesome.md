@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["markdown", "marked2", "emacs", "vi"]
 date = 2017-09-12T19:00:00Z
 description = ""

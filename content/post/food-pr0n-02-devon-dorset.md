@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["lardy cake", "dorset", "devon", "gyle 59", "palmers", "beer", "fryup", "fullenglish"]
 date = 2016-04-11T19:00:56Z
 description = ""

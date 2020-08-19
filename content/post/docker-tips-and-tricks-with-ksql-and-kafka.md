@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["docker", "Docker Compose", "ksql", "ksql-cli", "ksql-server", "kafka connect"]
 date = 2018-12-15T22:00:55Z
 description = ""

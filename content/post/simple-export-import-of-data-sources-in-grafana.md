@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["curl", "grafana", "bash", "jq"]
 date = 2017-08-08T19:32:00Z
 description = ""

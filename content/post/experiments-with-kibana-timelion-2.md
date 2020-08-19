@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kibana", "timelion", "quandl", "topbeat"]
 date = 2016-03-29T21:07:00Z
 description = ""

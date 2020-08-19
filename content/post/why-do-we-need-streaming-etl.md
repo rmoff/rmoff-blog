@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["streaming", "etl", "apache kafka", "confluent platform"]
 date = 2018-03-06T22:18:00Z
 description = ""

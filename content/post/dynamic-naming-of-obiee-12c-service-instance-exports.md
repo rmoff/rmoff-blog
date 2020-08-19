@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "obiee12c", "exportserviceinstance", "wlst"]
 date = 2016-05-27T09:13:00Z
 description = ""

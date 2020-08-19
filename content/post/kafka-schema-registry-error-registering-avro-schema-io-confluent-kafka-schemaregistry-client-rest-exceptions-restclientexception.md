@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka", "schema registry", "kafka-avro-console-producer"]
 date = 2016-12-02T11:35:57Z
 description = ""

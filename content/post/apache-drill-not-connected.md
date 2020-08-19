@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["apache drill"]
 date = 2016-06-20T19:04:18Z
 description = ""

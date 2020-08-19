@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["elasticsearch", "kafka", "kafkaconnect", "geopoint"]
 date = 2018-10-05T15:22:51Z
 description = ""

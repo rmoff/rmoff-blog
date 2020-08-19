@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["food", "fullenglish", "hawksmoor", "burger", "indian", "black pudding", "suet pudding", "cubano"]
 date = 2016-03-19T21:18:00Z
 description = ""

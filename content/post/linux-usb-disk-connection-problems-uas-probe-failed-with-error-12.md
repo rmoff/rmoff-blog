@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["lsblk", "uas", "usb", "mount"]
 date = 2017-06-21T06:14:45Z
 description = ""

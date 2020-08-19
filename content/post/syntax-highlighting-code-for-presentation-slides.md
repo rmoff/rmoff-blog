@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["pygments", "pygmentize", "jq", "syntax highlighting", "keynote", "presenting", "asciinema"]
 date = 2018-06-20T18:32:10Z
 description = ""

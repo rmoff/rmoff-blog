@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["debezium", "kafka", "kafka connect", "mysql"]
 date = 2018-03-24T14:58:14Z
 description = ""

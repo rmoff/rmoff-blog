@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["food", "fullenglish"]
 date = 2016-02-26T18:02:31Z
 description = ""

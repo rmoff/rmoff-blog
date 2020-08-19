@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "installation", "jps-06514", "jdk", "environment variables", "wls", "keystore"]
 date = 2016-03-18T18:04:07Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["ksql", "window", "aggregate", "timestamp", "elasticsearch", "kibana"]
 date = 2018-09-03T16:16:30Z
 description = ""

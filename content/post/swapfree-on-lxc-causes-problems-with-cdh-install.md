@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["lxc", "proxmox", "swapfree", "cdh", "cloudera", "yarn", "readProcMemInfoFile", "/proc/meminfo"]
 date = 2016-06-15T17:52:00Z
 description = ""

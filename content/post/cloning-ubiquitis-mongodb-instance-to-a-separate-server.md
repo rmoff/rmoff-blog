@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["mongodb", "ubiquiti", "ubnt", "mongorestore", "mongodump"]
 date = 2018-03-27T18:45:20Z
 description = ""

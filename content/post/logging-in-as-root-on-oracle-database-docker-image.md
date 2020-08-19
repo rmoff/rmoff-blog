@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["oracle", "docker", "sudo", "root"]
 date = 2018-11-30T12:13:41Z
 description = ""

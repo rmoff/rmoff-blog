@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["influxdb", "metrics", "bash", "awk", "sed", "du", "curl", "grafana"]
 date = 2016-02-27T21:05:00Z
 description = ""

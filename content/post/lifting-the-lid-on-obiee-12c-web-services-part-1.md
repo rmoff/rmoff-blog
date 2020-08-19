@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
 date = 2016-05-24T21:15:00Z
 description = ""

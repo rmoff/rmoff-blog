@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["ksql", "stream", "table", "join"]
 date = 2018-05-17T10:16:43Z
 description = ""

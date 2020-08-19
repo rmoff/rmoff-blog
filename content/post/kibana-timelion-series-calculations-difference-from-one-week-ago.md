@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["timelion", "kibana", "offset", "formatting", "bar", "line"]
 date = 2016-05-23T09:46:28Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["proxmox", "home server", "lxc", "docker", "vmware esxi"]
 date = 2016-06-07T20:43:20Z
 description = ""

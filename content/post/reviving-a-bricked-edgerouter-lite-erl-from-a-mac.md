@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["edgemax", "erl", "edgerouter lite", "tftp", "rj45", "screen", "squashfs", "router", "networking"]
 date = 2016-06-08T15:58:30Z
 description = ""

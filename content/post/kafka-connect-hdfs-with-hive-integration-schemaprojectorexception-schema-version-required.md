@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka", "avro", "kafka connect", "SchemaProjectorException"]
 date = 2016-07-19T14:36:52Z
 description = ""

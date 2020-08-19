@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["apcupsd", "ups"]
 date = 2016-07-18T07:59:51Z
 description = ""

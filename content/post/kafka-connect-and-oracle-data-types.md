@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka connect", "oracle", "number", "timestamp"]
 date = 2018-05-21T08:59:00Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["goldengate", "oracle", "kafka", "confluent platform", "swingbench"]
 date = 2017-11-21T17:31:00Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["qemu", "aws", "ec2", "centos", "rhel"]
 date = 2017-03-11T15:04:00Z
 description = ""

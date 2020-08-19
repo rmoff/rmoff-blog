@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["vmdk", "vgscan", "lvm", "mount", "raw", "img", "aws", "losetup"]
 date = 2017-03-11T14:21:00Z
 description = ""

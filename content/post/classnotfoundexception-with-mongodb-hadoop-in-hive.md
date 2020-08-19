@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["mogodb", "hive", "jar", "classnotfoundexception"]
 date = 2016-06-15T17:58:19Z
 description = ""

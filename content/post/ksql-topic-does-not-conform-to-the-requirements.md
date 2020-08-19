@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 date = 2018-03-06T23:08:11Z
 description = ""
 draft = false

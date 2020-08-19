@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["diff", "patch"]
 date = 2018-06-07T14:35:36Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["oracle", "openworld", "oaktable world"]
 date = 2017-09-29T19:02:55Z
 description = ""

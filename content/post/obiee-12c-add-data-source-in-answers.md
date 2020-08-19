@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "obiee12c", "xsa", "dataset", "datasetsvc"]
 date = 2016-05-27T08:44:24Z
 description = ""

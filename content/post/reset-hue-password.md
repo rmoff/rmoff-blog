@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["hue", "django", "python", "cdh"]
 date = 2016-07-05T13:27:06Z
 description = ""

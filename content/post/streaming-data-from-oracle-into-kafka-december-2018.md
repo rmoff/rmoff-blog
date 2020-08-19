@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "ksqldb"]
 date = 2018-12-12T09:49:04Z
 draft = false

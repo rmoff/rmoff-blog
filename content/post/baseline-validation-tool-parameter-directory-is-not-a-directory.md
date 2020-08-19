@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "bvt", "regression testing", "baseline validation tool", "obiee12c"]
 date = 2016-05-18T15:35:46Z
 description = ""

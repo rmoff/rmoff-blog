@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["goldengate", "kafka connect", "avro", "schema registry", "oracle"]
 date = 2017-09-12T21:55:16Z
 description = ""

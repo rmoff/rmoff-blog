@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["headphones", "microphone", "headset", "wireless", "logitech", "microsoft", "apple", "strava", "running", "podcasts", "apple watch"]
 date = 2017-03-11T11:00:00Z
 description = ""

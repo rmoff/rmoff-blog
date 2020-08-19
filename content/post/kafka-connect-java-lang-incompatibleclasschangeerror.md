@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
 date = 2016-11-24T20:58:44Z
 description = ""

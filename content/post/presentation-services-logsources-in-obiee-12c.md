@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["sawserver", "logging", "diagnostics"]
 date = 2016-06-01T11:03:00Z
 description = ""

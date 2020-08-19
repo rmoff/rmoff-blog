@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka connect", "JsonDeserializer"]
 date = 2017-09-06T12:00:25Z
 description = ""

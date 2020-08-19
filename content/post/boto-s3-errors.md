@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["boto", "s3", "aws", "python"]
 date = 2016-10-14T08:41:30Z
 description = ""

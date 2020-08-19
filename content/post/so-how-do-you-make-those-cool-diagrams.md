@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["paper", "ios", "diagrams", "presenting", "ipad", "tools"]
 date = 2018-12-10T12:38:18Z
 description = ""

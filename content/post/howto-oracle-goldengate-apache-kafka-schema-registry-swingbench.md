@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["apache kafka", "schema registry", "swingbench", "goldengate", "oracle"]
 date = 2018-02-01T23:15:00Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafkacat", "kafka", "multiline"]
 date = 2018-09-04T08:26:51Z
 description = ""

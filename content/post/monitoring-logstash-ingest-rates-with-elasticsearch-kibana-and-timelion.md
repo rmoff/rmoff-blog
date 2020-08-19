@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["logstash", "timelion", "kibana", "elasticsearch", "monitoring", "ingest"]
 date = 2016-05-13T05:45:19Z
 description = ""

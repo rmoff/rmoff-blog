@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["oracle", "bigdatalite", "vm"]
 date = 2016-06-06T22:28:25Z
 description = ""

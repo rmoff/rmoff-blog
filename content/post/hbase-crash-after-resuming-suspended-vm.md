@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["hbase", "bigdatalite", "virtualbox", "ova"]
 date = 2017-01-20T09:36:00Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["ogg", "kafka connect", "avro"]
 date = 2016-11-29T22:04:38Z
 description = ""

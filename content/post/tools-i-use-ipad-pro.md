@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["ipad pro", "apple pencil", "apple keyboard", "keynote"]
 date = 2018-12-11T15:12:15Z
 description = ""

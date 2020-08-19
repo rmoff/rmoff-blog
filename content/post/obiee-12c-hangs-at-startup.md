@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "obiee12c", "hang", "boot.properties", "start.cmd"]
 date = 2016-05-20T14:22:21Z
 description = ""

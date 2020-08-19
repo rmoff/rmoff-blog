@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["career"]
 date = 2017-03-10T17:30:00Z
 description = ""

@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["docker", "docker-compose"]
 date = 2018-11-20T17:47:54Z
 description = ""

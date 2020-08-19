@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka", "key", "spelling", "pebcak"]
 date = 2017-05-12T00:52:41Z
 description = ""

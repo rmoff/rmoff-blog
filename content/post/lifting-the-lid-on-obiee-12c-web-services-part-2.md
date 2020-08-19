@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "obiee12c", "rpd", "downloadrpd", "uploadrpd", "data-model-cmd", "web service", "rest", "curl", "sysdig"]
 date = 2016-05-28T20:30:00Z
 description = ""

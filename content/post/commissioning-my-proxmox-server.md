@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["proxmox", "ext4", "e2label", "lsblk", "hdiutil", "bootable usb", "memtest"]
 date = 2016-06-07T21:03:22Z
 description = ""

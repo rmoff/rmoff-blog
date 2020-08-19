@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["obiee", "jdbc", "jisql", "logical sql"]
 date = 2016-03-28T21:01:00Z
 description = ""

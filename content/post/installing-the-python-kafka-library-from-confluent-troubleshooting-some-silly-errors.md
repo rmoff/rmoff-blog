@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka", "confluent", "python", "apt-get"]
 date = 2018-03-06T22:18:24Z
 description = ""

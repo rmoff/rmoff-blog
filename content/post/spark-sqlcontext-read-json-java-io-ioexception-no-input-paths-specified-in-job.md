@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["spark", "sparksql", "json"]
 date = 2016-07-13T04:50:16Z
 description = ""

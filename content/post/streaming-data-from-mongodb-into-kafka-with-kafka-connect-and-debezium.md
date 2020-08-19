@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["mongodb", "debezium", "kafka connect", "apache kafka", "replica set"]
 date = 2018-03-27T18:52:00Z
 description = ""

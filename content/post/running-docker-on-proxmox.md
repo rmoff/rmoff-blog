@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["docker", "proxmox", "bittorrent sync", "dropbox"]
 date = 2016-06-07T21:43:26Z
 description = ""

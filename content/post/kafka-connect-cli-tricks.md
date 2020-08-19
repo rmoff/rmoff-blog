@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["kafka connect", "bash", "jq", "peco", "xargs", "rest api"]
 date = 2018-12-03T14:50:45Z
 description = ""

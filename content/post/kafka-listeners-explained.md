@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["apache kafka", "kafka", "docker", "advertised.listeners", "listeners", "aws", "ec2", "KAFKA_ADVERTISED_LISTENERS"]
 date = 2018-08-02T19:38:00Z
 description = "How to connect clients to Kafka hosted in separate networks, such as Docker, AWS EC2, GCP, Azure, etc"

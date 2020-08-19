@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["reading", "books", "twitter", "podcasts", "knowledge", "data", "career"]
 date = 2017-03-11T15:30:00Z
 description = "How do you try and stay current on technical affairs, given only 24 hours in a day and a job to do as well? Here's my take on it..."

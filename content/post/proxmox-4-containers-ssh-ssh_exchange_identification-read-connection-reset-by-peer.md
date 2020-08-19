@@ -1,5 +1,4 @@
 +++
-author = "Robin Moffatt"
 categories = ["proxmox", "cidr", "networking", "lxc"]
 date = 2016-07-05T15:20:37Z
 description = ""
