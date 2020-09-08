@@ -1,8 +1,8 @@
 ---
-title: 'Bulk delete search engines from Google Chrome'
-date: "2020-08-07T10:00:05+01:00"
-image: "/images/2020/07/IMG_5284.jpeg"
-thumbnail: "/images/2020/07/IMG_5126.jpeg"
+title: 'Poking around the search engines in Google Chrome'
+date: "2020-09-07T23:00:05+01:00"
+image: "/images/2020/09/IMG_6593.jpeg"
+thumbnail: "/images/2020/09/IMG_6599.jpeg"
 draft: true
 credit: "@rmoff"
 categories:
@@ -15,5 +15,136 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-sqlite /Users/rmoff/Library/Application Support/Google/Chrome/Default/Web Data
+Google Chrome automagically adds sites that you visit which support searching to a list of custom search engines. For each one you can set a keyword which activates it, so based on the above list if I want to search Amazon I can just type `a` `<tab>` and then my search term
+
+image::/images/2020/09/searchengines02.gif[]
+
+<!--more-->
+
+Head to preferences and `Manage search engines` and you'll see:
+
+image::/images/2020/09/searchengines01.png[]
+
+But what about if you don't want all of these search engines there? You can delete them _one by one_, but that's laborious. Let's see if we can do better. 
+
+WARNING: ⚠️ This is completely unsupported, do at your own risk, etc
+
+First up, close Google Chrome, because we're about to muck about with it and things will probably not be good if it's running whilst we do it. 
+
+
+A sensible thing to do first is to take a backup: 
+
+[source,bash]
+----
+cp ~/Library/Application\ Support/Google/Chrome/Default/Web\ Data ~/chrome_webdata.bak
+----
+
+Now we can take a look at the SQLite database that stores the search engine (and other) data. 
+
+[source,bash]
+----
+➜ sqlite3 ~/Library/Application\ Support/Google/Chrome/Default/Web\ Data
+SQLite version 3.28.0 2019-04-15 14:49:49
+Enter ".help" for usage hints.
+sqlite> .tables
+autofill                      meta
+autofill_model_type_state     payment_method_manifest
+autofill_profile_emails       payments_customer_data
+autofill_profile_names        payments_upi_vpa
+autofill_profile_phones       server_address_metadata
+autofill_profiles             server_addresses
+autofill_profiles_trash       server_card_cloud_token_data
+autofill_sync_metadata        server_card_metadata
+credit_cards                  token_service
+keywords                      unmasked_credit_cards
+masked_credit_cards           web_app_manifest_section
+----
+
+If the SQLite CLI is your thing then you can stick around here, but for poking around I found a GUI easier. https://sqlitebrowser.org/[DB Browser for SQLite] is available on most platforms. On the Mac you can run: 
+
+[source,bash]
+----
 brew cask install db-browser-for-sqlite
+----
+
+The table that holds the search engine config is called `keywords`
+
+image::/images/2020/09/searchengines03.png[]
+
+== Which search engines have never been used?
+
+There's tons of fields, including information about when the entry was created and was last used. With this information we can run some SQL to analyse the list: 
+
+[source,sql]
+----
+SELECT CASE
+        WHEN last_visited = 0 THEN 'never'
+        ELSE 'yes'
+    END AS USED,
+    COUNT(*)
+FROM keywords
+GROUP BY CASE
+        WHEN last_visited = 0 THEN 'never'
+        ELSE 'yes'
+    END;
+----
+
+[source,sql]
+----
+never       126
+yes         32
+----
+
+Since there's a bunch there, let's clear them out. 
+
+WARNING: ⚠️ This is completely unsupported, do at your own risk, etc
+
+[source,sql]
+----
+DELETE FROM keywords WHERE last_visited =0;
+----
+
+_This didn't seem to take any effect, even with Chrome closed, even having signed out of Sync. If you've any suggestions on how to make it persist then do let me know :)_
+
+== When did you last use the search engine?
+
+[source,sql]
+----
+SELECT short_name, last_visited,DATETIME(last_visited / 1000000 + (STRFTIME('%s', '1601-01-01')), 'unixepoch', 'localtime') FROM keywords ORDER BY last_visited DESC;
+----
+
+[source,sql]
+----
+amazon.co.uk  13244032138725921  2020-09-08 10:48:58
+images.googl  13244031156625704  2020-09-08 10:32:36
+LinkedIn      13244030586371852  2020-09-08 10:23:06
+ksqlDB issue  13244029597778579  2020-09-08 10:06:37
+Twitter       13243959593811733  2020-09-07 14:39:53
+Google Maps   13243697309712953  2020-09-04 13:48:29
+----
+
+Check out the format of the datetime field - https://stackoverflow.com/questions/20458406/what-is-the-format-of-chromes-timestamps[courtesy of StackOverflow] I found out that it is the _number of microseconds since January, 1601._ Unix epoch not good enough for you?… 😉
+
+We can break this down further, and look at which search engines I have used but not for the last 90 days (~3 months)
+
+[source,sql]
+----
+SELECT short_name, DATETIME(last_visited / 1000000 + (STRFTIME('%s', '1601-01-01')), 'unixepoch', 'localtime') AS last_visited 
+  FROM keywords 
+  WHERE JULIANDAY(date()) - 
+        JULIANDAY(DATETIME(last_visited / 1000000 + (STRFTIME('%s', '1601-01-01')), 'unixepoch', 'localtime')) 
+        > 90 
+  ORDER BY last_visited DESC;
+----
+
+[source,sql]
+----
+news.google.com  2020-06-05 17:24:23
+elixir-lang.org  2020-06-02 16:32:16
+IMDb             2020-01-14 11:39:32
+Neo4j Online Co  2019-12-06 12:15:55
+Vimeo            2019-11-14 17:21:57
+help.getpocket.  2019-09-29 14:41:20
+GitHub           2019-08-06 21:54:48
+----
+
