@@ -15,7 +15,10 @@ categories:
 
 Kafka Connect is the integration API for Apache Kafka. Check out this video for an overview of what Kafka Connect enables you to do, and how to do it. 
 
+<!--more-->
+
 {{< youtube RQn3tYvkeh8 >}}
+
 
 * [💾Download](https://www.confluent.io/download/)
 * [☁️ Confluent Cloud](https://confluent.cloud/signup)
