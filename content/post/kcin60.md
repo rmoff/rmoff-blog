@@ -1,7 +1,7 @@
 ---
 title: 'Kafka Connect in 60 seconds'
 date: "2020-09-11T16:00:05+01:00"
-image: "/images/2020/09/IMG_6672.jpeg"
+image: "/images/2020/09/Kafka Connect in 60 seconds_cover.jpg"
 thumbnail: "/images/2020/09/IMG_6647.jpeg"
 draft: false
 credit: "@rmoff"
