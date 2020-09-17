@@ -33,7 +33,8 @@ As of June 2020, this is what the line-up looks like:
       * Built on top of LogMiner. Oracle's API for third-party applications wanting to stream events from the database. 
       * Currently beta implementation by [**Debezium**](https://debezium.io/docs/connectors/oracle/) (0.9) with Kafka Connect
   * **Oracle Log Miner** No special license required (even available in Oracle XE).
-      * [Being](https://issues.jboss.org/browse/DBZ-20) [considered](https://issues.jboss.org/browse/DBZ-137?_sscc=t) by Debezium, and also implemented by [community connector here](https://github.com/erdemcer/kafka-connect-oracle)
+      * Currently beta implementation by [**Debezium**](https://debezium.io/releases/1.3/release-notes/#release-1.3.0-beta2) (1.3.0 beta2) with Kafka Connect ([details](https://issues.jboss.org/browse/DBZ-137))
+      * Implemented by [community connector here](https://github.com/erdemcer/kafka-connect-oracle)
       * Available commercially from Attunity, SQData, HVR, StreamSets, Striim etc
       * DBVisit Replicate is no longer developed. 
 * **Triggers** to capture changes made to a table, write details of those changes to another database table, ingest that table into Kafka (e.g. with JDBC connector).
@@ -43,7 +44,7 @@ As of June 2020, this is what the line-up looks like:
 
 ### What do they look like in action? 
 
-I did a recent talk at UK Oracle User Group TECH18 conference, presenting my talk "[No More Silos: Integrating Databases and Apache Kafka](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)". As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the new Debezium/XStream option (log-based CDC). Here I'll try and replicate the discussion and examples. You can also see previous articles that I've written showing [GoldenGate in action](https://rmoff.net/tag/goldengate/).
+I did a talk at UK Oracle User Group TECH18 conference, presenting my talk "[No More Silos: Integrating Databases and Apache Kafka](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)". As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the Debezium/XStream option (log-based CDC). Here I'll try and replicate the discussion and examples. You can also see previous articles that I've written showing [GoldenGate in action](https://rmoff.net/tag/goldengate/).
 
 You can find all of the code on the [demo-scene](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/no-more-silos-oracle.adoc) repository, runnable through Docker and Docker Compose. Simply clone the repo, and then run 
 
