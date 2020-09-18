@@ -1,0 +1,278 @@
+---
+title: 'Using the Debezium MS SQL connector with ksqlDB embedded Kafka Connect'
+date: "2020-09-18T10:00:05+01:00"
+image: "/images/2020/09/IMG_6749.jpeg"
+thumbnail: "/images/2020/09/IMG_6723.jpeg"
+draft: false
+credit: "@rmoff"
+categories:
+- MS SQL
+- Debezium
+- Confluent Hub
+- ksqlDB
+- Docker Compose
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Prompted by https://stackoverflow.com/questions/63946368/how-to-use-the-debezium-sql-server-connector-with-ksqldb-embedded-connect[a question on StackOverflow] I thought I'd take a quick look at setting up https://ksqldb.io[ksqlDB] to ingest CDC events from Microsoft SQL Server using https://debezium.io/[Debezium]. Some of this is based on my previous article, https://rmoff.net/2019/11/20/streaming-data-from-sql-server-to-kafka-to-snowflake-with-kafka-connect/[Streaming data from SQL Server to Kafka to Snowflake ❄️ with Kafka Connect]. 
+
+== Setting up the Docker Compose
+
+I like standalone, repeatable, demo code. For that reason I love using Docker Compose and I embed everything in there - connector installation, the kitchen sink - the works. 
+
+You can find the complete https://github.com/confluentinc/demo-scene/blob/master/mssql-to-kafka-with-ksqldb/docker-compose.yml[Docker Compose file on GitHub].
+
+=== Installing connectors in ksqlDB without Confluent Hub client
+
+I'll usually take advantage of the `command:` stanza in a Docker Compose service to do things like connector installation, https://rmoff.net/2018/12/15/docker-tips-and-tricks-with-ksql-and-kafka/[as detailed here]. In ksqlDB 0.11 the Confluent Hub client is absent so I've had to take a slightly hackier route. If you head over to https://hub.confluent.io[Confluent Hub] and download the connector you want (in this case Debezium MS SQL) you can check the network console to get the direct URL, in this case 
+
+[source,bash]
+----
+https://d1i4a15mxbxib1.cloudfront.net/api/plugins/debezium/debezium-connector-sqlserver/versions/1.2.2/debezium-debezium-connector-sqlserver-1.2.2.zip
+----
+
+Now, this URL is liable to change but for now, it works :) (I realise that this runs contrary to making a demo repeatable, but what's life if we can't live on the edge a bit)
+
+With this code we can download and install the connector within the ksqlDB Docker container when it spins up
+
+[source,bash]
+----
+curl https://d1i4a15mxbxib1.cloudfront.net/api/plugins/debezium/debezium-connector-sqlserver/versions/1.2.2/debezium-debezium-connector-sqlserver-1.2.2.zip -o /tmp/kafka-connect-mssql.zip
+yum install -y unzip
+unzip /tmp/kafka-connect-mssql.zip -d /usr/share/java/
+----
+
+There's a wrinkle in the plan here which is that the latest version of the container runs as a non-root user, and `sudo` is not installed (https://xkcd.com/149/[no sandwiches for me]). To hack around this we elevate the container to run as root user in the Docker Compose spec: 
+
+[source,yaml]
+----
+  ksqldb:
+    image: confluentinc/ksqldb-server:0.11.0
+    container_name: ksqldb
+    user: root
+    …
+----
+
+Now when the container launches it downloads the connector, installs `unzip` and unzips the connector archive directly into the `plugin.path` in which Kafka Connect (running embedded in ksqlDB) will look for it. 
+
+NOTE: The 'proper' way to do this is either bake your own ksqlDB image with the connector plugin already installed, or to download the connector to the host machine, and mount it into the ksqlDB container. Both of these are fine, but involve more moving parts and stuff to go wrong than a standalone Docker Compose file for my purposes :)
+
+== Running the stack 
+
+Spin up the https://github.com/confluentinc/demo-scene/blob/master/mssql-to-kafka-with-ksqldb/docker-compose.yml[Docker Compose file]
+
+[source,bash]
+----
+docker-compose up -d
+----
+
+and then launch ksqlDB - this seemingly complex snippet simply waits for ksqlDB to be available before launching the CLI: 
+
+[source,bash]
+----
+docker exec -it ksqldb bash -c 'echo -e "\n\n  Waiting for ksqlDB to be available before launching CLI\n"; while : ; do curl_status=$(curl -s -o /dev/null -w %{http_code} http://ksqldb:8088/info) ; echo -e $(date) " ksqlDB server listener HTTP state: " $curl_status " (waiting for 200)" ; if [ $curl_status -eq 200 ] ; then  break ; fi ; sleep 5 ; done ; ksql http://ksqldb:8088'
+----
+
+In a separate terminal, once ksqlDB has finished starting (i.e. once the ksqlDB CLI starts from the above command) make sure that the MS SQL connector has installed correctly: 
+
+[source,bash]
+----
+docker exec ksqldb curl -s localhost:8083/connector-plugins
+----
+
+You should see
+
+[source,bash]
+----
+[{"class":"io.debezium.connector.sqlserver.SqlServerConnector","type":"source","version":"1.2.2.Final"}]
+----
+
+== Configuring MS SQL for CDC
+
+When the MS SQL container starts a couple of scripts are run to set up the database for CDC and add some test data. If you're not using the Docker Compose then you need to run these yourself: 
+
+[source,sql]
+----
+include::https://raw.githubusercontent.com/confluentinc/demo-scene/master/mssql-to-kafka-with-ksqldb/data/mssql/b00_create_db_demo.sql[]
+----
+
+[source,sql]
+----
+include::https://raw.githubusercontent.com/confluentinc/demo-scene/master/mssql-to-kafka-with-ksqldb/data/mssql/x00_create_orders.sql[]
+----
+
+
+== Adding a SQL Server connector in ksqlDB
+
+You should now have the ksqlDB prompt open 
+
+[source,bash]
+----
+                  ===========================================
+                  =       _              _ ____  ____       =
+                  =      | | _____  __ _| |  _ \| __ )      =
+                  =      | |/ / __|/ _` | | | | |  _ \      =
+                  =      |   <\__ \ (_| | | |_| | |_) |     =
+                  =      |_|\_\___/\__, |_|____/|____/      =
+                  =                   |_|                   =
+                  =  Event Streaming Database purpose-built =
+                  =        for stream processing apps       =
+                  ===========================================
+
+Copyright 2017-2020 Confluent Inc.
+
+CLI v0.11.0, Server v0.11.0 located at http://ksqldb:8088
+
+Having trouble? Type 'help' (case-insensitive) for a rundown of how things work!
+
+ksql>
+----
+
+From the ksqlDB prompt create the connector: 
+
+[source,sql]
+----
+CREATE SOURCE CONNECTOR SOURCE_MSSQL_ORDERS_01 WITH (
+      'connector.class' = 'io.debezium.connector.sqlserver.SqlServerConnector',
+      'database.hostname' = 'mssql',
+      'database.port' = '1433',
+      'database.user' = 'sa',
+      'database.password' = 'Admin123',
+      'database.dbname' = 'demo',
+      'database.server.name' = 'mssql',
+      'table.whitelist' = 'dbo.orders',
+      'database.history.kafka.bootstrap.servers' = 'broker:29092',
+      'database.history.kafka.topic' = 'dbz_dbhistory.mssql.asgard-01',
+      'decimal.handling.mode' = 'double'
+);
+----
+
+Check that it's running successfully
+
+[source,sql]
+----
+SHOW CONNECTORS;
+----
+
+[source,sql]
+----
+ Connector Name         | Type   | Class                                              | Status
+--------------------------------------------------------------------------------------------------------------------
+ SOURCE_MSSQL_ORDERS_01 | SOURCE | io.debezium.connector.sqlserver.SqlServerConnector | RUNNING (1/1 tasks RUNNING)
+--------------------------------------------------------------------------------------------------------------------
+----
+
+If it's *not* (e.g. if the Status is `WARNING`) then run `docker logs -f ksqldb` and page through to find the `ERROR`. 
+
+== Using MS SQL data in ksqlDB
+
+With the connector running and the data flowing you can declare a stream against it
+
+[source,sql]
+----
+CREATE STREAM ORDERS WITH (KAFKA_TOPIC='mssql.dbo.ORDERS', VALUE_FORMAT='AVRO');
+----
+
+and then start to explore the data: 
+
+[source,sql]
+----
+SET 'auto.offset.reset' = 'earliest';
+
+SELECT SOURCE->NAME, SOURCE->SCHEMA + '.' + SOURCE->"TABLE", OP,BEFORE,AFTER FROM ORDERS EMIT CHANGES LIMIT 2;
+----
+
+[source,bash]
+----
++-----------------------+-----------------------+-------+---------+-----------------------+
+|NAME                   |KSQL_COL_0             |OP     |BEFORE   |AFTER                  |
++-----------------------+-----------------------+-------+---------+-----------------------+
+|mssql                  |dbo.ORDERS             |r      |null     |{ORDER_ID=1, CUSTOMER_I|
+|                       |                       |       |         |D=7, ORDER_TS=18256, OR|
+|                       |                       |       |         |DER_TOTAL_USD=2.1, ITEM|
+|                       |                       |       |         |=Proper Job}           |
+|mssql                  |dbo.ORDERS             |r      |null     |{ORDER_ID=2, CUSTOMER_I|
+|                       |                       |       |         |D=8, ORDER_TS=18236, OR|
+|                       |                       |       |         |DER_TOTAL_USD=0.23, ITE|
+|                       |                       |       |         |M=Wainwright}          |
+
+----
+
+Note the use of the `->` operator to access the nested fields. 
+
+[source,sql]
+----
+SELECT AFTER->ORDER_ID, AFTER->CUSTOMER_ID, AFTER->ORDER_TOTAL_USD FROM ORDERS EMIT CHANGES LIMIT 5;
+----
+
+[source,bash]
+----
++-------------+--------------+------------------+
+|ORDER_ID     |CUSTOMER_ID   |ORDER_TOTAL_USD   |
++-------------+--------------+------------------+
+|1            |7             |2.1               |
+|2            |8             |0.23              |
+|3            |12            |4.3               |
+|4            |7             |4.88              |
+|5            |14            |3.89              |
+Limit Reached
+Query terminated
+----
+
+== Capturing changes from MS SQL
+
+So far we've just seen the snapshot/bootstrap ingest of data from MS SQL into Kafka/ksqlDB. Let's make some changes in MS SQL and see how they show up in ksqlDB.
+
+Launch the MS SQL CLI
+
+[source,bash]
+----
+docker exec -it mssql bash -c '/opt/mssql-tools/bin/sqlcmd -l 30 -d demo -S localhost -U sa -P $SA_PASSWORD'
+----
+
+Make some changes to the data
+
+[source,sql]
+----
+DELETE FROM ORDERS WHERE ORDER_ID=1;
+UPDATE ORDERS SET ORDER_TOTAL_USD = ORDER_TOTAL_USD * 0.9 WHERE ORDER_ID =2;
+INSERT INTO ORDERS (order_id, customer_id, order_ts, order_total_usd, item) values (9, 5, '2019-11-29T11:10:39Z', '2.24', 'Black Sheep Ale');
+GO
+----
+
+Check out the data in ksqlDB
+
+[source,sql]
+----
+SELECT OP, 
+       SOURCE->SCHEMA + '.' + SOURCE->"TABLE",
+       BEFORE->ORDER_ID AS B_ORDER_ID,
+       AFTER->ORDER_ID AS A_ORDER_ID,
+       BEFORE->ORDER_TOTAL_USD AS B_ORDER_TOTAL_USD,
+       AFTER->ORDER_TOTAL_USD AS A_ORDER_TOTAL_USD,
+       BEFORE->ITEM AS B_ITEM,
+       AFTER->ITEM AS A_ITEM
+  FROM ORDERS
+  WHERE NOT OP='r'
+  EMIT CHANGES;
+----
+
+[source,sql]
+----
++-----+-------------+------------+-----------+-------------------+------------------+---------------------+---------------------+
+|OP   |KSQL_COL_0   |B_ORDER_ID  |A_ORDER_ID |B_ORDER_TOTAL_USD  |A_ORDER_TOTAL_USD |B_ITEM               |A_ITEM               |
++-----+-------------+------------+-----------+-------------------+------------------+---------------------+---------------------+
+|d    |dbo.ORDERS   |1           |null       |2.1                |null              |Proper Job           |null                 |
+|u    |dbo.ORDERS   |2           |2          |0.23               |0.21              |Wainwright           |Wainwright           |
+|c    |dbo.ORDERS   |null        |9          |null               |2.24              |null                 |Black Sheep Ale      |
+----
+
+Things to note: 
+
+* The `d` deletion message gives you access to the row state before it was deleted
+* The `u` update message gives you the field values before they were updated (`ORDER_TOTAL_USD`)
+* The `c` creation message has null values in the `BEFORE` object because there were no values before the row was created :)
