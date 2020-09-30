@@ -15,6 +15,9 @@ title = "Quick 'n Easy Population of Realistic Test Data into Kafka"
     curl -s "https://api.mockaroo.com/api/d5a195e0?count=2&key=ff7856d0"| \
     kafkacat -b localhost:9092 -t purchases -P
 
+<!--more-->
+
+
 ---
 Three things I love…Kafka, `kafkacat`, and Mockaroo. And in this post I get to show all three 😁 
 
