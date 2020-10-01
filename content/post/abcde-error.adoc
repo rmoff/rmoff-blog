@@ -1,0 +1,78 @@
+---
+title: '`abcde` - Error trying to calculate disc ids without lead-out information'
+date: "2020-10-01T09:16:11+01:00"
+draft: false
+credit: "@rmoff"
+categories:
+- abcde
+- CD ripping
+---
+
+Short & sweet to help out future Googlers. Trying to use `abcde` I got the error: 
+
+[source,bash]
+----
+[WARNING] something went wrong while querying the CD... Maybe a DATA CD or the CD is not loaded?
+[WARNING] Error trying to calculate disc ids without lead-out information.
+----
+
+<!--more-->
+
+
+Google found me https://unix.stackexchange.com/questions/406147/unable-to-read-an-audio-cd-in-debian-9-2[this StackOverflow article] which ultimately ended with the OP having a faulty drive, but courtesy of a well-written question I got this snippet to try: 
+
+[source,bash]
+----
+cd-info /dev/sr0
+----
+
+which gave me
+
+[source,bash]
+----
+cd-info version 2.0.0 x86_64-redhat-linux-gnu
+Copyright (c) 2003-2005, 2007-2008, 2011-2015, 2017 R. Bernstein
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+++ WARN: open (/dev/sr0): Permission denied
+++ WARN: could not open input stream...
+cd-info: Error in automatically selecting driver for input /dev/sr0.
+----
+
+So it was a permissions error for me, crudely fixed thus: 
+
+[source,bash]
+----
+sudo chmod o+rx /dev/sr0
+----
+
+and now `cd-info` worked:
+
+[source,bash]
+----
+cd-info /dev/sr0
+cd-info version 2.0.0 x86_64-redhat-linux-gnu
+Copyright (c) 2003-2005, 2007-2008, 2011-2015, 2017 R. Bernstein
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+CD location   : /dev/sr0
+CD driver name: GNU/Linux
+   access mode: IOCTL
+
+Vendor                      : TSSTcorp
+Model                       : CDDVDW SH-224FB
+[…]
+----
+
+as did `abcde`: 
+
+[source,bash]
+----
+No default output type defined. Autoselecting vorbis...
+Executing customizable pre-read function... done.
+[…]
+----
+
+I could have fiddled around with `usermod` and groups and stuff like that, but `chmod` was quicker & as effective on my simple home server. YOLO `¯\\_(ツ)_/¯`
