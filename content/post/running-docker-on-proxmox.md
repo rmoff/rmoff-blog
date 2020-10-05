@@ -63,7 +63,7 @@ You can use it for one-off transfers of single huge files, or just folders of do
  
 BitTorrent|Resilio Sync is nothing to do with the somewhat-infamous BitTorrent, other than similar technology -- which is presumably why they replaced the 'BitTorrent' part of the name.
 
-I've run BitTorrent Sync in the past in an OpenVZ container, but thought this would be a good chance to see if Docker was going to be useful for me. I found a [Docker image existing for Sync already]((https://hub.docker.com/r/bittorrent/sync/)), so ran it: 
+I've run BitTorrent Sync in the past in an OpenVZ container, but thought this would be a good chance to see if Docker was going to be useful for me. I found a [Docker image existing for Sync already](https://hub.docker.com/r/bittorrent/sync/), so ran it: 
 
 ```bash
 rmoff@proxmox01:~$ DATA_FOLDER=/data04/sync

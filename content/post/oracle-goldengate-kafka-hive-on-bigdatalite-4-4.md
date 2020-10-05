@@ -10,7 +10,7 @@ title = "Fun and Games with Oracle GoldenGate, Kafka, and Logstash on BigDataLit
 
 +++
 
-The Oracle by Example (ObE) [here](http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_12c/DI_BDL_Guide/BigDataIntegration_Demo.html?cid=10235&ssid=0) demonstrating how to use [Goldengate to replicate transactions big data targets]([https://docs.oracle.com/goldengate/bd1221/gg-bd/GBDIN/intro_adapter.htm#GBDIN101](http://)) such as HDFS is written for the BigDataLite [4.2.1](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite421-2843803.html), and for me didn't work on the current latest version, [4.4.0](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html). 
+The Oracle by Example (ObE) [here](http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_12c/DI_BDL_Guide/BigDataIntegration_Demo.html?cid=10235&ssid=0) demonstrating how to use [Goldengate to replicate transactions big data targets](https://docs.oracle.com/goldengate/bd1221/gg-bd/GBDIN/intro_adapter.htm#GBDIN101) such as HDFS is written for the BigDataLite [4.2.1](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite421-2843803.html), and for me didn't work on the current latest version, [4.4.0](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html). 
 
 The OBE (and similar [Hands On Lab](http://www.oracle.com/webfolder/technetwork/odi/ODI_BigData_HOL.pdf) PDF) assume the presence of `pmov.prm` and `pmov.properties` in `/u01/ogg/dirprm/`. On BDL 4.4 there's only the extract to from Oracle configuration, `emov`. 
 

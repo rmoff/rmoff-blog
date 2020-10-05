@@ -17,7 +17,7 @@ One issue that I hit defeated my Google-fu so I'm recording it here to hopefully
 The pipeline that I'd set up looked like this: 
 
 * [Eneco's Twitter Source](https://github.com/Eneco/kafka-connect-twitter) streaming tweets to a Kafka topic
-* Confluent's [HDFS Sink](docs.confluent.io/3.0.0/connect/connect-hdfs/docs/hdfs_connector.html) to stream tweets to HDFS and define Hive table automagically over them
+* Confluent's [HDFS Sink](https://docs.confluent.io/current/connect/kafka-connect-hdfs/index.html) to stream tweets to HDFS and define Hive table automagically over them
 
 It worked great, but only if I didn't enable the Hive integration part. For me the integration with Hive to automatically define schemas was one of the key interests for this platform, so I wanted to see if I could get it to work. The error I got was
 

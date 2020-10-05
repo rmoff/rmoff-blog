@@ -1,0 +1,60 @@
+---
+title: 'IBM MQ on Docker - Channel was blocked'
+date: "2020-10-01T01:09:41+01:00"
+credit: "https://twitter.com/rmoff/"
+draft: false
+categories:
+- IBM MQ
+- Docker
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+
+Running IBM MQ in a Docker container and the client connecting to it was throwing repeated `Channel was blocked` errors. 
+
+<!--more-->
+
+[source]
+----
+AMQ9777E: Channel was blocked [CommentInsert1(SYSTEM.DEF.SVRCONN), CommentInsert2(kafka-connect (192.168.48.8)), CommentInsert3(CLNTUSER(app)]
+AMQ9999E: Channel 'SYSTEM.DEF.SVRCONN' to host '192.168.48.8' ended abnormally. [CommentInsert1(SYSTEM.DEF.SVRCONN), CommentInsert2(1647), CommentInsert3(192.168.48.8)]
+----
+
+
+Ths container was part of a Docker Compose: 
+
+[source,yaml]
+----
+  ibmmq:
+    image: ibmcom/mq:9.2.0.0-r2
+    container_name: ibmmq
+    ports:
+    - "9443:9443"
+    environment:
+      LICENSE: "accept"
+      MQ_ADMIN_PASSWORD: "Admin123"
+      MQ_APP_PASSWORD: "Admin123"
+      MQ_QMGR_NAME: "QM1"
+----
+
+Reading https://github.com/ibm-messaging/mq-container/blob/master/docs/developer-config.md[the MQ image documentation] carefully I found this: 
+
+> Two channels are created, one for administration, the other for normal messaging:
+> 
+> * DEV.ADMIN.SVRCONN - configured to only allow the admin user to connect into it. A user and password must be supplied.
+> * **DEV.APP.SVRCONN - does not allow administrative users to connect. Password is optional unless you choose a password for app users.**
+
+Turned out I was using the wrong channel name (`SYSTEM.DEF.SVRCONN`). Changing my client to use the correct one (`DEV.APP.SVRCONN`) fixed the problem. 
+
+To list the channels available run on the IBM MQ container: 
+
+[source,bash]
+----
+echo "DISPLAY CHSTATUS(*)" | runmqsc QM1
+----
+
+(https://www.ibm.com/support/knowledgecenter/SSFKSJ_7.5.0/com.ibm.mq.ref.adm.doc/q086040_.htm[ref])

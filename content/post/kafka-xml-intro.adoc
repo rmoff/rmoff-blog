@@ -1,0 +1,145 @@
+---
+title: 'Ingesting XML data into Kafka - Introduction'
+date: "2020-10-01T12:09:41+01:00"
+image: "/images/2020/09/IMG_6833.jpeg"
+thumbnail: "/images/2020/09/IMG_6861.jpeg"
+credit: "https://twitter.com/rmoff/"
+draft: false
+series: Ingesting XML data into Kafka
+categories:
+- XML
+- Kafka
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+XML has been around for 20+ years, and whilst other ways of serialising our data have gained popularity in more recent times (such as JSON, Avro, and Protobuf), XML is not going away soon. Part of that is down to technical reasons (clearly defined and documented schemas), and part of it is simply down to enterprise inertia - having adopted XML for systems in the last couple of decades, they're not going to be changing now just for some short-term fad. See also COBOL. 
+
+Given this, it's not an uncommon question to see asked in the Kafka community how one can get data from a source system that's in XML form into a Kafka topic. Usually the route for ingestion from external systems into Kafka is https://rmoff.dev/what-is-kafka-connect[Kafka Connect], whether than be from flat file, REST endpoint, message queue, or somewhere else. 
+
+== 🤔 What are we expecting to see in the Kafka topic? 
+
+Let's start from the basics. Kafka messages are just bytes, so we can put whatever we want into it. We can dump XML into a Kafka topic, and now the Kafka topic has XML in it. But what are we expecting to do with that data? Unless our consuming application literally wants a stream of XML (in which case you are done now) then we need find a way to convert the XML data and its schema into a form that a Kafka consumer can read and access the actual schema. 
+
+An XML message stored as plain text in Kafka: 
+
+[width="100%",cols="2",options="header"]
+|===
+|Source | Kafka message
+|`<?xml version='1.0' encoding='UTF-8'?>
+<dataset> <record> <name>Edinburgh NCP</name> <space>E63</space> <occupied>false</occupied> </record> <record> <name>Bournemouth NCP</name> <space>E88</space> <occupied>true</occupied> </record> </dataset>` | `<?xml version='1.0' encoding='UTF-8'?> <dataset> <record> <name>Edinburgh NCP</name> <space>E63</space> <occupied>false</occupied> </record> <record> <name>Bournemouth NCP</name> <space>E88</space> <occupied>true</occupied> </record> </dataset>`
+|===
+
+It's not much more different from a payload that looks like this
+
+[width="100%",cols="2",options="header"]
+|===
+|Source | Kafka message
+|`Bacon ipsum dolor amet strip steak fatback porchetta` | `Bacon ipsum dolor amet strip steak fatback porchetta`
+|===
+
+*It's just a string*, and when it comes to a consuming application reading the message from the Kafka topic the application will need to know how to interpret that data, whether parsing the XML with an XSD, or figuring out some piggy-goodness 🐷.
+
+What we actually want to do is store the message in Kafka as a payload plus schema. That then gives us a message that logically looks like this: 
+
+[width="100%",cols="1,2a",options="header"]
+|===
+|Source | Kafka message
+|`<dataset>
+    <record>
+        <name>Edinburgh NCP</name>
+        <space>E63</space>
+        <occupied>false</occupied>
+    </record>
+    <record>
+        <name>Bournemouth NCP</name>
+        <space>E88</space>
+        <occupied>true</occupied>
+    </record>
+</dataset>` | 
+
+[width="100%",cols="3",options="header"]
+!===
+!name!space!occupied
+!Edinburgh NCP!E63!false
+!Bournemouth NCP!E88!true
+!===
+
+|===
+
+_If you look closely we're making some assumptions about the payload handling. We've taken one XML message and assumed that the `<dataset> <record>` is a wrapper, holding two records. It could be we want to hold the whole thing as a single message - and this is where we get into the nitty gritty of reserialising formats, because there's a bunch of assumptions and manual steps that need to be verified_. 
+
+== Schemas, Schmeeeemas
+
+Who cares about schemas? Me. You. Anyone wanting to build pipelines and applications around Kafka that are decoupled from the source, and not be beholden to the source to find out about the data coming from it. Given the example in the section above, we could take the final rendering with the `name`/`space`/`occupied` fields, hook that up to the JDBC sink, and stream that directly into a database - and create the target table too, *because we have the schema* necessary to execute the DDL. 
+
+XML is self-documenting with an XSD for its schema, but it's not a generally-supported serde in the Kafka ecosystem. For that, you want to look at Avro, Protobuf, or JSON Schema. The Confluent Schema Registry supports all three, and provides serdes for any producer & consumer application. It plugs in directly to Kafka Connect and ksqlDB too, and it enables you to build "plug and play" data pipelines that *_just work_*. 
+
+=== Why not just JSON?
+
+I mean, with JSON we can have messages that look like this: 
+
+[source,javascript]
+----
+{
+    "name": "Edinburgh NCP",
+    "space": "E63",
+    "occupied": "false"
+}
+----
+
+It _looks_ like there's a schema, doesn't it? We can store this JSON data on a Kafka message, and isn't that going to be good enough? Well, not really - because we can only _infer_ (which is a posh way of saying 'guess') the schema. We can _assume_ that there are three columns, and that they can't be null, and they _look_ like they're `VARCHAR`, although `occupied` could be a boolean - but we don't *know*. 
+
+If we want to use the data we have to specify the actual schema at the point at which we want to consume it (which in practice is going to mean coupling ourselves back to the team/org that wrote the data to find out its definition, when it changes, and so on): 
+
+[source,sql]
+----
+CREATE STREAM carpark_json (name VARCHAR, 
+                            space VARCHAR, 
+                            occupied VARCHAR) 
+                      WITH (KAFKA_TOPIC='carpark_json', 
+                      VALUE_FORMAT='JSON');
+----
+
+Contrast this to serialising the data on a Kafka topic with a format that enables us to register an actual schema. Now when it comes to use the data we *know* all of these things (fields, data types, defualts, nullability, etc) - and it's available to any consumer too. Check out this example, in which the consumer is ksqlDB: 
+
+[source,sql]
+----
+-- Note that we don't have to type in the schema
+-- This is because the consuming application (ksqlDB here)
+-- can retrieve the full schema from the Schema Registry
+CREATE STREAM carpark_proto 
+    WITH (KAFKA_TOPIC='carpark_proto', 
+          VALUE_FORMAT='PROTOBUF');
+
+-- Here's the schema:
+ksql> DESCRIBE carpark_proto;
+
+Name                 : CARPARK_PROTO
+ Field    | Type
+----------------------------
+ NAME     | VARCHAR(STRING)
+ SPACE    | VARCHAR(STRING)
+ OCCUPIED | VARCHAR(STRING)
+----------------------------
+----
+
+Learn more about the importance of schemas here: 
+
+* 🎥 https://youtu.be/WpfJ86_DYfY?t=2209[Serialisation and Schemas (Kafka as a Platform: the Ecosystem from the Ground Up - NDC Oslo 2020)]
+* 🎥 https://rmoff.dev/qcon-schemas[Streaming Microservices: Contracts & Compatibility - Gwen Shapira - QCon]
+* ✍️ https://www.confluent.io/blog/schemas-contracts-compatibility/[Schemas, Contracts, and Compatibility]
+* ✍️ https://www.confluent.io/blog/schema-registry-kafka-stream-processing-yes-virginia-you-really-need-one/[Yes, Virginia, You Really Do Need a Schema Registry]
+
+For the rest of these articles we're going to assume that you want to get the payload from the XML into Kafka into a form in which the schema is also declared and available to use for consuming applications. 
+
+== So what are my options for getting XML into a Kafka topic? 
+
+It partly depends on _where_ your XML data originates. If it's from a flat file then you have all the options below; whilst if it's somewhere like a message queue then you are probably looking at the second option on the list. 
+
+* Option 1: link:/2020/10/01/ingesting-xml-data-into-kafka-option-1-the-dirty-hack/[The Dirty Hack]
+* Option 2: link:/2020/10/01/ingesting-xml-data-into-kafka-option-2-kafka-connect-plus-single-message-transform/[Any Kafka Connect connector plus `kafka-connect-transform-xml` Single Message Transform]
+* Option 3: link:/2020/10/01/ingesting-xml-data-into-kafka-option-3-kafka-connect-filepulse-connector/[Kafka Connect FilePulse connector]
