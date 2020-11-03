@@ -51,9 +51,9 @@ Slides & Recordings: http://rmoff.net/talks/
 
 ### Headshots
 
-![](/images/headshots/Krakow 2020-02-26 90891099_3057762174242382_4307260123761344512_o.jpg)
+![](/images/headshots/Krakow_20200226.jpg)
 ![](/images/headshots/bigdatatechwarsaw2019_01.jpg)
 ![](/images/headshots/Robin_kafkasummit_headshot_1600px.jpg)
-![](/images/headshots/Kafka Summit 10.1.19 391.jpg)
+![](/images/headshots/Kafka_Summit_20191001.jpg)
 ![](/images/headshots/ksldn18-rmoff-01-sq.jpg)
 ![](/images/headshots/reitz-codetalks-2410-2019-128.jpg)
