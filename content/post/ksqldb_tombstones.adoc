@@ -208,7 +208,7 @@ rowtime: 2020/11/03 21:59:23.629 Z, key: 3, value: {"ORDER_TOTAL_USD": 910.11, "
 rowtime: 2020/11/03 21:59:23.629 Z, key: 1, value: {"ORDER_TOTAL_USD": 12.34, "ITEM": "Chocolate Cake", "CANCELLED_IND": false, "UPDATE_TS": 1604440429680}
 ----
 
-Now we do the fiddly bit - write a `null` for the value if the order *has* been logically deleted (`WHERE CANCELLED_IND = TRUE`). Most importantly, we use the `KAFKA` serialisation format. 
+Now we do the fiddly bit - write a `null` for the value if the order *has* been logically deleted (`WHERE CANCELLED_IND = TRUE`). Most importantly, we use the `KAFKA` serialisation format (see below for an explanation why). 
 
 [source,sql]
 ----
@@ -437,7 +437,9 @@ $ curl -s http://localhost:9200/orders_processed/_search \
 ]
 ----
 
-== Footnote
+== Footnotes
+
+== Compacted topics
 
 As mentioned at the begining, tombstones and compacted topics are often (but not always) two sides of the same coin. A compacted topic retains the latest *value* for every *key*, and so is a perfect way to retain state with which you might want to rehydrate a target datastore with. To configure the topic to be compacted run
 
@@ -452,6 +454,21 @@ Completed updating config for topic orders_processed.
 ----
 
 Note that log compaction does not run straight away, and there are other factors involved including things like active segments that will affect when you will actually be able to observe log compaction taking place. 
+
+=== Why does the `VALUE_FORMAT=KAFKA` trick work?
+
+When ksqlDB writes to a target stream (and thus an underlying topic) it has to serialise the data, and this is controlled by the `VALUE_FORMAT` either explicitly stated in the DDL or inherited from the source stream. The serialisation will usually be something like Avro or Protobuf (which support schemas and thus the Schema Registry), or JSON (which doesn't). Either way, it'll write a payload _that includes the schema, since a ksqlDB stream is a Kafka topic *plus schema*. Here's what it'd look like writing out `NULL` field with `VALUE_FORMAT='JSON'`:
+
+[source,javascript]
+----
+{
+  "offset": 5,
+  "key": "\u0000\u0000\u0000\u0001",
+  "payload": "{\"KSQL_COL_0\":null}"
+}
+----
+
+By using the `KAFKA` format the value is written as a primitive, with no envelope or schema. You can read more about serialisation formats https://docs.ksqldb.io/en/latest/developer-guide/serialization/#kafka[here]
 
 == Try it out!
 
