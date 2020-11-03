@@ -136,7 +136,7 @@ Taking the JSON message from the Kafka topic and manually sending it to Elastics
     "status": 400
     }
 
-So Elasticsearch is sensitive to the _case_ of the `lat`, `lon` columns. The fix (https://www.elastic.co/guide/en/elasticsearch/reference/current/geo-point.html[per the examples here]) is to force the column names to lower case, or concatenate the lat/long into a single string): 
+So Elasticsearch is sensitive to the _case_ of the `lat`, `lon` columns. The fix [per the examples here](https://www.elastic.co/guide/en/elasticsearch/reference/current/geo-point.html) is to force the column names to lower case, or concatenate the lat/long into a single string: 
 
     curl -XPOST "http://elasticsearch:9200/atm_possible_fraud/kafkaconnect" -H 'Content-Type: application/json' -d'
     {"ACCOUNT_ID":"a898",
