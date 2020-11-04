@@ -32,10 +32,10 @@ Make sure to follow me here on dev.to and [subscribe to my YouTube channel](http
 
 ## From Zero to Hero with Kafka Connect
 
-45 minute conference talk all about Kafka Connect with live demo!
+Conference talk all about Kafka Connect with live demo!
 
-* [🎥Recording](https://www.devto.com/watch?v=Jkcp28ki82k)
-* [📔Slides](https://talks.rmoff.net/DQkDj3/from-zero-to-hero-with-kafka-connect)
+* [🎥Recording](https://youtu.be/dXXfkoXXBbs)
+* [📔Slides](https://talks.rmoff.net/ScGJTe)
 
 ## Kafka Connect blogs
 
