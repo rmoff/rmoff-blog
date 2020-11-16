@@ -27,21 +27,15 @@ rmoff@proxmox01 ~> sudo service mongod stop
 Add replica set config to `/etc/mongod.conf`:
 
 ```
-[source,yaml]
-----
 replication:
    replSetName: mongo01
-----
 ```
 
 Optionally, also set the bindIp so that it listens on all IPs, not just loopback:
 
 ```
-[source,yaml]
-----
 net:
   bindIp: 0.0.0.0
-----
 ```
 
 Start Mongo, and initiate the replica set:
