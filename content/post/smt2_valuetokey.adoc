@@ -1,0 +1,162 @@
+---
+draft: false
+title: '🎄 Twelve Days of SMT 🎄 - Day 2: ValueToKey and ExtractField'
+date: "2020-12-09T20:00:18Z"
+image: "/images/2020/12/3BB98268-74D6-476A-B236-94220D1EEFAF.jpeg"
+thumbnail: "/images/2020/12/IMG_8516.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Kafka Connect
+- Single Message Transform
+- TwelveDaysOfSMT
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Setting the key of a Kafka message is important as it ensures correct logical processing when consumed across multiple partitions, as well as being a requirement when joining to messages in other topics. When using Kafka Connect the connector may already set the key, which is great. If not, you can use these two Single Message Transforms (SMT) to set it as part of the pipeline based on a field in the value part of the message. 
+
+To use the https://docs.confluent.io/platform/current/connect/transforms/valuetokey.html[`ValueToKey`] Single Message Transform specify the name of the field (`id`) that you want to copy from the value to the key: 
+
+[source,javascript]
+----
+"transforms"                    : "copyIdToKey",
+"transforms.copyIdToKey.type"   : "org.apache.kafka.connect.transforms.ValueToKey",
+"transforms.copyIdToKey.fields" : "id",
+----
+<!--more-->
+
+This writes it as a `Struct` to the Key, so you will often want to combine it with the https://docs.confluent.io/platform/current/connect/transforms/extractfield.html[`ExtractField`] Single Message Transform: 
+
+[source,javascript]
+----
+"transforms"                            : "copyIdToKey,extractKeyFromStruct",
+"transforms.copyIdToKey.type"           : "org.apache.kafka.connect.transforms.ValueToKey",
+"transforms.copyIdToKey.fields"         : "id",
+"transforms.extractKeyFromStruct.type"  :"org.apache.kafka.connect.transforms.ExtractField$Key",
+"transforms.extractKeyFromStruct.field" :"id"
+----
+
+{{< youtube gSaCtaHt1k4 >}}
+
+https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms[👾 Demo code]
+
+== Example - JDBC Source connector 
+
+Let's start with a basic JDBC source connector:
+
+[source,javascript]
+----
+{
+  "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+  "connection.url": "jdbc:mysql://mysql:3306/demo",
+  "connection.user": "mysqluser",
+  "connection.password": "mysqlpw",
+  "topic.prefix": "mysql-00-",
+  "poll.interval.ms": 1000,
+  "tasks.max":1,
+  "table.whitelist" : "customers",
+  "mode":"incrementing",
+  "incrementing.column.name": "id",
+  "validate.non.null": false
+}
+----
+
+An ingested Kafka message written by this connector looks like this - note the `null` key: 
+
+[source,javascript]
+----
+{
+  "topic": "mysql-00-customers",
+  "partition": 0,
+  "offset": 0,
+  "tstype": "create",
+  "ts": 1607512308962,
+  "broker": 1,
+  "key": null,
+  "payload": {
+    "id": {
+      "int": 1
+    },
+    "full_name": {
+      "string": "Leone Puxley"
+    },
+    "birthdate": {
+      "int": 9167
+    },
+    "fav_animal": {
+      "string": "Violet-eared waxbill"
+    },
+    "fav_colour": {
+      "string": "Puce"
+    },
+    "fav_movie": {
+      "string": "Oh! What a Lovely War"
+    }
+  }
+}
+----
+
+Assuming you want to use the `id` field from the source as the message key you can add the Single Message Transforms as shown here: 
+
+[source,javascript]
+----
+{
+  "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+  "connection.url": "jdbc:mysql://mysql:3306/demo",
+  "connection.user": "mysqluser",
+  "connection.password": "mysqlpw",
+  "topic.prefix": "mysql-02-",
+  "poll.interval.ms": 1000,
+  "tasks.max":1,
+  "table.whitelist" : "customers",
+  "mode":"incrementing",
+  "incrementing.column.name": "id",
+  "validate.non.null": false,
+  "transforms": "copyIdToKey,extractKeyFromStruct",
+  "transforms.copyIdToKey.type": "org.apache.kafka.connect.transforms.ValueToKey",
+  "transforms.copyIdToKey.fields": "id",
+  "transforms.extractKeyFromStruct.type":"org.apache.kafka.connect.transforms.ExtractField$Key",
+  "transforms.extractKeyFromStruct.field":"id"
+}
+----
+
+The resulting Kafka message looks like this: 
+
+[source,javascript]
+----
+{
+  "topic": "mysql-02-customers",
+  "partition": 0,
+  "offset": 0,
+  "tstype": "create",
+  "ts": 1607512714619,
+  "broker": 1,
+  "key": "1",
+  "payload": {
+    "id": {
+      "int": 1
+    },
+    "full_name": {
+      "string": "Leone Puxley"
+    },
+    "birthdate": {
+      "int": 9167
+    },
+    "fav_animal": {
+      "string": "Violet-eared waxbill"
+    },
+    "fav_colour": {
+      "string": "Puce"
+    },
+    "fav_movie": {
+      "string": "Oh! What a Lovely War"
+    }
+  }
+}
+----
+
+''''
+_See also https://kafka-tutorials.confluent.io/connect-add-key-to-source/kafka.html[Kafka Tutorials]_
