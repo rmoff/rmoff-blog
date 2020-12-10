@@ -1,7 +1,7 @@
 ---
 draft: true
-title: '🎄 Twelve Days of SMT 🎄 - Day 3: Flatten'
-date: "2020-12-10T09:23:18Z"
+title: '🎄 Twelve Days of SMT 🎄 - Day 4: RegExRouter'
+date: "2020-12-11T09:23:18Z"
 image: "/images/2020/12/3BB98268-74D6-476A-B236-94220D1EEFAF.jpeg"
 thumbnail: "/images/2020/12/IMG_8516.jpeg"
 credit: "https://twitter.com/rmoff/"
@@ -16,28 +16,162 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-The https://docs.confluent.io/platform/current/connect/transforms/flatten.html[`Flatten`] Single Message Transform (SMT) is useful when you need to collapse a nested message down to a flat structure. 
+If you want to change the topic name to which a source connector writes, or object name that's created on a target by a sink connector, the https://docs.confluent.io/platform/current/connect/transforms/regexrouter.html[`RegExRouter`] is exactly what you need. 
 
-To use the Single Message Transform you only need to reference it; there's no additional configuration required: 
+To use the Single Message Transform you specify the pattern in the topic name to match, and its replacement. To drop a prefix of `test-` from a topic you would use: 
 
 [source,javascript]
 ----
-"transforms"                    : "flatten",
-"transforms.flatten.type"       : "org.apache.kafka.connect.transforms.Flatten$Value"
+"transforms"                             : "dropTopicPrefix",
+"transforms.dropTopicPrefix.type"        : "org.apache.kafka.connect.transforms.RegexRouter",
+"transforms.dropTopicPrefix.regex"       : "test-(.*)",
+"transforms.dropTopicPrefix.replacement" : "$1"
 ----
 
 <!--more-->
 
-You can optionally override the default delimiter (`.`) that's used: 
-
-[source,javascript]
-----
-"transforms.flatten.delimiter"  : "_"
-----
-
 {{< youtube TODO >}}
 
 https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms[👾 Demo code]
+
+== Changing the topic name to which a source connector writes
+
+image::https://imgs.xkcd.com/comics/regular_expressions.png[XKCD]
+
+Source connectors will stream data to a Kafka topic based on properties define in the particular connector. For example, the JDBC source connector uses the table name and prefixes it with the mandatory value configured in `topic.prefix`. Other connectors will use the name of the source message queue being read from, the source file, etc etc. 
+
+Often, you'll want to route data to a topic name that matches https://riccomini.name/how-paint-bike-shed-kafka-topic-naming-conventions[conventions that you have in your organisation for topic naming]. Here's an example of a JDBC source connector, and we want to drop the prefix that it uses: 
+
+[source,javascript]
+----
+{
+  "connector.class"                       : "io.confluent.connect.jdbc.JdbcSourceConnector",
+  "connection.url"                        : "jdbc:mysql://mysql:3306/demo",
+  "connection.user"                       : "mysqluser",
+  "connection.password"                   : "mysqlpw",
+  "topic.prefix"                          : "mysql-02-",
+  "poll.interval.ms"                      : 1000,
+  "tasks.max"                             : 1,
+  "table.whitelist"                       : "customers",
+  "mode"                                  : "incrementing",
+  "incrementing.column.name"              : "id",
+  "validate.non.null"                     : false,
+  "transforms"                            : "dropTopicPrefix",
+  "transforms.dropTopicPrefix.type"       : "org.apache.kafka.connect.transforms.RegexRouter",
+  "transforms.dropTopicPrefix.regex"      : "mysql-02-(.*)",
+  "transforms.dropTopicPrefix.replacement": "$1"
+}
+----
+
+This is using RegEx to match the prefix `mysql-02-` and to store everything else `.*` in a capture group `(` `)`, which is then referenced in the replacement `$1`. 
+
+To learn more about RegEx, and experiment with patterns, check out the excellent https://regexr.com/5i7cc[RegExr.com]
+
+== Changing the object name to which a source connector writes
+
+Many sink connectors will use the topic name as the basis for the naming of the target object that it populates. The JDBC Sink connector creates a table named after the topic. The Elasticsearch sink connector creates an index named after the topic. And so on. 
+
+You can use the `RegExRouter` to customise the name of the object that sink connectors that follow this pattern will write to. 
+
+Here's an example of streaming data to MySQL, using the https://www.confluent.io/hub/confluentinc/kafka-connect-jdbc[JDBC sink connector]. _(See also 🎥 https://rmoff.dev/kafka-jdbc-video[Kafka Connect in Action : JDBC Sink] (👾 link:../kafka-to-database/README.adoc[`demo code`]) and 🎥 https://rmoff.dev/ksqldb-jdbc-sink-video[ksqlDB & Kafka Connect JDBC Sink in action] (👾 link:../kafka-to-database/ksqldb-jdbc-sink.adoc[`demo code`])_
+
+We're going to read data from a topic called `day4-transactions`: 
+
+[source,javascript]
+----
+curl -i -X PUT -H "Accept:application/json" \
+    -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day4-transactions-00/config \
+    -d '{
+          "connector.class"               : "io.confluent.connect.jdbc.JdbcSinkConnector",
+          "connection.url"                : "jdbc:mysql://mysql:3306/demo",
+          "connection.user"               : "mysqluser",
+          "connection.password"           : "mysqlpw",
+          "topics"                        : "day4-transactions",
+          "tasks.max"                     : "4",
+          "auto.create"                   : "true",
+          "auto.evolve"                   : "true"
+        }'
+----
+
+This works; you get a table created in MySQL:
+
+[source,sql]
+----
+mysql> show tables;
++-------------------+
+| Tables_in_demo    |
++-------------------+
+| day4-transactions |
++-------------------+
+1 row in set (0.00 sec)
+----
+
+What data's in the table? 
+
+[source,sql]
+----
+mysql> select * from day4-transactions;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '-transactions' at line 1
+----
+
+Turns out a hyphen in the table name does not make your life easy in MySQL. You can quote is with a backtick, but it is not ideal
+
+[source,sql]
+----
+mysql> select * from `day4-transactions` LIMIT 1;
++-----------+-------+---------------------------+
+| card_type | cost  | item                      |
++-----------+-------+---------------------------+
+| switch    | 98.77 | Westmalle Trappist Tripel |
++-----------+-------+---------------------------+
+1 row in set (0.00 sec)
+----
+
+By default the JDBC Sink connector takes the topic name as the name of the table to create. Let's modify the above connector to route data to a table called `transactions` instead, and drop the `day4-` prefix. 
+
+[source,javascript]
+----
+curl -i -X PUT -H "Accept:application/json" \
+    -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day4-transactions-00/config \
+    -d '{
+          "connector.class"                        : "io.confluent.connect.jdbc.JdbcSinkConnector",
+          "connection.url"                         : "jdbc:mysql://mysql:3306/demo",
+          "connection.user"                        : "mysqluser",
+          "connection.password"                    : "mysqlpw",
+          "topics"                                 : "day4-transactions",
+          "tasks.max"                              : "4",
+          "auto.create"                            : "true",
+          "auto.evolve"                            : "true",
+          "transforms"                             : "dropTopicPrefix",
+          "transforms.dropTopicPrefix.type"        : "org.apache.kafka.connect.transforms.RegexRouter",
+          "transforms.dropTopicPrefix.regex"       : "day4-(.*)",
+          "transforms.dropTopicPrefix.replacement" : "$1"
+        }'
+----
+
+Since we've `PUT` the above configuration it updates the existing connector, and now we have a table in MySQL without the `day4-` prefix that's much easier to work with: 
+
+[source,sql]
+----
+mysql> show tables;
++-------------------+
+| Tables_in_demo    |
++-------------------+
+| day4-transactions |
+| transactions      |
++-------------------+
+2 rows in set (0.00 sec)
+
+mysql> select * from transactions limit 1;
++-----------+-------+-----------------+
+| card_type | cost  | item            |
++-----------+-------+-----------------+
+| dankort   | 27.12 | Sapporo Premium |
++-----------+-------+-----------------+
+1 row in set (0.00 sec)
+----
+
+
 
 == Example - JDBC Sink connector 
 
