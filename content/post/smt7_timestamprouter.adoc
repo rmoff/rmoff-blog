@@ -1,9 +1,9 @@
 ---
 draft: false
-title: '🎄 Twelve Days of SMT 🎄 - Day 6: InsertField II'
+title: '🎄 Twelve Days of SMT 🎄 - Day 7: TimestampRouter'
 date: "2020-12-16T16:00:00Z"
-image: "/images/2020/12/smt_day6.jpg"
-thumbnail: "/images/2020/12/smt_day6_thumb.jpg"
+image: "/images/2020/12/smt_day7.jpg"
+thumbnail: "/images/2020/12/smt_day7_thumb.jpg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - Kafka Connect
@@ -16,21 +16,25 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-We kicked off this series by seeing on link:/2020/12/08/twelve-days-of-smt-day-1-insertfield-timestamp/[day 1] how to use https://docs.confluent.io/platform/current/connect/transforms/insertfield.html[`InsertField`] to add in the timestamp to a message passing through the Kafka Connect sink connector. Today we'll see how to use the same Single Message Transform to add in a static field value, as well as the name of the Kafka topic, partition, and offset from which the message has been read. 
+Many sink connectors base the object name to which they stream data on the name of the originating topic. Using the https://docs.confluent.io/platform/current/connect/transforms/timestamprouter.html[`TimestampRouter`] you can modify this topic name in-flight to include the timestamp of the Kafka message. 
+
+To use the Single Message Transform you specify the format of the timestamp to use in the topic name, and the format of the topic name to construct:
 
 [source,javascript]
 ----
-"transforms"                                : "insertStaticField1",
-"transforms.insertStaticField1.type"        : "org.apache.kafka.connect.transforms.InsertField$Value",
-"transforms.insertStaticField1.static.field": "sourceSystem",
-"transforms.insertStaticField1.static.value": "NeverGonna"
+"transforms"                                     : "addTimestampToTopic",
+"transforms.addTimestampToTopic.type"            : "org.apache.kafka.connect.transforms.TimestampRouter",
+"transforms.addTimestampToTopic.topic.format"    : "${topic}_${timestamp}",
+"transforms.addTimestampToTopic.timestamp.format": "YYYY-MM-dd"
 ----
 
 <!--more-->
 
-{{< youtube 6XfwZUnZLlI >}}
+The message timestamp can be set by the producer API explicitly, or allowed to default to the setting on the broker (https://kafka.apache.org/documentation/#log.message.timestamp.type[`log.message.timestamp.type`]) or topic (https://kafka.apache.org/documentation/#message.timestamp.type[`message.timestamp.type`]) which by default is the time on the broker at which the message is created (`CreateTime`). Message timestamps were added in Apache Kafka 0.10 in https://cwiki.apache.org/confluence/display/KAFKA/KIP-32+-+Add+timestamps+to+Kafka+message[KIP-32]. 
 
-https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms[👾 Demo code]
+{{< youtube TODO >}}
+
+https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms/day7.adoc[👾 Demo code]
 
 == Adding fields to messages at ingest in the Kafka Connect source connector
 
