@@ -1,0 +1,210 @@
+---
+draft: false
+title: '🎄 Twelve Days of SMT 🎄 - Day 10: ReplaceField'
+date: "2020-12-21T16:00:00Z"
+image: "/images/2020/12/smt_day10.jpg"
+thumbnail: "/images/2020/12/smt_day10_thumb.jpg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Kafka Connect
+- Single Message Transform
+- TwelveDaysOfSMT
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+The https://docs.confluent.io/platform/current/connect/transforms/replacefield.html[`ReplaceField`] Single Message Transform has three modes of operation on fields of data passing through Kafka Connect:
+
+* Include *only* the fields specified in the list (`whitelist`)
+* Include all fields *except* the ones specified (`blacklist`)
+* Rename field(s) (`renames`)
+
+<!--more-->
+
+It can be used in both a source and sink connector depending on requirements. 
+
+{{< youtube TODO >}}
+
+_(https://cwiki.apache.org/confluence/display/KAFKA/KIP-629%3A+Use+racially+neutral+terms+in+our+codebase[KIP-629] has started to be implemented in Apache Kafka 2.7. If you are using an earlier version then you will have to use `blacklist` and `whitelist` in place of `exclude` and `include` respectively)_
+
+https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms/day10.adoc[👾 Demo code]
+
+== Dropping fields in a sink connector
+
+Imagine we have a source topic with multiple fields in: 
+
+[source,bash]
+----
+docker exec kafkacat kafkacat -b broker:29092 -r http://schema-registry:8081 -s key=s -s value=avro -t day10-transactions -C -c1 -o-1 -u -q -J |  jq  '.payload'
+----
+
+[source,javascript]
+----
+{
+  "Gen0": {
+    "cost"            : { "string": "12.85" },
+    "units"           : { "string": "2" },
+    "card_type"       : { "string": "maestro" },
+    "item"            : { "string": "Hercules Double IPA" },
+    "customer_remarks": { "string": "Perfect! My experiment worked! They're all exactly 25 minutes slow!" },
+    "cc_num"          : { "string": "1228-1221-1221-1431" },
+    "cc_exp"          : { "string": "2013-9-12" },
+    "txn_date"        : { "string": "Wed Dec 16 07:59:52 GMT 2020" }
+  }
+}
+----
+
+This data is in Kafka, but the system to which we're going to stream it with a sink connector mustn't hold sensitive information, such as credit card data. One option is to link:day5.adoc[`Mask`] it, but this retains the fields in the payload which is wasteful if we simply don't want them in the target system. We can use `ReplaceField` to exclude a set of fields from passing through Kafka Connect: 
+
+[source,bash]
+----
+curl -i -X PUT -H "Accept:application/json" \
+  -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day10-01/config \
+  -d '{
+      "connector.class"            : "io.confluent.connect.jdbc.JdbcSinkConnector",
+      "connection.url"             : "jdbc:mysql://mysql:3306/demo",
+      "connection.user"            : "mysqluser",
+      "connection.password"        : "mysqlpw",
+      "topics"                     : "day10-transactions",
+      "tasks.max"                  : "4",
+      "auto.create"                : "true",
+      "auto.evolve"                : "true",
+      "transforms"                 : "dropCC",
+      "transforms.dropCC.type"     : "org.apache.kafka.connect.transforms.ReplaceField$Value",
+      "transforms.dropCC.blacklist": "cc_num,cc_exp,card_type"
+      }'
+----
+
+In the target system (a database, in this case) the credit card fields are not present, exactly as intended: 
+
+[source,sql]
+----
+mysql> describe `day10-transactions`;
++------------------+------+------+-----+---------+-------+
+| Field            | Type | Null | Key | Default | Extra |
++------------------+------+------+-----+---------+-------+
+| cost             | text | YES  |     | NULL    |       |
+| units            | text | YES  |     | NULL    |       |
+| item             | text | YES  |     | NULL    |       |
+| customer_remarks | text | YES  |     | NULL    |       |
+| txn_date         | text | YES  |     | NULL    |       |
++------------------+------+------+-----+---------+-------+
+5 rows in set (0.00 sec)
+----
+
+== Including only certain fields in a source connector
+
+This time we have a source connector that's ingesting data from a system that includes numerous fields that we don't want to ingest into Kafka. Because a Single Message Transform applies to the pipeline *before* a message is written to Kafka, not after, we can deliberately ensure that certain data is never stored in Kafka if it's not intended to be. 
+
+The source connector in this example is reading data from a database with a schema that looks like this: 
+
+[source,sql]
+----
+mysql> describe production_data;
++------------------+------+------+-----+---------+-------+
+| Field            | Type | Null | Key | Default | Extra |
++------------------+------+------+-----+---------+-------+
+| cost             | text | YES  |     | NULL    |       |
+| units            | text | YES  |     | NULL    |       |
+| card_type        | text | YES  |     | NULL    |       |
+| item             | text | YES  |     | NULL    |       |
+| customer_remarks | text | YES  |     | NULL    |       |
+| cc_num           | text | YES  |     | NULL    |       |
+| cc_exp           | text | YES  |     | NULL    |       |
+| txn_date         | text | YES  |     | NULL    |       |
++------------------+------+------+-----+---------+-------+
+8 rows in set (0.00 sec)
+----
+
+Unlike the scenario in the first section this time we want to extract data from the source system but only certain fields that we need for our particular analytics pipeline. It may be that it's inefficient to ingest a large number of redundant fields, or that the data is sensitive and we're not allowed to store it in our topic. In this case we specify just a list of fields to include: 
+
+[source,bash]
+----
+curl -X PUT http://localhost:8083/connectors/source-jdbc-mysql-day10-00/config \
+  -H "Content-Type: application/json" -d '{
+    "connector.class"                  : "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "connection.url"                   : "jdbc:mysql://mysql:3306/demo",
+    "connection.user"                  : "mysqluser",
+    "connection.password"              : "mysqlpw",
+    "topic.prefix"                     : "day10-",
+    "poll.interval.ms"                 : 10000,
+    "tasks.max"                        : 1,
+    "table.whitelist"                  : "production_data",
+    "mode"                             : "bulk",
+    "transforms"                       : "selectFields",
+    "transforms.selectFields.type"     : "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    "transforms.selectFields.whitelist": "item,cost,units,txn_date"
+  }'
+----
+
+The resulting Kafka topic is populated with only the fields of interest: 
+
+[source,bash]
+----
+docker exec kafkacat kafkacat -b broker:29092 -r http://schema-registry:8081 -s key=s -s value=avro -t day10-production_data -C -o-1 -u -q -J | jq  '.payload'
+----
+
+[source,javascript]
+----
+{
+  "cost"    : { "string": "48.54" },
+  "units"   : { "string": "41" },
+  "item"    : { "string": "Oak Aged Yeti Imperial Stout" },
+  "txn_date": { "string": "Mon Dec 14 11:43:56 GMT 2020" }
+}
+----
+
+== Renaming fields
+
+Perhaps you want to keep all the fields in the payload - but you want to change the name of them. This could be for various reasons, including: 
+
+* Standardise common naming for the same business measures as data is ingested into Kafka
+* Change a field to fit an existing name in a target object in a sink connector
+
+Here's an example renaming a field in a sink connector: 
+
+[source,bash]
+----
+curl -i -X PUT -H "Accept:application/json" \
+  -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day10-02/config \
+  -d '{
+      "connector.class"            : "io.confluent.connect.jdbc.JdbcSinkConnector",
+      "connection.url"             : "jdbc:mysql://mysql:3306/demo",
+      "connection.user"            : "mysqluser",
+      "connection.password"        : "mysqlpw",
+      "topics"                     : "day10-production_data",
+      "tasks.max"                  : "4",
+      "auto.create"                : "true",
+      "auto.evolve"                : "true",
+      "transforms"                 : "renameTS",
+      "transforms.renameTS.type"   : "org.apache.kafka.connect.transforms.ReplaceField$Value",
+      "transforms.renameTS.renames": "txn_date:transaction_timestamp"
+      }'
+----
+
+The resulting table in the database has the amended field name (`transaction_timestamp`): 
+
+[source,sql]
+----
+mysql> describe `day10-production_data`;
++-----------------------+------+------+-----+---------+-------+
+| Field                 | Type | Null | Key | Default | Extra |
++-----------------------+------+------+-----+---------+-------+
+| cost                  | text | YES  |     | NULL    |       |
+| units                 | text | YES  |     | NULL    |       |
+| card_type             | text | YES  |     | NULL    |       |
+| item                  | text | YES  |     | NULL    |       |
+| customer_remarks      | text | YES  |     | NULL    |       |
+| cc_num                | text | YES  |     | NULL    |       |
+| cc_exp                | text | YES  |     | NULL    |       |
+| transaction_timestamp | text | YES  |     | NULL    |       |
++-----------------------+------+------+-----+---------+-------+
+8 rows in set (0.01 sec)
+----
+
+== Try it out!
+
+You can find the full code for trying this out—including a Docker Compose so you can spin it up on your local machine— https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms/day10.adoc[👾 here]
