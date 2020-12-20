@@ -1,0 +1,133 @@
+---
+draft: true
+title: 'Scheduling Hugo Builds on GitHub pages with GitHub Actions'
+date: "2020-12-20T22:00:03Z"
+image: "/images/2020/12/IMG_7971.jpeg"
+thumbnail: "/images/2020/12/IMG_7971t.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Blogging
+- Hugo
+- GitHub
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Over the years I've used various blogging platforms; after a brief dalliance with Blogger I started for real with the near-inevitable Wordpress.com. From there I decided it would be fun to self-host using Ghost, and then almost link:/2018/12/17/moving-from-ghost-to-hugo/[exactly two years ago to the day] decided it definitely was not fun to spend time patching and upgrading my blog platform instead of writing blog articles, so headed over to my current platform of choice: Hugo hosted on GitHub pages. This has worked extremely well for me during that time, doing everything I want from it until recently. 
+
+<!--more-->
+
+As a static-site generator, Hugo supports the idea of future-dated posts, but you still need to regenerate that static site once the date has arrived. It's not the same as serving dynamic content on a blog in which you simply say `IF blogDate => NOW()`. With a static site you publish content by building it and pushing those static files to the server (GitHub Pages in my case) - and if you've published content that's future dated, you need to find a way to trigger that publishing process. 
+
+I recently undertook a little project to create and publish twelve videos in the run-up to Christmas; three of them were to be published after I'd hung up my laptop for the year and would be comfortably ensconced on a sofa and up to my ears in Quality Street and mince pies. Whilst there were plenty of tools to publish tweets on a schedule, and YouTube can schedule the publication of a video, my blog (from which the videos were linked) looked like it was going to be a bit of a problem. A bash `while` loop running on my laptop, or even a crontab, seemed a bit hacky and ultimately not reliable enough. 
+
+The answer turned out to be this thing called GitHub Actions which, like a lot of technology these days, I'd heard of and was vaguely aware of—but had no idea what it actually did. 
+
+GitHub Actions lets you take actions (duh!) based on the code in your repo on GitHub. Since my blog https://github.com/rmoff/rmoff-blog/[is just a repo], it can be set to trigger an action every time I push a new article to it (like this one), or indeed on a schedule also. 
+
+I found a few articles to use, primarily https://www.morling.dev/blog/automatically-deploying-hugo-website-via-github-actions/[this nice one] from https://twitter.com/gunnarmorling[Gunnar Morling]. 
+
+== Preparation
+
+_See link:/2018/12/17/moving-from-ghost-to-hugo/[my previous article] for details of how I've installed and configured Hugo_.
+
+I've got two repositories: 
+
+* `https://github.com/rmoff/rmoff-blog/` - holds the source code for my blog
+* `https://github.com/rmoff/rmoff.github.io` - the static site served through GitHub Pages. I have a custom domain (`rmoff.net`) set on this
+
+=== Repository secret (*source* repository)
+In the source repository, from which the GitHub Action will run, you need to create a https://docs.github.com/en/free-pro-team@latest/actions/reference/encrypted-secrets#creating-encrypted-secrets-for-a-repository[**Repository secret**]. This is the authorisation under which the Action will run. 
+
+I've seen tutorials do this with both SSH keypairs, and with GitHub https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token[Personal Access Tokens]. Based on https://www.morling.dev/blog/automatically-deploying-hugo-website-via-github-actions/[Gunnar's article], I used the SSH keypair approach, generating a unique pair just for this purpose:
+
+[source,bash]
+----
+ssh-keygen -t rsa -b 4096 -C "$(git config user.email)" -f gh-pages -N ""
+----
+
+In the repository secret for your source repository (so `https://github.com/rmoff/rmoff-blog/` in my case) put the *private* half of the key (if you use the above command it'll be called `gh-pages`). Give it a name and make a note of that name. I used `ACTIONS_DEPLOY_KEY`.
+
+image::/images/2020/12/gh1.png[]
+
+NOTE: You configure this secret against *the source repository* - I wasted time in my GitHub profile settings looking for an option that wasn't there 🤦‍♂️
+
+=== Deploy key (*target* repository)
+
+The deploy key is configured against the repository to which your Action is going to push the static site content, which is `https://github.com/rmoff/rmoff.github.io` in my case. If you are using SSH keys then it is the *public* part of your keypair that you generated, and using the above code will be called `gh-pages.pub`. 
+
+image::/images/2020/12/gh2.png[]
+
+NOTE: You configure this deploy key against *the target repository that holds your static site* - I wasted time in my GitHub profile settings looking for an option that wasn't there 🤦‍♂️
+
+== Configuring the Action
+
+Once you've set up the auth per above, you need to configure the action itself. This is done through a YAML file that you put in the source repository from which you want it to run. Mine is based heavily on the one in https://www.morling.dev/blog/automatically-deploying-hugo-website-via-github-actions/[Gunnar's article], with a few tweaks. 
+
+[source,yaml]
+----
+include::https://raw.githubusercontent.com/rmoff/rmoff-blog/master/.github/workflows/gh-pages-deployment.yml[]
+----
+
+Points to note: 
+
+* The action will trigger every ten minutes: 
++
+[source,yaml]
+----
+  schedule:
+    # Run every ten minutes
+    - cron: '*/10 * * * *'
+----
++
+as well as when a push is made to the master branch:
++
+[source,yaml]
+----
+  push:
+    branches:
+     - master
+----
+
+* You can tie the Hugo version to a particular number; I've used the same one as I run locally
++
+[source,yaml]
+----
+        hugo-version: '0.75.1'
+----
+
+* You need to make sure `deploy_key` matches whatever name you gave to the repository secret that you configured above
++
+[source,yaml]
+----
+        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+----
+
+* Hugo deployments are usually set up with `/public` as a submodule from another repo (the hosted static site repo). I got tied in knots here with this, so ended up setting `external_repository` and it works just fine. `/public` is the folder that https://github.com/peaceiris/actions-hugo[the Hugo action] pushes by default
++
+[source,yaml]
+----
+        external_repository: rmoff/rmoff.github.io
+----
+
+* This last setting is a crucial one. I use a custom domain on my GitHub Pages site, and when I was setting this up https://twitter.com/rmoff/status/1339983386031611909[that custom domain kept getting dropped each time I ran the action]…very confusing! Until I realised that the custom domain name is stored as a file `CNAME` in the repository, and the action was *replacing* the contents of the repository each time it ran! So, without `keep_files` the `CNAME` file in the target repo will get removed and the custom domain configured for GitHub pages will get dropped every time the action runs…
++
+[source,yaml]
+----
+        keep_files: true
+----
+
+The only issue I had was to do with my theme, and some dodgy `include` directives that I'd set up. I ended up ditching the theme that I use as a submodule and just including it in my site code. Dirty, but it works, and the theme isn't actively developed any more, so ¯\_(ツ)_/¯
+
+== Summary
+
+That's pretty much it. The build chugs away every few minutes, meaning that posts that I've written that are future dated will hopefully publish just fine when their time comes around. 
+
+image::/images/2020/12/actions.png[]
+
+Gunnar noted that he's evolved his build from what he originally published, as well as setting up preview builds for PRs which is a neat idea.
+
+{{< twitter 1340619722887483394 >}}
