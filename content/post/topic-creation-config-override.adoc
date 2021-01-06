@@ -1,0 +1,178 @@
+---
+draft: true
+title: 'Defining custom topic properties with Kafka Connect source connectors'
+date: "2021-01-06T12:18:51Z"
+image: "/images/2021/01/IMG_8408.jpeg"
+thumbnail: "/images/2021/01/BE2FC62C-0C03-45F3-B1BA-32C4F1D64B68.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Kafka Connect
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+When Kafka Connect ingests data from a source system into Kafka it writes it to a topic. Assuming you have set `auto.create.topics.enable = true` then it will create these topics for you, and do so using the defaults configured on the broker for topic creation, including https://kafka.apache.org/documentation/#brokerconfigs_num.partitions[`num.partitions`] and https://kafka.apache.org/documentation/#brokerconfigs_default.replication.factor[`default.replication.factor`]. 
+
+There are many other https://kafka.apache.org/documentation/#topicconfigs[topic-level configurations] which you may want to set for topics that are automatically created by Kafka Connect. This is particularly true for connectors which are creating a large number of topics, or where the topic name is not known in advance (e.g. when using a regex to select objects from the source system) and thus cannot be pre-created with the desired settings. Common settings for a topic that you may want to customise include https://kafka.apache.org/documentation/#topicconfigs_cleanup.policy[cleanup.policy], https://kafka.apache.org/documentation/#topicconfigs_min.insync.replicas[min.insync.replicas], and https://kafka.apache.org/documentation/#topicconfigs_compression.type[compression.type]. 
+
+https://cwiki.apache.org/confluence/display/KAFKA/KIP-158%3A+Kafka+Connect+should+allow+source+connectors+to+set+topic-specific+settings+for+new+topics[KIP-158] was implemented in Apache Kafka 2.6 (available with Confluent Platform 6.0), and adds the ability to set topic-level configurations for topics created by Kafka Connect source connectors. 
+
+<!--more-->
+
+== Just the defaults, ma'am. 
+
+Here's a very simply Kafka Connect source connector, reading data in from a file:
+
+[source,javascript]
+----
+curl -i -X PUT -H "Accept:application/json" -H  "Content-Type:application/json" \
+     http://localhost:8083/connectors/source-txt-file-00/config \
+     -d '{
+        "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+        "key.converter"  : "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+        "topic"          : "testdata-00",
+        "file"           : "/data/test.txt"
+        }'
+----
+
+Since the broker is configured to automagically create new topics (`auto.create.topics.enable = true`), it does so and using the defaults - one partition, replication factor of 1, etc. We can examine this using various tools: 
+
+* `kafka-topics`
++
+[source,bash]
+----
+$ kafka-topics --bootstrap-server broker:29092  --topic testdata-00 --describe
+Topic: testdata-00      PartitionCount: 1       ReplicationFactor: 1    Configs:
+        Topic: testdata-00      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+----
+
+* `kafkacat`
++
+[source,bash]
+----
+$ kafkacat -b broker:29092 -L -J|jq '.topics[] | select(.topic =="testdata")'
+----
++
+[source,javascript]
+----
+{
+  "topic": "testdata-00",
+  "partitions": [
+    {
+      "partition": 0,
+      "leader": 1,
+      "replicas": [
+        {
+          "id": 1
+        }
+      ],
+      "isrs": [
+        {
+          "id": 1
+        }
+      ]
+    }
+  ]
+}
+----
+
+== Setting the configuration for auto-created topics
+
+Let's see how we can use the new options in Apache Kafka 2.6 (Confluent Platform 6.0) to change some of the topic configurations that are set when it's created. 
+
+=== Attempt 1 … Crashed and burned, Mav
+
+image::/images/2021/01/crashed_and_burned.gif[Crashed and burned! Huh, Mav?]
+
+In my sandbox I just have a single broker so I'm going to leave the number of replicas as a sensible setting of 1, but I'm going to change the number of partitions to four, as well as the cleanup policy from its default of `delete` to instead `compact`. 
+
+[source,javascript]
+----
+curl -i -X PUT -H "Accept:application/json" -H  "Content-Type:application/json" \
+     http://localhost:8083/connectors/source-txt-file-01/config \
+     -d '{
+        "connector.class"                          : "org.apache.kafka.connect.file.FileStreamSourceConnector",
+        "key.converter"                            : "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter"                          : "org.apache.kafka.connect.storage.StringConverter",
+        "topic"                                    : "testdata-01",
+        "file"                                     : "/data/test.txt",
+        "topic.creation.default.partitions"        : 4,
+        "topic.creation.default.replication.factor": 1,
+        "topic.creation.default.cleanup.policy"    : "compact"
+        }'
+----
+
+NOTE: If you are setting topic creation overrides you *must* include `replication.factor` and `partitions` even if you're not specifying a value that's different from the broker default. 
+
+In the broker log you can see that the `cleanup.policy` configuration has been honoured (`{cleanup.policy=compact}`): 
+
+[source,bash]
+----
+[2021-01-06 12:03:04,184] INFO Creating topic testdata-01 with configuration {cleanup.policy=compact} and initial partition assignment HashMap(0 -> ArrayBuffer(1), 1 -> ArrayBuffer(1), 2 -> ArrayBuffer(1), 3 -> ArrayBuffer(1)) (kafka.zk.AdminZkClient)
+----
+
+But! Alas! the connector fails: 
+
+[source,bash]
+----
+[2021-01-06 12:03:04,346] ERROR WorkerSourceTask{id=source-txt-file-01-0} failed to send record to testdata-01:  (org.apache.kafka.connect.runtime.WorkerSourceTask)
+org.apache.kafka.common.InvalidRecordException: This record has failed the validation on broker and hence will be rejected.
+----
+
+The `FileStreamSourceConnector` sends records with no key set, which for a compacted topic makes no sense, and hence we get `org.apache.kafka.common.InvalidRecordException`. 
+
+=== Attempt 2…  I don't know, but uh, it's looking good so far.
+
+image::/images/2021/01/looking_good.gif[I don't know, but uh, it's looking good so far.]
+
+Let's try a different variation just to prove out the topic configuration: 
+
+[source,javascript]
+----
+curl -i -X PUT -H "Accept:application/json" -H  "Content-Type:application/json" \
+     http://localhost:8083/connectors/source-txt-file-02/config \
+     -d '{
+        "connector.class"                          : "org.apache.kafka.connect.file.FileStreamSourceConnector",
+        "key.converter"                            : "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter"                          : "org.apache.kafka.connect.storage.StringConverter",
+        "topic"                                    : "testdata-02",
+        "file"                                     : "/data/test.txt",
+        "topic.creation.default.partitions"        : 4,
+        "topic.creation.default.replication.factor": 1,
+        "topic.creation.default.compression.type"  : "snappy"
+        }'
+----
+
+In the Kafka Connect worker log you can see the settings used (under the covers it's done through `TopicCreationGroup`): 
+
+[source,bash]
+----
+[2021-01-06 12:11:29,256] INFO Created topic '(name=testdata-02, numPartitions=4, replicationFactor=1, replicasAssignments=null, configs={compression.type=snappy})' using creation group TopicCreationGroup{name='default', inclusionPattern=.*, exclusionPattern=, numPartitions=4, replicationFactor=1, otherConfigs={compression.type=snappy}} (org.apache.kafka.connect.runtime.WorkerSourceTask)
+----
+
+Checking out the topic details we can see it's as we wanted it - four partitions, and using snappy compression 💥
+
+[source,bash]
+----
+$ kafka-topics --bootstrap-server broker:29092  --topic testdata-02 --describe
+
+Topic: testdata-02      PartitionCount: 4       ReplicationFactor: 1    Configs: compression.type=snappy
+        Topic: testdata-02      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+        Topic: testdata-02      Partition: 1    Leader: 1       Replicas: 1     Isr: 1
+        Topic: testdata-02      Partition: 2    Leader: 1       Replicas: 1     Isr: 1
+        Topic: testdata-02      Partition: 3    Leader: 1       Replicas: 1     Isr: 1
+----
+
+== Topic Creation Groups
+
+In the example above I used just the `default` topic creation group, but you can create multiple groups of configuration based on the topic name. 
+
+I can see this being really useful if you want to override topic configuration for just _some_ of the topics that a connector creates but not all of them, or you want to override configuration for all topics but vary it by topic based on the topic name. 
+
+== More examples
+
+Check out the https://docs.confluent.io/platform/current/connect/userguide.html#configuration-examples[docs page] for some nicely documented examples of using this feature further. 
