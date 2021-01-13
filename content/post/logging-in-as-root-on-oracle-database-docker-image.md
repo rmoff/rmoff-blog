@@ -1,29 +1,68 @@
 +++
 categories = ["oracle", "docker", "sudo", "root"]
-date = 2018-11-30T12:13:41Z
+date = 2021-01-13T12:13:41Z
 description = ""
 draft = false
 image = "/images/2018/11/IMG_7280-EFFECTS.jpg"
-slug = "logging-in-as-root-on-oracle-database-docker-image"
+slug = "running-as-root-on-docker-image-without-sudo"
 tag = ["oracle", "docker", "sudo", "root"]
-title = "Logging in as root on Oracle Database Docker image"
-
+title = "Running as root on Docker images that don't use root"
+aliases = [
+    "/2018/11/30/logging-in-as-root-on-oracle-database-docker-image/"
+]
 +++
 
 
-tl;dr: 
+tl;dr: specify the `--user root` argument: 
 
 {{< highlight shell >}}
 docker exec --interactive \
             --tty \
             --user root \
             --workdir / \
-            oracle-container-name bash
+            container-name bash
 
 {{< /highlight >}}
 
 <!--more-->
 
+There are [good reasons](https://engineering.bitnami.com/articles/why-non-root-containers-are-important-for-security.html) why running in a container as root is not a good idea, and that's why many images published nowadays avoid doing this. [Confluent Platform's Docker images](https://hub.docker.com/r/confluentinc/) changed to using `appuser` with the 6.0 release. 
+
+## Checking the container user
+
+You can check what user your container is running with: 
+
+```bash
+$ docker exec --interactive --tty kafka bash
+[appuser@b59043522a44 ~]$ whoami
+appuser
+```
+
+or more directly: 
+
+```bash
+$ docker exec --interactive --tty kafka whoami
+appuser
+```
+
+## Changing the container user 
+
+Using the `--user root` argument when launching the Docker exec command you can override the container's user: 
+
+```bash
+$ docker exec --interactive --tty --user root kafka bash
+[root@b59043522a44 appuser]# whoami
+root
+```
+
+or
+
+```bash
+$ docker exec --interactive --tty --user root kafka whoami
+root
+```
+
+## Logging in as `root` on Oracle's Database Docker Image
 
 Using Oracle's [Docker database image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) I wanted to install some additional apps, without modifying the `Dockerfile`. 
 
