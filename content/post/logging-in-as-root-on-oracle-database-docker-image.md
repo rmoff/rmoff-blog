@@ -1,10 +1,8 @@
 +++
 categories = ["oracle", "docker", "sudo", "root"]
 date = 2021-01-13T12:13:41Z
-description = ""
 draft = false
 image = "/images/2018/11/IMG_7280-EFFECTS.jpg"
-slug = "running-as-root-on-docker-image-without-sudo"
 tag = ["oracle", "docker", "sudo", "root"]
 title = "Running as root on Docker images that don't use root"
 aliases = [
