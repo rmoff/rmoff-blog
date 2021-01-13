@@ -1,6 +1,6 @@
 ---
 draft: false
-title: 'Defining custom topic properties with Kafka Connect source connectors'
+title: 'Creating topics with Kafka Connect'
 date: "2021-01-06T12:18:51Z"
 image: "/images/2021/01/IMG_8408.jpeg"
 thumbnail: "/images/2021/01/BE2FC62C-0C03-45F3-B1BA-32C4F1D64B68.jpeg"
@@ -14,13 +14,30 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-When Kafka Connect ingests data from a source system into Kafka it writes it to a topic. Assuming you have set `auto.create.topics.enable = true` then it will create these topics for you, and do so using the defaults configured on the broker for topic creation, including https://kafka.apache.org/documentation/#brokerconfigs_num.partitions[`num.partitions`] and https://kafka.apache.org/documentation/#brokerconfigs_default.replication.factor[`default.replication.factor`]. 
-
-There are many other https://kafka.apache.org/documentation/#topicconfigs[topic-level configurations] which you may want to set for topics that are automatically created by Kafka Connect. This is particularly true for connectors which are creating a large number of topics, or where the topic name is not known in advance (e.g. when using a regex to select objects from the source system) and thus cannot be pre-created with the desired settings. Common settings for a topic that you may want to customise include https://kafka.apache.org/documentation/#topicconfigs_cleanup.policy[cleanup.policy], https://kafka.apache.org/documentation/#topicconfigs_min.insync.replicas[min.insync.replicas], and https://kafka.apache.org/documentation/#topicconfigs_compression.type[compression.type]. 
-
-https://cwiki.apache.org/confluence/display/KAFKA/KIP-158%3A+Kafka+Connect+should+allow+source+connectors+to+set+topic-specific+settings+for+new+topics[KIP-158] was implemented in Apache Kafka 2.6 (available with Confluent Platform 6.0), and adds the ability to set topic-level configurations for topics created by Kafka Connect source connectors. 
+When Kafka Connect ingests data from a source system into Kafka it writes it to a topic. If you have set `auto.create.topics.enable = true` on your broker then the topic will be created when written to. If `auto.create.topics.enable = false` (as it is on Confluent Cloud and many self-managed environments, for good reasons) then you can tell Kafka Connect to create those topics first. _This was added in Apache Kafka 2.6 (Confluent Platform 6.0) - prior to that you had to manually create the topics yourself otherwise the connector would fail._
 
 <!--more-->
+
+== Configuring Kafka Connect to create topics
+
+Kafka Connect (as of Apache Kafka 2.6) ships with a new *worker configuration*, `topic.creation.enable` which is set to `true` by default. So long as this is set, you can then specify the defaults for new topics to be created by a connector in the *connector configuration*: 
+
+[source,javascript]
+----
+[…]
+"topic.creation.default.replication.factor": 3,
+"topic.creation.default.partitions": 10,
+[…]
+----
+
+NOTE: Without these two settings present in the connector configuration, Kafka Connect will _not_ create the target topic for you. 
+
+== Defining custom topic properties with Kafka Connect source connectors
+
+When topics are created they are done so using the defaults configured on the broker for topic creation including https://kafka.apache.org/documentation/#brokerconfigs_num.partitions[`num.partitions`] and https://kafka.apache.org/documentation/#brokerconfigs_default.replication.factor[`default.replication.factor`]. There are many other https://kafka.apache.org/documentation/#topicconfigs[topic-level configurations] which you may want to set for topics that are automatically created by Kafka Connect. This is particularly true for connectors which are creating a large number of topics, or where the topic name is not known in advance (e.g. when using a regex to select objects from the source system) and thus cannot be pre-created with the desired settings. Common settings for a topic that you may want to customise include https://kafka.apache.org/documentation/#topicconfigs_cleanup.policy[cleanup.policy], https://kafka.apache.org/documentation/#topicconfigs_min.insync.replicas[min.insync.replicas], and https://kafka.apache.org/documentation/#topicconfigs_compression.type[compression.type]. 
+
+https://cwiki.apache.org/confluence/display/KAFKA/KIP-158%3A+Kafka+Connect+should+allow+source+connectors+to+set+topic-specific+settings+for+new+topics[KIP-158] was implemented in Apache Kafka 2.6 (available with Confluent Platform 6.0), and adds the ability to customise topic-level configurations for topics created by Kafka Connect source connectors. 
+
 
 == Just the defaults, ma'am. 
 
