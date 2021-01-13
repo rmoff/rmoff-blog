@@ -62,6 +62,38 @@ $ docker exec --interactive --tty --user root kafka whoami
 root
 ```
 
+## What, no `sudo`?
+
+Imagine this nightmare scenario 🙀 : 
+
+```bash
+$ docker exec --interactive --tty kafka bash
+[appuser@b59043522a44 ~]$ yum install jq
+Error: This command has to be run under the root user.
+[appuser@b59043522a44 ~]$ sudo yum install jq
+bash: sudo: command not found
+[appuser@b59043522a44 ~]$
+```
+
+Now, installing into Docker containers is not The Right Way - you should amend the Docker image to install what's needed before invocation as a container. *BUT* sometimes needs must. Whether a quick hack, or just a PoC that you want to get running - sometimes you do want to install into a container, and that can be more difficult without root. 
+
+You can use the same approach as above (`--user root`): 
+
+```bash
+$ docker exec --interactive --tty --user root kafka bash
+[root@b59043522a44 appuser]# yum install -y jq
+Confluent repository                                                                                                                                         13 kB/s |  29 kB     00:02
+Red Hat Universal Base Image 8 (RPMs) - BaseOS                                                                                                              978 kB/s | 772 kB     00:00
+Red Hat Universal Base Image 8 (RPMs) - AppStream                                                                                                           1.8 MB/s | 4.9 MB     00:02
+Red Hat Universal Base Image 8 (RPMs) - CodeReady Builder                                                                                                    40 kB/s |  13 kB     00:00
+zulu-openjdk - Azul Systems Inc., Zulu packages                                                                                                              95 kB/s | 123 kB     00:01
+[…]
+]
+Installed:
+  jq-1.5-12.el8.x86_64                                                                     oniguruma-6.8.2-2.el8.x86_64
+
+Complete!
+```
 ## Logging in as `root` on Oracle's Database Docker Image
 
 Using Oracle's [Docker database image](https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md) I wanted to install some additional apps, without modifying the `Dockerfile`. 
