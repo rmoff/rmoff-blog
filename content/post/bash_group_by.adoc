@@ -1,0 +1,58 @@
+---
+draft: false
+title: 'Performing a GROUP BY on data in bash'
+date: "2021-02-02T17:23:21Z"
+image: "/images/2021/02/IMG_8711.jpeg"
+thumbnail: "/images/2021/02/IMG_8588.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Data Engineering
+- Bash
+- Kafkacat
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+_One of the fun things about working with data over the years is learning how to use the tools of the day—but also learning to fall back on the tools that are always there for you - and one of those is bash and its wonderful library of shell tools._
+
+I've been playing around with a new data source recently, and needed to understand more about its structure. Within a single stream there were multiple message types.
+
+<!--more-->
+
+{{< tweet 1355097951094366209 >}}
+
+Each message has its https://gpsd.gitlab.io/gpsd/AIVDM.html#_ais_payload_interpretation[own schema], and a common `type` field. I wanted to know what the most common message types were. Courtesy of https://stackoverflow.com/a/380832/350613[StackOverflow] this was pretty easy. 
+
+My data happened to be in a Kafka topic, *but because of the beauty of unix pipelines the source could be anywhere that can emit to `stdout`*. Here I used `kafkacat` to take a sample of the most recent ten thousand messages on the topic: 
+
+[source,bash]
+----
+$ kafkacat -b localhost:9092 -t ais -C -c 10000 -o-10000 | \ 
+  jq  '.type'                                            | \
+  sort                                                   | \
+  uniq -c                                                | \
+  awk '{ print $2, $1 }'                                 | \
+  sort -n
+
+1 6162
+3 1565
+4 393
+5 1643
+8 61
+9 1
+12 1
+18 165
+21 3
+27 6
+----
+
+* `kafkacat` specifies the broker details (`-b`), source topic (`-t`), act as a consumer (`-C`) and then how many messages to consume (`-c 10000`) and from which offset (`-o-10000`). 
+* `jq` extracts just the value of the `type` field
+* `sort` orders all of the `type` values into order (a pre-requisite for `uniq`)
+* `uniq -c` outputs the number of occurrences of each line
+* The remaining commands are optional
+** `awk` changes round the columns from `<count>,<item>` to `<item>,<count>`
+** The final `sort` arranges the list in numeric order
