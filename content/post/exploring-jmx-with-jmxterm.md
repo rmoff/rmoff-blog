@@ -15,6 +15,7 @@ title = "Exploring JMX with jmxterm"
 
 <!--more-->
 
+_NOTE: JMX Term 1.0.0 gives me a NPE on Ubuntu, while 1.0.2 works fine_
 
 Launch: 
 
