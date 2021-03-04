@@ -52,3 +52,41 @@ The fields may well be nested - use `g(` in visidata to expand them.
 ++++
 <script id="asciicast-iasJQk2eVAbUV9qElYCtip6nh" src="https://asciinema.org/a/iasJQk2eVAbUV9qElYCtip6nh.js" async></script>
 ++++
+
+''''
+
+== Using it with Confluent Cloud
+
+{{< twitter 1367510560011669509 >}}
+
+Here you go: 
+
+* Raw JSON messages: 
++
+[source,bash]
+----
+kafkacat -X security.protocol=SASL_SSL -X sasl.mechanisms=PLAIN \
+         -b BROKER.gcp.confluent.cloud:9092 \
+         -X sasl.username="CCLOUD_API_KEY" \
+         -X sasl.password="CCLOUD_API_PASSWORD" \
+         -t my_topic -C -e -o-10000 | \
+         vd --filetype jsonl
+----
+
+* Avro data (Schema Registry on Confluent Cloud):
++
+[source,bash]
+----
+kafkacat -X security.protocol=SASL_SSL -X sasl.mechanisms=PLAIN \
+         -b BROKER.gcp.confluent.cloud:9092 \
+         -X sasl.username="CCLOUD_API_KEY" \
+         -X sasl.password="CCLOUD_API_PASSWORD" \
+         -s avro \
+         -r https://SR_API_KEY:SR_API_SECRET@SR_ENDPOINT.gcp.confluent.cloud \
+         -t my_avro_topic -C -e -o-10000 | \
+         vd --filetype jsonl
+----
++
+Note: You need to URL encode your credentials when supplying them in the Schema Registry URL (thanks to https://github.com/edenhill/kafkacat/issues/119#issuecomment-616086124[a6kme for this tip]!). If you don't you may well get the error `Avro/Schema-registry message deserialization: REST request failed (code -1): HTTP request failed: URL using bad/illegal format or missing URL : terminating`. 
++
+So if your Schema Registry API key and Secret were `key123!` and `S3cr3t/kjna%$!%dsf£` you'd https://www.url-encode-decode.com/[URL encode it] and use `https://key123%21:S3cr3t%2Fkjna%25%24%21%25dsf%C2%A3@SR_ENDPOINT.gcp.confluent.cloud`
