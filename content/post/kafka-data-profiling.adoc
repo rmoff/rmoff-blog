@@ -1,0 +1,54 @@
+---
+draft: false
+title: 'Quick profiling of data in Apache Kafka using kafkacat and visidata'
+date: "2021-03-04T14:23:15Z"
+image: "/images/2021/03/IMG_9166.jpeg"
+thumbnail: "/images/2021/03/kafka-visidata.gif"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Data
+- kafkacat
+- visidata
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+ksqlDB is a fantastically powerful tool for processing and analysing streams of data in Apache Kafka. But sometimes, you just want a quick way to profile the data in a topic in Kafka. I link:/2021/02/02/performing-a-group-by-on-data-in-bash/[wrote about this previously] with a convoluted (but effective) set of bash commands pipelined together to perform a `GROUP BY` on data. Then someone introduced me to `visidata`, which makes it all a lot quicker!
+
+<!--more-->
+
+Let's imagine we have data in Kafka, and we're going to go and build some cool stuff with it. We're going to process it and build a pipeline, and we need to know something about the data we're working with. https://www.visidata.org/[Visidata] is a commandline tool to work with data in all sorts of formats, including from `stdin`. Coupled with `kafkacat` for consuming data from a topic to `stdout` they make a perfect pairing: 
+
+++++
+<script id="asciicast-C4YuszVGg0slOtwA8lYearYPN" src="https://asciinema.org/a/C4YuszVGg0slOtwA8lYearYPN.js" async></script>
+++++
+
+This samples 100000 JSON records from a topic and pipes it into visidata: 
+
+Once visidata is open, press Shift-F to create histogram
+[source,bash]
+----
+kafkacat -b localhost:9092 -t my_topic -C -e -o-100000 | \
+  vd --filetype jsonl
+----
+
+Once visidata is open, use the arrow keys to move to the column on which you want to build a histogram and press Shift-F. Since it works with pipes if you leave the `-e` off the `kafkacat` argument you get a live stream of messages from the Kafka topic and the visidata will continue to update as messages arrive (although I think you need to replot the histogram if you want it to refresh). 
+
+If your data is in Avro instead you can use kafkacat's support for Avro conversion (`-s avro`) and JSON output (`-J`): 
+
+[source,bash]
+----
+kafkacat -b localhost:9092 -t my_topic -C -e -o-100000 \
+  -r http://schema-registry:8081 -s avro -J | \
+  jq -c '.payload'| \
+  vd --filetype jsonl
+----
+
+The fields may well be nested - use `g(` in visidata to expand them. 
+
+++++
+<script id="asciicast-iasJQk2eVAbUV9qElYCtip6nh" src="https://asciinema.org/a/iasJQk2eVAbUV9qElYCtip6nh.js" async></script>
+++++
