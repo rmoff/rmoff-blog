@@ -58,7 +58,9 @@ INFO Creating table with sql: CREATE TABLE `test_rmoff2` (
 PRIMARY KEY(`MESSAGE_KEY`)) (io.confluent.connect.jdbc.sink.DbStructure)
 ----
 
-This comes about because my JDBC Sink connector was set to `auto.create=true` with `pk.mode=record_key` and `pk.fields=MESSAGE_KEY`. This meant that the primary key for the table was coming from the key of the Kafka message and being stored in a field called `MESSAGE_KEY`. The key for the Kafka message was just a string (a primitive). You can see from the https://github.com/confluentinc/kafka-connect-jdbc/blob/10.0.x/src/main/java/io/confluent/connect/jdbc/dialect/MySqlDatabaseDialect.java#L123-L124[source code] of the connector that it maps `STRING` type from Kafka Connect to `TEXT` in MySQL. To define the field as a primary key in MySQL requires it to have a fixed length, not just `TEXT`. 
+This comes about because my JDBC Sink connector was set to `auto.create=true` with `pk.mode=record_key` and `pk.fields=MESSAGE_KEY`. This meant that the primary key for the table was coming from the key of the Kafka message and being stored in a field called `MESSAGE_KEY`. 
+
+The key for the Kafka message was just a string (a primitive). You can see from the https://github.com/confluentinc/kafka-connect-jdbc/blob/10.0.x/src/main/java/io/confluent/connect/jdbc/dialect/MySqlDatabaseDialect.java#L123-L124[source code] of the connector that it maps `STRING` type from Kafka Connect to `TEXT` in MySQL (https://github.com/confluentinc/kafka-connect-jdbc/commit/42b74cb8aa89b18acdcbe559fecedc89f7ffb009[previously] it was `VARCHAR(256)`). To define the field as a primary key in MySQL requires it to have a fixed length, not just `TEXT`. 
 
 One workaround for this would be to https://docs.confluent.io/platform/current/connect/transforms/custom.html[write your own Kafka Connect Single Message Transform] to modify the Key such that its length were set correctly. Another is to simply create the table in MySQL ahead of populating it with the JDBC sink connector and the field's data type appropriately (e.g. `VARCHAR(255)` if that's long enough for the data)
 
