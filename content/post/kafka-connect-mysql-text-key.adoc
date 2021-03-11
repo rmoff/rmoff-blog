@@ -62,8 +62,12 @@ This comes about because my JDBC Sink connector was set to `auto.create=true` wi
 
 The key for the Kafka message was just a string (a primitive). You can see from the https://github.com/confluentinc/kafka-connect-jdbc/blob/10.0.x/src/main/java/io/confluent/connect/jdbc/dialect/MySqlDatabaseDialect.java#L123-L124[source code] of the connector that it maps `STRING` type from Kafka Connect to `TEXT` in MySQL (https://github.com/confluentinc/kafka-connect-jdbc/commit/42b74cb8aa89b18acdcbe559fecedc89f7ffb009[previously] it was `VARCHAR(256)`). To define the field as a primary key in MySQL requires it to have a fixed length, not just `TEXT`. 
 
-One workaround for this would be to https://docs.confluent.io/platform/current/connect/transforms/custom.html[write your own Kafka Connect Single Message Transform] to modify the Key such that its length were set correctly. Another is to simply create the table in MySQL ahead of populating it with the JDBC sink connector and the field's data type appropriately (e.g. `VARCHAR(255)` if that's long enough for the data)
+Workarounds: 
 
+* Use version 5.5.3 of the connector in which `STRING` is still mapped to `VARCHAR(256)` (from https://www.confluent.io/hub/confluentinc/kafka-connect-jdbc[the download page] click on `Download previous versions`)
+* https://docs.confluent.io/platform/current/connect/transforms/custom.html[Write your own Kafka Connect Single Message Transform] to modify the Key such that its length were set correctly. 
+* Create the table in MySQL ahead of populating it with the JDBC sink connector and the field's data type appropriately (e.g. `VARCHAR(255)` if that's long enough for the data)
++
 [source,sql]
 ----
 CREATE TABLE `test_rmoff2` (
@@ -73,5 +77,3 @@ CREATE TABLE `test_rmoff2` (
 `MESSAGE_KEY` VARCHAR(255) NOT NULL,
 PRIMARY KEY(`MESSAGE_KEY`));
 ----
-
-Once you've created the target table you can restart the connector and it will work. 
