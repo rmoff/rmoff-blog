@@ -10,7 +10,7 @@ title = "Running a Docker Container on Proxmox for BitTorrent Sync"
 
 +++
 
-([Previously](http://rmoff.net/2016/06/07/a-new-arrival/), [previously](http://rmoff.net/2016/06/07/commissioning-my-proxmox-server/), [previously](http://rmoff.net/2016/06/07/importing-vmware-and-virtualbox-vms-to-proxmox/))
+([Previously](/2016/06/07/a-new-arrival/), [previously](/2016/06/07/commissioning-my-proxmox-server-os-and-filesystems/), [previously](/2016/06/07/importing-vmware-and-virtualbox-vms-to-proxmox/))
 
 Since Proxmox 4 has a recent Linux kernel and mainline one at that, it means that Docker can be run on it. I've yet to really dig into Docker and work out when it makes sense in place of Linux Containers (LXC), so this is going to be a learning experience for me. 
 

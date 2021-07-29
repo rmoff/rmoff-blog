@@ -10,7 +10,7 @@ title = "OGG-15051 oracle.goldengate.util.GGException:  Class not found: \"kafka
 
 +++
 
-Similar to the [previous issue](http://rmoff.net/2016/07/28/ogg-class-not-found-com-company-kafka-customproducerrecord/), the [sample config](http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm#GADBD457) in the docs causes another snafu: 
+Similar to the [previous issue](/2016/07/28/ogg-class-not-found-com.company.kafka.customproducerrecord/), the [sample config](http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm#GADBD457) in the docs causes another snafu: 
 
 ```
 OGG-15051  Java or JNI exception:

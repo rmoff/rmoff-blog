@@ -14,7 +14,7 @@ Recently added to the [oracledi project over at java.net](https://java.net/proje
 
 Elasticsearch is a 'document store' widely used for both search and analytics. It's something I've written a lot about ([here](http://rmoff.net/tag/elasticsearch/) and [here](http://www.rittmanmead.com/tag/elasticsearch) for archives), as well as [spoken about](https://speakerdeck.com/rmoff/data-discovery-and-systems-diagnostics-with-the-elk-stack) - preaching the good word, as it were, since the Elastic stack as a whole is very very good at what it does and a pleasure to work with. So, being able to combine that with my "day job" focus of Oracle is fun. Let's get started!
 
-From the [adaptor page](https://java.net/projects/oracledi/downloads/directory/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20ElasticSearch), download the zip to your machine. I'm using Oracle's [BigDataLite VM](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html) which already has GoldenGate installed and configured, and which I've also got Elasticsearch already on following on from [this earlier post](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/). If you've not got Elasticsearch already, head over to [elastic.co](https://www.elastic.co/downloads/elasticsearch) to download it. I'm using version 2.3.1, installed in `/opt/elasticsearch-2.3.1`.
+From the [adaptor page](https://java.net/projects/oracledi/downloads/directory/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20ElasticSearch), download the zip to your machine. I'm using Oracle's [BigDataLite VM](http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html) which already has GoldenGate installed and configured, and which I've also got Elasticsearch already on following on from [this earlier post](/2016/03/16/fun-and-games-with-oracle-goldengate-kafka-and-logstash-on-bigdatalite-4.4/). If you've not got Elasticsearch already, head over to [elastic.co](https://www.elastic.co/downloads/elasticsearch) to download it. I'm using version 2.3.1, installed in `/opt/elasticsearch-2.3.1`.
 
 ### Ready ... ##
 
@@ -223,7 +223,7 @@ One issue with the data that's come through in this example is that it is _all_ 
 
 # Streaming data from Oracle to Elasticsearch #
 
-Now that we've tested and proven the replicat load into Elasticsearch, let's do the full end-to-end. I'm going to use the same Extract as the BigDataLite [Oracle by Example](http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_12c/DI_BDL_Guide/BigDataIntegration_Demo.html?cid=10235&ssid=0) (you can see my notes on it [here](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/) if you're interested).
+Now that we've tested and proven the replicat load into Elasticsearch, let's do the full end-to-end. I'm going to use the same Extract as the BigDataLite [Oracle by Example](http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_12c/DI_BDL_Guide/BigDataIntegration_Demo.html?cid=10235&ssid=0) (you can see my notes on it [here](/2016/03/16/fun-and-games-with-oracle-goldengate-kafka-and-logstash-on-bigdatalite-4.4/) if you're interested).
 
 Reset & recreate the Extract, in the first OGG instance (`/u01/ogg`)
 
@@ -383,7 +383,7 @@ We can look at the data in the index directly:
 
 You'll note that the primary key (`MOVIE_ID`) has been correctly identied as the unique document `_id` field. The `_id` is now where things begin to get interesting, because this field enables the new OGG-Elasticsearch adaptor to apparently perform "UPSERT" on documents that already exist.
 
-To doublecheck this apparent method of handling of the data, I first wanted to validate what was coming through from OGG in terms of the data flowing through from the extract. To do this I hooked up a second replicat, to Kafka and on to Logstash into Elasticseach ([using this method](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/)), and then compared the doc count in the two relevant indices (or strictly speaking, the mapping types, corresponding to each index).
+To doublecheck this apparent method of handling of the data, I first wanted to validate what was coming through from OGG in terms of the data flowing through from the extract. To do this I hooked up a second replicat, to Kafka and on to Logstash into Elasticseach ([using this method](/2016/03/16/fun-and-games-with-oracle-goldengate-kafka-and-logstash-on-bigdatalite-4.4/)), and then compared the doc count in the two relevant indices (or strictly speaking, the mapping types, corresponding to each index).
 
 To start with, I deleted all my Elasticsearch data, as this shows: 
 
@@ -585,6 +585,6 @@ My document counts reflect what I'd expect -- the OGG-Elasticsearch adaptor dele
 
 This adaptor is a pretty smart way of mirroring a table's contents from one of [the many RDBMS that GoldenGate supports](http://www.oracle.com/technetwork/middleware/goldengate/certify-100402.html) as an extract source, into Elasticsearch.
 
-If you want to retain history of changed records, then using [OGG->Kafka->Logstash->Elasticsearch](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/) is an option.
+If you want to retain history of changed records, then using [OGG->Kafka->Logstash->Elasticsearch](/2016/03/16/fun-and-games-with-oracle-goldengate-kafka-and-logstash-on-bigdatalite-4.4/) is an option.
 
 And, if you don't have the spare cash for OGG, you can use [Logstash's JDBC input](https://www.elastic.co/blog/visualising-oracle-performance-data-with-the-elastic-stack) mechanism to pull data periodically from your RDBMS. This has the additional benefit of being able to specify custom SQL queries with joins etc - useful when pulling in denormalised datasets into Elasticsearch for analytics.

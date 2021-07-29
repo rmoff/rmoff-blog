@@ -173,7 +173,7 @@ It's possible to do this by building a table (for state) and then an aggregate o
 
 ---
 
-If you want to try this out further you can generate an stream of additional dummy data with this from [Mockaroo](https://rmoff.net/2018/05/10/quick-n-easy-population-of-realistic-test-data-into-kafka/), piped through `awk` to slow it down so you can see the effect on the generated aggregates as each message arrives:
+If you want to try this out further you can generate an stream of additional dummy data with this from [Mockaroo](/2018/05/10/quick-n-easy-population-of-realistic-test-data-into-kafka/), piped through `awk` to slow it down so you can see the effect on the generated aggregates as each message arrives:
 
     while [ 1 -eq 1 ]
       do curl -s "https://api.mockaroo.com/api/f2d6c8a0?count=1000&key=ff7856d0" | \

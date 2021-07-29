@@ -373,7 +373,7 @@ Put these files in `/u01/app/ogg-bd/dirprm`:
 
 <script src="https://gist.github.com/rmoff/0b658cccc625eed827ade52d7abab048.js"></script>
 
-**Be very careful with the above configuration files for any trailing whitespace** - it can cause problem, [detailed here](https://rmoff.net/2017/09/12/oracle-goldengate-kafka-connect-handler-troubleshooting/). 
+**Be very careful with the above configuration files for any trailing whitespace** - it can cause problem, [detailed here](link:/2017/09/12/oracle-goldengate-/-kafka-connect-handler-troubleshooting/). 
 
 Launch `ggsci`:
 

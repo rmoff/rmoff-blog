@@ -78,4 +78,4 @@ org.apache.ZooKeeperService
 
 {{< /highlight >}}
 
-Read more about [jxmterm here](https://rmoff.net/2018/09/19/exploring-jmx-with-jmxterm/)
+Read more about [jxmterm here](/2018/09/19/exploring-jmx-with-jmxterm/)

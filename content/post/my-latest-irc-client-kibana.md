@@ -14,7 +14,7 @@ OK, maybe that's not entirely true. But my *read-only* client, certainly.
 
 ![](/images/2016/03/2016-03-24_21-15-30.png)
 
-I was perusing the [Logstash input plugins](https://www.elastic.co/guide/en/logstash/current/input-plugins.html) recently when I noticed that there was one for [IRC](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-irc.html). Being a fan of IRC and a regular on the [#obihackers](http://rmoff.net/2016/03/03/obihackers-irc-channel/) channel, I thought this could be fun and yet another great example of how easy [the Elastic stack](http://elastic.co) is to work with.
+I was perusing the [Logstash input plugins](https://www.elastic.co/guide/en/logstash/current/input-plugins.html) recently when I noticed that there was one for [IRC](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-irc.html). Being a fan of IRC and a regular on the [#obihackers](/2016/03/03/obihackers-irc-channel/) channel, I thought this could be fun and yet another great example of how easy [the Elastic stack](http://elastic.co) is to work with.
 
 Installation is a piece of cake: 
 

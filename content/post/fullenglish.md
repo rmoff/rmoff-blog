@@ -4,13 +4,14 @@ date = 2016-02-26T18:02:31Z
 description = ""
 draft = false
 image = "/images/2016/02/thumb_IMG_3621_1024.jpg"
-slug = "fullenglish"
 tag = ["food", "fullenglish"]
-title = "#FullEnglish"
+title = "What makes a good Full English?"
 
 +++
 
-Thanks to the power of twitter, I can look back on all the many and varied Full English breakfasts that I've (mostly) enjoyed: https://twitter.com/search?q=rmoff%20%23fullenglish&src=typd
+Thanks to the power of twitter, I can look back on all the many and varied Full English breakfasts that I've (mostly) enjoyed: 
+
+👉🏻 https://twitter.com/search?q=rmoff%20%23fullenglish&src=typd
 
 ![](/images/2016/02/fullenglish.jpg)
 

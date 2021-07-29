@@ -44,7 +44,7 @@ As of June 2020, this is what the line-up looks like:
 
 ### What do they look like in action? 
 
-I did a talk at UK Oracle User Group TECH18 conference, presenting my talk "[No More Silos: Integrating Databases and Apache Kafka](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)". As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the Debezium/XStream option (log-based CDC). Here I'll try and replicate the discussion and examples. You can also see previous articles that I've written showing [GoldenGate in action](https://rmoff.net/tag/goldengate/).
+I did a talk at UK Oracle User Group TECH18 conference, presenting my talk "[No More Silos: Integrating Databases and Apache Kafka](https://speakerdeck.com/rmoff/no-more-silos-integrating-databases-and-apache-kafka)". As part of this I did a live demo showing the difference between using the JDBC Connector (query-based CDC) and the Debezium/XStream option (log-based CDC). Here I'll try and replicate the discussion and examples. You can also see previous articles that I've written showing [GoldenGate in action](/tag/goldengate/).
 
 You can find all of the code on the [demo-scene](https://github.com/confluentinc/demo-scene/blob/master/no-more-silos-oracle/no-more-silos-oracle.adoc) repository, runnable through Docker and Docker Compose. Simply clone the repo, and then run 
 
@@ -541,7 +541,7 @@ _Some of these are objective, others subjective. Others may indeed be plain fals
 
 * Oracle GoldenGate for Big Data
   * https://www.oracle.com/middleware/data-integration/goldengate/big-data/
-  * https://rmoff.net/tag/goldengate/
+  * /tag/goldengate/
   * https://www.confluent.io/blog/streaming-data-oracle-using-oracle-goldengate-kafka-connect/
   * https://www.confluent.io/connector/oracle-goldengate/
 

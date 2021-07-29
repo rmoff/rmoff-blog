@@ -10,7 +10,7 @@ title = "Kibana Timelion - Series Calculations - Difference from One Week Ago"
 
 +++
 
-I wrote recently about [Kibana's excellent Timelion feature](http://rmoff.net/2016/03/29/experiments-with-kibana-timelion-2/), which brings time-series visualisations to Kibana. In the comments Ben Huang asked: 
+I wrote recently about [Kibana's excellent Timelion feature](/2016/03/29/experiments-with-kibana-timelion/), which brings time-series visualisations to Kibana. In the comments Ben Huang asked: 
 
 > do you know how to show whats the difference between this Friday and last Friday by Timelion?
 

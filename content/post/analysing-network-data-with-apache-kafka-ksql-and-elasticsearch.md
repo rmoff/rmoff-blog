@@ -15,7 +15,7 @@ In [this article](http://cnfl.io/syslogs-filtering) I demonstrated how to use KS
 The data came from my home [Ubiquiti](https://www.ubnt.com/) router, and took two forms:
 
 1. A stream of network events from the router, sent over [syslog](https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-part-1-filtering) to Apache Kafka
-2. Device information that the router stores in an internal MongoDB database, streamed into Kafka using [Debezium and Kafka Connect](https://rmoff.net/2018/03/27/streaming-data-from-mongodb-into-kafka-with-kafka-connect-and-debezium/)
+2. Device information that the router stores in an internal MongoDB database, streamed into Kafka using [Debezium and Kafka Connect](/2018/03/27/streaming-data-from-mongodb-into-kafka-with-kafka-connect-and-debezium/)
 
 With [KSQL I denormalised the two sets of data](https://www.confluent.io/blog/real-time-syslog-processing-apache-kafka-ksql-enriching-events-with-external-data/), enriching each network event with full details of the associated device, based on the device's ID stored in each network event. The device information came from MongoDB, a copy of which was in a Kafka topic along with any changes that subsequently occurred in the MongoDB data (courtesy of CDC and Debezium).
 

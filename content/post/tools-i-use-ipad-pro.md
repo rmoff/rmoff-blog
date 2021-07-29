@@ -10,7 +10,7 @@ title = "Tools I Use: iPad Pro"
 
 +++
 
-I've written recently about [how I create the diagrams in my blog posts and talks](https://rmoff.net/2018/12/10/so-how-do-you-make-those-cool-diagrams/), and from discussions around that, a couple of people were interested more broadly in how I use my iPad Pro. So, on the basis that if two people are interested maybe others are (and if no-one else is, I have a copy-and-paste answer to give to those two people) here we go. 
+I've written recently about [how I create the diagrams in my blog posts and talks](/2018/12/10/so-how-do-you-make-those-cool-diagrams/), and from discussions around that, a couple of people were interested more broadly in how I use my iPad Pro. So, on the basis that if two people are interested maybe others are (and if no-one else is, I have a copy-and-paste answer to give to those two people) here we go. 
 
 ### Kit
 

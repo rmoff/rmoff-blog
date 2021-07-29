@@ -3,7 +3,7 @@ date = 2016-03-03T22:55:37Z
 description = ""
 draft = false
 slug = "obihackers-irc-channel"
-title = "#obihackers IRC channel"
+title = "obihackers IRC channel"
 
 +++
 

@@ -16,4 +16,4 @@ Here's where I'll be!
 
 If you use Google Calendar you can click on individual entries above and select `copy to my calendar` - which of course you'll want to do for all the ones I've marked as `[SPEAKING]` :-)
 
-Here's a list of all the [Apache Kafka talks at OpenWorld and JavaOne](https://rmoff.net/2017/09/20/apache-kafka-talks-at-oracle-openworld-javaone-and-oak-table-world-2017/), most of which I'll be trying to get to.
+Here's a list of all the [Apache Kafka talks at OpenWorld and JavaOne](/2017/09/20/apache-kafka-talks-at-oracle-openworld-javaone-and-oak-table-world-2017/), most of which I'll be trying to get to.

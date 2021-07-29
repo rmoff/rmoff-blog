@@ -12,7 +12,7 @@ title = "Kafka - AdminClient - Connection to node -1 could not be established. B
 
 
 ----
-**See also [Kafka Listeners - Explained](https://rmoff.net/2018/08/02/kafka-listeners-explained/)**
+**See also [Kafka Listeners - Explained](/2018/08/02/kafka-listeners-explained/)**
 
 ----
 

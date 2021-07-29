@@ -10,7 +10,7 @@ title = "Streaming data from Kafka into Elasticsearch"
 
 +++
 
-_This article is part of a series exploring Streaming ETL in practice. You can read about [setting up the ingest of realtime events from a standard Oracle platform](https://rmoff.net/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/), and [building streaming ETL using KSQL](https://www.confluent.io/blog/ksql-in-action-real-time-streaming-etl-from-oracle-transactional-data)._
+_This article is part of a series exploring Streaming ETL in practice. You can read about [setting up the ingest of realtime events from a standard Oracle platform](/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/), and [building streaming ETL using KSQL](https://www.confluent.io/blog/ksql-in-action-real-time-streaming-etl-from-oracle-transactional-data)._
 
 ---
 
