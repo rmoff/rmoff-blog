@@ -39,7 +39,7 @@ You can find full documentation for the OGG-BD replicat [here](http://docs.oracl
 
 In this article we're going to use OGG-BD to populate a topic for each table, using Avro encoding. [Here are](https://gist.github.com/rmoff/221b4a1903a85568042e3a1b9b07ab95) the three configuration files you should put in `/u01/app/ogg-bd/dirprm`.
 
-**Be very careful with copying & pasting these configuration files, as trailing whitespace can cause problems, [detailed here](link:/2017/09/12/oracle-goldengate-/-kafka-connect-handler-troubleshooting/).**
+**Be very careful with copying & pasting these configuration files, as trailing whitespace can cause problems, [detailed here](/2017/09/12/oracle-goldengate-/-kafka-connect-handler-troubleshooting/).**
 
 ### Starting the replicat ##
 
