@@ -10,7 +10,7 @@ title = "Commissioning my Proxmox Server - OS and filesystems"
 
 +++
 
-([Previously](http://rmoff.net/2016/06/07/a-new-arrival/))
+([Previously](/2016/06/07/a-new-arrival/))
 
 With my server in place, I ran a memtest on it ... which with 128G took a while ;)
 

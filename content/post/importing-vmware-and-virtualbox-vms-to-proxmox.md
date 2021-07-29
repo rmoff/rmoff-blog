@@ -10,7 +10,7 @@ title = "Importing VMWare and VirtualBox VMs to Proxmox"
 
 +++
 
-([Previously](http://rmoff.net/2016/06/07/a-new-arrival/), [previously](http://rmoff.net/2016/06/07/commissioning-my-proxmox-server/))
+([Previously](/2016/06/07/a-new-arrival/), [previously](/2016/06/07/commissioning-my-proxmox-server/))
 
 I've got a bunch of existing VirtualBox and VMWare VMs that I want to run on Proxmox. Eventually I'll migrate them to containers, but for the time being run them as "fat" VMs using Proxmox's KVM virtualisation. After copying the OVA files that I had to the server, I uncompressed them:
 

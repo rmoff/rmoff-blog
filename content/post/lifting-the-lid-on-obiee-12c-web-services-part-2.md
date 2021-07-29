@@ -10,7 +10,7 @@ title = "Lifting the Lid on OBIEE 12c Web Services - Part 2"
 
 +++
 
-In OBIEE 12c `data-model-cmd` is a wrapper for some java code which ultimately calls an internal RESTful web service in OBIEE 12c, `bi-lcm`. We saw in the [previous post](http://rmoff.net/2016/05/24/lifting-the-lid-on-obiee-12c-web-services-part-1/) how these internal web services can be opened up slightly, and we're going to do the same again here. Which means, time for the same caveat:
+In OBIEE 12c `data-model-cmd` is a wrapper for some java code which ultimately calls an internal RESTful web service in OBIEE 12c, `bi-lcm`. We saw in the [previous post](/2016/05/24/lifting-the-lid-on-obiee-12c-web-services-part-1/) how these internal web services can be opened up slightly, and we're going to do the same again here. Which means, time for the same caveat:
 
 ---
 

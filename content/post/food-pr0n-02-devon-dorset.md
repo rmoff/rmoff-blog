@@ -30,7 +30,7 @@ At the beginning of the holiday we went via Bournemouth and had a pretty good fr
 
 ![Fryup](/images/2016/04/IMG_6562.jpg)
 
-On the last day of holiday an overnight stop at Southhampton's Premier Inn North gave the chain chance to redeem itself after the [poor fry-up showing in Manchester recently](http://rmoff.net/2016/03/19/food-pr0n-01/), and redeem itself it did. Decent black pudding, good sausages, good egg, only let down by oddly-chewy bacon.
+On the last day of holiday an overnight stop at Southhampton's Premier Inn North gave the chain chance to redeem itself after the [poor fry-up showing in Manchester recently](/2016/03/19/food-pr0n-01/), and redeem itself it did. Decent black pudding, good sausages, good egg, only let down by oddly-chewy bacon.
 
 ![Premier Inn Fryup](/images/2016/04/IMG_7375-1.jpg)
 

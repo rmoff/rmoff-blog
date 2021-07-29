@@ -10,7 +10,7 @@ title = "So how DO you make those cool diagrams?"
 
 +++
 
-I [write](https://www.confluent.io/blog/author/robin/) and [speak](http://rmoff.net/presentations/) lots about Kafka, and get a fair few questions from this. The most common question is actually nothing to do with Kafka, but instead: 
+I [write](https://www.confluent.io/blog/author/robin/) and [speak](/presentations/) lots about Kafka, and get a fair few questions from this. The most common question is actually nothing to do with Kafka, but instead: 
 
 > How do you make those cool diagrams? 
 

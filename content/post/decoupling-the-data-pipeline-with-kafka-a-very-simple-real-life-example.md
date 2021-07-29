@@ -10,7 +10,7 @@ title = "Decoupling the Data Pipeline with Kafka - A (Very) Simple Real Life Exa
 
 +++
 
-I've recently been playing around with the ELK stack ([now officially known as the Elastic stack](https://www.elastic.co/blog/heya-elastic-stack-and-x-pack)) collecting data from [an IRC channel](http://rmoff.net/2016/03/03/obihackers-irc-channel/) with Elastic's Logstash, storing it in Elasticsearch and [analysing it with Kibana](http://rmoff.net/2016/03/24/my-latest-irc-client-kibana/). But, this isn't an "ELK" post - this is a Kafka post! ELK is just some example data manipulation tooling that helps demonstrate the principles.
+I've recently been playing around with the ELK stack ([now officially known as the Elastic stack](https://www.elastic.co/blog/heya-elastic-stack-and-x-pack)) collecting data from [an IRC channel](/2016/03/03/obihackers-irc-channel/) with Elastic's Logstash, storing it in Elasticsearch and [analysing it with Kibana](/2016/03/24/my-latest-irc-client-kibana/). But, this isn't an "ELK" post - this is a Kafka post! ELK is just some example data manipulation tooling that helps demonstrate the principles.
 
 As I [wrote about last year](http://www.rittmanmead.com/2015/10/forays-into-kafka-enabling-flexible-data-pipelines/), Apache Kafka provides a handy way to build flexible "pipelines". Today I'm writing up a short real-world example of this in practice. There are three elements to the flexibility that I really want to highlight:
 
@@ -22,7 +22,7 @@ The simplest form of the pipeline I was using looks like this:
 
 ![](/images/2016/04/kd01.png)
 
-A logstash configuration ([`logstash-irc.conf`](https://gist.github.com/rmoff/862d0ceea223aa7283244b1b27594941#file-01-logstash-irc-conf)) gets Logstash to connect to the IRC server and send messages received to Elasticsearch. From here they can be displayed and analysed within Kibana. [Read more about the details here](http://rmoff.net/2016/03/24/my-latest-irc-client-kibana/) if you're interested.
+A logstash configuration ([`logstash-irc.conf`](https://gist.github.com/rmoff/862d0ceea223aa7283244b1b27594941#file-01-logstash-irc-conf)) gets Logstash to connect to the IRC server and send messages received to Elasticsearch. From here they can be displayed and analysed within Kibana. [Read more about the details here](/2016/03/24/my-latest-irc-client-kibana/) if you're interested.
 
 From a "pipeline" point of view this is a pretty typical pattern. A tool (Logstash here, but could be ODI, Informatica, etc) runs with a set of "code" (a very simple `.conf` here, elsewhere it could be mappings and load plans), reading data from a source. Obviously in full-blown system there's a dozen more moving parts than this simple example, but the point stands.
 
@@ -49,7 +49,7 @@ With the data streaming into Kafka and building up there we can then set up one 
 
 ![](/images/2016/04/kd03a.png)
 
-At this point I'm [where I was before](http://rmoff.net/2016/03/24/my-latest-irc-client-kibana/); streaming IRC content in near-real-time to Elasticsearch and analysing it with Kibana. The only difference is that I've added in Kafka as a buffer, decoupling the reading messages from IRC with the processing and subsequent storage of them.
+At this point I'm [where I was before](/2016/03/24/my-latest-irc-client-kibana/); streaming IRC content in near-real-time to Elasticsearch and analysing it with Kibana. The only difference is that I've added in Kafka as a buffer, decoupling the reading messages from IRC with the processing and subsequent storage of them.
 
 Now here's the money shot -- I can add new consumers of this data that's in Kafka, whenever I want, without needing to know about them at the time that I extracted the source data. I can pick up from the end of the feed, or I can reprocess the whole lot, *per consumer*. I've used this in a couple of instances recently:
 

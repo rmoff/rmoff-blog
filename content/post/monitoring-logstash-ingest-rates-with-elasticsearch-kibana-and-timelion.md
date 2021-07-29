@@ -10,7 +10,7 @@ title = "Monitoring Logstash Ingest Rates with Elasticsearch, Kibana, and Timeli
 
 +++
 
-Yesterday I wrote about [Monitoring Logstash Ingest Rates with InfluxDB and Grafana](http://rmoff.net/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/), in which InfluxDB provided the data store for the ingest rate data, and Grafana the frontend. 
+Yesterday I wrote about [Monitoring Logstash Ingest Rates with InfluxDB and Grafana](/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/), in which InfluxDB provided the data store for the ingest rate data, and Grafana the frontend. 
 
 [Mark Walkom](https://twitter.com/warkolm/) reminded me on twitter that the next release of Logstash will add more functionality in this area - and that it'll integrate back into the Elastic stack: 
 
@@ -21,7 +21,7 @@ Which then got me thinking -- why add in InfluxDB and Grafana, if you're already
 
 ### Logstash Configuration
 
-This is the same [as before](http://rmoff.net/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/), except the **output** stanza points to Elasticsearch: 
+This is the same [as before](/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/), except the **output** stanza points to Elasticsearch: 
 
 ```ruby
 input {
@@ -108,7 +108,7 @@ Let's save the visualisation, and include it on the dashboard with our actual da
 
 --- 
 
-So - ingest rate monitoring within the Elastic stack? Done. Ingest rate monitoring if you're also using InfluxDB & Grafana? [Done](http://rmoff.net/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/)! And just to round off all permutations - you want to store your data in Elasticsearch, but just love how Grafana looks? Not a problem, since [Grafana support Elasticsearch as a data source](http://docs.grafana.org/datasources/elasticsearch/): 
+So - ingest rate monitoring within the Elastic stack? Done. Ingest rate monitoring if you're also using InfluxDB & Grafana? [Done](/2016/05/12/monitoring-logstash-ingest-rates-with-influxdb-and-grafana/)! And just to round off all permutations - you want to store your data in Elasticsearch, but just love how Grafana looks? Not a problem, since [Grafana support Elasticsearch as a data source](http://docs.grafana.org/datasources/elasticsearch/): 
 
 ![Grafana visualising Elasticsearch data](/images/2016/05/Grafana_-_Twitter_Ingest_Monitor.png)
 

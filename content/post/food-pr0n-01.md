@@ -10,9 +10,9 @@ title = "Food Pr0n - 01"
 
 +++
 
-One of the perks of my job is that I get to travel to some pretty nice places (hi, San Francisco, Bergen, Åland Islands), and get to eat some pretty good food too. If you're looking for some techie content, then move along and go and read about [Kafka](http://rmoff.net/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/), but if you enjoy food pr0n then stay put.
+One of the perks of my job is that I get to travel to some pretty nice places (hi, San Francisco, Bergen, Åland Islands), and get to eat some pretty good food too. If you're looking for some techie content, then move along and go and read about [Kafka](/2016/03/16/oracle-goldengate-kafka-hive-on-bigdatalite-4-4/), but if you enjoy food pr0n then stay put.
 
-I was working for a client in the centre of Manchester this week, staying as usual at a Premier Inn. I'm a big fan of my [fried breakfasts](http://rmoff.net/2016/02/26/fullenglish/), and whilst never anything to write home about (or indeed write a blog about) Premier Inn breakfasts are generally fine for what they are -- but this one was a real disappointment. Even with the excitement of seeing [bubble and squeak](https://en.wikipedia.org/wiki/Bubble_and_squeak), it was a real let down; luke warm, and the sausages in particular tasted really artificially flavoured. 
+I was working for a client in the centre of Manchester this week, staying as usual at a Premier Inn. I'm a big fan of my [fried breakfasts](/2016/02/26/fullenglish/), and whilst never anything to write home about (or indeed write a blog about) Premier Inn breakfasts are generally fine for what they are -- but this one was a real disappointment. Even with the excitement of seeing [bubble and squeak](https://en.wikipedia.org/wiki/Bubble_and_squeak), it was a real let down; luke warm, and the sausages in particular tasted really artificially flavoured. 
 
 ![Premier Inn Fryup - hopefully just a blip on their record of 'not bad' usually](/images/2016/03/IMG_3694--1--2.JPG)
 
