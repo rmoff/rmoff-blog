@@ -156,7 +156,7 @@ And then we can check the topic that's being written to. Here I'm using kafkacat
 ----
 docker exec kafkacat \
   kafkacat -b kafka:29092 \
-           -t rabbit-test-00 
+           -t rabbit-test-00 \
            -C -u
 ----
 
@@ -217,12 +217,9 @@ Inspect the raw topic contents:
 [source,sql]
 ----
 ksql> PRINT 'rabbit-test-00' FROM BEGINNING;
-Format:JSON                                                                                                                                  
-{"ROWTIME":1578477403591,"ROWKEY":"null","transaction":"PAYMENT","amount":"$125.0"}
-{"ROWTIME":1578477598555,"ROWKEY":"null","transaction":"PAYMENT","amount":"$125.0"}
-{"ROWTIME":1578478171540,"ROWKEY":"null","transaction":"PAYMENT","amount":"$125.0"}
-{"ROWTIME":1578480036859,"ROWKEY":"null","transaction":"PAYMENT","amount":"$125.0","timestamp":"Wed 8 Jan 2020 10:40:36 GMT"}
-{"ROWTIME":1578480105771,"ROWKEY":"null","transaction":"PAYMENT","amount":"$125.0","timestamp":"Wed 8 Jan 2020 10:41:45 GMT"}
+Key format: ¯\_(ツ)_/¯ - no data processed
+Value format: JSON or KAFKA_STRING
+rowtime: 2021/09/30 09:48:48.854 Z, key: <null>, value: {"transaction": "PAYMENT", "amount": "$125.0", "timestamp": "Thu 30 Sep 2021 10:48:30 BST" }, partition: 0
 ----
 
 Declare the stream (which is just the existing Kafka topic with an explicit schema): 
@@ -244,14 +241,12 @@ ksql> SET 'auto.offset.reset' = 'earliest';
 Successfully changed local property 'auto.offset.reset' to 'earliest'. Use the UNSET command to revert your change.
 
 ksql> SELECT transaction, amount, timestamp FROM rabbit EMIT CHANGES;
-+------------+---------+----------------------------+
-|TRANSACTION |AMOUNT   |TIMESTAMP                   |
-+------------+---------+----------------------------+
-|PAYMENT     |$125.0   |null                        |
-|PAYMENT     |$125.0   |null                        |
-|PAYMENT     |$125.0   |null                        |
-|PAYMENT     |$125.0   |Wed 8 Jan 2020 10:40:36 GMT |
-|PAYMENT     |$125.0   |Wed 8 Jan 2020 10:41:45 GMT |
++-------------+---------+------------------------------+
+|TRANSACTION  |AMOUNT   |TIMESTAMP                     |
++-------------+---------+------------------------------+
+|PAYMENT      |$125.0   |Thu 30 Sep 2021 10:55:28 BST  |
+|PAYMENT      |$25.0    |Thu 30 Sep 2021 10:55:35 BST  |
+|PAYMENT      |$42.0    |Thu 30 Sep 2021 10:55:40 BST  |
 ----
 
 The `AMOUNT` column is clearly a currency, but the source data is a character string (`$125.0`). Let's write a stream processor to split these into more appropriate columns, and also drop messages with no timestamp (that we'll class as invalid data for this example): 
@@ -273,11 +268,12 @@ This creates a new Kafka topic, populated by the transformed data driven by the 
 [source,sql]
 ----
 ksql> SELECT TX_TYPE, CURRENCY, TX_AMOUNT, TX_TIMESTAMP FROM TRANSACTIONS EMIT CHANGES;
-+--------+----------+----------+----------------------------+
-|TX_TYPE |CURRENCY  |TX_AMOUNT |TX_TIMESTAMP                |
-+--------+----------+----------+----------------------------+
-|PAYMENT |$         |125.00    |Wed 8 Jan 2020 10:40:36 GMT |
-|PAYMENT |$         |125.00    |Wed 8 Jan 2020 10:41:45 GMT |
++---------+---------+----------+------------------------------+
+|TX_TYPE  |CURRENCY |TX_AMOUNT |TX_TIMESTAMP                  |
++---------+---------+----------+------------------------------+
+|PAYMENT  |$        |125.00    |Thu 30 Sep 2021 10:55:28 BST  |
+|PAYMENT  |$        |25.00     |Thu 30 Sep 2021 10:55:35 BST  |
+|PAYMENT  |$        |42.00     |Thu 30 Sep 2021 10:55:40 BST  |
 ----
 
 Note that the messages without a timestamp are not present in the new stream. 
