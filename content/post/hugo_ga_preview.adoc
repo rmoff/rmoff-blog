@@ -2,8 +2,8 @@
 draft: true
 title: 'Using GitHub Actions to build automagic Hugo previews of draft articles'
 date: "2022-04-05T20:35:13Z"
-image: "/images/2022/04/"
-thumbnail: "/images/2022/04/"
+image: "/images/2022/04/build.png"
+thumbnail: "/images/2022/04/IMG_5139.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - Hugo
@@ -15,13 +15,13 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-This blog is built using Hugo, hosted on GitHub Pages. I was recently writing a blog of which I wanted to share the draft with someone, but since it's written in raw Asciidoc it's not the same as once it's rendered with all the images included etc. When I'm writing I run Hugo locally for the preview of the new post, and I ended up exporting that local preview to a PDF - not a great workflow. This blog post shows you how to create an automagic preview of any draft content on Hugo using GitHub Actions.
+This blog is written in Asciidoc, built using Hugo, and hosted on GitHub Pages. I recently wanted to share the draft of a post I was writing with someone and ended up exporting a local preview to a PDF - not a great workflow! This blog post shows you how to create an automagic hosted preview of any draft content on Hugo using GitHub Actions.
 
 <!--more-->
 
 I link:/2020/12/20/scheduling-hugo-builds-on-github-pages-with-github-actions/[wrote previously] about using GitHub Actions to automagically build and deploy my blog whenever I push new content to the GitHub repo that hosts the source. My friend https://twitter.com/gunnarmorling[Gunnar Morling] does not only that with https://www.morling.dev/[his blog], but also a neat preview functionality for new content in a Pull Request (PR). I'm writing this blog to document the steps I took to mimic https://github.com/gunnarmorling/morling.dev/blob/master/.github/workflows/preview.yml[his setup] :) 
 
-In essence it's the same as link:/2020/12/20/scheduling-hugo-builds-on-github-pages-with-github-actions/[deploying the production Hugo site to GitHub Pages], except it's hosted on https://surge.sh/[`https://surge.sh/`] instead and with a variable URL. 
+In essence it's the same as link:/2020/12/20/scheduling-hugo-builds-on-github-pages-with-github-actions/[deploying the production Hugo site to GitHub Pages], except it's hosted on https://surge.sh/[`https://surge.sh/`] instead and with a variable URL (since you might have multiple drafts each with their own PR). 
 
 == Setting up an account on surge.sh
 
@@ -131,29 +131,27 @@ These break down as follows:
 * `job.name`: This is the name of the job, specified under `jobs:` in the YAML that defines the Workflow. 
 * `pr.number`: The PR number, which can be obtained from a variable in the workflow. 
 
-I'm stealing https://github.com/gunnarmorling/morling.dev/blob/master/.github/workflows/preview.yml#L17[Gunnar's nice bit of code] here to determine the PR number: 
+I'm stealing https://github.com/gunnarmorling/morling.dev/blob/master/.github/workflows/preview.yml#L17[Gunnar's nice bit of code] here to determine the PR number :) 
 
-[source,bash]
+[source,yaml]
 ----
-export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH") 
+    - name: Setup base URL env var
+      run: |
+        export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH") 
+        echo BASEURL="https://rmoff-rmoff-blog-preview-pr-"$PRNUMBER".surge.sh/" >> $GITHUB_ENV
 ----
 
-Using that I can then build the BASEURL which gets passed to Hugo shortly
-
-[source,bash]
-----
-export BASEURL = "https://rmoff-rmoff-blog-preview-pr-'"$PRNUMBER"'.surge.sh/"
-----
+Note that `export` works locally to a step, but to pass the variable between steps you append the setting of it to `$GITHUB_ENV`
 
 === Build the Hugo site
 
 Install of simply `hugo` which builds the site, we add a few command line flags to build draft posts (`--buildDrafts`), future-dated posts (`--buildFuture`), and also change the base URL (`--baseURL`) which by default (per the https://github.com/rmoff/rmoff-blog/blob/master/config.yaml[`config.yaml`]) is the live site (`rmoff.net`). 
 
-If the base URL is incorrectly set the resulting built site won't render properly - you'll get missing CSS files, weird relative links, etc. 
+Note that if the base URL is incorrectly set the resulting built site won't render properly - you'll get missing CSS files, weird relative links, etc. 
 
 === Deploying the built site to surge.sh
 
-https://github.com/afc163/surge-preview[This action] deploys the built site (under `/public`) from the previous step to surge.sh: 
+https://github.com/afc163/surge-preview[This action] deploys the built site (under `/public`, specified in the `dist` parameter) from the previous step to surge.sh: 
 
 [source,yaml]
 ----
@@ -177,7 +175,7 @@ https://github.com/afc163/surge-preview[This action] deploys the built site (und
 include::https://raw.githubusercontent.com/rmoff/rmoff-blog/master/.github/workflows/preview-blog.yaml[]
 ----
 
-Put this YAML in a file in your github repository root folder under `.github/workflows/`
+Put this YAML in a file in your github repository root folder under `.github/workflows/`. 
 
 == The workflow in action
 
@@ -214,3 +212,7 @@ image::/images/2022/04/pr4.png[]
 5. Bask in the glory of a nice preview of your new article, whilst safely not impinging upon your live site. 
 +
 image::/images/2022/04/preview.png[]
+
+--- 
+
+_My thanks to https://twitter.com/gunnarmorling/[Gunnar Morling] for basically figuring all this out for me to +++<del>+++steal+++</del>+++ seek inspiration from._
