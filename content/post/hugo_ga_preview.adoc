@@ -1,0 +1,221 @@
+---
+draft: false
+title: 'Using GitHub Actions to build automagic Hugo previews of draft articles'
+date: "2022-04-06T19:30:13Z"
+image: "/images/2022/04/build.png"
+thumbnail: "/images/2022/04/IMG_5139.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Hugo
+- GitHub
+- Blogging
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+This blog is written in Asciidoc, built using Hugo, and hosted on GitHub Pages. I recently wanted to share the draft of a post I was writing with someone and ended up exporting a local preview to a PDF - not a great workflow! This blog post shows you how to create an automagic hosted preview of any draft content on Hugo using GitHub Actions.
+
+This is useful for previewing and sharing one's own content, but also for making good use of GitHub as a collaborative platform - if someone https://github.com/rmoff/rmoff-blog/pull/4#pullrequestreview-933907051[reviews and amends your PR] the post gets updated in the preview too. 
+
+<!--more-->
+
+I link:/2020/12/20/scheduling-hugo-builds-on-github-pages-with-github-actions/[wrote previously] about using GitHub Actions to automagically build and deploy my blog whenever I push new content to the GitHub repo that hosts the source. My friend https://twitter.com/gunnarmorling[Gunnar Morling] does not only do that with https://www.morling.dev/[his blog], but he also has a neat preview functionality for new content in a Pull Request (PR). I'm writing this blog to document the steps I took to mimic https://github.com/gunnarmorling/morling.dev/blob/master/.github/workflows/preview.yml[his setup] :) 
+
+In essence it's the same as link:/2020/12/20/scheduling-hugo-builds-on-github-pages-with-github-actions/[deploying the production Hugo site to GitHub Pages], except it's hosted on https://surge.sh/[`https://surge.sh/`] instead and with a variable URL (since you might have multiple drafts each with their own PR). 
+
+== Setting up an account on surge.sh
+
+https://surge.sh/[`https://surge.sh/`] is not a shell script as the name may suggest, but a hosted service that provides `Static web publishing for Front-End Developers`. Their audience is denoted very clearly by the fact you can't sign up online - they assume that _of course_ you'll have `npm` installed (because you're a front-end developer, right). For us heathens without it, you need to install `npm` first which you can do via `brew` (which in turn you can install using `npm`…only kidding)
+
+[source,bash]
+----
+brew install npm
+----
+
+Then install surge
+
+[source,bash]
+----
+npm install --global surge
+----
+
+With it installed you can then create an account
+
+[source,bash]
+----
+$ surge login
+
+   Login (or create surge account) by entering email & password.
+
+          email: robin+surge@moffatt.me
+       password:
+
+   Success - Logged in as robin+surge@moffatt.me.
+----
+
+Check your email and verify your email address, and then go and create an authentication token: 
+
+[source,bash]
+----
+$ surge token
+
+   4fimxlh7xmvvs72qhmrmgbhx4jwudepa
+----
+
+https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository[Add this to your GitHub repository] as a Repository Secret under Actions. 
+
+image::/images/2022/04/gha_token.png[]
+
+== Building the Workflow
+
+This is all built around creating a https://docs.github.com/en/actions[GitHub Actions] https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions[workflow]. It will do the following: 
+
+1. Trigger when a new PR is created
+2. Checkout the code from the PR source branch
+3. Install the dependencies on the container that's running
+4. Set a variable to hold the target URL for the deployed preview
+5. Build the Hugo site
+6. Deploy the built preview to https://surge.sh/[`https://surge.sh/`]
+
+Let's look at each of these in detail. Each section contributes a lump of YAML which builds the overall workflow. 
+
+=== Triggering a GitHub Action on a PR
+
+There are many events in a GitHub repository that can trigger an action, including a https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request[`pull_request`]. You can refine it further using a https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#using-filters[filter], such as only a pull request that's been marked as ready for review. Here I'm just going to target PRs that are [re-]opened, which is the default and so https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request[per the docs] no filter is needed:
+
+[source,yaml]
+----
+on:
+  pull_request:
+----
+
+=== Checkout the code
+
+https://github.com/actions/checkout[This action] checks out the code from the PR branch. It can be configured to fetch other branches if required, but per the doc: 
+
+> Only a single commit is fetched by default, for *the ref/SHA that triggered the workflow*
+
+[source,yaml]
+----
+    - uses: actions/checkout@v3
+----
+
+=== Install dependencies
+
+This is the same as used for the live site (which kinda makes sense, given that this is to be a preview of it)
+
+[source,yaml]
+----
+    - name: Install Ruby Dev                     
+      run: sudo apt-get install ruby-dev
+
+    - name: Install AsciiDoctor and Rouge
+      run: sudo gem install asciidoctor rouge
+
+    - name: Setup Hugo                           
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: '0.85.0'
+----
+
+=== Determining the preview URL
+
+To deploy to `surge.sh` I used the same GitHub Action as Gunnar, which is https://github.com/afc163/surge-preview[this one]. The URL that it deploys to is determined by the source repository and PR number: 
+
+> `https://{{repository.owner}}-{{repository.name}}-{{job.name}}-pr-{{pr.number}}.surge.sh`
+
+These break down as follows: 
+
+* `repository.owner`: `rmoff`
+* `repository.name`: `rmoff-blog`
+* `job.name`: This is the name of the job, specified under `jobs:` in the YAML that defines the Workflow. 
+* `pr.number`: The PR number, which can be obtained from a variable in the workflow. 
+
+I'm stealing https://github.com/gunnarmorling/morling.dev/blob/master/.github/workflows/preview.yml#L17[Gunnar's nice bit of code] here to determine the PR number :) 
+
+[source,yaml]
+----
+    - name: Setup base URL env var
+      run: |
+        export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH") 
+        echo BASEURL="https://rmoff-rmoff-blog-preview-pr-"$PRNUMBER".surge.sh/" >> $GITHUB_ENV
+----
+
+Note that `export` works locally to a step, but to pass the variable between steps you append the setting of it to `$GITHUB_ENV`
+
+=== Build the Hugo site
+
+Instead of simply calling `hugo` which builds the site, we add a few command line flags to build draft posts (`--buildDrafts`), future-dated posts (`--buildFuture`), and also change the base URL (`--baseURL`) which by default (per the https://github.com/rmoff/rmoff-blog/blob/master/config.yaml[`config.yaml`]) is the live site (`rmoff.net`). 
+
+Note that if the base URL is incorrectly set the resulting built site won't render properly - you'll get missing CSS files, weird relative links, etc. 
+
+=== Deploying the built site to surge.sh
+
+https://github.com/afc163/surge-preview[This action] deploys the built site (under `/public`, specified in the `dist` parameter) from the previous step to surge.sh: 
+
+[source,yaml]
+----
+    - name: Preview
+      uses: afc163/surge-preview@v1
+      id: preview_step
+      with:
+        surge_token: ${{ secrets.SURGE_TOKEN }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        dist: public
+        failOnError: 'true'
+        teardown: true
+        build: |
+          echo Deploying to surge.sh
+----
+
+== The finished workflow
+
+[source,yaml]
+----
+include::https://raw.githubusercontent.com/rmoff/rmoff-blog/master/.github/workflows/preview-blog.yaml[]
+----
+
+Put this YAML in a file in your github repository root folder under `.github/workflows/`. 
+
+== The workflow in action
+
+1. Create a branch of the main branch, into which you will commit a new blog post:
++
+[source,bash]
+----
+git checkout -b my_new_article
+----
+
+2. Start writing your blog. Once it's ready to publish as a draft, commit it and push to GitHub: 
++
+[source,bash]
+----
+git add content/post/never_gonna_give_you_up.adoc
+git commit -m "Draft ready for review"
+git push --set-upstream origin my_new_article
+----
+
+3. Create a PR from the new branch:
++
+image::/images/2022/04/pr1.png[]
++
+image::/images/2022/04/pr2.png[]
++
+When you create the PR you'll notice that a check has been added to it - this is the action that's configured by the workflow and triggered by the PR being created
++
+image::/images/2022/04/pr2a.png[]
+
+4. As the action runs you'll see it update the PR with its status, and then a completion message including the URL to which the preview has been uploaded
++
+image::/images/2022/04/pr4.png[]
+
+5. Bask in the glory of a nice preview of your new article, whilst safely not impinging upon your live site. 
++
+image::/images/2022/04/preview.png[]
+
+--- 
+
+_My thanks to https://twitter.com/gunnarmorling/[Gunnar Morling] for basically figuring all this out for me to +++<del>+++steal+++</del>+++ seek inspiration from._

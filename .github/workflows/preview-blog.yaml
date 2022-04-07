@@ -1,0 +1,44 @@
+name: Build and Deploy PR Preview
+
+on:
+  pull_request:
+
+jobs:
+  preview:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Ruby Dev                     
+      run: sudo apt-get install ruby-dev
+
+    - name: Install AsciiDoctor and Rouge
+      run: sudo gem install asciidoctor rouge
+
+    - name: Setup Hugo                           
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: '0.85.0'
+
+    - name: Setup base URL env var
+      run: |
+        export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH") 
+        echo BASEURL="https://rmoff-rmoff-blog-preview-pr-"$PRNUMBER".surge.sh/" >> $GITHUB_ENV
+
+    - name: Report base URL env var
+      run: echo "${{ env.BASEURL }}" 
+
+    - name: Build                                
+      run: hugo --buildFuture --buildDrafts --baseURL "${{ env.BASEURL }}"
+
+    - name: Deploy                               
+      uses: afc163/surge-preview@v1
+      id: preview_step
+      with:
+        surge_token: ${{ secrets.SURGE_TOKEN }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        dist: public
+        failOnError: 'true'
+        teardown: true
+        build: |
+          echo Deploying to surge.sh
