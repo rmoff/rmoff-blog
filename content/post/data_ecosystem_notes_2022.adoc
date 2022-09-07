@@ -16,13 +16,13 @@ categories:
 
 <!--more-->
 
-For the past 5.5 years I've been head-down in the exciting area of stream processing and events, and I realised recently that the world of data and analytics that I worked in up to 2017 which was changing significantly back then (Big Data, y'all!) has evolved and, dare I say it, matured somewhat - and I've not necessarily kept up with it. In this post you can follow along as I start to reacquaint myself with where it's got to these days.
+For the past 5.5 years I've been head-down in the exciting area of stream processing and events, and I realised recently that the world of data and analytics that I worked in up to 2017 which was changing significantly back then (Big Data, y'all!) has evolved and, dare I say it, matured somewhat - and I've not necessarily kept up with it. In this series of posts you can follow along as I start to reacquaint myself with where it's got to these days.
 
 ## Background
 
 Twenty years ago (😱TWENTY😱) I took my first job from university using my 🎼 Music degree to…build data warehouses. I was lucky to get a place on a graduate scheme at a well-established retailer with an excellent training programme. I got taught COBOL, DB2, TSO, and all that fun stuff. I even remember my TSO handle - TSO954. Weird huh. From there I continued in the data space, via a stint as a DBA on production OLTP systems, and into more data warehousing and analytics with Oracle in 2010. 
 
-From the mid 2010s I became aware of the Big Data ecosystem emerging, primarily around Apache Hadoop and Cloudera. All the things I'd been used to doing with analytical data suddenly became really difficult. Query some data? Write Java code. Update some data? Haha nope. Use SQL? hah, welcome to this alpha release that probably doesn't work. And BTW, if you didn't know it before, now you truly know the meaning of JAR hell. 
+From the mid 2010s I became aware of the Big Data ecosystem emerging, primarily around Apache Hadoop and Cloudera (anyone remember https://twitter.com/kestelyn/status/322407722261819392[_Data Is The New Bacon_]?). All the things I'd been used to doing with analytical data suddenly became really difficult. Query some data? Write Java code. Update some data? Haha nope. Use SQL? hah, welcome to this alpha release that probably doesn't work. And BTW, if you didn't know it before, now you truly know the meaning of JAR hell. 
 
 Snark aside, I spent some time https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[looking at some of the tools] and building out examples of its use in 2016, before moving jobs into my current role at Confluent. 
 
@@ -42,13 +42,15 @@ It's hard to write a piece like this without invoking https://www.youtube.com/wa
 * ETL/ELT the data into a target Data Warehouse or Data Mart, probably with a star or snowflake schema
 * Build dashboards on the data
 
+<< put a diagram here >>
+
 Extracts were usually once a day. Operational Data Stores were becoming a bit trendy then along with 'micro-batch' extracts which meant data coming maybe more frequently, e.g. 5-10 minutes
 
-Tools were the traditional ETL lot (Informatica, Data Stage, etc), with Oracle's Data Integrator (neé Sunopsis) bringing the concept of ELT. Instead of buying servers (e.g. Informatica) to run the Transform, you took advantage of the target database's ability to crunch data by loading the data into the database in one set of tables, transform it there, and load it into another set of tables.
+Tools were the traditional ETL lot (Informatica, Data Stage, etc), with Oracle's Data Integrator (neé Sunopsis) bringing the concept of ELT in which instead of buying servers (e.g. Informatica) to run the Transform, you took advantage of the target database's ability to crunch data by loading the data into the database in one set of tables, transform it there, and load it into another set of tables. Nowadays https://twitter.com/esammer/status/1567547892927442944[ELT is not such a clear-cut concept] (for non-obvious reasons)
 
 Data modeling was an important part, as was the separation of logical and physical at both the ELT stage (ODI) and reporting (e.g. OBIEE's semantic layer). 
 
-Source control was something that the hipsters did. Emailing around files and using CODE_FILE_V01, CODE_FILE_V02, CODE_FILE_PROD_RELESE!_V3 was seen as perfectly acceptable and sufficient. Even if you wanted to, it was often https://www.rittmanmead.com/blog/2015/01/concurrent-rpd-development-in-obiee/[difficult]. 
+Source control in analytics was something that the hipsters did. Emailing around files and using `CODE_FILE_V01`, `CODE_FILE_V02`, `CODE_FILE_PROD_RELESE!_V3` was seen as perfectly acceptable and sufficient. Even if you wanted to, it was often https://www.rittmanmead.com/blog/2015/01/concurrent-rpd-development-in-obiee/[difficult]. 
 
 Data Warehouses tended to live on dedicated platforms including Teradata, Netezza, as well as the big RDBMSs such as Oracle, DB2, and SQL Server. 
 
@@ -78,6 +80,17 @@ And speaking of a dozen data stores, nowadays there are stores specialised for e
 
 For the rest of the article I'm going to focus on the software side of things. 
 
+----
+
+separate articles: 
+
+* storage & access
+* query & transformation engines
+* ETL/ELT tools & orchestration
+* Misc
+
+
+
 ## Back to Basics
 
 Both https://seattledataguy.substack.com/[SeattleDataGuy] in his article https://seattledataguy.substack.com/p/the-baseline-datastack-going-beyond[The Baseline Data Stack] and https://www.linkedin.com/in/jamesdensmore/[James Densmore] in his book https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/[Data Pipelines Pocket Reference] describe the basic approach to moving data into a place from which it can be analysed. Build a pipeline to do a batch extract of data from the source system into a target store from which it can be worked on. No streaming, no fancy tooling - just good ole' ETL. 
@@ -88,42 +101,33 @@ It seems that nowadays you're as likely to be writing code (probably in Python, 
 
 A plethora of tools have sprung up to orchestrate these kinds of pipelines, with https://seattledataguy.substack.com/p/should-you-use-apache-airflow[Airflow] a common one. 
 
-## Storing and Accessing Your Data pt 1: 🔥 Burn It All Down 🔥
+## Reference Architectures for Handling Data
 
-In the beginning was the word, and the word was an expensive relational datawarehouse that wasn't flexible or scalable enough for the cool kids in Silicon Valley. 
+Some things change…and some things stay the same. 9 years ago Oracle published their https://www.oracle.com/technetwork/database/bigdata-appliance/overview/bigdatarefarchitecture-2297765.pdf[reference archicture for Information Management and Big Data]. Whilst bits of it haven't aged so well, the core concept of how data is sourced, stored, and served seems to match up almost exactly with Databricks' https://www.databricks.com/glossary/medallion-architecture["Medallion Architecture"]. Which is a good thing - trends come and go but if as an industry we've settled on a common approach then it makes everyone's lives easier!
 
-Then came Hadoop and scalability was won, at the vast cost of usability. You literally had to write your own Java code to move data around and transform it. You needed to serialise and deserialise the data yourself, and could store whatever you wanted - it didn't have to be structured. This was sold as a benefit -- "Schema on Read" they said, "It'll be a good idea", they said. _Oh bugger, where's my schema, they said when they came to use it._
 
-Through the virtues of open source a fantastic ecosystem grew and such wonderfully named projects as Sqoop, Oozie, and Pig and Flume emerged. Hive brought with it the familiar and comforting bosom of SQL and table structures but with limited functionality (no `DELETE` or `UPDATE` at first) and performance. 
+[cols="1,1"]
+|===
+|2013 | 2022 | tl;dr
 
-Over the years things improved, with Spark replacing MapReduce and enabling a generation of Python coders to get into the big data lark too, along with https://spark.apache.org/sql/[SQL].
+|`Staging` (or `Raw Data Reservoir`)
+|`Bronze`
+|
 
-Amongst all of this pioneering work and technology was the assumption that the resting (and sometimes serving) place for analytical data was HDFS. Other stores like HBase existed for special purposes, but the general we've-got-a-bunch-of-data-in-this-org-and-need-to-collect-it destination was HDFS. Because "general dumping ground" wasn't sexy enough for the marketing folk it became sold as a "Data Lake" with all the associated puns and awful cliches (fishing for data, data swamp, etc etc etc). 
+|`Foundation`
+|`Silver`
 
-The general pitch around the data lake was to collect all the data, structured and unstructured (or structured that you've made unstructured by chucking away its schema when you loaded it) and then +++<del>+++wait for the data lake fairy to conjure magical value out of the pile of data you've dumped there+++</del>+++ make the raw data available for teams in the company to process and use for their particular purposes. 
+|`Access & Performance` 
+|`Gold`
+|===
 
-All of this was built around the closely-intertwined Hadoop platform, whether self-managed on-premises or with a cloud provider such as AWS. In parallel you had lots of other development enabling similar patterns, such as Athena (built on the open-source Presto) to query data held in S3. 
 
-## Storing and Accessing Your Data pt 2: …and Then Rebuild It 🏗️
+image::/images/2022/09/databricks_ma_01.png[Extract from Databricks' Medallion Architecture diagram]
 
-Coming back to this after my attention being elsewhere for a few years means that I have the slightly uninformed but helpfully simplistic view of things. What the relational datawarehouses used to do (bar scale, arguably), we are now approaching something roughly like parity again with a stack of tools that have stabilised and matured in large, with a layer on top that's still being figured out. 
+image::/images/2022/09/oracle_ra_01.png[Extract from Oracle's Information Management and Big Data Reference Architecture]
 
-Underpinning it all is the idea of separation of storage and compute. This is important for two vital reasons: 
+See also Oracle's https://www.oracle.com/technetwork/topics/entarch/articles/oea-big-data-guide-1522052.pdf[An Enterprise Architect’s Guide to Big Data - Reference Architecture Overview (March 2016)]
 
-* It's a lot cheaper to store data and pay for compute when you want to use it, instead of the coupled approach (per RDBMS like Oracle) where you have a server with disks and CPUs and you're paying for the CPUs whether they're doing anything or not, and when you need more storage and have filled the disk bays you need to buy (and license, hi Oracle) another server (with CPUs etc)
-* If your data is held in an open format on a storage platform that has open APIs then multiple tools can use it as they want to. Contrast this to putting your data in SQL Server (not to pick on Oracle all the time), and any tool that wants to use it has to do so through SQL Server. If a new tool comes along that does particular processing really really well and your data is sat in an RDBMS then you have to migrate that data off the RDBMS first, or query it in place. 
-
-<< point about cloud native and how it's even more important to have open formats>> 
-
-This is where a lot of the innovation seems to be happening at the moment, with table formats being built and developed to work with data on these open storage platforms (HDFS, S3, etc) held in file formats suitable to the task at hand (such as https://parquet.apache.org/[Apache Parquet] which is column based and thus great for analytics). Table formats include: 
-
-* Apache Hudi
-* Apache Iceberg
-* Delta Lake
-
-https://www.dremio.com/subsurface/subsurface-meetup-comparison-of-data-lakehouse-table-formats/
-
-All of them enable the things that we'd have taken for granted a decade ago including rich metadata, `UPDATE`s, `DELETE`s, and ACID compliance. 
 
 ## Job Titles
 
