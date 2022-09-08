@@ -61,12 +61,13 @@ This is where a lot of the innovation seems to be happening at the moment, with 
 * Apache Iceberg
 * Delta Lake
 
-All of them enable the things that we'd have taken for granted a decade ago including rich metadata, transactional access, `UPDATE`s, `DELETE`s, and ACID compliance, along with apparently performant access to the underlying raw data files. 
+All of them enable the things that we'd have taken for granted a decade ago including rich metadata, transactional access, `UPDATE`s, `DELETE`s, and ACID compliance, along with performant access when querying the data. 
 
 There are some good explanation and comparison posts covering the three formats: 
 * https://dacort.dev/posts/modern-data-lake-storage-layers/[An Introduction to Modern Data Lake Storage Layers] - https://twitter.com/dacort[Damon Cortesi] (AWS)
 * Comparison of Data Lake Table Formats https://www.dremio.com/subsurface/comparison-of-data-lake-table-formats-iceberg-hudi-and-delta-lake/[blog] / https://www.dremio.com/subsurface/subsurface-meetup-comparison-of-data-lakehouse-table-formats/[video] - https://twitter.com/AMdatalakehouse[Alex Merced] (Dremio)
 * https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison[Apache Hudi vs Delta Lake vs Apache Iceberg - Lakehouse Feature Comparison] - https://www.linkedin.com/in/lakehouse/[Kyle Weller] (Onehouse)
+* https://lakefs.io/hudi-iceberg-and-delta-lake-data-lake-table-formats-compared/[Hudi, Iceberg and Delta Lake: Data Lake Table Formats Compared] - https://www.linkedin.com/in/paulsingman/[Paul Singman]
 
 Run your own, or use used hosted versions including
 
@@ -90,3 +91,41 @@ Redshift for local datawarehouses
 SageMaker
 
 https://www.youtube.com/watch?v=3znQs0MzZ-k&t=1818s[Data Mesh is a paradigm - Lakehouse is a platform]
+
+## LakeFS -- `git` For Data
+
+https://twitter.com/rmoff/status/1567829714865102853[src]
+
+Having https://www.youtube.com/watch?v=uixZ7NcGoeE[watched @gwenshap and @ozkatz100 talk about "git for data"] I would definitely say is a serious idea.
+However to the point at the end of the video, RTFM—it took reading https://docs.lakefs.io/using_lakefs/data-devenv.html and some other pages subsequently to really grok the concept in practice.
+
+Where I struggled at first with the git analogy alone was that data changes, and I couldn't see how branch/merge fitted into that outside of the idea of branching for throwaway testing alone. The https://www.youtube.com/watch?v=uixZ7NcGoeE&t=1401s[1PB accidental deletion example] was useful for illustrating the latter point for sure. 
+
+But then reading https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka made me realise that I was thinking about the whole thing from a streaming PoV—when actually the idea of running a batch against a branch with a hook to validate and then merge is a freakin awesome idea
+
+(As the roadmap issue notes, doing this for streaming data is conceptually possible but more complex to implement.) 
+
+I'm also still trying to think through the implications of https://docs.lakefs.io/understand/model.html#merge[merging one branch into another] in which there are changes; can data really be treated the same as code in that sense, or could one end up with inconsistent data sets?
+
+Lastly, having been reading up on table formats, I'd be interested to dig into quite how much LakeFS works already with them vs roadmap alone (the docs are not entirely consistent on this point)—but with both in place it sounds like a fantastic place for data eng to be heading. 
+
+
+
+https://lakefs.io/the-everything-bagel-ii-versioned-data-lake-tables-with-lakefs-and-trino/
+
+
+
+Roll back deletes
+Test new ETL with live data
+
+Live *batch* workloads: 
+
+> * run a job or a pipeline on a separate branch and commit,
+> * record information such as the git hash of the code executed, the versions of frameworks used, and information about the data artifacts,
+> * once the pipeline has completed successfully, commit, and attach the recorded information as metadata.
+https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka[src] 
+
+https://www.youtube.com/watch?v=uixZ7NcGoeE&t=1237s[How to commit an unbounded stream?]
+this one I don't quite get. Suggests there's some kind of quality check that's applied before merging the branch. is this automated - CI/CD approach? Yes, using hooks just like in github world. See https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka. Aspirational pattern, not easily implemented currently. 
+
+LakeFS works just fine with Hive, but per the https://docs.lakefs.io/understand/roadmap.html#table-format-support[roadmap] it sounds like there's not full support for modern table format (Hudi/Iceberg/Delta Lake) yet.
