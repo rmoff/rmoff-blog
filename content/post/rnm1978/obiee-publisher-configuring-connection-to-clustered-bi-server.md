@@ -27,7 +27,7 @@ jdbc:oraclebi://serverA.fqdn.company.net:9706/PrimaryCCS=serverA;PrimaryCCSPort=
 3 - add FQDN to all hostnames just for good measure : jdbc:oraclebi://serverA.fqdn.company.net:9706/PrimaryCCS=serverA.fqdn.company.net;PrimaryCCSPort=9706;SecondaryCCS=serverB.fqdn.company.net;SecondaryCCSPort=9706  
   
 Thought - we've proved that BI Server is up and running by specifying them as direct connections above, but we've not proved that the Cluster Controller is running. Logging into BI Administrator and using the Cluster Manager proves that all the components are up and running:  
-[![](/images/rnm1978/cluster+manager.JPG)](http://3.bp.blogspot.com/_RCx_EVJpczQ/Sceagoj7zUI/AAAAAAAAE1Y/O77f2HeR3tI/s1600/cluster+manager.JPG)  
+![](/images/rnm1978/cluster+manager.JPG)  
   
   
   
@@ -63,7 +63,7 @@ Changed the Publisher logging level to Debug (Admin>System Maintenance>Server Co
   
 Resorted to searching Metalink and Metalink 3 (because one support system would be too obvious). Hit straight away in Metalink 3 doc ID 559795.1 "BI Publisher does not accept cluster jdbc connection strings" - a semi colon is missing from the end of the statement!  
 
-[![](/images/rnm1978/success%21.JPG)](http://2.bp.blogspot.com/_RCx_EVJpczQ/ScetqudeQsI/AAAAAAAAE1o/uGn78OGUSfc/s1600/success%21.JPG)  
+![](/images/rnm1978/success%21.JPG)  
 
   
 This now works fine:  

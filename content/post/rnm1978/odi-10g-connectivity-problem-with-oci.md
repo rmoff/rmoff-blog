@@ -5,7 +5,7 @@ categories:
   - "odi"
 ---
 
-Trying to connect to a repository in ODI using OCI. Target database is Oracle 11.1.0.7. [![](/images/rnm1978/2011-08-04_1129_-0000.png "2011-08-04_1129_ 0000")](http://rnm1978.files.wordpress.com/2011/08/2011-08-04_1129_-0000.png)
+Trying to connect to a repository in ODI using OCI. Target database is Oracle 11.1.0.7. ![](/images/rnm1978/2011-08-04_1129_-0000.png "2011-08-04_1129_ 0000")
 
 Throws this error: \[sourcecode\] com.sunopsis.sql.l: Oracle Data Integrator Timeout: connection with URL jdbc:oracle:oci8:@ODIPRD and user ODI\_USER. at com.sunopsis.sql.SnpsConnection.a(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.t(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.connect(SnpsConnection.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.graphical.l.oi.a(oi.java) \[...\] \[/sourcecode\]
 

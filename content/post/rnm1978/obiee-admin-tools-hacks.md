@@ -20,21 +20,21 @@ Here's my list so far, please feel free to add to it in the comments and correct
 
 ### perfmon
 
-Credit: http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html [![](/images/rnm1978/Oracle+BI+Presentation+Services+Performance+Monitor_1248170724573.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmWTqeZ6oPI/AAAAAAAAGak/_tnu2_WnsyI/s1600/Oracle+BI+Presentation+Services+Performance+Monitor_1248170724573.png) Go to http://\[server\]:\[port\]/analytics/saw.dll?perfmon and you'll get the Performance Monitor. This is the same data that's used by the BI Management Pack and is accessible through the [jmx agent](/2009/07/jconsole-jmx.html)
+Credit: http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html ![](/images/rnm1978/Oracle+BI+Presentation+Services+Performance+Monitor_1248170724573.png)
 
 ### oc4j
 
-An alternative to jconsole is to access the Oracle BI Management MBeans through oc4j. [@lex has details here](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html) [![](/images/rnm1978/Oracle+Enterprise+Manager+%28oc4jadmin%29+-+Application+MBeans_1248266844104.png)](http://2.bp.blogspot.com/_RCx_EVJpczQ/SmcKwgveQuI/AAAAAAAAGbM/GI0wJmYDCzA/s1600/Oracle+Enterprise+Manager+%28oc4jadmin%29+-+Application+MBeans_1248266844104.png)
+An alternative to jconsole is to access the Oracle BI Management MBeans through oc4j. [@lex has details here](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html) ![](/images/rnm1978/Oracle+Enterprise+Manager+%28oc4jadmin%29+-+Application+MBeans_1248266844104.png)
 
 ### Windows perfmon
 
-[![](/images/rnm1978/perfmon2.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmmPDKAnKpI/AAAAAAAAGdY/jkm7ZJCq3dk/s1600/perfmon2.png)
+![](/images/rnm1978/perfmon2.png)
 
 More details in [separate post here](/2009/07/obiee-windows-perfmon-counters.html)
 
 ### jconsole
 
-The same data as through perfmon above, full details here: [jmx agent](/2009/07/jconsole-jmx.html) [![](/images/rnm1978/jcon4.png)](http://4.bp.blogspot.com/_RCx_EVJpczQ/SmWzkjwa1qI/AAAAAAAAGas/cH0hNRPpbvE/s1600/jcon4.png)
+The same data as through perfmon above, full details here: [jmx agent](/2009/07/jconsole-jmx.html) ![](/images/rnm1978/jcon4.png)
 
 ### jManage
 

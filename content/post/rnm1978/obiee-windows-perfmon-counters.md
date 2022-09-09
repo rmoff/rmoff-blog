@@ -15,13 +15,13 @@ This will only work for installations where your OBIEE server is running on Wind
 To run PerfMon go to Start->Run and enter perfmon, or navigate Start -> Settings -> Control Panel -> Administrative Tools -> Performance  
   
 By default a handful of metrics about your local machine are displayed:  
-[![](/images/rnm1978/perfmon0.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmmRZU8OXkI/AAAAAAAAGdo/om_jmwM9g1M/s1600/perfmon0.png)  
+![](/images/rnm1978/perfmon0.png)  
 Right click and Add Counters:  
-[![](/images/rnm1978/perfmon0a.png)](http://4.bp.blogspot.com/_RCx_EVJpczQ/SmmRuvCCt0I/AAAAAAAAGdw/P8SePycvP8o/s1600/perfmon0a.png)If you want to monitor a remote installation of OBIEE (on Windows only, remember) then enter the network name eg \\\\MYREMOTESERVER in 'Select counters from Computer:', otherwise set this to 'Use local computer counters'.  
+![](/images/rnm1978/perfmon0a.png) then enter the network name eg \\\\MYREMOTESERVER in 'Select counters from Computer:', otherwise set this to 'Use local computer counters'.  
   
 Then click on Performance object dropdown, and you should see a long list of Oracle BI performance objects:  
-[![](/images/rnm1978/perfmon1.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/SmmRB7yKDhI/AAAAAAAAGdg/Jl_X5of2L4I/s1600/perfmon1.png)Pick one of these and a list of counters within the object will be listed. You can add all, some or just one of these.  
-[![](/images/rnm1978/perfmon2.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmmPDKAnKpI/AAAAAAAAGdY/jkm7ZJCq3dk/s1600/perfmon2.png)  
+![](/images/rnm1978/perfmon1.png)Pick one of these and a list of counters within the object will be listed. You can add all, some or just one of these.  
+![](/images/rnm1978/perfmon2.png)  
   
 By default the Performance Counters are installed I think, but both NQSServer.exe and sawserver.exe have commandline options for reinstalling them (or uninstalling, if you want to):  
 

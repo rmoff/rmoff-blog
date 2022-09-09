@@ -7,7 +7,7 @@ categories:
   - "sawserver"
 ---
 
-[@alexgorbachev](http://twitter.com/alexgorbachev) [tweeted me](http://www.bettween.com/rnm1978/alexgorbachev/Jun-11-2010/Jun-14-2010/desc) recently after picking up my presentation on [Performance Testing and OBIEE](/2010/05/24/performance-testing-and-obiee/). [![](/images/rnm1978/2010-06-14_1115331.png "2010-06-14_111533")](http://www.bettween.com/rnm1978/alexgorbachev/Jun-11-2010/Jun-14-2010/desc)
+[@alexgorbachev](http://twitter.com/alexgorbachev) [tweeted me](http://www.bettween.com/rnm1978/alexgorbachev/Jun-11-2010/Jun-14-2010/desc) recently after picking up my presentation on [Performance Testing and OBIEE](/2010/05/24/performance-testing-and-obiee/). ![](/images/rnm1978/2010-06-14_1115331.png "2010-06-14_111533")
 
 His question got me thinking, and as ever the answer "It Depends" is appropriate here :-)
 

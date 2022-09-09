@@ -60,6 +60,6 @@ Once you've figured out common correlations for an application you can program t
 
 ## Testing NQServer directly
 
-**This idea nicked wholesale from the document provided by Oracle Support :-)** LoadRunner works with the ODBC protocol and can therefore be used for load testing the Analytics (NQServer) directly, i.e. excluding the Presentation Services web front-end. This would be done by recording activity through nQCmd: [![](/images/rnm1978/lr60.png "LR59")![LR60](http://rnm1978.files.wordpress.com/2009/10/lr60.png?w=300 "LR60")](http://rnm1978.files.wordpress.com/2009/10/lr59.png)
+**This idea nicked wholesale from the document provided by Oracle Support :-)** LoadRunner works with the ODBC protocol and can therefore be used for load testing the Analytics (NQServer) directly, i.e. excluding the Presentation Services web front-end. This would be done by recording activity through nQCmd: ![](/images/rnm1978/lr60.png "LR59")![LR60](http://rnm1978.files.wordpress.com/2009/10/lr60.png?w=300 "LR60")
 
-[![](/images/rnm1978/lr62.png "LR61")![LR62](/images/rnm1978/lr62.png "LR62")](http://rnm1978.files.wordpress.com/2009/10/lr61.png)
+![](/images/rnm1978/lr62.png "LR61")![LR62](/images/rnm1978/lr62.png "LR62")

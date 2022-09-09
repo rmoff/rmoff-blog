@@ -8,7 +8,7 @@ categories:
 
 Have you defined CLIENT\_ID in your OBIEE RPD yet? You really ought to.
 
-As well as helping track down users of troublesome queries, it also tags dump files with the OBIEE user of an offending query should the worst occur: [![](/images/rnm1978/2011-08-05_1600_-0000.png "2011-08-05_1600_ 0000")](http://rnm1978.files.wordpress.com/2011/08/2011-08-05_1600_-0000.png)
+As well as helping track down users of troublesome queries, it also tags dump files with the OBIEE user of an offending query should the worst occur: ![](/images/rnm1978/2011-08-05_1600_-0000.png "2011-08-05_1600_ 0000")
 
 For details, see:
 

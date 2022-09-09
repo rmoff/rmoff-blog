@@ -12,14 +12,14 @@ The configuration of how Presentation Services (sawserver) does its logging is i
   
 It's all nice and XML'd:  
 
-[![](/images/rnm1978/filter.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/SmikDK1SO1I/AAAAAAAAGdI/GoSh-qQV2VI/s1600/filter.png)Logging Detail  
+![](/images/rnm1978/filter.png)Logging Detail  
 Change the numerical values in the FilterRecord entries to alter the detail level of the logging. Lower means less detail, higher means more.  
   
 Be aware that your log files can grow very rapidly if you set the logging too high, and unless you're troubleshooting then leave them at the defaults.  
   
 Logging Configuration  
 You can change various things like how many log files are written, to what size, and also the format of the log entries:  
-[![](/images/rnm1978/shortlog.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/Smijzk_IySI/AAAAAAAAGdA/Q1l6t5tCJS8/s1600/shortlog.png)This configuration is in the Writer definition, in the case of format set fmtName="short"  
+![](/images/rnm1978/shortlog.png)This configuration is in the Writer definition, in the case of format set fmtName="short"  
 Being able to write a single-line entry is very useful in the case of monitoring software (eg. OpenView) which can't parse multiple line log entries.  
   
 sawserver.out.log and saw\[x\].log  

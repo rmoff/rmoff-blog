@@ -23,7 +23,7 @@ I do
 
 > alt-space -> cmd \[tab\] psservice restart sawsvc
 
-[![](/images/rnm1978/psservice1.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/SmiW7L0eSRI/AAAAAAAAGcw/DMT4ttHX0GE/s1600/psservice1.png)[![](/images/rnm1978/psservice2.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmiXz69ZuQI/AAAAAAAAGc4/Bcba2LmxvdY/s1600/psservice2.png)You can query service statuses, and for multiple services at a time:  
+![](/images/rnm1978/psservice1.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/SmiW7L0eSRI/AAAAAAAAGcw/DMT4ttHX0GE/s1600/psservice1.png)[![](/images/rnm1978/psservice2.png)You can query service statuses, and for multiple services at a time:  
 
 > C:\\Windows\\System32>psservice query "Oracle BI"  
 

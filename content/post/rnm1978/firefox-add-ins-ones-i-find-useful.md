@@ -5,7 +5,7 @@ categories:
   - "firefox"
 ---
 
-[![](/images/rnm1978/firefox+addins.JPG)](http://1.bp.blogspot.com/_RCx_EVJpczQ/Scic25d3LkI/AAAAAAAAE2g/jgnMSHIetJU/s1600/firefox+addins.JPG)  
+![](/images/rnm1978/firefox+addins.JPG)  
   
 
 - Delicious Bookmarks

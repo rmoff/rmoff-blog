@@ -54,25 +54,25 @@ The following illustrates the effect of averaging I/O throughput figures.
 
 The data is the average I/O throughput, sampled every five seconds ([through this method](/2011/03/09/comparing-methods-for-recording-io-vsysstat-vs-hp-measureware/)). Note that already this is an average, but in the context of hourly samples (for example) we will have to live with five seconds as the starting point.
 
-[![](/images/rnm1978/io_compare_sampling_periods_01.png "io_compare_sampling_periods_01")](http://rnm1978.files.wordpress.com/2011/03/io_compare_sampling_periods_01.png)
+![](/images/rnm1978/io_compare_sampling_periods_01.png "io_compare_sampling_periods_01")
 
 This first graph shows the original data, with a five minute average drawn over it. For each, the maximum is noted. It can be seen that the maximum the I/O throughput hit was a shade over 3GB/s. That was the real maximum that we were driving through the I/O pipe over the period of time (ignoring that it's a 5-second average). Now look at the maximum of the 5 minute average - we lost c240MB/s in our maximum, which is now 2.7GBs.
 
-[![](/images/rnm1978/io_compare_sampling_periods_02.png "io_compare_sampling_periods_02")](http://rnm1978.files.wordpress.com/2011/03/io_compare_sampling_periods_02.png)
+![](/images/rnm1978/io_compare_sampling_periods_02.png "io_compare_sampling_periods_02")
 
 In the second graph the original sample is shown, with a 30 minute average. It's clear to see the effect of averaging the data has - the peaks and troughs are smoothed out, giving a more even line. But is this what we want? Our apparent maximum I/O based on a 30 minute average has now almost **halved**! Apparently, we only needed 1.6GB/s of I/O throughput during this time period. The graph clearly shows that this is a false statement. But what about now?
 
-[![](/images/rnm1978/io_compare_sampling_periods_03.png "io_compare_sampling_periods_03")](http://rnm1978.files.wordpress.com/2011/03/io_compare_sampling_periods_03.png)
+![](/images/rnm1978/io_compare_sampling_periods_03.png "io_compare_sampling_periods_03")
 
 Same graph as before, but without the context of the original sample. Given this data - which is what you'll have if you collect I/O throughput data that's sampled every 30 minutes - then how would you know what the maximum throughput during that period was? It is impossible to know!
 
 Pushing this point further, the same 30 minute average, over an extended period:
 
-[![](/images/rnm1978/io_compare_sampling_periods_04.png "io_compare_sampling_periods_04")](http://rnm1978.files.wordpress.com/2011/03/io_compare_sampling_periods_04.png)
+![](/images/rnm1978/io_compare_sampling_periods_04.png "io_compare_sampling_periods_04")
 
 What's the maximum throughput that was required during this period? When was the I/O throughput approaching capacity? **_You can't know from the averaged data alone!_**
 
-[![](/images/rnm1978/io_compare_sampling_periods_05.png "io_compare_sampling_periods_05")](http://rnm1978.files.wordpress.com/2011/03/io_compare_sampling_periods_05.png)
+![](/images/rnm1978/io_compare_sampling_periods_05.png "io_compare_sampling_periods_05")
 
 Here's the same extended period, with the original 5 second samples. This is just proving the point, that the 30 minute samples have obliterated the peaks particularly around 04:00 - 06:00.
 

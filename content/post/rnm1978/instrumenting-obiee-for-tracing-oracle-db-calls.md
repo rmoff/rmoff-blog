@@ -38,7 +38,7 @@ dbms\_application\_info.set\_action(action\_name=>'\[...\]')
 
 For example, to pass through the OBIEE username and display name (NQ\_SESSION.USER and NQ\_SESSION.DISPLAYNAME respectively) you would use the following code:
 
-[![](/images/rnm1978/snag-2011-01-28-16-00-18-0000.png "SNAG-2011-01-28-16.00.18-0000")](http://rnm1978.files.wordpress.com/2011/01/snag-2011-01-28-16-00-18-0000.png)
+![](/images/rnm1978/snag-2011-01-28-16-00-18-0000.png "SNAG-2011-01-28-16.00.18-0000")
 
 When you look at V$SESSION for the connection from OBIEE, it would show up something like this:
 
@@ -50,7 +50,7 @@ What would be really cool would be if we could pass through the details of the r
 
 ![](/images/rnm1978/snag-2011-02-02-09-58-33-0000.png "SNAG-2011-02-02-09.58.33-0000")
 
-Then add a script to the connection pool to pass this value through in the database connection: [![](/images/rnm1978/snag-2011-02-02-10-22-35-0000.png "SNAG-2011-02-02-10.22.35-0000")](http://rnm1978.files.wordpress.com/2011/02/snag-2011-02-02-10-22-35-0000.png) When run this then shows up on V$SESSION as: \[sourcecode light="true" language="sql"\] col client\_identifier for a20 col client\_info for a20 SELECT PROGRAM, CLIENT\_IDENTIFIER, CLIENT\_INFO, MODULE, ACTION FROM V$SESSION WHERE LOWER(PROGRAM) LIKE 'nqsserver%'; \[/sourcecode\] ![](/images/rnm1978/snag-2011-02-02-14-48-24-0000.png "snag-2011-02-02-14-48-24-0000.png")
+Then add a script to the connection pool to pass this value through in the database connection: ![](/images/rnm1978/snag-2011-02-02-10-22-35-0000.png "SNAG-2011-02-02-10.22.35-0000")
 
 You get an error if you've not set a value for the variable that is referenced in the connection script (in the above example, "REPORT"). So what you could do is create a dummy session variable called REPORT with a default value (eg "<unspecified report>"), which will then be used if a report doesn't override it: ![](/images/rnm1978/snag-2011-02-02-11-23-53-0000.png "SNAG-2011-02-02-11.23.53-0000")
 
@@ -60,7 +60,7 @@ It may be my misunderstanding of the subtleties of the flavours of OBIEE variabl
 
 ![](/images/rnm1978/snag-2011-02-02-11-34-45-0000.png "SNAG-2011-02-02-11.34.45-0000")
 
-[![](/images/rnm1978/snag-2011-02-02-11-51-07-0000.png "SNAG-2011-02-02-11.51.07-0000")](http://rnm1978.files.wordpress.com/2011/02/snag-2011-02-02-11-51-07-0000.png)
+![](/images/rnm1978/snag-2011-02-02-11-51-07-0000.png "SNAG-2011-02-02-11.51.07-0000")
 
 Despite this, the modified value of the variable is what gets passed through correctly in the DB connection.
 

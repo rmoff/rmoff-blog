@@ -20,14 +20,14 @@ To test the connectivity I did Update Row Count over one of the tables, and got
 > \[nQSError: 17001\] Oracle Error code:942, message: ORA-00942: table or view does not exist ...  
 
 I'd already checked where the tables did reside through SQL Developer:  
-[![](/images/rnm1978/rowcount.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/Smg5r3RbYoI/AAAAAAAAGb0/yAqaFROz_Gw/s1600/rowcount.png)Since my connection was defined with a user other than the schema owner (DAC\_REPO), I figured it was maybe not qualifying the table name, so found this in the connection pool settings:  
-[![](/images/rnm1978/cp.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/Smg6OyO9wcI/AAAAAAAAGb8/xnkuZy7lrLY/s1600/cp.png)I could then update the row counts, with the following exceptions which are columns defined in the RPD but not present in my DAC repository schema (v7.9.5.1):  
+![](/images/rnm1978/rowcount.png), I figured it was maybe not qualifying the table name, so found this in the connection pool settings:  
+![](/images/rnm1978/cp.png):  
 W\_ETL\_FOLDER.PRIORITY, W\_ETL\_RUN\_STEP.GROUP\_NAME and W\_ETL\_RUN\_STEP.RUN\_MODE  
   
 I deleted these from the Physical layer, hoping that it would warn me if they're used in the BMM or Presentation layer. It didn't - but running a Global Consistency Check warned me that Run Mode is used in the Task Runs logical table, so I deleted it from there too.  
   
 I saved the RPD and change my NQServer.config to point to it:  
-[![](/images/rnm1978/nqsconfig.png)](http://4.bp.blogspot.com/_RCx_EVJpczQ/Smg9gLAR9OI/AAAAAAAAGcE/HgoyXjq6dgU/s1600/nqsconfig.png)Starting up BI Server I got an error:  
+![](/images/rnm1978/nqsconfig.png)Starting up BI Server I got an error:  
 
 > 2009-07-23 11:47:45 \[nQSError: 26011\] File C:\\OracleBI\\server\\Config\\NQSConfig.INI Near Line 30, near : Syntax error \[nQSError: 26012\] .
 
@@ -44,8 +44,8 @@ and it starts up fine. I then got an error trying to log into Answers:
 (I like the fact that Presentation Services parses the ODBC error into something more intelligable. I'd have eventually figured it out from the ODBC error, but being told up front what the problem is doesn't happen enough with computer errors:) )  
   
 This happened because in my system DSN (pointed to in the Presentation Services instanceconfig.xml) I had checked the "Change default catalog to" box, and it was trying to find SampleSales in the repository when it didn't exist.  
-[![](/images/rnm1978/odbcdsn.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmhCvaTLJEI/AAAAAAAAGcM/r53fxZUFrBA/s1600/odbcdsn.png)Unticking this box finally let me log in  
-[![](/images/rnm1978/Oracle+BI+Answers_1248346868443.png)](http://2.bp.blogspot.com/_RCx_EVJpczQ/SmhDRmjZPYI/AAAAAAAAGcU/XPlanKT15aU/s1600/Oracle+BI+Answers_1248346868443.png)  
+![](/images/rnm1978/odbcdsn.png)Unticking this box finally let me log in  
+![](/images/rnm1978/Oracle+BI+Answers_1248346868443.png)  
 On a specific point, the "# Succesful" and "# Failed" measures in Task Runs refer to the number of rows, not number of tasks as it could be interpreted.  
   
   

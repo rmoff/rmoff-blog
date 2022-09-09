@@ -11,7 +11,7 @@ By a strange co-incidence after following [this thread on OTN forums](http://for
 
 I've got a test install of OBIEE running on my Windows XP laptop, and whilst building a report in Answers got this:
 
-[![](/images/rnm1978/crash1.png)](http://2.bp.blogspot.com/_RCx_EVJpczQ/SmiDrEorbbI/AAAAAAAAGcg/OPGwTLXXg8k/s1600/crash1.png)[![](/images/rnm1978/crash2.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmiDrfJnsVI/AAAAAAAAGco/eWpXEVMu92g/s1600/crash2.png)The "Error signature" (brings to mind fountain pens and blotting pads) was:
+![](/images/rnm1978/crash1.png)](http://2.bp.blogspot.com/_RCx_EVJpczQ/SmiDrEorbbI/AAAAAAAAGcg/OPGwTLXXg8k/s1600/crash1.png)[![](/images/rnm1978/crash2.png) was:
 
 > szAppName : sawserver.exe szAppVer : 10.1.3.4 szModName : kernel32.dll szModVer : 5.1.2600.3119 offset : 000097a3
 

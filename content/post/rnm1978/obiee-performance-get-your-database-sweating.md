@@ -46,15 +46,15 @@ When queried, NQQuery.log embarrassingly admits facts such as: \[sourcecode\] Ro
 
 06-APR 10:05 10:18 579 0 6 3,436,816 06-APR 10:05 10:18 553 0 4 3,239,101 06-APR 10:05 10:18 383 0 3 1,624,656 06-APR 10:11 11:48 5694 0 1 13,894,550 06-APR 10:11 11:48 4314 0 1 11,840,156 06-APR 10:21 10:27 336 456 4 3,239,101 \[/sourcecode\]
 
-A look at the machine's vital statistics for this time period shows the impact: [![](/images/rnm1978/mw_27_20110406.png "mw_27_20110406")](http://rnm1978.files.wordpress.com/2011/05/mw_27_20110406.png)
+A look at the machine's vital statistics for this time period shows the impact: ![](/images/rnm1978/mw_27_20110406.png "mw_27_20110406")
 
-For a bit more detail, here's the time period at greater resolution: [![](/images/rnm1978/mw_27_20110406_1000.png "mw_27_20110406_1000")](http://rnm1978.files.wordpress.com/2011/05/mw_27_20110406_1000.png)
+For a bit more detail, here's the time period at greater resolution: ![](/images/rnm1978/mw_27_20110406_1000.png "mw_27_20110406_1000")
 
 Notice that the server starts paging out during the work, and there's a lot of disk activity - both read and write. CPU goes from a normal c.5% up to 20-30%.
 
 This was one user doing this -- care to place bets on how the system would perform if it were rolled out to ten users running this kind of workload?
 
-For reference, here's one of our other BI Servers which serves at least 10 times as many users, where the reports do the bulk of their work in the database: [![](/images/rnm1978/mw_07_20110406.png "mw_07_20110406")](http://rnm1978.files.wordpress.com/2011/05/mw_07_20110406.png)
+For reference, here's one of our other BI Servers which serves at least 10 times as many users, where the reports do the bulk of their work in the database: ![](/images/rnm1978/mw_07_20110406.png "mw_07_20110406")
 
 ## Monitoring for problems
 
