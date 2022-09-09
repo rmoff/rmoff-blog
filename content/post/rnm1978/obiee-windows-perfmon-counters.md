@@ -1,0 +1,38 @@
+---
+title: "OBIEE Windows PerfMon counters"
+date: "2009-07-24"
+categories: 
+  - "hack"
+  - "obiee"
+  - "performance"
+  - "windows"
+---
+
+Yet another way to access the BI Management data discussed [here](http://rnm1978.blogspot.com/2009/07/obiee-admin-tools-hacks.html) - through Windows' PerfMon tool.  
+  
+This will only work for installations where your OBIEE server is running on Windows. You should be able to run PerfMon locally or remotely. Standard practise would be not to run it locally on a Production machine :-)  
+  
+To run PerfMon go to Start->Run and enter perfmon, or navigate Start -> Settings -> Control Panel -> Administrative Tools -> Performance  
+  
+By default a handful of metrics about your local machine are displayed:  
+[![](/images/rnm1978/perfmon0.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmmRZU8OXkI/AAAAAAAAGdo/om_jmwM9g1M/s1600/perfmon0.png)  
+Right click and Add Counters:  
+[![](/images/rnm1978/perfmon0a.png)](http://4.bp.blogspot.com/_RCx_EVJpczQ/SmmRuvCCt0I/AAAAAAAAGdw/P8SePycvP8o/s1600/perfmon0a.png)If you want to monitor a remote installation of OBIEE (on Windows only, remember) then enter the network name eg \\\\MYREMOTESERVER in 'Select counters from Computer:', otherwise set this to 'Use local computer counters'.  
+  
+Then click on Performance object dropdown, and you should see a long list of Oracle BI performance objects:  
+[![](/images/rnm1978/perfmon1.png)](http://1.bp.blogspot.com/_RCx_EVJpczQ/SmmRB7yKDhI/AAAAAAAAGdg/Jl_X5of2L4I/s1600/perfmon1.png)Pick one of these and a list of counters within the object will be listed. You can add all, some or just one of these.  
+[![](/images/rnm1978/perfmon2.png)](http://3.bp.blogspot.com/_RCx_EVJpczQ/SmmPDKAnKpI/AAAAAAAAGdY/jkm7ZJCq3dk/s1600/perfmon2.png)  
+  
+By default the Performance Counters are installed I think, but both NQSServer.exe and sawserver.exe have commandline options for reinstalling them (or uninstalling, if you want to):  
+
+> NQSServer.exe /installperf  
+> NQSServer.exe /uninstallperf  
+>   
+> sawserver.exe /installperf  
+> sawserver.exe /uninstallperf  
+
+PerfMon is documented well elsewhere on the web so I won't say much more other than that you can use it interactively or logging to file. The latter would be very useful for trending of performance data, you could even go full circle and analyse it with Answers :-)  
+  
+Final thought is that exposing the data this way is very helpful for Systems Management, as you now have the option of using [MOM/SCOM](http://www.microsoft.com/systemcenter/operationsmanager/en/us/default.aspx), etc to monitor and alert on your BI servers.  
+  
+I would imagine some or all of the above functionality is also available through the BI Management Pack for Enterprise Manager, but this is another way to [skin the cat](http://www.usingenglish.com/reference/idioms/there+are+many+ways+to+skin+a+cat.html).
