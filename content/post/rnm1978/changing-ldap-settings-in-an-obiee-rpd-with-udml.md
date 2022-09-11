@@ -8,7 +8,7 @@ categories:
   - "udml"
 ---
 
-A chap called Kevin posted a comment on a [previous posting of mine](/2009/09/09/syntax-for-admintool-exe-command-line-script/) asking
+A chap called Kevin posted a comment on a [previous posting of mine](/2009/09/09/syntax-for-admintool.exe-command-line-script/) asking
 
 > _did you ever come across anything that could be used to change the LDAP server settings from a command line (admintool.exe, UDML, or otherwise)?_
 

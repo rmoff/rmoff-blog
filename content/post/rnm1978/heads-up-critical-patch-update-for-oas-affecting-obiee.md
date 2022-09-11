@@ -24,4 +24,4 @@ Paraphrasing the announcement:
 
 More details from the Oracle [Critical Patch Updates and Security Alerts](http://www.oracle.com/technology/deploy/security/alerts.htm) page.
 
-\[update 21st October\] [Details here, patch is for BI Server so presumably the application server is irrelevant](/2009/10/21/obiee-vuln-cv-2009-1990/)
+\[update 21st October\] [Details here, patch is for BI Server so presumably the application server is irrelevant](/2009/10/21/critical-patch-update-obiee-vuln-cve-2009-1990/)

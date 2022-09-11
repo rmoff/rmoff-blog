@@ -7,7 +7,7 @@ categories:
   - "sawserver"
 ---
 
-As well as tinkering with the sawserver (Presentation Services) [logging level](/2009/07/23/sawserver-logging-configuration-logconfig-xml/) and [format](/2009/08/19/sawserver-log-short-format/), we can specific which bits of the log we're interested in. This is useful for two reasons:
+As well as tinkering with the sawserver (Presentation Services) [logging level](/2009/07/23/sawserver-logging-configuration-logconfig.xml/) and [format](/2009/08/19/sawserver-log-short-format/), we can specific which bits of the log we're interested in. This is useful for two reasons:
 
 1. We can enable detailed logging for a specific area, without impacting performance as much as detailed logging throughout would cause
 2. By only logging in detail the area of interest we can more easily read the log output and not have to wade through pages of irrelevant information

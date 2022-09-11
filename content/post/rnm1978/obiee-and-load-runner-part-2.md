@@ -8,7 +8,7 @@ categories:
   - "sawserver"
 ---
 
-**UPDATED: See a HOWTO for OBIEE and LoadRunner here: [/2009/10/01/obiee-and-loadrunner-howto/](/2009/10/01/obiee-and-loadrunner-howto/)**
+**UPDATED: See a HOWTO for OBIEE and LoadRunner here: [/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/](/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/)**
 
 * * *
 

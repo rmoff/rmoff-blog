@@ -12,5 +12,5 @@ As well as helping track down users of troublesome queries, it also tags dump fi
 
 For details, see:
 
-- [Identify your OBIEE users by setting Client ID in Oracle connection](/2010/01/26/identify-your-users-by-setting-client-id-in-oracle/)
+- [Identify your OBIEE users by setting Client ID in Oracle connection](/2010/01/26/identify-your-obiee-users-by-setting-client-id-in-oracle-connection/)
 - [Instrumenting OBIEE for tracing Oracle DB calls](/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/)

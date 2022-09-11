@@ -30,15 +30,15 @@ An alternative to jconsole is to access the Oracle BI Management MBeans through 
 
 ![](/images/rnm1978/perfmon2.png)
 
-More details in [separate post here](/2009/07/obiee-windows-perfmon-counters.html)
+More details in [separate post here](/2009/07/24/obiee-windows-perfmon-counters/)
 
 ### jconsole
 
-The same data as through perfmon above, full details here: [jmx agent](/2009/07/jconsole-jmx.html) ![](/images/rnm1978/jcon4.png)
+The same data as through perfmon above, full details here: [jmx agent](/2009/07/16/jconsole-/-jmx/) ![](/images/rnm1978/jcon4.png)
 
 ### jManage
 
-jManage is an open-source tool that can also be used to access the MBeans: ![jmanage13](/images/rnm1978/jmanage13.png "jmanage13") See [this post](/2009/07/29/oracle-bi-management-jmanage/) for information sawping Credit: http://tipsonobiee.blogspot.com/2009/07/sawping.html
+jManage is an open-source tool that can also be used to access the MBeans: ![jmanage13](/images/rnm1978/jmanage13.png "jmanage13") See [this post](/2009/07/29/obiee-performance-monitoring-and-alerting-with-jmanage/) for information sawping Credit: http://tipsonobiee.blogspot.com/2009/07/sawping.html
 
 > C:\\OracleBI\\web\\bin>sawping.exe -help sawping \[-p port\] \[-s host\] \[-v (verbose mode)\] \[-q (quiet mode)\] \[-h\]C:\\OracleBI\\web\\bin>sawping.exe -s myPSserver.company.net -v Server alive and well
 
@@ -66,7 +66,7 @@ tusc Not OBIEE as such, but interesting for the truly nosy. This is a unix (HP) 
 
 Administration Tool Maybe not so unknown, but has front-end for monitoring clusters which I liked
 
-The AdminTool can also be fed a script via the command line, [see details here](/2009/09/08/admintool-exe-command/)
+The AdminTool can also be fed a script via the command line, [see details here](/2009/09/08/admintool.exe-/command/)
 
 Other stuff This is a list of binaries that might or might not be of interest and that I plan to have a play with at some point
 

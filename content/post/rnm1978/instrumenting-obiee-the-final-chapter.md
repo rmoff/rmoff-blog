@@ -22,7 +22,7 @@ categories:
 
  
 
-(_Previously on this blog: [1](/2010/01/26/identify-your-users-by-setting-client-id-in-oracle/), [2](/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/), [3](/2011/08/08/have-you-defined-client_id-in-obiee-yet/)..._)
+(_Previously on this blog: [1](/2010/01/26/identify-your-obiee-users-by-setting-client-id-in-oracle-connection/), [2](/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/), [3](/2011/08/08/have-you-defined-client_id-in-obiee-yet/)..._)
 
 ## Summary
 

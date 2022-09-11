@@ -9,7 +9,7 @@ categories:
 
 Short but sweet this one - a way of troubleshooting connectivity problems between _analytics_ (the Presentation Services Plug-in, either j2ee servlet or ISAPI, a.k.a. SAWBridge) and _sawserver_ (Presentation Services).
 
-For a recap on the services & flow please see the first few paragraphs of [this post](/2009/11/06/clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/).
+For a recap on the services & flow please see the first few paragraphs of [this post](/2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/).
 
 Problems in connectivity between analytics and sawserver normally manifest themselves through this error message:
 
@@ -33,7 +33,7 @@ The next line(s) will tell you what the problem is, followed by a bunch of gener
 
 The errors are often self-explanatory (so long as you understand the architecture); "Connection refused" means that analytics tried to connect to sawserver and couldn't. Once the problem is established then it's a case of working through in a logical manner to determine the cause. Connection refused is 95% of the time simply that Presentation Services (sawserver) isn't running. Or maybe it is running, but on a different host or port than analytics is looking for.
 
-To check where analytics is going to be looking for sawserver, examine the analytics configuration file **$J2EE\_home/applications/analytics/analytics/WEB-INF/web.xml** (different for ISAPI, see last paragraph [here](/2009/11/06/clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)). There'll be configuration lines matching one of these two examples. The default is this: \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawserver.Host</param-name> <param-value>localhost</param-value> </init-param> <init-param> <param-name>oracle.bi.presentation.sawserver.Port</param-name> <param-value>9710</param-value> </init-param> \[/sourcecode\] A customised (e.g. for <a href="[clustered resilience](/2009/11/06/clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)) entry may look like this: \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawservers</param-name> <param-value>BISandbox01:9710;BISandbox02:9710</param-value> </init-param>\[/sourcecode\]
+To check where analytics is going to be looking for sawserver, examine the analytics configuration file **$J2EE\_home/applications/analytics/analytics/WEB-INF/web.xml** (different for ISAPI, see last paragraph [here](/2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)). There'll be configuration lines matching one of these two examples. The default is this: \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawserver.Host</param-name> <param-value>localhost</param-value> </init-param> <init-param> <param-name>oracle.bi.presentation.sawserver.Port</param-name> <param-value>9710</param-value> </init-param> \[/sourcecode\] A customised (e.g. for <a href="[clustered resilience](/2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)) entry may look like this: \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawservers</param-name> <param-value>BISandbox01:9710;BISandbox02:9710</param-value> </init-param>\[/sourcecode\]
 
 ### sawserver
 
