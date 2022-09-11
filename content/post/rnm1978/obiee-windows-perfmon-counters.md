@@ -17,7 +17,7 @@ To run PerfMon go to Start->Run and enter perfmon, or navigate Start -> Settings
 By default a handful of metrics about your local machine are displayed:  
 ![](/images/rnm1978/image_lost.png)  
 Right click and Add Counters:  
-![](/images/rnm1978/perfmon0a.png) then enter the network name eg \\\\MYREMOTESERVER in 'Select counters from Computer:', otherwise set this to 'Use local computer counters'.  
+![](/images/rnm1978/image_lost.png) then enter the network name eg \\\\MYREMOTESERVER in 'Select counters from Computer:', otherwise set this to 'Use local computer counters'.  
   
 Then click on Performance object dropdown, and you should see a long list of Oracle BI performance objects:  
 ![](/images/rnm1978/image_lost.png)Pick one of these and a list of counters within the object will be listed. You can add all, some or just one of these.  

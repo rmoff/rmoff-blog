@@ -24,7 +24,7 @@ Credit: http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.h
 
 ### oc4j
 
-An alternative to jconsole is to access the Oracle BI Management MBeans through oc4j. [@lex has details here](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html) ![](/images/rnm1978/Oracle+Enterprise+Manager+%28oc4jadmin%29+-+Application+MBeans_1248266844104.png)
+An alternative to jconsole is to access the Oracle BI Management MBeans through oc4j. [@lex has details here](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html) ![](/images/rnm1978/image_lost.png)
 
 ### Windows perfmon
 
