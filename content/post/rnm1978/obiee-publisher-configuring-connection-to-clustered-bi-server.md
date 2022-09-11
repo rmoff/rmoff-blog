@@ -63,7 +63,7 @@ Changed the Publisher logging level to Debug (Admin>System Maintenance>Server Co
   
 Resorted to searching Metalink and Metalink 3 (because one support system would be too obvious). Hit straight away in Metalink 3 doc ID 559795.1 "BI Publisher does not accept cluster jdbc connection strings" - a semi colon is missing from the end of the statement!  
 
-![](/images/rnm1978/success%21.JPG)  
+![](/images/rnm1978/image_lost.png)  
 
   
 This now works fine:  
