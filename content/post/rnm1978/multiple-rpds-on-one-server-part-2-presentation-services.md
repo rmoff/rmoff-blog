@@ -11,7 +11,7 @@ categories:
 
 In this article I plan to get sample and paint repositories hosted on a single server, using one BI Server instance and two Presentation Services instances. This is on both Unix (OEL 4) and Windows, and both OC4J (OBIEE's "basic installation" option) and OAS ("Advanced Installation").
 
-Make sure you've read and followed [part 1 - BI Server](http://wp.me/pAQda-35) first.
+Make sure you've read and followed [part 1 - BI Server](/2009/08/25/multiple-rpds-on-one-server-part-1-the-bi-server/) first.
 
 Remember that multiple Presentation Services instances on a machine is **UNSUPPORTED BY ORACLE!**
 

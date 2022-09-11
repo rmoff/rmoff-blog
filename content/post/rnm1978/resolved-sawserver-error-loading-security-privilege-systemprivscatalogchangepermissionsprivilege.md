@@ -14,7 +14,7 @@ A quick search on the forums threw up [two](http://forums.oracle.com/forums/thre
 
 Since I'd got this webcat fresh out of the box I was puzzled how it could be corrupted.
 
-I did a bit more tinkering (including [nosying around in the sawserver log](http://rnm1978.wordpress.com/category/log/)), before realising it was indeed corrupt, and that I was indeed a muppet.
+I did a bit more tinkering (including [nosying around in the sawserver log](/category/log/)), before realising it was indeed corrupt, and that I was indeed a muppet.
 
 Here's what happened after copying EnterpriseBusinessAnalytics.zip to my (unix) Presentation Services box: \[sourcecode language="bash"\]
 

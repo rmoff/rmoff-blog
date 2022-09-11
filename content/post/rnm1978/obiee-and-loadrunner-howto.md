@@ -52,7 +52,7 @@ _Most of these are set from Tools -> Recording Options, or from the Options butt
     ![](/images/rnm1978/lr51.png "LR50")![LR51](http://rnm1978.files.wordpress.com/2009/09/lr51.png?w=300 "LR51")
 - Copy this to a file called obiee.cor: \[sourcecode language="xml"\] <?xml version="1.0"?> <CorrelationSettings><Group Name="OBIEE" Enable="1" Icon="logo\_bi.bmp"><Rule Name="scid" LeftBoundText="\_scid=" LeftBoundType="1" LeftBoundInstance="0" RightBoundText="&quot;" RightBoundType="1" AltRightBoundText="" AltRightBoundType="1" Flags="0" ParamPrefix="" Type="8" SaveOffset="0" SaveLen="-1" CallbackName="" CallbackDLLName="" FormField="" ReplaceLB="" ReplaceRB=""/></Group></CorrelationSettings> \[/sourcecode\]
     
-    Import this correlation file (see [notes here for information about correlation](http://wp.me/pAQda-7r)) by going to Tools -> Recording Options -> Correlation -> Import. Optionally you can include an icon by downloading this image [![logo_bi](/images/rnm1978/logo_bi.png "logo_bi")](http://rnm1978.files.wordpress.com/2009/09/logo_bi.png) and converting it to bmp and saving it to C:\\Program Files\\HP\\Virtual User Generator\\dat\\webrulesdefaultsettings\\icons [![LR52](http://rnm1978.files.wordpress.com/2009/09/lr52.png?w=300 "LR52")](http://rnm1978.files.wordpress.com/2009/09/lr52.png) After importing the correlation file, untick all other applications in the correlation list except for OBIEE
+    Import this correlation file (see [notes here for information about correlation](/2009/10/01/obiee-and-hp-performance-center-a-k-a-loadrunner-notes)) by going to Tools -> Recording Options -> Correlation -> Import. Optionally you can include an icon by downloading this image [![logo_bi](/images/rnm1978/logo_bi.png "logo_bi")](http://rnm1978.files.wordpress.com/2009/09/logo_bi.png) and converting it to bmp and saving it to C:\\Program Files\\HP\\Virtual User Generator\\dat\\webrulesdefaultsettings\\icons [![LR52](http://rnm1978.files.wordpress.com/2009/09/lr52.png?w=300 "LR52")](http://rnm1978.files.wordpress.com/2009/09/lr52.png) After importing the correlation file, untick all other applications in the correlation list except for OBIEE
 
 ## Parameterisation
 
@@ -186,4 +186,4 @@ You should now have the basics of a valid VUser script to run through the load g
 
 All of these are topics in their own right, and to get any value out of performance testing need to be researched and done properly. Otherwise you end up with _geeee ain't this cool, I can run a thousand users at once! oh, what now ...._ which is not very scientific and not much use to anyone.
 
-See [this supplemental blog post](http://wp.me/pAQda-7r) for various notes that I made during this but which aren't directly part of the step-by-step tutorial.
+See [this supplemental blog post](/2009/10/01/obiee-and-hp-performance-center-a-k-a-loadrunner-notes) for various notes that I made during this but which aren't directly part of the step-by-step tutorial.

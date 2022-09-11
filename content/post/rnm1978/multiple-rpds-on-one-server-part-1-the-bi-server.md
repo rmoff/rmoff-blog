@@ -87,7 +87,7 @@ Do the same for Paint (update instanceconfig.xml to use AnalyticsWebPaint, and C
 
 ## Next steps
 
-You've now got a single BI server hosting two repositories. See [Part 2 - Presentation Services](http://wp.me/pAQda-3r) for setting up multiple Presentation Services to work with these repositories.
+You've now got a single BI server hosting two repositories. See [Part 2 - Presentation Services](/2009/08/25/multiple-rpds-on-one-server-part-2-presentation-services) for setting up multiple Presentation Services to work with these repositories.
 
 ## References / sources
 

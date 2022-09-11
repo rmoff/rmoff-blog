@@ -12,9 +12,9 @@ categories:
 
 ## Introduction
 
-This is the second part of three detailed articles making up a mini-series about [OBIEE monitoring](http://wp.me/pAQda-kP). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
+This is the second part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
-This article takes data that [part one](http://wp.me/pAQda-l0) showed you how to collect into a tab-separated file that looks something like this:
+This article takes data that [part one](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) showed you how to collect into a tab-separated file that looks something like this:
 
 \[sourcecode\] 2010-11-29-14:48:18 1 0 11 0 3 2 1 676 340 0 53 1 0 41 0 3 0 2010-11-29-14:49:18 1 0 11 0 3 2 1 676 0 0 0 1 0 0 0 3 0 2010-11-29-14:50:18 2 0 16 1 4 3 1 679 0 0 0 1 0 0 0 4 0 2010-11-29-14:51:18 2 2 19 1 4 3 1 679 32 0 53 1 0 58 0 4 0 2010-11-29-14:52:18 2 1 19 1 4 3 4 682 0 0 0 1 0 0 0 4 0 2010-11-29-14:53:18 2 1 19 1 4 3 4 682 0 0 0 1 0 0 0 4 0 2010-11-29-14:54:18 2 0 19 1 4 3 1 682 0 0 0 1 0 0 0 4 0 \[/sourcecode\]
 
@@ -72,7 +72,7 @@ The title for each dataset is defined as part of the statement as is seen above.
 
 ## Generating gnuplot scripts automagically
 
-You may have realised by now that this is all quite fiddly to set up. Here are two scripts that will help generate gnuplot scripts. It's based on the tcl script from [part one](http://wp.me/pAQda-l0) and uses the first item in the array, ID, to determine the column number that a metric will appear in in the datafile.
+You may have realised by now that this is all quite fiddly to set up. Here are two scripts that will help generate gnuplot scripts. It's based on the tcl script from [part one](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) and uses the first item in the array, ID, to determine the column number that a metric will appear in in the datafile.
 
 This first one writes a series of gnuplot statements to plot each metric out on an individual graph, and assumes you have a two-server cluster so plots the datafiles from two servers on the same graph. \[sourcecode language="bash"\] cat gnuplot\_header grep lappend obieejmx\_server01.tcl|\\ sed s/{//g|\\ sed s/}//g|\\ sed s/"lappend mbeanattrs "//g|\\ sed s/"Oracle BI Management:Oracle BI=Performance,AppName="//g|\\ sed s/"Oracle BI Server,"/"BI"/g|\\ sed s/"name=Oracle BI General"/""/g|\\ sed s/"type=Oracle BI Physical DB,name=Oracle Data Warehouse"/"DB"/g|\\ sed s/"type=Oracle BI DB Connection Pool,name=Star\_Oracle Data Warehouse\_Oracle Data Warehouse Connection Pool"/"Conn Pool"/g|\\ sed s/"Oracle BI Presentation Server,name=Oracle BI PS "/"BIPS"/g|\\ sed s/"Connection"/"Conn"/g|\\ sed s/"Current"/"Curr"/g|\\ sed s/"Sessions"/"Sess"/g|\\ awk 'FS="\\t" { $1+=1 print "set output \\""$1".png\\"" print "set title \\"" $2 "\\\\n" $3 "\\"" print "plot \\"server01.jmx\\" using 1:" $1 " with lines title \\"server01\\",\\"server02.jmx\\" using 1:" $1 " with lines title \\"server02\\"" }' \[/sourcecode\]
 
@@ -100,4 +100,4 @@ And then run your wrapper in the same way as the metric collection, using nohup 
 
 ## What next?
 
-So you've got your data ... you've got your graphs ... now why not serve them up through a convenient webpage that refreshes automatically? [Click here for part three](http://wp.me/pAQda-lo) that shows you how to bolt this onto an existing OAS installation.
+So you've got your data ... you've got your graphs ... now why not serve them up through a convenient webpage that refreshes automatically? [Click here for part three](/2010/12/06/adding-obiee-monitoring-graphs-into-oas/) that shows you how to bolt this onto an existing OAS installation.

@@ -7,7 +7,7 @@ categories:
   - "security"
 ---
 
-[Oracle Application Server](http://rnm1978.wordpress.com/category/oas/) (OAS) is the Web and Application server typically deployed with OBIEE. There are several settings which by default may be viewed as security weaknesses. Whether realistically a target or not, it's good practice to always be considering security and lock down your servers as much as reasonably possible. I adopt the default stance of having to find a reason to leave something less secure, rather than justify why it needs doing.
+[Oracle Application Server](/category/oas/) (OAS) is the Web and Application server typically deployed with OBIEE. There are several settings which by default may be viewed as security weaknesses. Whether realistically a target or not, it's good practice to always be considering security and lock down your servers as much as reasonably possible. I adopt the default stance of having to find a reason to leave something less secure, rather than justify why it needs doing.
 
 There are various tools and companies out there that will help you scan your deployments for weaknesses. In reading about this I found [Nikto](http://cirt.net/nikto2) which runs on all platforms. In essence it takes a hostname and port and scans for known vulnerabilities in web servers (not just OAS).
 
