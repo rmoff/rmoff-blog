@@ -17,4 +17,4 @@ If, for some reason, you need to check what web application server is in use for
 6\. Click on the first entry in the list, URL should be http://yourserver:7777/analytics/saw.dll?Dashboard  
 7\. In the right-hand pane of the Headers tab you should see Server listed. In this instance, it's Oracle-Application-Server-10g/10.1.3.1.0 Oracle-HTTP-Server  
   
-![](/images/rnm1978/server.png)
+![](/images/rnm1978/image_lost.png)

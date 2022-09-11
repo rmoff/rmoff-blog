@@ -7,6 +7,6 @@ categories:
   - "support"
 ---
 
-One of my little gripes with Metalink is its purporting to be helpful when it's blatantly not. Here's one: ![](/images/rnm1978/Search+Results_1248424918711.png)
+One of my little gripes with Metalink is its purporting to be helpful when it's blatantly not. Here's one: ![](/images/rnm1978/image_lost.png)
 
 Now which is more likely, on Metalink 3; that I'm searching for sawserver (integral component to OBIEE), or sqlserver?!
