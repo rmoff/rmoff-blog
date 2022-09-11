@@ -21,7 +21,7 @@ Right click and Add Counters:
   
 Then click on Performance object dropdown, and you should see a long list of Oracle BI performance objects:  
 ![](/images/rnm1978/perfmon1.png)Pick one of these and a list of counters within the object will be listed. You can add all, some or just one of these.  
-![](/images/rnm1978/perfmon2.png)  
+![](/images/rnm1978/image_lost.png)  
   
 By default the Performance Counters are installed I think, but both NQSServer.exe and sawserver.exe have commandline options for reinstalling them (or uninstalling, if you want to):  
 

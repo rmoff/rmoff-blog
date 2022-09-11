@@ -20,7 +20,7 @@ Here's my list so far, please feel free to add to it in the comments and correct
 
 ### perfmon
 
-Credit: http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html ![](/images/rnm1978/Oracle+BI+Presentation+Services+Performance+Monitor_1248170724573.png)
+Credit: http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html ![](/images/rnm1978/image_lost.png)
 
 ### oc4j
 
@@ -28,13 +28,13 @@ An alternative to jconsole is to access the Oracle BI Management MBeans through 
 
 ### Windows perfmon
 
-![](/images/rnm1978/perfmon2.png)
+![](/images/rnm1978/image_lost.png)
 
 More details in [separate post here](/2009/07/24/obiee-windows-perfmon-counters/)
 
 ### jconsole
 
-The same data as through perfmon above, full details here: [jmx agent](/2009/07/16/jconsole-/-jmx/) ![](/images/rnm1978/jcon4.png)
+The same data as through perfmon above, full details here: [jmx agent](/2009/07/16/jconsole-/-jmx/) ![](/images/rnm1978/image_lost.png)
 
 ### jManage
 

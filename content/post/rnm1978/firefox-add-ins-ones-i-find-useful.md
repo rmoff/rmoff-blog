@@ -5,7 +5,7 @@ categories:
   - "firefox"
 ---
 
-![](/images/rnm1978/firefox+addins.JPG)  
+![](/images/rnm1978/image_lost.png)  
   
 
 - Delicious Bookmarks

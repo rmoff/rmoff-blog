@@ -82,7 +82,7 @@ and sawserver didn't come up! This to me points the finger towards the server
 This has now gone to Oracle as an SR, as something is clearly up with sawserver :-(  
   
 Update: running gpm (glance for x-windows) I found this:  
-![](/images/rnm1978/3_ed.JPG)sawserver64 being reported as "Blocked On" "Other" for 100% of the time.  
+![](/images/rnm1978/image_lost.png)sawserver64 being reported as "Blocked On" "Other" for 100% of the time.  
 Not sure what that translates to in real money yet though.  
   
 Update: [solution here!](http://rnm1978.blogspot.com/2009/04/sawserver-wont-start-up-resolved.html)
