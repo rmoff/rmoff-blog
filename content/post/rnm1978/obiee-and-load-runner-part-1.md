@@ -48,7 +48,7 @@ Doc ID 735158.1 on Metalink details this problem, but doesn't have a solution. T
 
 \[sourcecode language="html"\]<DIV style="display:none" id="DashboardErrorDiv"></DIV>\[/sourcecode\]
 
-I did a detailed examination of the sawserver log (using detailed logging level) but couldn't find any errors. I checked the analytics web app log too, and the oc4j and apache logs. All turned up nothing. Using [Fiddler2](www.fiddlertool.com/) I set up a trace of the network traffic from LoadRunner to OBIEE (define Fiddler2 as a proxy in LoadRunner) - and the blasted thing worked! No error! So then I removed the proxy setting and again it worked, no problem. How frustrating.
+I did a detailed examination of the sawserver log (using detailed logging level) but couldn't find any errors. I checked the analytics web app log too, and the oc4j and apache logs. All turned up nothing. Using [Fiddler2](http://www.fiddlertool.com/) I set up a trace of the network traffic from LoadRunner to OBIEE (define Fiddler2 as a proxy in LoadRunner) - and the blasted thing worked! No error! So then I removed the proxy setting and again it worked, no problem. How frustrating.
 
 Taking a step back, I restarted sawserver, ran the Replay and got the error again. Changed to go via Fiddler2, no error. Bounced sawserver again, ran the Replay through Fiddler2 first this time - and got the error. Phew. So it looks like it's maybe cache-based, and at least it's repeatable.
 

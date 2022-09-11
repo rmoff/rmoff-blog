@@ -13,7 +13,7 @@ categories:
 
 This is the first part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
-For some background on OBIEE's Systems Management component, along with JMX and MBeans, [see here](/2009/07/22/oracle-bi-management-systems-management-mbeans/) and [here](/categories/jmx/). The following assumes you know your mbeans from coffee beans and jmx from a bmx.
+For some background on OBIEE's Systems Management component, along with JMX and MBeans, [see here](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/) and [here](/categories/jmx/). The following assumes you know your mbeans from coffee beans and jmx from a bmx.
 
 The metric collection is built around the [jmxsh](http://code.google.com/p/jmxsh/) tool. This is similar to [jmxterm](http://wiki.cyclopsgroup.org/jmxterm) and both provide command-line access to jmx. Once it's commandline, it's scriptable :)
 

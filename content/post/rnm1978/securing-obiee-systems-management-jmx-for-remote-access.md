@@ -15,8 +15,8 @@ OBIEE's Systems Management functionality exposes performance counters and the ap
 It's extremely useful, and is documented pretty widely :
 
 - [JConsole / JMX](/2009/07/16/jconsole-/-jmx/)
-- [JConsole / JMX – followup](/2009/07/21/jconsole-jmx-followup/)
-- [Oracle BI Management / Systems Management MBeans](/2009/07/22/oracle-bi-management-systems-management-mbeans/)
+- [JConsole / JMX – followup](/2009/07/21/jconsole-/-jmx-followup/)
+- [Oracle BI Management / Systems Management MBeans](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/)
 - [PerfMon](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html)
 - [OBIEE MBeans and OC4J](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html)
 - [OBIEE performance monitoring and alerting with jManage](/2009/07/29/obiee-performance-monitoring-and-alerting-with-jmanage/)
