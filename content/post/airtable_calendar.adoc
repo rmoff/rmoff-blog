@@ -1,0 +1,108 @@
+---
+draft: false
+title: 'Customising the fields shown in Airtable''s Calendar .ics export'
+date: "2022-09-12T16:17:08Z"
+image: "/images/2022/09/h_dji_fly_20220822_181208_685_1661188335757_photo_optimized.jpeg"
+thumbnail: "/images/2022/09/t_DSCF8251.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Airtable
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+https://airtable.com[Airtable] is a rather wonderful tool. It powers link:/2022/08/31/inside-the-sausage-factory-how-we-built-the-program-for-current-2022/[the program creation backend process] for Kafka Summit and Current. It does, however, have a few frustrating limitations - often where it feels like a feature was built on a Friday afternoon and they didn't get chance to finish it before knocking off to head to the pub. 
+
+<!--more-->
+
+## The Problem
+
+One of these limitations is that the https://support.airtable.com/docs/integrating-airtable-with-external-calendar-applications[`.ics` calendar sharing] will only use the primary field of the table. Which means that a view that looks nice in Airtable: 
+
+image::/images/2022/09/airtable01.png[Calendar view in Airtable with full details]
+
+will look like crap in your calendar application: 
+
+image::/images/2022/09/airtable02.png[Fantastical showing record IDs]
+
+You'd think that the **labels** configured in the Calendar view:
+
+image::/images/2022/09/airtable03.png[Airtable calendar label config]
+
+would apply to the `.ics` but apparently not. Airtable support confirmed that the primary field is all that's shown, and that this is a limitation. 
+
+## The Solution (kinda)
+
+This isn't a perfect solution because it won't automagically update as new records are added. However, if you have a static set of records, or are content to do additional manual work when you add any, then it may still be useful for you. 
+
+1. Create a new table called `Calendar` (or whatever you want)
+2. Delete the columns that are created, and rename the primary field to something that represents the record that will be on the calendar. Since I'm using it to represent sessions at a conference I'm going to call it `Session`. 
++
+image::/images/2022/09/airtable04.png[New table]
+3. Add a new field to the table, set it as a **Link to another record** and select the source table which holds the records you want on the calendar. 
++
+When prompted, add the additional fields that you will want to use in the calendar: 
++
+* Start date/time
+* End date/time (optional)
+* All the fields you want to use in the label
++
+image::/images/2022/09/airtable05.png[Add the link field]
++
+You should have a table that looks something like this: 
++
+image::/images/2022/09/airtable06.png[Empty table with all the necessary fields]
+4. Now the cludgy bit (and if there's a way to automate it, please do let me know!). Over in the source table, you'll see a new column has been added for the link field to your new table (mine's called `Calendar` and so is the link field)
++
+image::/images/2022/09/airtable07.png[Link field added to the source table]
++
+Click on the *header of the primary field of your source table* to select all the cells, and copy them to the clipboard (Cmd-C on the Mac). 
++
+image::/images/2022/09/airtable08.png[Copying the primary field values]
++
+Now click on the header of the new link field and paste from the clipboard (Cmd-V on the Mac). 
++
+image::/images/2022/09/airtable09.png[Pasting the primary field values into the link field]
++
+When you go to your new table you'll see it populated with records matching those in the source. 
++
+image::/images/2022/09/airtable10.png[The new records in the link table]
+5. Now to customise the primary field so that it displays the values that you want it to. Change the field type to *Formula* and set the formula to a concatenation of the fields required
++
+image::/images/2022/09/airtable11.png[Setting the primary field formula]
++
+image::/images/2022/09/airtable12.png[Resulting primary field values]
+6. Now the process is as normal - create a Calendar view and set the start/end dates from the lookup fields included in your table: 
++
+image::/images/2022/09/airtable13.png[Setting the calendar start/end date fields]
++
+The calendar will show using the primary field value by default (you don't need to customise the labels now): 
++
+image::/images/2022/09/airtable14.png[Calendar view showing records]
++
+And with the `.ics` share link created…
+image::/images/2022/09/airtable15.png[.ics share link]
++
+…it renders exactly as we want it in our external calendar app: 
++
+image::/images/2022/09/airtable16.png[External calendar view]
+
+NOTE: If you add new records to the source table you need to make sure that the link field has the primary field value set in it, otherwise the Calendar table that we've created won't get an entry for it. 
+
+## Bonus Points: Fixing the Time Zones in Airtable Calendar
+
+Another hack here, but I honestly can't make head nor tail of the logic used in the date/time fields and time zones. In the absence of a way to set the time zone, I've resorted to creating a derived field in the `Calendar` table above and a formula to shift the time as necessary: 
+
+[source,sql]
+----
+DATEADD({Start (from session_link)},5,'hours')
+----
+
+image::/images/2022/09/airtable17.png[Changing the time zone in an Airtable field]
+
+You can then reconfigure the Calendar view to use the new field with the fixed time zone: 
+
+image::/images/2022/09/airtable18.png[Using the new fixed TZ field in Airtable calendar view]
