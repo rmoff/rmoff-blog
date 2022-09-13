@@ -13,7 +13,7 @@ title = "Proxmox 4 Containers - ssh - ssh_exchange_identification: read: Connect
 **TL;DR** When defining networking on Proxmox 4 LXC containers, use an appropriate CIDR suffix (e.g. 24) - don't use 32!
 
 ---
-On my [Proxmox 4 server](/2016/06/07/commissioning-my-proxmox-server/) I'm running a whole load of lovely LXC containers. Unfortunately, I had trouble connecting to them. From a client machine, I got the error
+On my [Proxmox 4 server](/2016/06/07/commissioning-my-proxmox-server-os-and-filesystems/) I'm running a whole load of lovely LXC containers. Unfortunately, I had trouble connecting to them. From a client machine, I got the error
 
     ssh_exchange_identification: read: Connection reset by peer
 

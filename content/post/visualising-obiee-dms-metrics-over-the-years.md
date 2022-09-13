@@ -14,11 +14,11 @@ It struck me today when I was writing my most recent blog over at [Rittman Mead]
 
 * Back in 2009 I wrote about using something called JManage to pull metrics out of OBIEE 10g via JMX:  
 
-    ![](https://rnm1978.files.wordpress.com/2009/07/jmanage08.png?w=900&h=760)
+    ![](/images/rnm1978/jmanage08.png?w=900&h=760)
 
-* Still with OBIEE 10g in 2011, I was using rrdtool and some [horrible-looking tcl hacking](https://rnm1978.wordpress.com/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) to get the metrics out through jmx :
+* Still with OBIEE 10g in 2011, I was using rrdtool and some [horrible-looking tcl hacking](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) to get the metrics out through jmx :
 
-    ![](https://rnm1978.files.wordpress.com/2011/03/graph.png?w=2048&h=542)
+    ![](/images/rnm1978/graph.png?w=2048&h=542)
 
 * 2014 brought with it DMS and my first forays with Graphite for storing & visualising data: 
 
