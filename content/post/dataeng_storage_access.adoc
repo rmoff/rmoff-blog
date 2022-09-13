@@ -1,12 +1,12 @@
 ---
 draft: true
-title: 'Dataeng_storage_access'
+title: 'Data Engineering S01E02: Storage and Access'
 date: "2022-09-07T17:07:04Z"
 image: "/images/2022/09/"
 thumbnail: "/images/2022/09/"
 credit: "https://twitter.com/rmoff/"
 categories:
-- Uncategorized
+- Data Engineering
 ---
 
 :source-highlighter: rouge
@@ -14,118 +14,136 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
+In this article I look at where we store our analytical data, how we organise it, and how we enable access to it. I'm considering here potentially large volumes of data for access throughout an organisation. I'm not looking at data stores that are used for specific purposes (caches, low-latency analytics, graph etc).
+
+The article is link:/2022/09/02/data-engineering-s01e01-stretching-my-legs-in-the-analytical-data-ecosystem-in-2022/[part of a series] in which I explore the world of data engineering in 2022 and how it has changed from when I started my career in data warehousing 20+ years ago. Read the link:/2022/09/02/data-engineering-s01e01-stretching-my-legs-in-the-analytical-data-ecosystem-in-2022/[introduction] for more context and background.
+
 <!--more-->
 
-
-## Storing and Accessing Your Data pt 1: 🔥 Burn It All Down 🔥
+## Storing and Accessing Your Data pt 1: 🔥 Burn It All Down…🔥
 
 In the beginning was the word, and the word was an expensive relational datawarehouse that wasn't flexible or scalable enough for the cool kids in Silicon Valley. 
 
-Then came Hadoop and scalability was won, at the vast cost of usability. You literally had to write your own Java code to move data around and transform it. You needed to serialise and deserialise the data yourself, and could store whatever you wanted - it didn't have to be structured. This was sold as a benefit -- "Schema on Read" they said, "It'll be a good idea", they said. _Oh bugger, where's my schema, they said when they came to use it._
+Then came Hadoop and scalability was won, at the vast cost of usability. You literally had to write your own Java code to move data around and transform it. You needed to serialise and deserialise the data yourself, and could store whatever you wanted - it didn't have to be structured. This was sold as a benefit -- "Schema on Read" they said, "It'll be a good idea", they said. _"Oh bugger, where's my schema"_, they said when they came to use it.
 
-Through the virtues of open source a fantastic ecosystem grew and such wonderfully named projects as Sqoop, Oozie, and Pig and Flume emerged. Hive brought with it the familiar and comforting bosom of SQL and table structures but with limited functionality (including no `DELETE` or `UPDATE` at first) and performance. 
+Through the virtues of open source a fantastic ecosystem grew particularly around the https://apache.org[Apache Software Foundation] and we got such wonderfully named projects as https://sqoop.apache.org/[Sqoop], https://oozie.apache.org/[Oozie], https://pig.apache.org/[Pig], and https://flume.apache.org/[Flume] emerged. https://hive.apache.org/[Hive] brought with it the familiar and comforting bosom of SQL and table structures but with limited functionality (including no `DELETE` or `UPDATE` at first) and performance. 
 
-Over the years things improved, with Spark replacing MapReduce and enabling a generation of Python coders to get into the big data lark too, along with https://spark.apache.org/sql/[SQL].
+Over the years things improved, with https://spark.apache.org/[Spark] replacing https://hadoop.apache.org/[MapReduce] and enabling a generation of Python coders to get into the big data lark too, along with https://spark.apache.org/sql/[SQL].
 
-Amongst all of this pioneering work and technology was the assumption that the resting (and sometimes serving) place for analytical data was HDFS. Other stores like HBase existed for special purposes, but the general we've-got-a-bunch-of-data-in-this-org-and-need-to-collect-it destination was HDFS. Because "general dumping ground" wasn't sexy enough for the marketing folk it became sold as a "Data Lake" with all the associated puns and awful cliches (fishing for data, data swamp, etc etc etc). 
+Amongst all of this pioneering work and technology was the assumption that the resting (and sometimes serving) place for analytical data was https://hadoop.apache.org/[HDFS]. Other stores like https://hbase.apache.org/[HBase] existed for special purposes, but the general we've-got-a-bunch-of-data-in-this-org-and-need-to-collect-it destination was HDFS. Because "general dumping ground" wasn't sexy enough for the marketing folk it became sold as a "Data Lake" with all the associated puns and awful cliches (fishing for data, data swamp, etc etc etc). 
 
-The general pitch around the data lake was to collect all the data, structured and unstructured (or structured that you've made unstructured by chucking away its schema when you loaded it) and then +++<del>+++wait for the data lake fairy to conjure magical value out of the pile of data you've dumped there+++</del>+++ make the raw data available for teams in the company to process and use for their particular purposes. 
+The general pitch around the data lake was to collect all the data, structured and unstructured (_or structured that you've made unstructured by chucking away its schema when you loaded it_), and then +++<del>+++wait for the data lake fairy to conjure magical value out of the pile of data you've dumped there+++</del>+++ make the raw data available for teams in the company to process and use for their particular purposes. 
 
-All of this was built around the closely-intertwined Hadoop platform, whether self-managed on-premises or with a cloud provider such as AWS. In parallel you had lots of other development enabling similar patterns, such as Athena (built on the open-source Presto) to query data held in S3. 
+Accessing the data in HDFS was done with Hive and other tools including Impala, Drill, and Presto. All had their pros and cons, often with limitations around performance and management of the data. 
+
+All of this was built around the closely-intertwined https://hadoop.apache.org/[Hadoop] platform, whether self-managed on-premises including with deployments from Cloudera, MapR, and Hortonworks, or with a cloud provider such as AWS and its https://aws.amazon.com/emr/[EMR] service. 
 
 ## Storing and Accessing Your Data pt 2: …and Then Rebuild It 🏗️
 
-
 Coming back to this after my attention being elsewhere for a few years means that I have the slightly uninformed but helpfully simplistic view of things. What the relational datawarehouses used to do (bar scale, arguably), we are now approaching something roughly like parity again with a stack of tools that have stabilised and matured in large, with a layer on top that's still being figured out. 
 
-Underpinning it all is the idea of separation of storage and compute. This is important for two vital reasons: 
+Underpinning it all is the core idea of separation of storage and compute. This is important for two vital reasons: 
 
-* It's a lot cheaper to store data and pay for compute when you want to use it, instead of the coupled approach (per RDBMS like Oracle) where you have a server with disks and CPUs and you're paying for the CPUs whether they're doing anything or not, and when you need more storage and have filled the disk bays you need to buy (and license, hi Oracle) another server (with CPUs etc). 
-* If your data is held in an open format on a storage platform that has open APIs then multiple tools can use it as they want to. Contrast this to putting your data in SQL Server (not to pick on Oracle all the time), and any tool that wants to use it has to do so through SQL Server. If a new tool comes along that does particular processing really really well and your data is sat in an RDBMS then you have to migrate that data off the RDBMS first, or query it in place. 
+* It's a lot **cheaper** to store data and only pay for compute when you want to use it. 
++
+Otherwise you couple the two together which is what we've generally always done and is seen in every RDBMS, like Oracle, DB2, etc etc. With the coupled approach you have a server with disks and CPUs and you're paying for the CPUs whether they're doing anything or not, and when you need more storage and have filled the disk bays you need to buy (and license, hi Oracle) another server (with CPUs etc). The added element here is that you have to provision your capacity for your *peak* workload, which means over-provisioning and capacity sat idle potentially for much of the time depending on your business and data workload patterns. 
+* If your data is held in an **open format** on a storage platform that has **open APIs** then multiple tools can use it as they want to.
++
+Contrast this to putting your data in SQL Server (not to pick on Oracle all the time), and any tool that wants to use it has to do so through SQL Server. If a new tool comes along that does particular processing really really well and your data is sat in an RDBMS then you have to migrate that data off the RDBMS first, or query it in place. 
 
-Hive gave us this separation, right? Well, it did, but with a https://youtu.be/nWwQMlrjhy0?t=734[long list of problems and limitations].
+HDFS and Hive gave us this separation, right? Well, it did, but with a https://youtu.be/nWwQMlrjhy0?t=734[long list of problems and limitations for Hive]. In addition, HDFS has nowadays been overtaken by S3 as the object store of choice with APIs supported by numerous non-S3 platforms, both Cloud based (e.g. https://cloud.google.com/storage/docs/interoperability[Google's Cloud Storage (GCS)], and https://developers.cloudflare.com/r2/platform/s3-compatibility/api/[Cloudflare's R2]) and on-premises (e.g. https://min.io/[Minio]). 
 
-### The Lake House
+### Data Lake Table Formats & Data Lakehouses
 
-The open format point could also be reframed as the "vendor lockin bogey man" pitch, but rather than that I would say that it's more about creating a platform that enables you to hedge your bets as to the best tools that will be using the data. 
+So, full disclosure first: 
 
-<< point about cloud native and how it's even more important to have open formats>> 
+{{< tweet 1565747777992359938 >}}
 
-Lakehouse paper 2021 https://www.cidrdb.org/cidr2021/papers/cidr2021_paper17.pdf
-https://twitter.com/gwenshap/status/1565771009902256129
-https://www.linkedin.com/feed/update/urn:li:activity:6971514189613834240/
+You can read the https://www.cidrdb.org/cidr2021/papers/cidr2021_paper17.pdf[Lakehouse paper] (and https://www.databricks.com/wp-content/uploads/2020/08/p975-armbrust.pdf[more detailed one]) and decide for yourself https://twitter.com/gwenshap/status/1565771009902256129[its virtues], but I found it a useful description of a pattern that several technologies are adopting—not just Databricks and their Delta Lake implementation of the Lakehouse. (I'll admit, the name grates—and I miss the Hadoop days of fun names 😉). 
 
-This is where a lot of the innovation seems to be happening at the moment, with table formats being built and developed to work with data on these open storage platforms (HDFS, S3, etc) held in file formats suitable to the task at hand (such as https://parquet.apache.org/[Apache Parquet] which is column based and thus great for analytics). Table formats include: 
+In short, the "Lakehouse" concept from Databricks is where data is stored on object store (the Data Lake) with a layer above it providing a "table format" through which data can be read and written in a structured way, supporting updates and deletes to the data, as well as queried in an efficient way. The Lakehouse is the whole; the **table format** is the specific layer of technology that implements the access on the data in your Data Lake.
 
-* Apache Hudi
-* Apache Iceberg
-* Delta Lake
+Whether you go for the Lakehouse term (Databricks would like you to, and https://www.snowflake.com/guides/what-data-lakehouse[Snowflake] and https://www.oracle.com/uk/data-lakehouse/what-is-data-lakehouse/[Oracle] are both onboard) or just the Data Lake plus Table Format, it's a really interesting idea. The bit that really catches my attention is that it enables a common table structure to be defined and accessed by a variety of compute engines - meaning that in both querying and processing (ETL/ELT) the data can be structured and manipulated in the way in which you would in an RDBMS. 
+
+The three table formats available are:
+
+* https://hudi.apache.org/[Apache Hudi]
+* https://iceberg.apache.org[Apache Iceberg]
+* https://delta.io[Delta Lake]
 
 All of them enable the things that we'd have taken for granted a decade ago including rich metadata, transactional access, `UPDATE`s, `DELETE`s, and ACID compliance, along with performant access when querying the data. 
 
+Both Hudi and Delta Lake have a similar conceptual diagram which illustrates things well. Note the plethora of query engines and integrations that each support. 
+
+image::/images/2022/09/hudi_dl01.png[Apache Hudi and Delta Lake conceptual diagrams]
+
+_(image credits: https://hudi.apache.org/[Apache Hudi] / https://delta.io[Delta Lake])_
+
+### Managed Data Lakehouses
+
+You can run run your own, or use used hosted versions including
+
+* https://www.onehouse.ai/[Onehouse] (Apache Hudi)
+* https://tabular.io/[Tabular] (Apache Iceberg)
+* https://www.databricks.com/[Databricks] (Delta Lake) 
+* GCP's https://cloud.google.com/blog/products/data-analytics/unify-data-lakes-and-warehouses-with-biglake-now-generally-available[BigLake] (Iceberg?)
+
+Azure have a close partnership with Databricks, so the only major cloud provider missing from this list is AWS. They have https://aws.amazon.com/lake-formation/[Lake Formation] and https://docs.aws.amazon.com/lake-formation/latest/dg/governed-tables.html[Governed Tables] which looks similar on the surface but I've not dug into in detail (and Governed Tables aren't even mentioned on AWS' https://aws.amazon.com/blogs/big-data/build-a-lake-house-architecture-on-aws/[Build a Lakehouse Architecture on AWS] blog). 
+
+Snowflake recently added support for https://www.snowflake.com/blog/iceberg-tables-powering-open-standards-with-snowflake-innovations/[Iceberg tables] (complementing the existing https://docs.snowflake.com/en/user-guide/tables-external-intro.html#delta-lake-support[support for Delta Lake external tables]), and are https://www.snowflake.com/blog/5-reasons-apache-iceberg/[backing Iceberg] presumably in part to try and hamper Databricks' Delta Lake (see also their snarky comments about "_Iceberg includes features that are *paid in other table formats*_", "_The Iceberg project is *well-run* open source_" etc, taking a shot at the fact that Delta Lake has paid options, and the majority of committers are from Databricks). 
+
+https://www.dremio.com/[Dremio] are also in this space as one of the companies working on https://arrow.apache.org/[Apache Arrow] and providing a fast query engine built on it called Dremio Sonar. I've yet to get my head around their offering, but it looks like on-premises platform as well as hosted, with support for Apache Iceberg and Delta Lake. They've got a rich set of resources in their https://www.dremio.com/subsurface/[Subsurface] resource area.
+
+Oracle being Oracle are not ones to miss up the chance to jump on a buzzword or marketing bandwagon. Their version of the Lakehouse however looks to be to stick their Autonomous Data Warehouse (it's self driving! self healing!) on top of a data lake - kinda like Snowflake have done, but without the open table format support of Apache Iceberg. The huge downside to this is that without the open table format there's zero interoperability with other query & processing engines - something Oracle are presumably not in a rush to enable.   
+
+### Storage Formats
+
+In a Lakehouse the data storage looks fairly similar from a high level to how it does in a Data Lake - the idea is still to do so using an open format
+
+* Probably something like https://avro.apache.org/[Avro] for structure data that's still to be processed
+* A columnar format such as https://parquet.apache.org/[Parquet] or https://orc.apache.org/[Orc] for data that's going to be queried
+* It could also just be JSON (hell, use CSV if you really must)
+
+And regardless of the format, to store the data on storage with an open API (or at least one which is widely supported by most tools) - S3 becomes the de facto choice here.
+
+### Reading more about Table Formats & Lakehouses
+
 There are some good explanation and comparison posts covering the three formats: 
+
 * https://dacort.dev/posts/modern-data-lake-storage-layers/[An Introduction to Modern Data Lake Storage Layers] - https://twitter.com/dacort[Damon Cortesi] (AWS)
 * Comparison of Data Lake Table Formats https://www.dremio.com/subsurface/comparison-of-data-lake-table-formats-iceberg-hudi-and-delta-lake/[blog] / https://www.dremio.com/subsurface/subsurface-meetup-comparison-of-data-lakehouse-table-formats/[video] - https://twitter.com/AMdatalakehouse[Alex Merced] (Dremio)
 * https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison[Apache Hudi vs Delta Lake vs Apache Iceberg - Lakehouse Feature Comparison] - https://www.linkedin.com/in/lakehouse/[Kyle Weller] (Onehouse)
 * https://lakefs.io/hudi-iceberg-and-delta-lake-data-lake-table-formats-compared/[Hudi, Iceberg and Delta Lake: Data Lake Table Formats Compared] - https://www.linkedin.com/in/paulsingman/[Paul Singman]
 
-Run your own, or use used hosted versions including
+### A Note About Open Formats
 
-* https://www.onehouse.ai/[Onehouse] (Apache Hudi)
-* https://tabular.io/[Tabular] (Apache Iceberg)
-* https://www.databricks.com/[Databricks] (Delta Lake) 
-* GCP's (https://cloud.google.com/blog/products/data-analytics/unify-data-lakes-and-warehouses-with-biglake-now-generally-available[BigLake])
+Whether we're talking data lakes, Lakehouses, or other ways of storing data, open formats are important. A closed-format vendor will tell you that it's just the "vendor lockin bogeyman man" pitch and how often do you re-platform anyway. I would reframe it away from this and suggest that just as with tools such as Apache Kafka, an open format enables you to keep your data in a neutral place, accessible by many different tools and technologies. Why do so many support it? Because it's open! 
 
-_Azure have a close partnership with Databricks, so the only major cloud provider missing from this list is AWS. They have https://aws.amazon.com/lake-formation/[Lake Formation] and https://docs.aws.amazon.com/lake-formation/latest/dg/governed-tables.html[Governed Tables] which looks similar on the surface but I've not dug into in detail (and Governed Tables aren't even mentioned on AWS' https://aws.amazon.com/blogs/big-data/build-a-lake-house-architecture-on-aws/[Build a Lake House Architecture on AWS] blog)._
+In a technology landscape which has not stopped moving at this pace for several years now and probably won't for many more, the alternative to an open format is betting big on a closed platform and hoping that nothing better comes along in the envisaged lifetime of the data platform. Open formats give you the flexibility to hedge your bets, to evaluate newer tools and technologies as they come along, and to not be beholden to a particular vendor or technology if it falls behind what you need. 
 
-Snowflake recently added support for https://www.snowflake.com/blog/iceberg-tables-powering-open-standards-with-snowflake-innovations/[Iceberg tables] (complementing the existing https://docs.snowflake.com/en/user-guide/tables-external-intro.html#delta-lake-support[support for Delta Lake external tables]), and are https://www.snowflake.com/blog/5-reasons-apache-iceberg/[backing Iceberg] presumably in part to try and hamper Databricks' Delta Lake (c.f. "_Iceberg includes features that are *paid in other table formats*_", "_The Iceberg project is *well-run* open source_" etc). 
+In previous times the use of an open format may have been moot given the dearth of alternatives when it came to processing the data—never mind the fact that the storage of data was usually coupled to the compute making it even more irrelevant. Nowadays there are multiple "big hitters" in each processing category with a dozen other options nibbling at their feet. Using a open format gives you the freedom to trial whichever ones you want to. 
 
-https://www.dremio.com/[Dremio] are also in this space as one of the companies working on https://arrow.apache.org/[Apache Arrow] and providing a fast query engine built on it called Dremio Sonar. I've yet to get my head around their offering, but it looks like on-premises platform as well as hosted, with support for Apache Iceberg and Delta Lake. They've got a rich set of resources in their https://www.dremio.com/subsurface/[Subsurface] resource area.
+Just a tip to vendors: that's great if you're embracing open formats, but check your hubris if you start to brag about it whilst simultaneously throwing FUD at open source. https://www.linkedin.com/posts/robinmoffatt_choosing-open-wisely-snowflake-blog-activity-6973309528628973568-gjOJ?utm_source=share&utm_medium=member_desktop[Just sayin'].
 
-https://www.youtube.com/watch?v=3znQs0MzZ-k[Data Lakehouse and Data Mesh—Two Sides of the Same Coin]
-Zalando have 10 petabytes of data in central data lake, and same again across other buckets across the organisation.
+## `git` For Data with LakeFS
 
-Spark on Databricks
-Trino + Superset 
-Redshift for local datawarehouses
-SageMaker
+Coming back to the big picture of how we store and access data nowadays one idea that's caught my attention is that of being able to apply git-like semantics *to the data itself*. Here's a copy of https://twitter.com/rmoff/status/1567829714865102853[a recent Twitter thread that I wrote]. 
 
-https://www.youtube.com/watch?v=3znQs0MzZ-k&t=1818s[Data Mesh is a paradigm - Lakehouse is a platform]
+> Having https://www.youtube.com/watch?v=uixZ7NcGoeE[watched @gwenshap and @ozkatz100 talk about "git for data"] I would definitely say is a serious idea.
+> However to the point at the end of the video, RTFM—it took reading https://docs.lakefs.io/using_lakefs/data-devenv.html and some other pages subsequently to really grok the concept in practice.
 
-## LakeFS -- `git` For Data
+> Where I struggled at first with the git analogy alone was that data changes, and I couldn't see how branch/merge fitted into that outside of the idea of branching for throwaway testing alone. The https://www.youtube.com/watch?v=uixZ7NcGoeE&t=1401s[1PB accidental deletion example] was useful for illustrating the latter point for sure. 
 
-https://twitter.com/rmoff/status/1567829714865102853[src]
+> But then reading https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka made me realise that I was thinking about the whole thing from a streaming PoV—when actually the idea of running a batch against a branch with a hook to validate and then merge is a freakin awesome idea
 
-Having https://www.youtube.com/watch?v=uixZ7NcGoeE[watched @gwenshap and @ozkatz100 talk about "git for data"] I would definitely say is a serious idea.
-However to the point at the end of the video, RTFM—it took reading https://docs.lakefs.io/using_lakefs/data-devenv.html and some other pages subsequently to really grok the concept in practice.
+> (As the roadmap issue notes, doing this for streaming data is conceptually possible but more complex to implement.) 
 
-Where I struggled at first with the git analogy alone was that data changes, and I couldn't see how branch/merge fitted into that outside of the idea of branching for throwaway testing alone. The https://www.youtube.com/watch?v=uixZ7NcGoeE&t=1401s[1PB accidental deletion example] was useful for illustrating the latter point for sure. 
+> I'm also still trying to think through the implications of https://docs.lakefs.io/understand/model.html#merge[merging one branch into another] in which there are changes; can data really be treated the same as code in that sense, or could one end up with inconsistent data sets?
 
-But then reading https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka made me realise that I was thinking about the whole thing from a streaming PoV—when actually the idea of running a batch against a branch with a hook to validate and then merge is a freakin awesome idea
+> Lastly, having been reading up on table formats, I'd be interested to dig into quite how much LakeFS works already with them vs roadmap alone (the docs are not entirely consistent on this point)—but with both in place it sounds like a fantastic place for data eng to be heading. 
 
-(As the roadmap issue notes, doing this for streaming data is conceptually possible but more complex to implement.) 
+The "git for data" pitch is a great way to articulate things, but it also shifted my brain off some of the central uses. For code, `git` is an integral part of the development process but once it hits Production `git` steps back from an active role. However, in the case of LakeFS some of their most exciting use cases are _as part of the Production data process_. https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka[The docs] have several examples which I think are just great: 
 
-I'm also still trying to think through the implications of https://docs.lakefs.io/understand/model.html#merge[merging one branch into another] in which there are changes; can data really be treated the same as code in that sense, or could one end up with inconsistent data sets?
+* When your batch pipeline runs, it does so against a branch of the data. Before merging that branch back into trunk, a hook can be configured to do various data quality checks (just as you'd configure hooks in GitHub etc to check for code quality, test suites, etc etc). This could be things like checking for PII slipping through, or simply "did we process the approximate number of records that we would expect". If that kind of check fails because the source data's gone bad or failed up stream then you potentially save yourself a ton of unpicking that you'd have to do if it's updated directly in the Production data lake. 
+* As above, the batch pipeline creates a new branch when it runs, and when (or if) it completes successfully and merges that back into the trunk, that merge can have attached to it a bunch of metadata to do with the pipeline execution. What version of the code was it running, what version of the underlying frameworks on which it executed, and so on. Invaluable for tracing particular problems at a later date. 
 
-Lastly, having been reading up on table formats, I'd be interested to dig into quite how much LakeFS works already with them vs roadmap alone (the docs are not entirely consistent on this point)—but with both in place it sounds like a fantastic place for data eng to be heading. 
-
-
-
-https://lakefs.io/the-everything-bagel-ii-versioned-data-lake-tables-with-lakefs-and-trino/
-
-
-
-Roll back deletes
-Test new ETL with live data
-
-Live *batch* workloads: 
-
-> * run a job or a pipeline on a separate branch and commit,
-> * record information such as the git hash of the code executed, the versions of frameworks used, and information about the data artifacts,
-> * once the pipeline has completed successfully, commit, and attach the recorded information as metadata.
-https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka[src] 
-
-https://www.youtube.com/watch?v=uixZ7NcGoeE&t=1237s[How to commit an unbounded stream?]
-this one I don't quite get. Suggests there's some kind of quality check that's applied before merging the branch. is this automated - CI/CD approach? Yes, using hooks just like in github world. See https://docs.lakefs.io/understand/roadmap.html#improved-streaming-support-for-apache-kafka. Aspirational pattern, not easily implemented currently. 
-
-LakeFS works just fine with Hive, but per the https://docs.lakefs.io/understand/roadmap.html#table-format-support[roadmap] it sounds like there's not full support for modern table format (Hudi/Iceberg/Delta Lake) yet.
