@@ -21,6 +21,11 @@ I'd forgotten how amazingly useful notebooks are. It's [six years since I wrote 
 
 If you want to run it yourself you can [download the notebook](/images/2022/09/lakefs.ipynb) and run it on the [Everything Bagel](https://github.com/treeverse/lakeFS/tree/master/deployments/compose) Docker Compose environment from LakeFS. 
 
+## tl;dr
+
+With LakeFS you can branch and merge your data just as you would with your code. You can work on a copy of your main dataset to test new code without worrying about overwriting it. You can test destructive changes without committing them until you're sure they work. 
+
+See more thoughts on it [here](/2022/09/14/data-engineering-in-2022-storage-and-access/#_git_for_data_with_lakefs).
 
 ## Overview
 
