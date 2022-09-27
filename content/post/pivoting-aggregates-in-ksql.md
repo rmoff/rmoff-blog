@@ -7,7 +7,7 @@ image: "/images/2019/04/DSCF2886.jpg"
 credit: ""
 thumbnail: "/images/2019/04/DSCF2902.jpg"
 categories:
-- KSQL
+- ksqlDB
 - Data wrangling
 ---
 
