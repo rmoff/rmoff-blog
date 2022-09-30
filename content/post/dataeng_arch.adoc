@@ -1,9 +1,9 @@
 ---
 draft: true
 title: "Data Engineering in 2022: Architectures & Terminology"
-date: "2022-09-13T10:50:56Z"
-image: "/images/2022/09/"
-thumbnail: "/images/2022/09/"
+date: "2022-09-29T10:50:56Z"
+image: "/images/2022/09/h_IMG_8726.jpeg"
+thumbnail: "/images/2022/09/joshua-hoehne-1UDjq8s8cy0-unsplash.jpg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - Data Engineering
@@ -16,10 +16,72 @@ categories:
 
 <!--more-->
 
+## ELT vs ETL vs E(t)LT vs Eᵉ(t)LTEͤᴛⷮL (_I made the last one up—I hope_)
+
+This is one of those _you had to be there_ moments. If you come into the world of data and analytics engineering today, ELT is just what it is and is pretty much universally understood. But if you've been around for …_waves hands_… longer than that, you might be confused by what people are calling ELT and ETL. Well, I was ✋. 
+
+My starting point for understanding ETL and ELT is what I already knew from a decade ago. The de facto approach to building a datawarehouse had been **ETL**. You'd run an ETL server with something like https://datacadamia.com/dit/powercenter/powercenter[Informatica PowerCenter], which would **E**xtract the data from a source system, **T**ransform it, and then **L**oad it to the target datawarehouse. 
+
+image::/images/2022/09/etl1.jpg[ETL high level view]
+
+Then Oracle Data Integrator (neé Sunopsis) came along and introduced the concept of ELT, in which the data is **E**xtracted from source, and then **L**oaded _to the target datawarehouse_. The difference here is that its loaded in its [usually] raw form, and _then_ **T**ransformed. The benefit of this ELT (or E-LT to spell it out a bit more clearly) approach is that instead of having to provision and scale an ETL server to do the heavy lifting of transformation work you can get the database to do it. Databases are particularly good at crunching large sets of data - so this makes a lot of sense.
+
+image::/images/2022/09/elt1.jpg[ETL high level view]
+
+### ELT Is Exactly As You Knew It—Except Not At All
+
+The huge boulder that I just couldn't make the mental leap over when I started link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[getting back into this stuff] was if ELT was where it was at, where https://github.com/dbt-labs/dbt-core[dbt] fitted into the picture. 
+
+image::/images/2022/09/6v582v.jpg[dbt meme]
+
+The mistake I was making was assuming that it was a 1:1 substitute for an existing tool - whereas it's not. dbt does the *T* of ELT. That's all. 
+
+So ELT is still ELT, it's just that in terms of tooling it's become (EL)(T). 
+
+`$Tool_1` does the **E**xtract and **L**oad of raw data from a source into a stage in the target data warehouse/lake (e.g. S3, BigQuery, Snowflake - heck, even Oracle!). Possibly does some very light transformation work on the way. Tools in this space include FiveTran, Singer, AirByte, and others - it's a crowded space with each vendor having its https://airbyte.com/etl-tools-comparison[own] https://docs.google.com/spreadsheets/d/1QKrtBpg6PliPMpcndpmkZpDVIz_o6_Y-LWTTvQ6CfHA/edit#gid=0[spin]. 
+
+image::/images/2022/09/el.jpg[EL high level view]
+
+Regardless of how the data gets loaded, `$Tool_2` (dbt being the obvious one here) then **T**ransforms the data *_in place_*. In the context of something like Oracle that's going to be two schemas on the same instance. Other stacks will have their own implementations. When you think of something like S3 and Spark the concept becomes rather abstract - but it's still the same principle: read the data, transform the data, write it back to the same storage. 
+
+image::/images/2022/09/t.jpg[T high level view]
+
+dbt's own repo spells it out nicely too: 
+
+image::https://raw.githubusercontent.com/dbt-labs/dbt-core/202cb7e51e218c7b29eb3b11ad058bd56b7739de/etc/dbt-transform.png[dbt high-level view]
+
+## Simple? Mostly. Marketing Bollocks? Not entirely. 
+
+
+Another nuance to what I described above is discussed in https://twitter.com/esammer/status/1567343640934232064[this thread] started by https://twitter.com/esammer[Eric Sammer]
+
+{{< tweet 1567343640934232064 >}}
+
+The 💡 statement is this one from https://twitter.com/teej_m/[TJ], also quoting James Densmore:  
+
+{{< tweet 1567347745387872257 >}}
+
+From this I took the point that ETL/ELT is not *just* about _where_ the work gets executed, but *also* about _what_ gets executed, namely the business logic. By extension it is also about *who* is responsible for it (and by further extension, to whom the supporting tools need to be targetted at supporting). 
+
+So the "datawarehouse engineers" of yore would build the pipeline including transformations all in one: 
+
+image::/images/2022/09/etl2.jpg[ELT high level view]
+
+Whereas nowadays we have the pipeline built by one person (perhaps the "data engineer"):
+
+image::/images/2022/09/el2.jpg[EL high level view]
+
+And then the "analytics engineers" (broadly) write code in dbt et al to apply transformations to the data:
+
+image::/images/2022/09/t2.jpg[T high level view]
+
+
 
 ## Reference Architectures
 
-Some things change…and some things stay the same. 9 years ago Oracle published their https://www.oracle.com/technetwork/database/bigdata-appliance/overview/bigdatarefarchitecture-2297765.pdf[reference archicture for Information Management and Big Data]. Whilst bits of it haven't aged so well, the core concept of how data is sourced, stored, and served seems to match up almost exactly with Databricks' https://www.databricks.com/glossary/medallion-architecture["Medallion Architecture"]. Which is a good thing - trends come and go but if as an industry we've settled on a common approach then it makes everyone's lives easier!
+OK, so that's my confusion over ETL/ELT cleared up. It's as it was before, but with added nuance and separate toolsets today. My next point of interest was comparing how published reference architectures for data at a high level compared. 
+
+You see, some things change…and some things stay the same. 9 years ago Oracle published their https://www.oracle.com/technetwork/database/bigdata-appliance/overview/bigdatarefarchitecture-2297765.pdf[reference archicture for Information Management and Big Data]. Whilst bits of it haven't aged so well, the core concept of how data is sourced, stored, and served seems to match up almost exactly with Databricks' https://www.databricks.com/glossary/medallion-architecture["Medallion Architecture"]. Which is a good thing - trends come and go but if as an industry we've settled on a common approach then it makes everyone's lives easier!
 
 
 [cols="1,1"]
@@ -28,28 +90,21 @@ Some things change…and some things stay the same. 9 years ago Oracle published
 
 |`Staging` (or `Raw Data Reservoir`)
 |`Bronze`
-|
+| f
 
 |`Foundation`
 |`Silver`
+|
 
 |`Access & Performance` 
 |`Gold`
+|
 |===
 
 
-image::/images/2022/09/databricks_ma_01.png[Extract from Databricks' Medallion Architecture diagram]
-
-image::/images/2022/09/oracle_ra_01.png[Extract from Oracle's Information Management and Big Data Reference Architecture]
+image::/images/2022/09/db_vs_ora_ra.jpg[link="/images/2022/09/db_vs_ora_ra.jpg",alt="Extract from Oracle's Information Management and Big Data Reference Architecture compared to Databricks' Medallion Architecture diagram"]
 
 See also Oracle's https://www.oracle.com/technetwork/topics/entarch/articles/oea-big-data-guide-1522052.pdf[An Enterprise Architect’s Guide to Big Data - Reference Architecture Overview (March 2016)]
 
 In February 2022 Oracle published https://docs.oracle.com/en/solutions/oci-curated-analysis/index.html[this reference architecture].
 
-## Terminology
-
-ELT / ETL / E(t)LT
-
-Is it about where the work gets done and in what order, or does it suggest something about who and when the work get done by too? 
-
-https://twitter.com/esammer/status/1567547892927442944
