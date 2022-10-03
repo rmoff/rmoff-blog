@@ -841,7 +841,7 @@ main.show(n=1,vertical=True)
 
 * [Introduction](/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/)
 * [Storage and Access](/2022/09/14/data-engineering-in-2022-storage-and-access/)
+* [Architectures & Terminology](/2022/10/02/data-engineering-in-2022-architectures-terminology/)
 * Query & Transformation Engines [TODO]
 * ETL/ELT tools & Orchestration [TODO]
-* Architectures & Terminology [TODO]
 * [Resources](/2022/09/14/data-engineering-resources/)
