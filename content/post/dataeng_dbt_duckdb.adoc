@@ -1,0 +1,345 @@
+---
+draft: false
+title: 'Data Engineering in 2022: Exploring dbt and DuckDB'
+date: "2022-10-07T17:07:04Z"
+// image: "/images/2022/09/h_IMG_8389.jpeg"
+// thumbnail: "/images/2022/09/t_IMG_5037.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Data Engineering
+- dbt
+- DuckDB
+---
+
+The https://github.com/dbt-labs/jaffle_shop_duckdb[DuckDB-based demo of dbt] was interesting to me on two fronts. Firstly, I was looking to try dbt hands-on whilst offline (airplane wifi is sucky/non-existant) so wanted something that would be self-contained locally and not need dbt cloud, BigQuery or any other cloud datawarehouse - and since it uses DuckDB it fits the bill (geddit?!) perfectly. Secondly, DuckDB had appeared on my radar recently and I was keen to check it out. 
+
+The https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md[README] is comprehensive and well-written. Kudos to the author for copy-paste for _all_ the steps needed to get set up including an isolated Python virtual environment. 
+
+My starting point for this was pretty much zero knowledge of dbt, and I used this opportunity to poke around it and understand it better. I could go and read the https://docs.getdbt.com/[docs] and the https://courses.getdbt.com/[training material], but that'd be too obvious ;) 
+
+## Mach Speed
+
+The first execution option of the demo is called _Mach Speed_ and basically has you simply run the whole thing end-to-end with `dbt build` — and that's it.
+
+[source,sql]
+----
+$ dbt build
+16:29:22  Running with dbt=1.1.1
+16:29:22  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:29:22
+16:29:22  Concurrency: 1 threads (target='dev')
+16:29:22
+16:29:22  1 of 28 START seed file main.raw_customers ..................................... [RUN]
+16:29:22  1 of 28 OK loaded seed file main.raw_customers ................................. [INSERT 100 in 0.14s]
+16:29:22  2 of 28 START seed file main.raw_orders ........................................ [RUN]
+16:29:23  2 of 28 OK loaded seed file main.raw_orders .................................... [INSERT 99 in 0.04s]
+16:29:23  3 of 28 START seed file main.raw_payments ...................................... [RUN]
+16:29:23  3 of 28 OK loaded seed file main.raw_payments .................................. [INSERT 113 in 0.04s]
+16:29:23  4 of 28 START view model main.stg_customers .................................... [RUN]
+[…]
+16:29:23  28 of 28 START test unique_orders_order_id ..................................... [RUN]
+16:29:23  28 of 28 PASS unique_orders_order_id ........................................... [PASS in 0.03s]
+16:29:23
+16:29:23  Finished running 3 seeds, 3 view models, 20 tests, 2 table models in 1.16s.
+16:29:23
+16:29:23  Completed successfully
+16:29:23
+16:29:23  Done. PASS=28 WARN=0 ERROR=0 SKIP=0 TOTAL=28
+16:29:34  Error sending message, disabling tracking
+----
+
+That's a lot of things it's just done, with the resulting data loaded into DuckDB. The path of the database file is set in the `profiles.yml` dbt configuration file: 
+
+[source,yaml]
+----
+  outputs:
+    dev:
+      type: duckdb
+      path: 'jaffle_shop.duckdb'
+----
+
+If we check in DuckDB we can see there's data been loaded and transformed in various forms - magic! 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| customers     |
+| orders        |
+| raw_customers |
+| raw_orders    |
+| raw_payments  |
+| stg_customers |
+| stg_orders    |
+| stg_payments  |
++---------------+
+Time: 0.020s
+----
+
+The source of the data is the CSV 'seed' data in `/seed` - the demo's author notes that this is not an idiomatic way to work with dbt and typically the data will already be in the database. 
+
+As a side note - DuckDB has one of the most beautiful interactive CLI tools out of the box for any database that I've used. 
+
+image::/images/2022/10/SCR-20221002-ocy.png[DuckDB CLI]
+
+## Step-by-Step
+
+Whilst the README says very clearly : 
+
+> What this repo is not:
+> A tutorial
+
+I'm still wanting to use it to understand a bit about dbt (and DuckDB), so I'm going to run each step at a time to understand a bit more about what dbt is and what it does. 
+
+To start with I'll delete the DuckDB database that was created above, and then create a new one (since it doesn't exist when I launch the CLI it'll get created). 
+
+[source,bash]
+----
+$ rm jaffle_shop.duckdb
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb>
+----
+
+Confirm that it's empty: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
+Time: 0.006s
+----
+
+Now let's do the first bit of the processing, which is going to be loading the sample data ('seed' data). The help text says you can use `--models` to specify one or more models. I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
+
+[source,bash]
+----
+$ dbt seed --models raw_customers
+16:59:27  Running with dbt=1.1.1
+16:59:28  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:59:28
+16:59:28  Concurrency: 1 threads (target='dev')
+16:59:28
+16:59:28  1 of 1 START seed file main.raw_customers ...................................... [RUN]
+16:59:28  1 of 1 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.08s]
+16:59:28
+16:59:28  Finished running 1 seed in 0.17s.
+16:59:28
+16:59:28  Completed successfully
+16:59:28
+16:59:28  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+16:59:28  Error sending message, disabling tracking
+----
+
+Note the `INSERT 100`. I'm guessing this is what it says on the tin - that it's inserted 100 rows. Let's check DuckDB: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| raw_customers |
++---------------+
+Time: 0.018s
+jaffle_shop.duckdb> select count(*) from raw_customers;
++--------------+
+| count_star() |
++--------------+
+| 100          |
++--------------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb>
+----
+
+The table's been created by dbt, but I'm not sure using what schema definition. Here's how it looks in DuckDB:
+
+[source,sql]
+----
++-----+------------+---------+---------+------------+-------+
+| cid | name       | type    | notnull | dflt_value | pk    |
++-----+------------+---------+---------+------------+-------+
+| 0   | id         | INTEGER | False   | <null>     | False |
+| 1   | first_name | VARCHAR | False   | <null>     | False |
+| 2   | last_name  | VARCHAR | False   | <null>     | False |
++-----+------------+---------+---------+------------+-------+
+----
+
+Perhaps it just takes a best guess from the CSV file - the fields all being nullable would make sense, and the field names match the CSV header
+
+[source,bash]
+----
+$ head -n1 seeds/raw_customers.csv
+id,first_name,last_name
+----
+
+I wonder if dbt will overwrite the data that's there if you re-run the `seed` step. Let's muck about with the data and see what happens. 
+
+[source,sql]
+----
+jaffle_shop.duckdb> update raw_customers set last_name='Astley';
++-------+
+| Count |
++-------+
+| 100   |
++-------+
+1 row in set
+Time: 0.012s
+
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| Astley    | 100          |
++-----------+--------------+
+1 row in set
+Time: 0.011s
+----
+
+Re-run the seed step: 
+
+[source,bash]
+----
+$ dbt seed --models raw_customers
+17:06:50  Running with dbt=1.1.1
+17:06:50  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+17:06:50
+17:06:50  Concurrency: 1 threads (target='dev')
+17:06:50
+17:06:50  1 of 1 START seed file main.raw_customers ...................................... [RUN]
+17:06:51  1 of 1 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.16s]
+17:06:51
+17:06:51  Finished running 1 seed in 0.32s.
+17:06:51
+17:06:51  Completed successfully
+17:06:51
+17:06:51  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+17:06:51  Error sending message, disabling tracking
+----
+
+Check the data: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| Astley    | 100          |
++-----------+--------------+
+1 row in set
+Time: 0.011s
+jaffle_shop.duckdb>
+----
+
+So it looks like it's not changed. BUT…if we re-launch the DuckDB CLI you'll see something different: 
+
+[source,sql]
+----
+jaffle_shop.duckdb>
+Goodbye!
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| P.        | 7            |
+| M.        | 8            |
+| C.        | 7            |
+| R.        | 13           |
+| F.        | 5            |
+| W.        | 11           |
+| S.        | 3            |
+| D.        | 3            |
+| H.        | 11           |
+| K.        | 4            |
+| A.        | 6            |
+| G.        | 4            |
+| B.        | 5            |
+| O.        | 4            |
+| T.        | 2            |
+| J.        | 3            |
+| N.        | 2            |
+| L.        | 1            |
+| E.        | 1            |
++-----------+--------------+
+19 rows in set
+Time: 0.023s
+jaffle_shop.duckdb>
+----
+
+So, the CLI queries the state of the DuckDB file as it was on launch, perhaps? But for sure, we can say that the dbt seed operation will reset the seed data and fix any changes that have been made. 
+
+Let's run the rest of the seed steps (including the one we've been changing): 
+
+[source,bash]
+----
+$ dbt seed
+17:11:30  Running with dbt=1.1.1
+17:11:30  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+17:11:30
+17:11:31  Concurrency: 1 threads (target='dev')
+17:11:31
+17:11:31  1 of 3 START seed file main.raw_customers ...................................... [RUN]
+17:11:31  1 of 3 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.16s]
+17:11:31  2 of 3 START seed file main.raw_orders ......................................... [RUN]
+17:11:31  2 of 3 OK loaded seed file main.raw_orders ..................................... [INSERT 99 in 0.08s]
+17:11:31  3 of 3 START seed file main.raw_payments ....................................... [RUN]
+17:11:31  3 of 3 OK loaded seed file main.raw_payments ................................... [INSERT 113 in 0.06s]
+17:11:31
+17:11:31  Finished running 3 seeds in 0.44s.
+17:11:31
+17:11:31  Completed successfully
+17:11:31
+17:11:31  Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+17:11:31  Error sending message, disabling tracking
+----
+
+Re-launch the DuckDB CLI and observe that the three seed tables now exist and have data in them:
+
+[source,sql]
+----
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| raw_customers |
+| raw_orders    |
+| raw_payments  |
++---------------+
+Time: 0.021s
+
+jaffle_shop.duckdb> select * from raw_payments limit 1;
++----+----------+----------------+--------+
+| id | order_id | payment_method | amount |
++----+----------+----------------+--------+
+| 1  | 1        | credit_card    | 1000   |
++----+----------+----------------+--------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb> select * from raw_customers limit 1;
++----+------------+-----------+
+| id | first_name | last_name |
++----+------------+-----------+
+| 1  | Michael    | P.        |
++----+------------+-----------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb> select * from raw_orders limit 1;
++----+---------+------------+----------+
+| id | user_id | order_date | status   |
++----+---------+------------+----------+
+| 1  | 1       | 2018-01-01 | returned |
++----+---------+------------+----------+
+1 row in set
+Time: 0.067s
+----
+
