@@ -1,5 +1,5 @@
 ---
-draft: false
+draft: true
 title: 'Data Engineering in 2022: Exploring dbt and DuckDB'
 date: "2022-10-07T17:07:04Z"
 // image: "/images/2022/09/h_IMG_8389.jpeg"
@@ -80,7 +80,7 @@ Time: 0.020s
 
 The source of the data is the CSV 'seed' data in `/seed` - the demo's author notes that this is not an idiomatic way to work with dbt and typically the data will already be in the database. 
 
-As a side note - DuckDB has one of the most beautiful interactive CLI tools out of the box for any database that I've used. 
+As a side note - make sure to check out https://github.com/dbcli/duckcli[duckcli], which gives DuckDB one of the most beautiful interactive CLI tools out of the box for any database that I've used. 
 
 image::/images/2022/10/SCR-20221002-ocy.png[DuckDB CLI]
 
@@ -91,7 +91,7 @@ Whilst the README says very clearly :
 > What this repo is not:
 > A tutorial
 
-I'm still wanting to use it to understand a bit about dbt (and DuckDB), so I'm going to run each step at a time to understand a bit more about what dbt is and what it does. 
+I'm still wanting to use it to understand a bit about dbt (and DuckDB), so I'm going to https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md#running-build-steps-independently[run each step at a time] to understand a bit more about what dbt is and what it does. The collection of steps here is what https://docs.getdbt.com/reference/commands/build[`dbt build`] executes automagically for you.
 
 To start with I'll delete the DuckDB database that was created above, and then create a new one (since it doesn't exist when I launch the CLI it'll get created). 
 
@@ -112,7 +112,36 @@ jaffle_shop.duckdb> \dt
 Time: 0.006s
 ----
 
-Now let's do the first bit of the processing, which is going to be loading the sample data ('seed' data). The help text says you can use `--models` to specify one or more models. I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
+### `dbt seed`
+
+Let's do the first bit of the processing, which is going to be loading the sample data ('seed' data). I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
+
+[NOTE]
+====
+The docs are rather good. Instead of just guessing I could look up https://docs.getdbt.com/reference/commands/seed[`dbt seed`] and see that it says: 
+
+> The `dbt seed` command will load `csv` files located in the `seed-paths` directory of your dbt project into your data warehouse.
+
+`seed-paths` is defined in `./dbt_project.yml`: 
+
+[source,yaml]
+----
+seed-paths: ["seeds"]
+----
+====
+
+The help text says you can use `--models` to specify one or more models. There are three seed files: 
+
+[source,bash]
+----
+$ ls -l seeds
+total 24
+-rw-r--r--  1 rmoff  staff  1302 27 Sep 21:33 raw_customers.csv
+-rw-r--r--  1 rmoff  staff  2723 27 Sep 21:33 raw_orders.csv
+-rw-r--r--  1 rmoff  staff  2560 27 Sep 21:33 raw_payments.csv
+----
+
+So lets take one of the CSV filenames and use that:
 
 [source,bash]
 ----
@@ -273,7 +302,7 @@ Time: 0.023s
 jaffle_shop.duckdb>
 ----
 
-So, the CLI queries the state of the DuckDB file as it was on launch, perhaps? But for sure, we can say that the dbt seed operation will reset the seed data and fix any changes that have been made. 
+So, the CLI queries the state of the DuckDB file as it was on launch, perhaps? But for sure, we can say that the `dbt seed` operation will reset the seed data and fix any changes that have been made. 
 
 Let's run the rest of the seed steps (including the one we've been changing): 
 
@@ -341,5 +370,231 @@ jaffle_shop.duckdb> select * from raw_orders limit 1;
 +----+---------+------------+----------+
 1 row in set
 Time: 0.067s
+----
+
+Using DBeaver you can open the DuckDB database and visualise the tables with their FK relationships (I added these; they're not defined by default)
+
+image::/images/2022/10/SCR-20221011-n9u.png[DuckDB ERD]
+
+### `dbt run`
+
+https://docs.getdbt.com/reference/commands/run[The docs] for `dbt run` say: 
+
+> `dbt run` executes compiled sql model files against the current `target` database
+
+Which makes me think it would be interesting to first check out https://docs.getdbt.com/reference/commands/compile[`dbt compile`]. In turn the docs for this say: 
+
+> `dbt compile` generates executable SQL from source `model`, `test`, and `analysis` files. You can find these compiled SQL files in the `target/` directory of your dbt project.
+
+I noted that `target/` is in the `.gitignore` so I figure can be deleted (from being created in the  `dbt build` above) and then observed to see the output in each step. 
+
+[source,bash]
+----
+$ rm -rf target
+----
+
+Whilst there are three source file types described above (`model`, `test`, and `analysis`) I only see `/models` present (the paths, as before, are defined in `dbt_project.yml`): 
+
+[source,bash]
+----
+$ ls -l models tests analysis
+ls: analysis: No such file or directory
+ls: tests: No such file or directory
+models:
+total 40
+-rw-r--r--  1 rmoff  staff  1195 27 Sep 21:33 customers.sql
+-rw-r--r--  1 rmoff  staff  1068 27 Sep 21:33 docs.md
+-rw-r--r--  1 rmoff  staff   970 27 Sep 21:33 orders.sql
+-rw-r--r--  1 rmoff  staff   272 27 Sep 21:33 overview.md
+-rw-r--r--  1 rmoff  staff  2311 27 Sep 21:33 schema.yml
+drwxr-xr-x  6 rmoff  staff   192 27 Sep 21:33 staging
+----
+
+Let's compile one of the models. If I take a look at the top of `customers.sql` it's clearly referencing something else: 
+
+[source,sql]
+----
+$ head models/customers.sql
+with customers as (
+
+    select * from {{ ref('stg_customers') }}
+
+),
+[…]
+----
+
+So where's `stg_customers` defined? In `models/staging/stg_customers.sql`: 
+
+[source,sql]
+----
+with source as (
+
+    {#-
+    Normally we would select from the table here, but we are using seeds to load
+    our data in this project
+    #}
+    select * from {{ ref('raw_customers') }}
+
+),
+
+renamed as (
+
+    select
+        id as customer_id,
+        first_name,
+        last_name
+
+    from source
+
+)
+
+select * from renamed
+----
+
+So this pulls from the `raw_customers` that was loaded in the seed step and changes a column name (`id` to `customer_id`). Let's `dbt compile` it and see what happens. 
+
+[source,bash]
+----
+$ dbt compile --model models/staging/stg_customers.sql
+16:14:53  Running with dbt=1.1.1
+16:14:53  Partial parse save file not found. Starting full parse.
+16:14:54  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:14:54
+16:14:54  Concurrency: 1 threads (target='dev')
+16:14:54
+16:14:54  Done.
+----
+
+If we head over to `target/` (which we removed before the compile, so whatever we see was created by this step) we see a bunch of new content: 
+
+[source,bash]
+----
+$ ls -lR target
+total 984
+drwxr-xr-x  3 rmoff  staff      96 11 Oct 17:14 compiled
+-rw-r--r--  1 rmoff  staff   23490 11 Oct 17:14 graph.gpickle
+-rw-r--r--  1 rmoff  staff  239522 11 Oct 17:14 manifest.json
+-rw-r--r--  1 rmoff  staff  232476 11 Oct 17:14 partial_parse.msgpack
+-rw-r--r--  1 rmoff  staff    2077 11 Oct 17:14 run_results.json
+
+target/compiled:
+total 0
+drwxr-xr-x  3 rmoff  staff  96 11 Oct 17:14 jaffle_shop
+
+target/compiled/jaffle_shop:
+total 0
+drwxr-xr-x  3 rmoff  staff  96 11 Oct 17:14 models
+
+target/compiled/jaffle_shop/models:
+total 0
+drwxr-xr-x  4 rmoff  staff  128 11 Oct 17:14 staging
+
+target/compiled/jaffle_shop/models/staging:
+total 8
+drwxr-xr-x  4 rmoff  staff  128 11 Oct 17:14 schema.yml
+-rw-r--r--  1 rmoff  staff  202 11 Oct 17:14 stg_customers.sql
+
+target/compiled/jaffle_shop/models/staging/schema.yml:
+total 16
+-rw-r--r--  1 rmoff  staff   96 11 Oct 17:14 not_null_stg_customers_customer_id.sql
+-rw-r--r--  1 rmoff  staff  187 11 Oct 17:14 unique_stg_customers_customer_id.sql
+----
+
+If we look at the compiled version of the `staging/stg_customers.sql` model that we saw above you'll see the reference is now resolved, with the rest of the file remaining the same: 
+
+[source,sql]
+----
+with source as (
+    select * from "main"."main"."raw_customers"
+
+),
+
+renamed as (
+
+    select
+        id as customer_id,
+        first_name,
+        last_name
+
+    from source
+
+)
+
+select * from renamed
+----
+
+Another SQL file that you'll notice has appeared is under `target/compiled/jaffle_shop/models/staging/schema.yml` (yes it's a folder, even if its got a `.yml` extension, welcome to UNIX):
+
+[source,bash]
+----
+$ ls -lR target/compiled/jaffle_shop/models/staging/schema.yml
+total 16
+-rw-r--r--  1 rmoff  staff   96 11 Oct 17:14 not_null_stg_customers_customer_id.sql
+-rw-r--r--  1 rmoff  staff  187 11 Oct 17:14 unique_stg_customers_customer_id.sql
+----
+
+These two SQL files look like they're to check two different constraints (NOT NULL and uniqueness): 
+
+[source,sql]
+----
+$ head target/compiled/jaffle_shop/models/staging/schema.yml/*
+==> target/compiled/jaffle_shop/models/staging/schema.yml/not_null_stg_customers_customer_id.sql <==
+
+select customer_id
+from "main"."main"."stg_customers"
+where customer_id is null
+
+==> target/compiled/jaffle_shop/models/staging/schema.yml/unique_stg_customers_customer_id.sql <==
+
+select
+    customer_id as unique_field,
+    count(*) as n_records
+
+from "main"."main"."stg_customers"
+where customer_id is not null
+----
+
+But where are these constraints defined? It's not in the `staging/stg_customers.sql` because we saw that above and there was no DDL there. Instead the clue is in the name of the folder - `staging/schema.yml`. If we head back to the `models` folder and look at `staging/schema.yml` we'll see the constraints defined in YAML: 
+
+[source,yaml]
+----
+$ cat models/staging/schema.yml
+version: 2
+
+models:
+  - name: stg_customers
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+[…]
+----
+
+So this is starting to come together (_it would still be easier to learn if I just read the docs instead of reverse engineering this stuff…but that's how I learn by poking things and see what yelps 🤷‍♂️_): the `schema.yml` defines the names of the objects in a schema folder (my assumption is that `staging` is seen as a schema, and the parent folder under `models` another schema), and then the `.sql` files in that folder define the objects themselves and their derivations from their source. The source is referenced and resolved and compilation time. 
+
+The only other files under `target/` at this point look like runtime info, metadata, and other such stuff. For example, here's `run_results.json`:
+
+[source,javascript]
+----
+$ jq '.' target/run_results.json
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v4.json",
+    "dbt_version": "1.1.1",
+    "generated_at": "2022-10-11T16:14:54.519780Z",
+    "invocation_id": "3363ffe7-90aa-4fc1-9a4b-306b180414b8",
+    "env": {}
+  },
+  "results": [
+    {
+      "status": "success",
+      "timing": [
+        {
+          "name": "compile",
+          "started_at": "2022-10-11T16:14:54.419911Z",
+          "completed_at": "2022-10-11T16:14:54.423616Z"
+        },
+[…]
 ----
 
