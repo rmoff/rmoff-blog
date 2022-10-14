@@ -1,0 +1,600 @@
+---
+draft: true
+title: 'Data Engineering in 2022: Exploring dbt and DuckDB'
+date: "2022-10-07T17:07:04Z"
+// image: "/images/2022/09/h_IMG_8389.jpeg"
+// thumbnail: "/images/2022/09/t_IMG_5037.jpeg"
+credit: "https://twitter.com/rmoff/"
+categories:
+- Data Engineering
+- dbt
+- DuckDB
+---
+
+The https://github.com/dbt-labs/jaffle_shop_duckdb[DuckDB-based demo of dbt] was interesting to me on two fronts. Firstly, I was looking to try dbt hands-on whilst offline (airplane wifi is sucky/non-existant) so wanted something that would be self-contained locally and not need dbt cloud, BigQuery or any other cloud datawarehouse - and since it uses DuckDB it fits the bill (geddit?!) perfectly. Secondly, DuckDB had appeared on my radar recently and I was keen to check it out. 
+
+The https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md[README] is comprehensive and well-written. Kudos to the author for copy-paste for _all_ the steps needed to get set up including an isolated Python virtual environment. 
+
+My starting point for this was pretty much zero knowledge of dbt, and I used this opportunity to poke around it and understand it better. I could go and read the https://docs.getdbt.com/[docs] and the https://courses.getdbt.com/[training material], but that'd be too obvious ;) 
+
+## Mach Speed
+
+The first execution option of the demo is called _Mach Speed_ and basically has you simply run the whole thing end-to-end with `dbt build` — and that's it.
+
+[source,sql]
+----
+$ dbt build
+16:29:22  Running with dbt=1.1.1
+16:29:22  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:29:22
+16:29:22  Concurrency: 1 threads (target='dev')
+16:29:22
+16:29:22  1 of 28 START seed file main.raw_customers ..................................... [RUN]
+16:29:22  1 of 28 OK loaded seed file main.raw_customers ................................. [INSERT 100 in 0.14s]
+16:29:22  2 of 28 START seed file main.raw_orders ........................................ [RUN]
+16:29:23  2 of 28 OK loaded seed file main.raw_orders .................................... [INSERT 99 in 0.04s]
+16:29:23  3 of 28 START seed file main.raw_payments ...................................... [RUN]
+16:29:23  3 of 28 OK loaded seed file main.raw_payments .................................. [INSERT 113 in 0.04s]
+16:29:23  4 of 28 START view model main.stg_customers .................................... [RUN]
+[…]
+16:29:23  28 of 28 START test unique_orders_order_id ..................................... [RUN]
+16:29:23  28 of 28 PASS unique_orders_order_id ........................................... [PASS in 0.03s]
+16:29:23
+16:29:23  Finished running 3 seeds, 3 view models, 20 tests, 2 table models in 1.16s.
+16:29:23
+16:29:23  Completed successfully
+16:29:23
+16:29:23  Done. PASS=28 WARN=0 ERROR=0 SKIP=0 TOTAL=28
+16:29:34  Error sending message, disabling tracking
+----
+
+That's a lot of things it's just done, with the resulting data loaded into DuckDB. The path of the database file is set in the `profiles.yml` dbt configuration file: 
+
+[source,yaml]
+----
+  outputs:
+    dev:
+      type: duckdb
+      path: 'jaffle_shop.duckdb'
+----
+
+If we check in DuckDB we can see there's data been loaded and transformed in various forms - magic! 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| customers     |
+| orders        |
+| raw_customers |
+| raw_orders    |
+| raw_payments  |
+| stg_customers |
+| stg_orders    |
+| stg_payments  |
++---------------+
+Time: 0.020s
+----
+
+The source of the data is the CSV 'seed' data in `/seed` - the demo's author notes that this is not an idiomatic way to work with dbt and typically the data will already be in the database. 
+
+As a side note - make sure to check out https://github.com/dbcli/duckcli[duckcli], which gives DuckDB one of the most beautiful interactive CLI tools out of the box for any database that I've used. 
+
+image::/images/2022/10/SCR-20221002-ocy.png[DuckDB CLI]
+
+## Step-by-Step
+
+Whilst the README says very clearly : 
+
+> What this repo is not:
+> A tutorial
+
+I'm still wanting to use it to understand a bit about dbt (and DuckDB), so I'm going to https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md#running-build-steps-independently[run each step at a time] to understand a bit more about what dbt is and what it does. The collection of steps here is what https://docs.getdbt.com/reference/commands/build[`dbt build`] executes automagically for you.
+
+To start with I'll delete the DuckDB database that was created above, and then create a new one (since it doesn't exist when I launch the CLI it'll get created). 
+
+[source,bash]
+----
+$ rm jaffle_shop.duckdb
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb>
+----
+
+Confirm that it's empty: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
+Time: 0.006s
+----
+
+### `dbt seed`
+
+Let's do the first bit of the processing, which is going to be loading the sample data ('seed' data). I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
+
+[NOTE]
+====
+The docs are rather good. Instead of just guessing I could look up https://docs.getdbt.com/reference/commands/seed[`dbt seed`] and see that it says: 
+
+> The `dbt seed` command will load `csv` files located in the `seed-paths` directory of your dbt project into your data warehouse.
+
+`seed-paths` is defined in `./dbt_project.yml`: 
+
+[source,yaml]
+----
+seed-paths: ["seeds"]
+----
+====
+
+The help text says you can use `--models` to specify one or more models. There are three seed files: 
+
+[source,bash]
+----
+$ ls -l seeds
+total 24
+-rw-r--r--  1 rmoff  staff  1302 27 Sep 21:33 raw_customers.csv
+-rw-r--r--  1 rmoff  staff  2723 27 Sep 21:33 raw_orders.csv
+-rw-r--r--  1 rmoff  staff  2560 27 Sep 21:33 raw_payments.csv
+----
+
+So lets take one of the CSV filenames and use that:
+
+[source,bash]
+----
+$ dbt seed --models raw_customers
+16:59:27  Running with dbt=1.1.1
+16:59:28  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:59:28
+16:59:28  Concurrency: 1 threads (target='dev')
+16:59:28
+16:59:28  1 of 1 START seed file main.raw_customers ...................................... [RUN]
+16:59:28  1 of 1 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.08s]
+16:59:28
+16:59:28  Finished running 1 seed in 0.17s.
+16:59:28
+16:59:28  Completed successfully
+16:59:28
+16:59:28  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+16:59:28  Error sending message, disabling tracking
+----
+
+Note the `INSERT 100`. I'm guessing this is what it says on the tin - that it's inserted 100 rows. Let's check DuckDB: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| raw_customers |
++---------------+
+Time: 0.018s
+jaffle_shop.duckdb> select count(*) from raw_customers;
++--------------+
+| count_star() |
++--------------+
+| 100          |
++--------------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb>
+----
+
+The table's been created by dbt, but I'm not sure using what schema definition. Here's how it looks in DuckDB:
+
+[source,sql]
+----
++-----+------------+---------+---------+------------+-------+
+| cid | name       | type    | notnull | dflt_value | pk    |
++-----+------------+---------+---------+------------+-------+
+| 0   | id         | INTEGER | False   | <null>     | False |
+| 1   | first_name | VARCHAR | False   | <null>     | False |
+| 2   | last_name  | VARCHAR | False   | <null>     | False |
++-----+------------+---------+---------+------------+-------+
+----
+
+Perhaps it just takes a best guess from the CSV file - the fields all being nullable would make sense, and the field names match the CSV header
+
+[source,bash]
+----
+$ head -n1 seeds/raw_customers.csv
+id,first_name,last_name
+----
+
+I wonder if dbt will overwrite the data that's there if you re-run the `seed` step. Let's muck about with the data and see what happens. 
+
+[source,sql]
+----
+jaffle_shop.duckdb> update raw_customers set last_name='Astley';
++-------+
+| Count |
++-------+
+| 100   |
++-------+
+1 row in set
+Time: 0.012s
+
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| Astley    | 100          |
++-----------+--------------+
+1 row in set
+Time: 0.011s
+----
+
+Re-run the seed step: 
+
+[source,bash]
+----
+$ dbt seed --models raw_customers
+17:06:50  Running with dbt=1.1.1
+17:06:50  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+17:06:50
+17:06:50  Concurrency: 1 threads (target='dev')
+17:06:50
+17:06:50  1 of 1 START seed file main.raw_customers ...................................... [RUN]
+17:06:51  1 of 1 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.16s]
+17:06:51
+17:06:51  Finished running 1 seed in 0.32s.
+17:06:51
+17:06:51  Completed successfully
+17:06:51
+17:06:51  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+17:06:51  Error sending message, disabling tracking
+----
+
+Check the data: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| Astley    | 100          |
++-----------+--------------+
+1 row in set
+Time: 0.011s
+jaffle_shop.duckdb>
+----
+
+So it looks like it's not changed. BUT…if we re-launch the DuckDB CLI you'll see something different: 
+
+[source,sql]
+----
+jaffle_shop.duckdb>
+Goodbye!
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb> select last_name,count(*) from raw_customers group by last_name;
++-----------+--------------+
+| last_name | count_star() |
++-----------+--------------+
+| P.        | 7            |
+| M.        | 8            |
+| C.        | 7            |
+| R.        | 13           |
+| F.        | 5            |
+| W.        | 11           |
+| S.        | 3            |
+| D.        | 3            |
+| H.        | 11           |
+| K.        | 4            |
+| A.        | 6            |
+| G.        | 4            |
+| B.        | 5            |
+| O.        | 4            |
+| T.        | 2            |
+| J.        | 3            |
+| N.        | 2            |
+| L.        | 1            |
+| E.        | 1            |
++-----------+--------------+
+19 rows in set
+Time: 0.023s
+jaffle_shop.duckdb>
+----
+
+So, the CLI queries the state of the DuckDB file as it was on launch, perhaps? But for sure, we can say that the `dbt seed` operation will reset the seed data and fix any changes that have been made. 
+
+Let's run the rest of the seed steps (including the one we've been changing): 
+
+[source,bash]
+----
+$ dbt seed
+17:11:30  Running with dbt=1.1.1
+17:11:30  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+17:11:30
+17:11:31  Concurrency: 1 threads (target='dev')
+17:11:31
+17:11:31  1 of 3 START seed file main.raw_customers ...................................... [RUN]
+17:11:31  1 of 3 OK loaded seed file main.raw_customers .................................. [INSERT 100 in 0.16s]
+17:11:31  2 of 3 START seed file main.raw_orders ......................................... [RUN]
+17:11:31  2 of 3 OK loaded seed file main.raw_orders ..................................... [INSERT 99 in 0.08s]
+17:11:31  3 of 3 START seed file main.raw_payments ....................................... [RUN]
+17:11:31  3 of 3 OK loaded seed file main.raw_payments ................................... [INSERT 113 in 0.06s]
+17:11:31
+17:11:31  Finished running 3 seeds in 0.44s.
+17:11:31
+17:11:31  Completed successfully
+17:11:31
+17:11:31  Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+17:11:31  Error sending message, disabling tracking
+----
+
+Re-launch the DuckDB CLI and observe that the three seed tables now exist and have data in them:
+
+[source,sql]
+----
+$ duckcli jaffle_shop.duckdb
+Version: 0.0.1
+GitHub: https://github.com/dbcli/duckcli
+jaffle_shop.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| raw_customers |
+| raw_orders    |
+| raw_payments  |
++---------------+
+Time: 0.021s
+
+jaffle_shop.duckdb> select * from raw_payments limit 1;
++----+----------+----------------+--------+
+| id | order_id | payment_method | amount |
++----+----------+----------------+--------+
+| 1  | 1        | credit_card    | 1000   |
++----+----------+----------------+--------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb> select * from raw_customers limit 1;
++----+------------+-----------+
+| id | first_name | last_name |
++----+------------+-----------+
+| 1  | Michael    | P.        |
++----+------------+-----------+
+1 row in set
+Time: 0.007s
+jaffle_shop.duckdb> select * from raw_orders limit 1;
++----+---------+------------+----------+
+| id | user_id | order_date | status   |
++----+---------+------------+----------+
+| 1  | 1       | 2018-01-01 | returned |
++----+---------+------------+----------+
+1 row in set
+Time: 0.067s
+----
+
+Using DBeaver you can open the DuckDB database and visualise the tables with their FK relationships (I added these; they're not defined by default)
+
+image::/images/2022/10/SCR-20221011-n9u.png[DuckDB ERD]
+
+### `dbt run`
+
+https://docs.getdbt.com/reference/commands/run[The docs] for `dbt run` say: 
+
+> `dbt run` executes compiled sql model files against the current `target` database
+
+Which makes me think it would be interesting to first check out https://docs.getdbt.com/reference/commands/compile[`dbt compile`]. In turn the docs for this say: 
+
+> `dbt compile` generates executable SQL from source `model`, `test`, and `analysis` files. You can find these compiled SQL files in the `target/` directory of your dbt project.
+
+I noted that `target/` is in the `.gitignore` so I figure can be deleted (from being created in the  `dbt build` above) and then observed to see the output in each step. 
+
+[source,bash]
+----
+$ rm -rf target
+----
+
+Whilst there are three source file types described above (`model`, `test`, and `analysis`) I only see `/models` present (the paths, as before, are defined in `dbt_project.yml`): 
+
+[source,bash]
+----
+$ ls -l models tests analysis
+ls: analysis: No such file or directory
+ls: tests: No such file or directory
+models:
+total 40
+-rw-r--r--  1 rmoff  staff  1195 27 Sep 21:33 customers.sql
+-rw-r--r--  1 rmoff  staff  1068 27 Sep 21:33 docs.md
+-rw-r--r--  1 rmoff  staff   970 27 Sep 21:33 orders.sql
+-rw-r--r--  1 rmoff  staff   272 27 Sep 21:33 overview.md
+-rw-r--r--  1 rmoff  staff  2311 27 Sep 21:33 schema.yml
+drwxr-xr-x  6 rmoff  staff   192 27 Sep 21:33 staging
+----
+
+Let's compile one of the models. If I take a look at the top of `customers.sql` it's clearly referencing something else: 
+
+[source,sql]
+----
+$ head models/customers.sql
+with customers as (
+
+    select * from {{ ref('stg_customers') }}
+
+),
+[…]
+----
+
+So where's `stg_customers` defined? In `models/staging/stg_customers.sql`: 
+
+[source,sql]
+----
+with source as (
+
+    {#-
+    Normally we would select from the table here, but we are using seeds to load
+    our data in this project
+    #}
+    select * from {{ ref('raw_customers') }}
+
+),
+
+renamed as (
+
+    select
+        id as customer_id,
+        first_name,
+        last_name
+
+    from source
+
+)
+
+select * from renamed
+----
+
+So this pulls from the `raw_customers` that was loaded in the seed step and changes a column name (`id` to `customer_id`). Let's `dbt compile` it and see what happens. 
+
+[source,bash]
+----
+$ dbt compile --model models/staging/stg_customers.sql
+16:14:53  Running with dbt=1.1.1
+16:14:53  Partial parse save file not found. Starting full parse.
+16:14:54  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+16:14:54
+16:14:54  Concurrency: 1 threads (target='dev')
+16:14:54
+16:14:54  Done.
+----
+
+If we head over to `target/` (which we removed before the compile, so whatever we see was created by this step) we see a bunch of new content: 
+
+[source,bash]
+----
+$ ls -lR target
+total 984
+drwxr-xr-x  3 rmoff  staff      96 11 Oct 17:14 compiled
+-rw-r--r--  1 rmoff  staff   23490 11 Oct 17:14 graph.gpickle
+-rw-r--r--  1 rmoff  staff  239522 11 Oct 17:14 manifest.json
+-rw-r--r--  1 rmoff  staff  232476 11 Oct 17:14 partial_parse.msgpack
+-rw-r--r--  1 rmoff  staff    2077 11 Oct 17:14 run_results.json
+
+target/compiled:
+total 0
+drwxr-xr-x  3 rmoff  staff  96 11 Oct 17:14 jaffle_shop
+
+target/compiled/jaffle_shop:
+total 0
+drwxr-xr-x  3 rmoff  staff  96 11 Oct 17:14 models
+
+target/compiled/jaffle_shop/models:
+total 0
+drwxr-xr-x  4 rmoff  staff  128 11 Oct 17:14 staging
+
+target/compiled/jaffle_shop/models/staging:
+total 8
+drwxr-xr-x  4 rmoff  staff  128 11 Oct 17:14 schema.yml
+-rw-r--r--  1 rmoff  staff  202 11 Oct 17:14 stg_customers.sql
+
+target/compiled/jaffle_shop/models/staging/schema.yml:
+total 16
+-rw-r--r--  1 rmoff  staff   96 11 Oct 17:14 not_null_stg_customers_customer_id.sql
+-rw-r--r--  1 rmoff  staff  187 11 Oct 17:14 unique_stg_customers_customer_id.sql
+----
+
+If we look at the compiled version of the `staging/stg_customers.sql` model that we saw above you'll see the reference is now resolved, with the rest of the file remaining the same: 
+
+[source,sql]
+----
+with source as (
+    select * from "main"."main"."raw_customers"
+
+),
+
+renamed as (
+
+    select
+        id as customer_id,
+        first_name,
+        last_name
+
+    from source
+
+)
+
+select * from renamed
+----
+
+Another SQL file that you'll notice has appeared is under `target/compiled/jaffle_shop/models/staging/schema.yml` (yes it's a folder, even if its got a `.yml` extension, welcome to UNIX):
+
+[source,bash]
+----
+$ ls -lR target/compiled/jaffle_shop/models/staging/schema.yml
+total 16
+-rw-r--r--  1 rmoff  staff   96 11 Oct 17:14 not_null_stg_customers_customer_id.sql
+-rw-r--r--  1 rmoff  staff  187 11 Oct 17:14 unique_stg_customers_customer_id.sql
+----
+
+These two SQL files look like they're to check two different constraints (NOT NULL and uniqueness): 
+
+[source,sql]
+----
+$ head target/compiled/jaffle_shop/models/staging/schema.yml/*
+==> target/compiled/jaffle_shop/models/staging/schema.yml/not_null_stg_customers_customer_id.sql <==
+
+select customer_id
+from "main"."main"."stg_customers"
+where customer_id is null
+
+==> target/compiled/jaffle_shop/models/staging/schema.yml/unique_stg_customers_customer_id.sql <==
+
+select
+    customer_id as unique_field,
+    count(*) as n_records
+
+from "main"."main"."stg_customers"
+where customer_id is not null
+----
+
+But where are these constraints defined? It's not in the `staging/stg_customers.sql` because we saw that above and there was no DDL there. Instead the clue is in the name of the folder - `staging/schema.yml`. If we head back to the `models` folder and look at `staging/schema.yml` we'll see the constraints defined in YAML: 
+
+[source,yaml]
+----
+$ cat models/staging/schema.yml
+version: 2
+
+models:
+  - name: stg_customers
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+[…]
+----
+
+So this is starting to come together (_it would still be easier to learn if I just read the docs instead of reverse engineering this stuff…but that's how I learn by poking things and see what yelps 🤷‍♂️_): the `schema.yml` defines the names of the objects in a schema folder (my assumption is that `staging` is seen as a schema, and the parent folder under `models` another schema), and then the `.sql` files in that folder define the objects themselves and their derivations from their source. The source is referenced and resolved and compilation time. 
+
+The only other files under `target/` at this point look like runtime info, metadata, and other such stuff. For example, here's `run_results.json`:
+
+[source,javascript]
+----
+$ jq '.' target/run_results.json
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v4.json",
+    "dbt_version": "1.1.1",
+    "generated_at": "2022-10-11T16:14:54.519780Z",
+    "invocation_id": "3363ffe7-90aa-4fc1-9a4b-306b180414b8",
+    "env": {}
+  },
+  "results": [
+    {
+      "status": "success",
+      "timing": [
+        {
+          "name": "compile",
+          "started_at": "2022-10-11T16:14:54.419911Z",
+          "completed_at": "2022-10-11T16:14:54.423616Z"
+        },
+[…]
+----
+

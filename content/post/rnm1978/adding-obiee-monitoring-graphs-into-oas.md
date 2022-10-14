@@ -18,7 +18,10 @@ This final article describes how to bolt on to OAS a simple web page hosting the
 
 ## The webpage
 
-This is just an old-school basic HTML page, with a meta-refresh tag (which note that Chrome doesn't work with) and img tags: \[sourcecode language="html"\] <html> <meta http-equiv="refresh" content="60"> <head> <title>OBIEE Servers</title> </head> <body> <img src="server01.png"></br> <img src="server02.png"></br> </body> </html> \[/sourcecode\]
+This is just an old-school basic HTML page, with a meta-refresh tag (which note that Chrome doesn't work with) and img tags: 
+```
+<html> <meta http-equiv="refresh" content="60"> <head> <title>OBIEE Servers</title> </head> <body> <img src="server01.png"></br> <img src="server02.png"></br> </body> </html> 
+```
 
 I shan't patronise you nor embarrass myself with my rusty HTML skills any further - I'll leave you how to build your dashboard how you want it.
 
