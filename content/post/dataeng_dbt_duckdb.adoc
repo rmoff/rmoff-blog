@@ -1,9 +1,9 @@
 ---
 draft: true
-title: 'Data Engineering in 2022: Exploring dbt and DuckDB'
-date: "2022-10-07T17:07:04Z"
-// image: "/images/2022/09/h_IMG_8389.jpeg"
-// thumbnail: "/images/2022/09/t_IMG_5037.jpeg"
+title: 'Data Engineering in 2022: Exploring dbt with DuckDB'
+date: "2022-10-20T17:07:04Z"
+image: "/images/2022/10/h_IMG_8370.jpeg"
+thumbnail: "/images/2022/10/t_IMG_8724.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - Data Engineering
@@ -11,9 +11,9 @@ categories:
 - DuckDB
 ---
 
-The https://github.com/dbt-labs/jaffle_shop_duckdb[DuckDB-based demo of dbt] was interesting to me on two fronts. Firstly, I was looking to try dbt hands-on whilst offline (airplane wifi is sucky/non-existant) so wanted something that would be self-contained locally and not need dbt cloud, BigQuery or any other cloud datawarehouse - and since it uses DuckDB it fits the bill (geddit?!) perfectly. Secondly, DuckDB had appeared on my radar recently and I was keen to check it out. 
+The https://github.com/dbt-labs/jaffle_shop_duckdb[DuckDB-based demo of dbt] was interesting to me on two fronts. Firstly, I was looking to try dbt hands-on whilst offline (airplane wifi is sucky/non-existant) so wanted something that would be self-contained locally and not need dbt cloud, BigQuery or any other cloud datawarehouse - and since it uses DuckDB it fits the bill (geddit?!) perfectly. Secondly, https://duckdb.org/[DuckDB] had appeared on my radar recently and I was keen to check it out. I had a play around with it link:/2022/10/14/current-22-session-analysis-with-duckdb-and-jupyter-notebook/[in a notebook previously], so this is my second article using it.
 
-The https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md[README] is comprehensive and well-written. Kudos to the author for copy-paste for _all_ the steps needed to get set up including an isolated Python virtual environment. 
+The https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/README.md[README] is comprehensive and well-written. Kudos to the author for providing copy-paste for _all_ the steps needed to get set up including an isolated Python virtual environment. 
 
 My starting point for this was pretty much zero knowledge of dbt, and I used this opportunity to poke around it and understand it better. I could go and read the https://docs.getdbt.com/[docs] and the https://courses.getdbt.com/[training material], but that'd be too obvious ;) 
 
@@ -114,7 +114,7 @@ Time: 0.006s
 
 ### `dbt seed`
 
-Let's do the first bit of the processing, which is going to be loading the sample data ('seed' data). I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
+Let's do the first bit of the processing (as shown in the `build` output above), which is going to be loading the sample data ('seed' data). I'm not 100% sure of the definition of a *model* at this point but I'm going to guess it's the CSV files. 
 
 [NOTE]
 ====
@@ -376,13 +376,17 @@ Using DBeaver you can open the DuckDB database and visualise the tables with the
 
 image::/images/2022/10/SCR-20221011-n9u.png[DuckDB ERD]
 
-### `dbt run`
+'''
 
-https://docs.getdbt.com/reference/commands/run[The docs] for `dbt run` say: 
+The next bit we'll poke at, based on the https://docs.getdbt.com/reference/commands/build[`build`] docs is `dbt run`. 
+
+But before we quite get to that, https://docs.getdbt.com/reference/commands/run[the docs] for `dbt run` say in turn: 
 
 > `dbt run` executes compiled sql model files against the current `target` database
 
-Which makes me think it would be interesting to first check out https://docs.getdbt.com/reference/commands/compile[`dbt compile`]. In turn the docs for this say: 
+Which makes me think it would be interesting to first check out https://docs.getdbt.com/reference/commands/compile[`dbt compile`]. 
+
+### `dbt compile` 
 
 > `dbt compile` generates executable SQL from source `model`, `test`, and `analysis` files. You can find these compiled SQL files in the `target/` directory of your dbt project.
 
@@ -500,7 +504,7 @@ total 16
 -rw-r--r--  1 rmoff  staff  187 11 Oct 17:14 unique_stg_customers_customer_id.sql
 ----
 
-If we look at the compiled version of the `staging/stg_customers.sql` model that we saw above you'll see the reference is now resolved, with the rest of the file remaining the same: 
+If we look at the compiled version of the `compiled/jaffle_shop/models/staging/stg_customers.sql` model that we saw above you'll see the reference is now resolved, with the rest of the file remaining the same: 
 
 [source,sql]
 ----
@@ -597,4 +601,508 @@ $ jq '.' target/run_results.json
         },
 […]
 ----
+
+### `dbt run`
+
+Having poked around what goes on during compilation, let's look at https://docs.getdbt.com/reference/commands/run[`dbt run`]. Before I do that I'll just double-check the state of the database first: 
+
+[source,bash]
+----
+$ duckdb jaffle_shop.duckdb -c show
+┌───────────────┬────────────────────────────────────────┬──────────────────────────────────────┬───────────┐
+│  table_name   │              column_names              │             column_types             │ temporary │
+├───────────────┼────────────────────────────────────────┼──────────────────────────────────────┼───────────┤
+│ raw_customers │ [first_name, id, last_name]            │ [VARCHAR, INTEGER, VARCHAR]          │ false     │
+│ raw_orders    │ [id, order_date, status, user_id]      │ [INTEGER, DATE, VARCHAR, INTEGER]    │ false     │
+│ raw_payments  │ [amount, id, order_id, payment_method] │ [INTEGER, INTEGER, INTEGER, VARCHAR] │ false     │
+└───────────────┴────────────────────────────────────────┴──────────────────────────────────────┴───────────┘
+----
+
+Only the seed tables are there, as we'd expect (from the `dbt seed` step; the `dbt compile` doesn't execute any data movement). Now we `run` - I'm going to run it just for one of the models (`customers`) to start with: 
+
+[source,bash]
+----
+dbt run --models raw_customers
+----
+
+The response to doing something daft (running the `raw_customers` model, instead of `customers`) is pleasingly forgiving (`[WARNING]: Nothing to do`) and informative (`Try checking your model configs and model specification args`): 
+
+[source,bash]
+----
+$ dbt run --models raw_customers
+09:39:14  Running with dbt=1.1.1
+09:39:14  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+09:39:14
+09:39:14  [WARNING]: Nothing to do. Try checking your model configs and model specification args
+----
+
+Let's try the correct one: 
+
+[source,bash]
+----
+$ dbt run --models customers
+09:40:59  Running with dbt=1.1.1
+09:41:00  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+09:41:00
+09:41:00  Concurrency: 1 threads (target='dev')
+09:41:00
+09:41:00  1 of 1 START table model main.customers ........................................ [RUN]
+09:41:00  1 of 1 ERROR creating table model main.customers ............................... [ERROR in 0.05s]
+09:41:00
+09:41:00  Finished running 1 table model in 0.18s.
+09:41:00
+09:41:00  Completed with 1 error and 0 warnings:
+09:41:00
+09:41:00  Runtime Error in model customers (models/customers.sql)
+09:41:00    Catalog Error: Table with name stg_customers does not exist!
+09:41:00    Did you mean "raw_customers"?
+09:41:00
+09:41:00  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
+----
+
+Agh, still not quite there. There's probably a reason the docs exist. 
+
+`Table with name stg_customers does not exist` tells us that `stg_customers` is needed first, so let's cross our fingers for third-time-lucky: 
+
+[source,bash]
+----
+$ dbt run --models stg_customers
+09:49:04  Running with dbt=1.1.1
+09:49:04  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+09:49:04
+09:49:04  Concurrency: 1 threads (target='dev')
+09:49:04
+09:49:04  1 of 1 START view model main.stg_customers ..................................... [RUN]
+09:49:04  1 of 1 OK created view model main.stg_customers ................................ [OK in 0.07s]
+09:49:04
+09:49:04  Finished running 1 view model in 0.18s.
+09:49:04
+09:49:04  Completed successfully
+09:49:04
+09:49:04  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+----
+
+🎉🎉
+
+It's almost like flailing around without reading the docs can be productive 🤔
+
+If we look at what's changed in the local folder we can see a few interesting things: 
+
+[source,bash]
+----
+$ find . -mtime -5m -print
+.
+./target/graph.gpickle
+./target/compiled/jaffle_shop/models/staging/stg_customers.sql
+./target/run_results.json
+./target/manifest.json
+./target/run/jaffle_shop/models
+./target/run/jaffle_shop/models/staging
+./target/run/jaffle_shop/models/staging/stg_customers.sql
+./jaffle_shop.duckdb.wal
+./jaffle_shop.duckdb
+./logs/dbt.log
+----
+
+There's the same `./target/compiled/jaffle_shop/models/staging/stg_customers.sql` which we saw above when we ran `dbt compile` -- although its timestamp shows that it was updated when we just ran `dbt run`. Alongside this `./target/compiled` file there a `./target/run` of the same name
+
+[source,sql]
+----
+$ cat ./target/run/jaffle_shop/models/staging/stg_customers.sql
+
+  create view "main"."stg_customers__dbt_tmp" as (
+    with source as (
+    select * from "main"."main"."raw_customers"
+
+),
+
+renamed as (
+
+    select
+        id as customer_id,
+        first_name,
+        last_name
+
+    from source
+
+)
+
+select * from renamed
+  );
+----
+
+You'll notice here that we've actually got some DML: `create view … as`. Other than that, the `run` version of the SQL is the same as the `compile` version. If we head over to DuckDB we can see there's now a view which performs the described transformation (rename `id` to `customer_id`): 
+
+[source,sql]
+----
+jaffle_shop.duckdb> select table_name, table_type from information_schema.tables;
++---------------+------------+
+| table_name    | table_type |
++---------------+------------+
+| raw_payments  | BASE TABLE |
+| raw_customers | BASE TABLE |
+| raw_orders    | BASE TABLE |
+| stg_customers | VIEW       |
++---------------+------------+
+4 rows in set
+
+jaffle_shop.duckdb> select definition from pg_views where viewname='stg_customers';
++-------------------------------------------------------------------------------------------------------------------------------------------------+
+| definition                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------+
+| /* {"app": "dbt", "dbt_version": "1.1.1", "profile_name": "jaffle_shop", "target_name": "dev", "node_id": "model.jaffle_shop.stg_customers"} */ |
+|   create view "main"."stg_customers__dbt_tmp" as (                                                                                              |
+|     with source as (                                                                                                                            |
+|     select * from "main"."main"."raw_customers"                                                                                                 |
+| ),                                                                                                                                              |
+| renamed as (                                                                                                                                    |
+|     select                                                                                                                                      |
+|         id as customer_id,                                                                                                                      |
+|         first_name,                                                                                                                             |
+|         last_name                                                                                                                               |
+|     from source                                                                                                                                 |
+| )                                                                                                                                               |
+| select * from renamed                                                                                                                           |
+|   );                                                                                                                                            |
+| ;                                                                                                                                               |
++-------------------------------------------------------------------------------------------------------------------------------------------------+
+1 row in set
+Time: 0.012s
+
+jaffle_shop.duckdb> select customer_id, first_name, last_name from stg_customers using sample 1;
++-------------+------------+-----------+
+| customer_id | first_name | last_name |
++-------------+------------+-----------+
+| 84          | Christina  | R.        |
++-------------+------------+-----------+
+1 row in set
+Time: 0.016s
+----
+
+Now I'll run the other two staging tables which will also create views. The `stg_orders` is the same as customers with just a change to the `id` field name. `stg_payments` also applies a transform to a currency field in the data:
+
+[source,sql]
+----
+    select
+        […]
+        -- `amount` is currently stored in cents, so we convert it to dollars
+        amount / 100 as amount
+        […]
+----
+
+Whereas before I used the name of the model, https://docs.getdbt.com/reference/node-selection/syntax#examples[per the docs] you can also specify a folder of models (`--models staging`). 
+
+NOTE: `--models` is deprecated in favour of `--select`
+
+[source,sql]
+----
+dbt run --models staging
+10:48:11  Running with dbt=1.1.1
+10:48:11  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+10:48:11
+10:48:11  Concurrency: 1 threads (target='dev')
+10:48:11
+10:48:11  1 of 3 START view model main.stg_customers ..................................... [RUN]
+10:48:11  1 of 3 OK created view model main.stg_customers ................................ [OK in 0.09s]
+10:48:11  2 of 3 START view model main.stg_orders ........................................ [RUN]
+10:48:11  2 of 3 OK created view model main.stg_orders ................................... [OK in 0.04s]
+10:48:11  3 of 3 START view model main.stg_payments ...................................... [RUN]
+10:48:11  3 of 3 OK created view model main.stg_payments ................................. [OK in 0.06s]
+10:48:11
+10:48:11  Finished running 3 view models in 0.30s.
+10:48:11
+10:48:11  Completed successfully
+10:48:11
+10:48:11  Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+----
+
+Now we've got three views in DuckDB representing the staging models over the raw seed data:
+
+[source,sql]
+----
+$ duckdb jaffle_shop.duckdb -c "select table_name, table_type from information_schema.tables;"
+┌───────────────┬────────────┐
+│  table_name   │ table_type │
+├───────────────┼────────────┤
+│ raw_payments  │ BASE TABLE │
+│ raw_customers │ BASE TABLE │
+│ raw_orders    │ BASE TABLE │
+│ stg_orders    │ VIEW       │
+│ stg_customers │ VIEW       │
+│ stg_payments  │ VIEW       │
+└───────────────┴────────────┘
+----
+
+So that's staging run. dbt creates views here because that's the https://docs.getdbt.com/docs/build/materializations[materialization config] that's specified in the `dbt_project.yml`: 
+
+[source,yaml]
+----
+[…]
+models:
+  jaffle_shop:
+      materialized: table
+      staging:
+        materialized: view
+----
+
+Let's now take a look at the main models that build tables from staging. 
+
+#### The Main Models: `customers.sql`
+
+Looking at https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/models/customers.sql[this model's SQL] you can see that calculates several aggregates by customer: 
+
+* From **order data** (earliest & most recent order date, number of orders)
+* From **payment data** (total amount paid)
+
+and builds a table of all customers with order and payment data where it exists (`LEFT JOIN`). 
+
+Let's run it. 
+
+[source,bash]
+----
+$ dbt run --select customers
+13:39:39  Running with dbt=1.1.1
+13:39:39  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+13:39:39
+13:39:39  Concurrency: 1 threads (target='dev')
+13:39:39
+13:39:39  1 of 1 START table model main.customers ........................................ [RUN]
+13:39:39  1 of 1 OK created table model main.customers ................................... [OK in 0.10s]
+13:39:39
+13:39:39  Finished running 1 table model in 0.31s.
+13:39:39
+13:39:39  Completed successfully
+13:39:39
+13:39:39  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+----
+
+over in DuckDB we have a nice `customers` table populated for us: 
+
+[source,sql]
+----
+jaffle_shop.duckdb> select table_name, table_type from information_schema.tables;
++---------------+------------+
+| table_name    | table_type |
++---------------+------------+
+| raw_orders    | BASE TABLE |
+| raw_customers | BASE TABLE |
+| raw_payments  | BASE TABLE |
+| customers     | BASE TABLE |
+| stg_payments  | VIEW       |
+| stg_customers | VIEW       |
+| stg_orders    | VIEW       |
++---------------+------------+
+7 rows in set
+Time: 0.019s
+
+jaffle_shop.duckdb> describe customers;
++-----+-------------------------+---------+---------+------------+-------+
+| cid | name                    | type    | notnull | dflt_value | pk    |
++-----+-------------------------+---------+---------+------------+-------+
+| 0   | customer_id             | INTEGER | False   | <null>     | False |
+| 1   | first_name              | VARCHAR | False   | <null>     | False |
+| 2   | last_name               | VARCHAR | False   | <null>     | False |
+| 3   | first_order             | DATE    | False   | <null>     | False |
+| 4   | most_recent_order       | DATE    | False   | <null>     | False |
+| 5   | number_of_orders        | BIGINT  | False   | <null>     | False |
+| 6   | customer_lifetime_value | HUGEINT | False   | <null>     | False |
++-----+-------------------------+---------+---------+------------+-------+
+Time: 0.008s
+
+jaffle_shop.duckdb> select * from customers using sample 5;
++-------------+------------+-----------+-------------+-------------------+------------------+-------------------------+
+| customer_id | first_name | last_name | first_order | most_recent_order | number_of_orders | customer_lifetime_value |
++-------------+------------+-----------+-------------+-------------------+------------------+-------------------------+
+| 67          | Michael    | H.        | <null>      | <null>            | <null>           | <null>                  |
+| 35          | Sara       | T.        | 2018-02-21  | 2018-03-21        | 2                | 34                      |
+| 12          | Amy        | D.        | 2018-03-03  | 2018-03-03        | 1                | 4                       |
+| 52          | Laura      | F.        | 2018-03-23  | 2018-03-23        | 1                | 27                      |
+| 94          | Gregory    | H.        | 2018-01-04  | 2018-01-29        | 2                | 24                      |
++-------------+------------+-----------+-------------+-------------------+------------------+-------------------------+
+5 rows in set
+Time: 0.012s
+
+jaffle_shop.duckdb> select count(*) from customers;
++--------------+
+| count_star() |
++--------------+
+| 100          |
++--------------+
+1 row in set
+Time: 0.009s
+jaffle_shop.duckdb>
+----
+
+#### The Main Models: `orders.sql`
+
+https://github.com/dbt-labs/jaffle_shop_duckdb/blob/duckdb/models/orders.sql[The orders.sql model] is not quite as straight forward. Check out the first line of it
+
+[source,sql]
+----
+{% set payment_methods = ['credit_card', 'coupon', 'bank_transfer', 'gift_card'] %}
+----
+
+What SQL-devil magic is this?!
+
+++++
+<div class="tenor-gif-embed" data-postid="16135803" data-share-method="host" data-aspect-ratio="1.25" data-width="100%"><a href="https://tenor.com/view/friends-joey-scared-terrified-horrified-gif-16135803">Friends Joey GIF</a>from <a href="https://tenor.com/search/friends-gifs">Friends GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+Well it turns out that you can super-charge SQL by adding https://docs.getdbt.com/docs/build/jinja-macros[Jinja] to it. _Which when you hear it on a podcast sounds exactly like 'Ginger' and is really confusing._
+
+The particular snippet above (`payment_methods`) is actually used in https://docs.getdbt.com/docs/build/jinja-macros#jinja[the doc page] as an example. It explains that, as seen later in the model, the variable `payment_methods` can then be iterated over:
+
+[source,sql]
+----
+{% for payment_method in payment_methods %}
+sum(case when payment_method = '{{payment_method}}' then amount end) as {{payment_method}}_amount,
+{% endfor %}
+----
+
+to generate the desired SQL: 
+
+[source,sql]
+----
+sum(case when payment_method = 'bank_transfer' then amount end) as bank_transfer_amount,
+sum(case when payment_method = 'credit_card' then amount end) as credit_card_amount,
+sum(case when payment_method = 'gift_card' then amount end) as gift_card_amount,
+----
+
+This is pretty smart. We _could_ just write the SQL directly itself, but what happens when we start taking cheques and cryptocurrencies for payment? We either end up copy-and-pasting and search & replace on this line twice: 
+
+[source,sql]
+----
+sum(case when payment_method = 'cheque' then amount end) as cheque_amount,
+sum(case when payment_method = 'crypto' then amount end) as crypto_amount,
+----
+
+which is fiddly and error prone. In addition if you look further down the model's SQL you can see that the variable is used again: 
+
+[source,sql]
+----
+{% for payment_method in payment_methods -%}
+  order_payments.{{ payment_method }}_amount,
+{% endfor -%}
+----
+
+So now your chances of making errors is even more so because you need to work out all the places in the SQL has appeared, and no way of telling which fields need replicating without knowing the code logic closely. 
+
+Alternatively, we just add them once to the nicely obvious and declared enum: 
+
+[source,sql]
+----
+{% set payment_methods = ['cheque','crypto','credit_card', 'coupon', 'bank_transfer', 'gift_card'] %}
+----
+
+Pretty smart huh. 
+
+++++
+<div class="tenor-gif-embed" data-postid="16733420" data-share-method="host" data-aspect-ratio="1.40351" data-width="100%"><a href="https://tenor.com/view/thumbs-up-friends-approve-gif-16733420">Thumbs Up Friends GIF</a>from <a href="https://tenor.com/search/thumbs+up-gifs">Thumbs Up GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+This is where `dbt compile` comes into its own too. It was useful above to understand a bit more about the flow of things, but here it's going to let us take the model and check how the Jinja will resolve into SQL: 
+
+[source,bash]
+----
+$ dbt compile --select orders
+15:13:58  Running with dbt=1.1.1
+15:13:58  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+15:13:58
+15:13:58  Concurrency: 1 threads (target='dev')
+15:13:58
+15:13:58  Done.
+----
+
+[source,sql]
+----
+$ cat target/compiled/jaffle_shop/models/orders.sql
+[…]
+
+order_payments as (
+
+    select
+        order_id,
+
+        sum(case when payment_method = 'cheque' then amount else 0 end) as cheque_amount,
+        sum(case when payment_method = 'crypto' then amount else 0 end) as crypto_amount,
+        sum(case when payment_method = 'credit_card' then amount else 0 end) as credit_card_amount,
+        sum(case when payment_method = 'coupon' then amount else 0 end) as coupon_amount,
+        sum(case when payment_method = 'bank_transfer' then amount else 0 end) as bank_transfer_amount,
+        sum(case when payment_method = 'gift_card' then amount else 0 end) as gift_card_amount,
+        sum(amount) as total_amount
+[…]
+    select
+        orders.order_id,
+        orders.customer_id,
+        orders.order_date,
+        orders.status,
+        order_payments.cheque_amount,
+        order_payments.crypto_amount,
+        order_payments.credit_card_amount,
+        order_payments.coupon_amount,
+        order_payments.bank_transfer_amount,
+        order_payments.gift_card_amount,
+        order_payments.total_amount as amount
+[…]
+----
+
+There's a nice https://docs.getdbt.com/docs/build/jinja-macros#dbtonic-jinja[note in the docs] about a _dbtonic_ approach to the use of Jinja (_this is nothing to do with Gin, but a nice nod to the_ pythonic _concept_) which is worth a read including strong advice to +++<del>+++not be a smartarse+++</del>+++ https://docs.getdbt.com/docs/build/jinja-macros#favor-readability-over--ness[favour readability over DRY-ness]. 
+
+### `dbt run` 
+
+Now that we've understood how all of this works, let's run it all: 
+
+[source,bash]
+----
+$ dbt run
+15:51:46  Running with dbt=1.1.1
+15:51:46  Found 5 models, 20 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 3 seed files, 0 sources, 0 exposures, 0 metrics
+15:51:46
+15:51:46  Concurrency: 1 threads (target='dev')
+15:51:46
+15:51:46  1 of 5 START view model main.stg_customers ..................................... [RUN]
+15:51:46  1 of 5 OK created view model main.stg_customers ................................ [OK in 0.11s]
+15:51:46  2 of 5 START view model main.stg_orders ........................................ [RUN]
+15:51:47  2 of 5 OK created view model main.stg_orders ................................... [OK in 0.06s]
+15:51:47  3 of 5 START view model main.stg_payments ...................................... [RUN]
+15:51:47  3 of 5 OK created view model main.stg_payments ................................. [OK in 0.07s]
+15:51:47  4 of 5 START table model main.customers ........................................ [RUN]
+15:51:47  4 of 5 OK created table model main.customers ................................... [OK in 0.09s]
+15:51:47  5 of 5 START table model main.orders ........................................... [RUN]
+15:51:47  5 of 5 OK created table model main.orders ...................................... [OK in 0.05s]
+15:51:47
+15:51:47  Finished running 3 view models, 2 table models in 0.54s.
+15:51:47
+15:51:47  Completed successfully
+15:51:47
+15:51:47  Done. PASS=5 WARN=0 ERROR=0 SKIP=0 TOTAL=5
+----
+
+We end up with two final tables built and populated from this, `customers` and `orders`
+
+[source,bash]
+----
+$ duckdb jaffle_shop.duckdb -c "select table_name, table_type from information_schema.tables;"
+┌───────────────┬────────────┐
+│  table_name   │ table_type │
+├───────────────┼────────────┤
+│ orders        │ BASE TABLE │
+│ customers     │ BASE TABLE │
+[…]
+└───────────────┴────────────┘
+----
+
+## Wrapping up…
+
+So that was fun. Slightly back-to-front, but fun nonetheless. 
+
+dbt gives us a nice way to use SQL to declare the transformations that we'd like to do on our data. It's predicated on your data being in place already -- https://rmoff.net/2022/10/02/data-engineering-in-2022-architectures-terminology/[it's the T of the ELT/ETL process].
+
+With dozens of https://docs.getdbt.com/docs/supported-data-platforms[adaptors] you can use the same build platform but with different targets. I can see the appeal of this massively both as a way early in a project to evaluate different data stores side-by-side, as well as later on in a project as technology perhaps evolves to the point that you want to move your workload elsewhere. 
+
+## Learning More
+
+* https://docs.getdbt.com/docs/introduction[dbt Documentation]
+* https://courses.getdbt.com/collections[dbt Training]
+* https://docs.getdbt.com/community/join[dbt Community]
 
