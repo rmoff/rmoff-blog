@@ -1,0 +1,1059 @@
+---
+draft: true
+title: 'Hands-on with dbt - wrangling the feedback data from Current 22'
+date: "2022-10-20T16:27:14Z"
+image: "/images/2022/10/"
+thumbnail: "/images/2022/10/"
+credit: "https://twitter.com/rmoff/"
+categories:
+- dbt
+- DuckDB
+- Current 22
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+I started my dbt journey by link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[poking and pulling at the pre-built jaffle_shop demo running with DuckDB as its data store]. Now I want to see if I can put it to use myself to wrangle the session feedback data that came in from https://2022.currentevent.io/[Current 2022]. I've link:/2022/10/14/current-22-session-analysis-with-duckdb-and-jupyter-notebook/[analysed] this already, but it struck me that a particular part of it would benefit from some tidying up - and be a good excuse to see what it's like using dbt to do so. 
+
+<!--more-->
+
+## Set up
+
+I'm going to use DuckDB as my datastore because it's local and all I need at this point. Because of that, I'll crib salient sections from the https://github.com/dbt-labs/jaffle_shop_duckdb/[jaffle_shop_duckdb] demo, as well as make use of the https://docs.getdbt.com/docs/get-started/getting-started-dbt-core[dbt getting started docs].
+
+[source,bash]
+----
+# Create a project folder
+mkdir current-dbt
+
+# Copy the requirements from jaffle_shop_duckdb
+cp ../jaffle_shop_duckdb/requirements.txt .
+
+# Download deps and init the environment
+python3 -m venv venv
+source venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+source venv/bin/activate
+----
+
+Create a ✨sparkly new dbt project with `dbt init`: 
+
+[source,bash]
+----
+$ dbt init
+16:40:45  Running with dbt=1.1.1
+16:40:45  Creating dbt configuration folder at /Users/rmoff/.dbt
+Enter a name for your project (letters, digits, underscore): current_dbt
+Which database would you like to use?
+[1] postgres
+[2] duckdb
+
+(Don't see the one you want? https://docs.getdbt.com/docs/available-adapters)
+
+Enter a number: 2
+16:41:03  No sample profile found for duckdb.
+16:41:03
+Your new dbt project "current_dbt" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+----
+
+From this I get a dbt project structure on disk: 
+
+[source,bash]
+----
+$ ls -lR current_dbt
+total 16
+-rw-r--r--  1 rmoff  staff   571 20 Oct 17:29 README.md
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 analyses
+-rw-r--r--  1 rmoff  staff  1337 20 Oct 17:40 dbt_project.yml
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 macros
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 models
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 seeds
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 snapshots
+drwxr-xr-x  3 rmoff  staff    96 20 Oct 17:31 tests
+
+current_dbt/analyses:
+total 0
+
+current_dbt/macros:
+total 0
+
+current_dbt/models:
+total 0
+drwxr-xr-x  5 rmoff  staff  160 20 Oct 17:31 example
+
+current_dbt/models/example:
+total 24
+-rw-r--r--  1 rmoff  staff  475 20 Oct 17:29 my_first_dbt_model.sql
+-rw-r--r--  1 rmoff  staff  115 20 Oct 17:29 my_second_dbt_model.sql
+-rw-r--r--  1 rmoff  staff  437 20 Oct 17:29 schema.yml
+
+current_dbt/seeds:
+total 0
+
+current_dbt/snapshots:
+total 0
+
+current_dbt/tests:
+total 0
+----
+
+To this I'm going to add the `profiles.yml` from the https://raw.githubusercontent.com/dbt-labs/jaffle_shop_duckdb/duckdb/profiles.yml[jaffle_shop_duckdb] demo and update it for my project.  
+
+[source,yaml]
+----
+current_dbt:
+
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'current_dbt.duckdb'
+      threads: 1
+----
+
+So now my root dbt project folder looks like this: 
+
+[source,bash]
+----
+-rw-r--r--  1 rmoff  staff   571B 20 Oct 17:29 README.md
+drwxr-xr-x  3 rmoff  staff    96B 20 Oct 17:31 analyses
+-rw-r--r--  1 rmoff  staff   1.3K 20 Oct 17:40 dbt_project.yml
+drwxr-xr-x  3 rmoff  staff    96B 20 Oct 17:31 macros
+drwxr-xr-x  3 rmoff  staff    96B 20 Oct 17:31 models
+-rw-r--r--  1 rmoff  staff   118B 21 Oct 09:50 profiles.yml
+drwxr-xr-x  5 rmoff  staff   160B 21 Oct 10:00 seeds
+drwxr-xr-x  3 rmoff  staff    96B 20 Oct 17:31 snapshots
+drwxr-xr-x  3 rmoff  staff    96B 20 Oct 17:31 tests
+----
+
+
+## Source Data
+
+The source data is two files: 
+
+1. Session ratings - feedback left by attendees
+2. Session scans - number of attendees per session by badge scan count
+
+Both are CSV exports, which I've placed in the `current_dbt/seeds` folder. 
+
+To start with I'm simply going to see if I get use `dbt seed` to load these into DuckDB. 
+
+[source,bash]
+----
+$ dbt seed
+09:03:19  Running with dbt=1.1.1
+09:03:19  Partial parse save file not found. Starting full parse.
+09:03:20  Found 2 models, 4 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+09:03:20
+09:03:20  Concurrency: 1 threads (target='dev')
+09:03:20
+09:03:20  1 of 2 START seed file main.rating_detail ...................................... [RUN]
+09:03:21  1 of 2 OK loaded seed file main.rating_detail .................................. [INSERT 2416 in 0.61s]
+09:03:21  2 of 2 START seed file main.session_scans ...................................... [RUN]
+09:03:21  2 of 2 OK loaded seed file main.session_scans .................................. [INSERT 163 in 0.10s]
+09:03:21
+09:03:21  Finished running 2 seeds in 0.86s.
+09:03:21
+09:03:21  Completed successfully
+09:03:21
+09:03:21  Done. PASS=2 WARN=0 ERROR=0 SKIP=0 TOTAL=2
+----
+
+There's now a DuckDB file created, and within it two tables holding data!
+
+[source,bash]
+----
+$ ls -l *.duckdb
+-rw-r--r--  1 rmoff  staff  2109440 21 Oct 10:03 current_dbt.duckdb
+----
+
+[source,sql]
+----
+current_dbt.duckdb> \dt
++---------------+
+| name          |
++---------------+
+| rating_detail |
+| session_scans |
++---------------+
+Time: 0.018s
+current_dbt.duckdb> describe session_scans;
++-----+--------------------------------------------------------+---------+---------+------------+-------+
+| cid | name                                                   | type    | notnull | dflt_value | pk    |
++-----+--------------------------------------------------------+---------+---------+------------+-------+
+| 0   | Session Code                                           | VARCHAR | False   | <null>     | False |
+| 1   | Day                                                    | VARCHAR | False   | <null>     | False |
+| 2   | Start                                                  | VARCHAR | False   | <null>     | False |
+| 3   | End                                                    | VARCHAR | False   | <null>     | False |
+| 4   | Speakers                                               | VARCHAR | False   | <null>     | False |
+| 5   | Name                                                   | VARCHAR | False   | <null>     | False |
+| 6   | Scans                                                  | VARCHAR | False   | <null>     | False |
+| 7   | Location                                               | VARCHAR | False   | <null>     | False |
+| 8   | Average Sesion Rating                                  | DOUBLE  | False   | <null>     | False |
+| 9   | # Survey Responses                                     | INTEGER | False   | <null>     | False |
+| 10  | Please rate your overall experience with this session. | DOUBLE  | False   | <null>     | False |
+| 11  | Please rate the quality of the content.                | DOUBLE  | False   | <null>     | False |
+| 12  | Please rate your satisfaction with the presenter.      | DOUBLE  | False   | <null>     | False |
+[…]
++-----+--------------------------------------------------------+---------+---------+------------+-------+
+Time: 0.011s
+current_dbt.duckdb> describe rating_detail;
++-----+---------------+---------+---------+------------+-------+
+| cid | name          | type    | notnull | dflt_value | pk    |
++-----+---------------+---------+---------+------------+-------+
+| 0   | sessionID     | INTEGER | False   | <null>     | False |
+| 1   | title         | VARCHAR | False   | <null>     | False |
+| 2   | Start Time    | VARCHAR | False   | <null>     | False |
+| 3   | Rating Type   | VARCHAR | False   | <null>     | False |
+| 4   | Rating Type_2 | VARCHAR | False   | <null>     | False |
+| 5   | rating        | INTEGER | False   | <null>     | False |
+| 6   | Comment       | VARCHAR | False   | <null>     | False |
+| 7   | User ID       | INTEGER | False   | <null>     | False |
+| 8   | First         | VARCHAR | False   | <null>     | False |
+| 9   | Last          | VARCHAR | False   | <null>     | False |
+| 10  | Email         | VARCHAR | False   | <null>     | False |
+| 11  | Sponsor Share | VARCHAR | False   | <null>     | False |
+| 12  | Account Type  | VARCHAR | False   | <null>     | False |
+| 13  | Attendee Type | VARCHAR | False   | <null>     | False |
++-----+---------------+---------+---------+------------+-------+
+Time: 0.009s
+current_dbt.duckdb>
+----
+
+Pretty nice!
+
+## Data Wrangling: The Spec
+
+There are several things I want to do with the data: 
+
+1. Create a single detail table of all rating comments and scores
+2. Create a summary table of both rating and attendance data
+3. Remove PII data of those who left ratings
+4. Rename fields to remove spaces etc
+5. Pivot the "Rating Type" / "rating" values into a set of columns. 
++
+In its current form it looks like this: 
++
+[source,sql]
+----
+current_dbt.duckdb> select SessionID, "Rating Type", rating from rating_detail;
++-----------+--------------------+--------+
+| SessionID | Rating Type        | rating |
++-----------+--------------------+--------+
+| 42        | Overall Experience | 5      |
+| 42        | Presenter          | 5      |
+| 42        | Content            | 4      |
+| 42        | Overall Experience | 5      |
+| 42        | Presenter          | 5      |
+| 42        | Content            | 5      |
++-----------+--------------------+--------+
+6 rows in set
+Time: 0.009s
+----
++
+In the final table it would be better to pivot these into individual fields like this: 
++
+[source,sql]
+----
++------------+----------------+------------------+----------------+
+| session_id | content_rating | presenter_rating | overall_rating |
++------------+----------------+------------------+----------------+
+| 42         | <null>         | <null>           | 5              |
+| 42         | <null>         | 5                | <null>         |
+| 42         | 4              | <null>           | <null>         |
+| 42         | <null>         | <null>           | 5              |
+| 42         | <null>         | 5                | <null>         |
+| 42         | 5              | <null>           | <null>         |
++------------+----------------+------------------+----------------+
+6 rows in set
+Time: 0.009s
+----
++
+With the data structured like this analyses can be more easily run against the data. 
+
+6. Unify the identifier used for sessions - at the moment the two sets of data use `Session Code` and `sessionID` which don't relate and are sometimes `null`. The only common link is the title of the session itself. 
++
+[source,sql]
+----
+current_dbt.duckdb> select r.sessionID,
+                            s."Session Code",
+                            r.title
+                      from rating_detail r
+                            inner join session_scans s
+                            on r.title=s.name
+                    using sample 5;
++-----------+--------------+-----------------------------------------------------------------------------------------------+
+| sessionID | Session Code | title                                                                                         |
++-----------+--------------+-----------------------------------------------------------------------------------------------+
+| 140       | 50650015-1   | A Crash Course in Designing Messaging APIs                                                    |
+| 33        | 50650015-2   | You're Spiky and We Know It - Twilio's journey on Handling Data Spikes for Real-Time Alerting |
+| 141       | 50650011-7   | Bootiful Kafka: Get the Message!                                                              |
+| 139       | <null>       | KEYNOTE: Apache Kafka: Past, Present, & Future                                                |
+| 104       | 50650048-4   | Knock Knock, Who's There? Identifying Kafka Clients in a Multi-tenant Environment             |
++-----------+--------------+-----------------------------------------------------------------------------------------------+
+5 rows in set
+Time: 0.009s
+----
+
+7. Create a new field showing if an attendee who left a session rating was there in-person or not. The source data has `Attendee Type` field but this is more granular and exposes more data than we'd like to to the end analyst
++
+[source,sql]
+----
+current_dbt.duckdb> select "Attendee type" , count(*) 
+                      from main_seed_data.rating_detail 
+                    group by "Attendee Type" 
+                    order by 1;
++--------------------+--------------+
+| Attendee Type      | count_star() |
++--------------------+--------------+
+| Employee           | 126          |
+| General            | 1334         |
+| Speaker            | 298          |
+[…]
+| Virtual            | 537          |
++--------------------+--------------+
+15 rows in set
+Time: 0.008s
+----
+
+8. Exclude session data for mealtimes (this data's important, but outside my scope of analysis)
+9. Pivot the session track into a single field. Currently the data has a field for each track and a check in the appropriate one: 
++
+[source,sql]
+----
+current_dbt.duckdb> select * from main_seed_data.session_scans using sample 10;
++ […] -+--------------+------------------+------------------------------+
+| […]  | Kafka Summit | Modern Data Flow | Operations and Observability |
++ […] -+--------------+------------------+------------------------------+
+| […]  | x            | <null>           | x                            |
+| […]  | <null>       | <null>           | <null>                       |
+| […]  | x            | x                | <null>                       |
+| […]  | x            | x                | <null>                       |
+| […]  | <null>       | <null>           | x                            |
+| […]  | <null>       | x                | <null>                       |
+| […]  | <null>       | <null>           | x                            |
+| […]  | x            | <null>           | <null>                       |
+| […]  | <null>       | x                | <null>                       |
+| […]  | <null>       | <null>           | <null>                       |
++ […] -+--------------+------------------+------------------------------+
+10 rows in set
+Time: 0.025s
+----
++
+I'd rather narrow the table into a single https://duckdb.org/docs/sql/data_types/list[`LIST`] of track(s) for each session, something like: 
++
+[source,sql]
+----
++ […] -+----------------------------------------------------+
+| […]  | Track                                              |
++ […] -+----------------------------------------------------+
+| […]  | ['Kafka Summit','Operations and Observability']    |
+| […]  | ['Kafka Summit']                                   |
+| […]  | ['Kafka Summit']                                   |
+| […]  | ['Modern Data Flow']                               |
++ […] -+----------------------------------------------------+
+----
+
+
+## My First Model 👨‍🎓
+
+Following the pattern of the https://github.com/dbt-labs/jaffle_shop_duckdb[jaffle shop] demo, I'm going to use staging tables to tidy up the raw data to start with. 
+
+We'll check the pattern works first with one table (`rating_detail`) and then move on to the other. 
+
+In starting to write out the SQL I noticed a problem in my naming: 
+
+[source,sql]
+----
+with source as (
+  select * from {{ ref('rating_detail')}}
+)
+----
+
+If my source raw data is called `rating_detail` then it's going to get mighty confusing. I want to either use a name prefix or perhaps a separate database catalog (schema) for this raw data that I've loaded. Checking the docs I found the https://docs.getdbt.com/reference/seed-configs[seed configuration] including an option to https://docs.getdbt.com/reference/seed-configs#apply-the-schema-configuration-to-all-seeds[set the schema]. 
+
+So I've added to my `dbt_project.yml` the following: 
+
+[source,yaml]
+----
+seeds:
+  +schema: seed_data
+----
+
+I could drop the existing tables directly (just to keep things tidy), but in all honesty it's quicker just to remove the database and let DuckDB create a new one when we re-run the seed command.
+
+[source,bash]
+----
+$ rm current_dbt.duckdb
+$ dbt seed
+13:26:03  Running with dbt=1.1.1
+13:26:03  Unable to do partial parsing because a project config has changed
+13:26:03  Found 2 models, 4 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+13:26:03
+13:26:04  Concurrency: 1 threads (target='dev')
+13:26:04
+13:26:04  1 of 2 START seed file main_seed_data.rating_detail ............................ [RUN]
+13:26:04  1 of 2 OK loaded seed file main_seed_data.rating_detail ........................ [INSERT 2416 in 0.54s]
+13:26:04  2 of 2 START seed file main_seed_data.session_scans ............................ [RUN]
+13:26:04  2 of 2 OK loaded seed file main_seed_data.session_scans ........................ [INSERT 163 in 0.11s]
+13:26:04
+13:26:04  Finished running 2 seeds in 0.84s.
+13:26:04
+13:26:04  Completed successfully
+13:26:04
+13:26:04  Done. PASS=2 WARN=0 ERROR=0 SKIP=0 TOTAL=2
+----
+
+Now my seed data is loaded into two tables in their own schema: 
+
+[source,sql]
+----
+$ duckdb current_dbt.duckdb -c "select table_schema, table_name, table_type from information_schema.tables;"
+
+┌────────────────┬───────────────┬────────────┐
+│  table_schema  │  table_name   │ table_type │
+├────────────────┼───────────────┼────────────┤
+│ main_seed_data │ rating_detail │ BASE TABLE │
+│ main_seed_data │ session_scans │ BASE TABLE │
+└────────────────┴───────────────┴────────────┘
+----
+
+++++
+<div class="tenor-gif-embed" data-postid="16333599" data-share-method="host" data-aspect-ratio="1.26482" data-width="100%"><a href="https://tenor.com/view/shaun-the-sheep-thumbs-up-okay-alright-good-job-gif-16333599">Shaun The Sheep Thumbs Up GIF</a>from <a href="https://tenor.com/search/shaun+the+sheep-gifs">Shaun The Sheep GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+So back to my staging model. Here's my first pass at the clean up of `rating_detail` based on the relevant points of the spec above to implement at this stage. 
+
+[source,sql]
+----
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    title           AS session_name,
+                    "Rating Type"   AS rating_type,
+                    rating,
+                    "comment"       AS rating_comment,
+                    "Attendee Type" AS attendee_type
+                    -- Spec #7 Create a new field showing if attendee was in-person or not
+                    CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
+                    -- Spec #3: Remove PII data of those who left ratings
+          FROM      {{ ref('rating_detail') }}
+          )
+
+SELECT    *
+FROM      source_data
+-- Spec #8: Exclude irrelevant sessions
+WHERE     session_name NOT IN ('Breakfast', 'Lunch', 'Registration')
+----
+
+Let's compile it and see how it goes. Before I do this I'm going to tear off the training wheels and remove the example models - we can do this for ourselves :-)
+
+[source,bash]
+----
+$ rm -rf models/example
+----
+
+[source,bash]
+----
+$ dbt compile
+14:24:11  Running with dbt=1.1.1
+14:24:12  [WARNING]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.
+There are 1 unused configuration paths:
+- models.current_dbt.example
+
+14:24:12  Found 1 model, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+14:24:12
+14:24:12  Concurrency: 1 threads (target='dev')
+14:24:12
+14:24:12  Done.
+----
+
+A warning which we'll look at later, but for now it _looks_ like the compile succeeded. Let's check the output: 
+
+[source,sql]
+----
+$ cat ./target/compiled/current_dbt/models/staging/stg_ratings.sql
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    title           AS session_name,
+                    "Rating Type"   AS rating_type,
+                    rating,
+                    "comment"       AS rating_comment,
+                    "Attendee Type" AS attendee_type
+                    -- Spec #7 Create a new field showing if attendee was in-person or not
+                    CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
+                    -- Spec #3: Remove PII data of those who left ratings
+          FROM      "main"."main_seed_data"."rating_detail"
+          )
+
+SELECT    *
+FROM      source_data
+-- Spec #8: Exclude irrelevant sessions
+WHERE     session_name NOT IN ('Breakfast', 'Lunch', 'Registration')
+----
+
+I'm not sure if the qualification of the schema looks right here `FROM      "main"."main_seed_data"."rating_detail"` but let's worry about that when we need to. Which is right now, because I'm going to try and run this model too. Over in the `dbt_project.yml` I'll tell it to create the staging model as a view (and in the process fix the warning above about the unused `examples` path): 
+
+[source,yaml]
+----
+models:
+  current_dbt:
+    staging:
+      +materialized: view
+----
+
+With that set, let's try running it. If all goes well, I'll get a view created in DuckDB. 
+
+[source,sql]
+----
+$ dbt run
+14:27:41  Running with dbt=1.1.1
+14:27:41  Unable to do partial parsing because a project config has changed
+14:27:42  Found 1 model, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+14:27:42
+14:27:42  Concurrency: 1 threads (target='dev')
+14:27:42
+14:27:42  1 of 1 START view model main.stg_ratings ....................................... [RUN]
+14:27:42  1 of 1 ERROR creating view model main.stg_ratings .............................. [ERROR in 0.05s]
+14:27:42
+14:27:42  Finished running 1 view model in 0.24s.
+14:27:42
+14:27:42  Completed with 1 error and 0 warnings:
+14:27:42
+14:27:42  Runtime Error in model stg_ratings (models/staging/stg_ratings.sql)
+14:27:42    Parser Error: syntax error at or near "CASE"
+14:27:42    LINE 12:                     CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
+14:27:42                        -- Spec #3: Remove PII data of those who left ratings
+14:27:42              FROM      "main"."main_seed_data"."rating_detail"
+14:27:42              )
+14:27:42
+14:27:42    SELECT    *
+14:27:42    FROM      source_data
+14:27:42    -- Spec #8: Exclude irrelevant sessions
+14:27:42    WHERE     session_name NOT IN ('Breakfast', 'Lunch', 'Registration')
+14:27:42      );
+14:27:42    ...
+14:27:42                                 ^
+14:27:42
+14:27:42  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
+----
+
+Well, all didn't go well. 
+
+[source]
+----
+Runtime Error in model stg_ratings (models/staging/stg_ratings.sql)
+  Parser Error: syntax error at or near "CASE"
+----
+
+Hmmm. So it turns out that the compile will compile _but not parse_ the SQL for validity. Rookie SQL mistake right here: 
+
+[source,sql]
+----
+  "Attendee Type" AS attendee_type
+  -- Spec #7 Create a new field showing if attendee was in-person or not
+  CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
+  -- Spec #3: Remove PII data of those who left ratings
+----
+
+Can you see it? Or rather, not see it? 
+
+How about now?
+
+[source,sql]
+----
+  "Attendee Type" AS attendee_type,
+  -- Spec #7 Create a new field showing if attendee was in-person or not
+  CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
+  -- Spec #3: Remove PII data of those who left ratings
+----
+
+With the errant comma put in its place, and then subsequently the missing `END` that the eagle-eyed amongst you will have spotted inserted in the `CASE` statement, things look better: 
+
+[source,sql]
+----
+  "Attendee Type" AS attendee_type,
+  -- Spec #7 Create a new field showing if attendee was in-person or not
+  CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 END AS virtual_attendee
+----
+
+and as if by magic… 
+
+[source,bash]
+----
+$ dbt run
+14:55:57  Running with dbt=1.1.1
+14:55:57  Found 1 model, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+14:55:57
+14:55:57  Concurrency: 1 threads (target='dev')
+14:55:57
+14:55:57  1 of 1 START view model main.stg_ratings ....................................... [RUN]
+14:55:57  1 of 1 OK created view model main.stg_ratings .................................. [OK in 0.08s]
+14:55:57
+14:55:57  Finished running 1 view model in 0.24s.
+14:55:57
+14:55:57  Completed successfully
+14:55:57
+14:55:57  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+----
+
+_(turns out the schema qualification I was worrying about worked just fine)_
+
+Check it out!  
+
+[source,sql]
+----
+$ duckdb current_dbt.duckdb -c "select table_schema, table_name, table_type from information_schema.tables;"
+
+┌────────────────┬───────────────┬────────────┐
+│  table_schema  │  table_name   │ table_type │
+├────────────────┼───────────────┼────────────┤
+│ main_seed_data │ session_scans │ BASE TABLE │
+│ main_seed_data │ rating_detail │ BASE TABLE │
+│ main           │ stg_ratings   │ VIEW       │
+└────────────────┴───────────────┴────────────┘
+
+$ duckdb current_dbt.duckdb -c "select * from stg_ratings using sample 5;"
+
+┌────────────────┬────────────────────┬────────┬─────────────────────┬─────────────────┬──────────────────┐
+│   session_name │    rating_type     │ rating │ rating_comment      │  attendee_type  │ virtual_attendee │
+├────────────────┼────────────────────┼────────┼─────────────────────┼─────────────────┼──────────────────┤
+│ Session x      │ Content            │ 4      │ Need more cheetohs  │ Sponsor         │ 0                │
+│ Session y   .. │ Content            │ 3      │                     │ General         │ 0                │
+│ Session z      │ Presenter          │ 4      │ Great hair, ...     │ Sponsor         │ 0                │
+│ Session foo .. │ Overall Experience │ 5      │                     │ Virtual         │ 1                │
+│ Session bar .. │ Presenter          │ 5      │                     │ General         │ 0                │
+└────────────────┴────────────────────┴────────┴─────────────────────┴─────────────────┴──────────────────┘
+----
+
+++++
+<div class="tenor-gif-embed" data-postid="18653611" data-share-method="host" data-aspect-ratio="1.35593" data-width="100%"><a href="https://tenor.com/view/magic-gif-18653611">Magic GIF</a>from <a href="https://tenor.com/search/magic-gifs">Magic GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+(actual footage of me with my lockdown beard 😉 )
+
+Let's build the other staging model now. The only point of interest here is combining the numerous fields that represent all the tracks and have a value in them if the associated session was in that track. For this I'm going to try my hand at some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] since this feels like a great place for it. 
+
+The SQL pattern I want to replicate is this: 
+
+1. In a CTE (Common Table Expression), for each field, if it's not `NULL` then return a single-entry https://duckdb.org/docs/sql/data_types/list[`LIST`] with the name (not value) of the field
+2. Select from the CTE and use `LIST_CONCAT` to condense all the `LIST` fields
+
+If it's easier to visualise it then here's a test dataset that mimics the source: 
+
+[source,sql]
+----
++--------+--------+
+| A      | B      |
++--------+--------+
+| <null> | X      |
+| X      | <null> |
+| X      | X      |
++--------+--------+
+----
+
+and here's the resulting transformation: 
+
+[source,sql]
+----
+WITH X AS (SELECT A, B,
+       CASE WHEN A='X' THEN ['A'] END AS F0,
+       CASE WHEN B='X' THEN ['B'] END AS F1
+FROM FOO)
+SELECT LIST_CONCAT(F0, F1) AS COMBINED_FLAGS FROM X
+
++----------------+
+| COMBINED_FLAGS |
++----------------+
+| ['B']          |
+| ['A']          |
+| ['A', 'B']     |
++----------------+
+----
+
+So here's my `stg_scans` model using this approach. Note also the use of `loop.index` to create the required number of field aliases that can then be referenced in the subsequent `SELECT`. 
+
+[source,sql]
+----
+{% set tracks = ['Architectures You've Always Wondered About','Case Studies','Data Development Life Cycle','Developing Real-Time Applications','Event Streaming in Academia and Beyond','Fun and Geeky','Kafka Summit','Modern Data Flow','Operations and Observability','Panel','People & Culture','Real Time Analytics','Sponsored Session','Streaming Technologies'] %}
+
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    NAME                   AS session_name,
+                    Speakers               AS speakers,
+                    scans                  AS scans,
+                    "# Survey Responses"   AS rating_ct,
+                    -- Spec #9 Combine all track fields into a single summary
+                    {% for t in tracks -%}
+                    CASE WHEN t IS NOT NULL THEN ['t'] END 
+                                           AS F{{ loop.index }},
+                    {% endfor -%}
+          FROM      {{ ref('session_scans') }}
+          )
+SELECT    session_name,
+          speakers,
+          scans,
+          rating_ct,
+          LIST_CONCAT(
+            {% for t in tracks -%}
+              F{{ loop.index }},
+            {% endfor -%}
+          ) AS track 
+FROM      source_data
+----
+
+Is it just me, or are you deeply suspicious when your code runs the first time of trying without error? 
+
+[source,bash]
+----
+$ dbt run --select stg_scans
+16:17:19  Running with dbt=1.1.1
+16:17:19  Found 2 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+16:17:19
+16:17:19  Concurrency: 1 threads (target='dev')
+16:17:19
+16:17:19  1 of 1 START view model main.stg_scans ......................................... [RUN]
+16:17:19  1 of 1 OK created view model main.stg_scans .................................... [OK in 0.08s]
+16:17:19
+16:17:19  Finished running 1 view model in 0.20s.
+16:17:20
+16:17:20  Completed successfully
+16:17:20
+16:17:20  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
+----
+
+and then you go to check the resulting view… and it's exactly that same as the one you just built with a different name? 
+
+[source,sql]
+----
+current_dbt.duckdb> describe stg_scans;
++-----+------------------+---------+---------+------------+-------+
+| cid | name             | type    | notnull | dflt_value | pk    |
++-----+------------------+---------+---------+------------+-------+
+| 0   | session_name     | VARCHAR | False   | <null>     | False |
+| 1   | rating_type      | VARCHAR | False   | <null>     | False |
+| 2   | rating           | INTEGER | False   | <null>     | False |
+| 3   | rating_comment   | VARCHAR | False   | <null>     | False |
+| 4   | attendee_type    | VARCHAR | False   | <null>     | False |
+| 5   | virtual_attendee | INTEGER | False   | <null>     | False |
++-----+------------------+---------+---------+------------+-------+
+Time: 0.009s
+----
+
+…because you copied the source **and didn't save it** so dbt was just running exactly the same as before but with a different name.
+
+++++
+<div class="tenor-gif-embed" data-postid="5928154" data-share-method="host" data-aspect-ratio="1.31" data-width="100%"><a href="https://tenor.com/view/face-palm-shake-my-head-smdh-smh-muppets-gif-5928154">Face Palm Shake My Head GIF</a>from <a href="https://tenor.com/search/face+palm-gifs">Face Palm GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+Let's save our masterpiece and try actually running that instead: 
+
+[source,bash]
+----
+$ dbt run --select stg_scans
+16:22:33  Running with dbt=1.1.1
+16:22:33  Encountered an error:
+Compilation Error in model stg_scans (models/staging/stg_scans.sql)
+  expected token ',', got 've'
+    line 1
+      {% set tracks = ['Architectures You've Always Wondered About',
+      […]
+----
+
+Phew - an error. I mean, that's a shame, but at least it's running the code we wanted it to :) 
+
+The error was an unescaped quote, so let's fix that and try again. 
+
+[source,bash]
+----
+16:23:35  Completed with 1 error and 0 warnings:
+16:23:35
+16:23:35  Runtime Error in model stg_scans (models/staging/stg_scans.sql)
+16:23:35    Parser Error: syntax error at or near ")"
+16:23:35    LINE 62:             ) AS track
+16:23:35                         ^
+----
+
+Not sure a clear error this time. Let's check out the compiled SQL to see if our Jinja magic is working.
+
+[source,sql]
+----
+$ cat ./target/compiled/current_dbt/models/staging/stg_scans.sql
+
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    NAME                   AS session_name,
+                    Speakers               AS speakers,
+                    scans                  AS scans,
+                    "# Survey Responses"   AS rating_ct,
+                    -- Spec #9 Combine all track fields into a single summary
+                    CASE WHEN t IS NOT NULL THEN ['t'] END
+                                           AS F1,
+                    CASE WHEN t IS NOT NULL THEN ['t'] END
+                                           AS F2,
+[…]
+                    FROM      "main"."main_seed_data"."session_scans"
+          )
+SELECT    session_name,
+          speakers,
+          scans,
+          rating_ct,
+          LIST_CONCAT(
+            F1,
+            F2,
+[…]
+
+            ) AS track
+FROM      source_data
+----
+
+So some of it's working. The incrementing field name (`F1`, `F2`, etc), and the list iteration. However, the `t` literal shouldn't be there - and that's because I didn't enclose it in the magic double curly braces `{{ fun happens here }}`. 
+
+[source,sql]
+----
+  CASE WHEN t IS NOT NULL THEN ['t'] END 
+----
+
+should be 
+
+[source,sql]
+----
+  CASE WHEN {{ t }} IS NOT NULL THEN ['{{ t }}'] END 
+----
+
+Let's compile that and see: 
+
+[source,sql]
+----
+$ cat ./target/compiled/current_dbt/models/staging/stg_scans.sql
+
+
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    NAME                   AS session_name,
+                    Speakers               AS speakers,
+                    scans                  AS scans,
+                    "# Survey Responses"   AS rating_ct,
+                    -- Spec #9 Combine all track fields into a single summary
+                    CASE WHEN Architectures You've Always Wondered About IS NOT NULL THEN ['Architectures You've Always Wondered About'] END
+                                           AS F1,
+                    CASE WHEN Case Studies IS NOT NULL THEN ['Case Studies'] END
+                                           AS F2,
+                    CASE WHEN Data Development Life Cycle IS NOT NULL THEN ['Data Development Life Cycle'] END
+                                           AS F3,
+[…]
+----
+
+We're making progress! The field name needs double-quoting, and we need to work out how to escape the `'` in some of the values. The former is simple enough, and the latter is solved with a quick visit to the dbt docs and their excellent search which hits https://docs.getdbt.com/reference/dbt-jinja-functions/cross-database-macros#escape_single_quotes[`escape_single_quotes`] straight away…
+
+…which turns out to not be so simple because the dbt version I'm using (1.1.1) needs to be >=1.2 to use the function. For now I'm going to omit the problematic track and worry about it at a later point if I have chance to figure out upgrading :) 
+
+Now when I run the code I get a new problem (which you can actually see above already if you look _really_ closely). 
+
+[source,bash]
+----
+$ dbt run --select stg_scans                                                                                           1 ↵
+16:46:06  Running with dbt=1.1.1
+16:46:06  Found 2 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+16:46:06
+16:46:06  Concurrency: 1 threads (target='dev')
+16:46:06
+16:46:06  1 of 1 START view model main.stg_scans ......................................... [RUN]
+16:46:06  1 of 1 ERROR creating view model main.stg_scans ................................ [ERROR in 0.06s]
+16:46:06
+16:46:06  Finished running 1 view model in 0.26s.
+16:46:06
+16:46:06  Completed with 1 error and 0 warnings:
+16:46:06
+16:46:06  Runtime Error in model stg_scans (models/staging/stg_scans.sql)
+16:46:06    Parser Error: syntax error at or near ")"
+16:46:06    LINE 60:             ) AS track
+16:46:06                         ^
+16:46:06
+16:46:06  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
+----
+
+The problem is this bit of code: 
+
+§[source,sql]
+----
+LIST_CONCAT(
+  {% for t in tracks -%}
+    F{{ loop.index }},
+  {% endfor -%}
+) AS track 
+----
+
+The loop includes a field seperator `,` every iteration which is _mostly_ what we want—except we don't want it on the final iteration as it then looks like this (notice after `F14` the erroneous comma): 
+
+[source,sql]
+----
+LIST_CONCAT(
+  F1,
+  F2,
+[…]
+  F13,
+  ) AS track
+----
+
+Let's see if we can code around that by checking our index in the iteration (`loop.index`) against the length of the list (`tracks|length`):
+
+[source,sql]
+----
+LIST_CONCAT(
+  {% for t in tracks -%}
+    F{{ loop.index }} {% if loop.index < tracks|length %}, {% endif %}
+  {% endfor -%}
+) AS track 
+----
+
+Now if we compile the model we can see a nice set of SQL: 
+
+[source,sql]
+----
+LIST_CONCAT(
+  F1 ,
+  F2 ,
+[…]
+  F12 ,
+  F13
+  ) AS track
+----
+
+We're getting there, but still no dice when we run the model: 
+
+[source,bash]
+----
+$ dbt run --select stg_scans
+16:54:13  Running with dbt=1.1.1
+16:54:14  Found 2 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0
+ metrics
+16:54:14
+16:54:14  Concurrency: 1 threads (target='dev')
+16:54:14
+16:54:14  1 of 1 START view model main.stg_scans ......................................... [RUN]
+16:54:14  1 of 1 ERROR creating view model main.stg_scans ................................ [ERROR in 0.05s]
+16:54:14
+16:54:14  Finished running 1 view model in 0.21s.
+16:54:14
+16:54:14  Completed with 1 error and 0 warnings:
+16:54:14
+16:54:14  Runtime Error in model stg_scans (models/staging/stg_scans.sql)
+16:54:14    Binder Error: No function matches the given name and argument types 'list_concat(VARCHAR[], VARCHAR[], VARCHAR[],
+ VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[], VARCHAR[])'. You might ne
+ed to add explicit type casts.
+16:54:14        Candidate functions:
+16:54:14        list_concat(ANY[], ANY[]) -> ANY[]
+16:54:14
+16:54:14
+16:54:14  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
+----
+
+Turns out I mis-read the docs for `LIST_CONCAT` — it concatenates **two** lists, not many. We can see this if I expand my test case from above: 
+
+[source,sql]
+----
+current_dbt.duckdb> WITH X AS (SELECT A, B,
+                           CASE WHEN A='X' THEN ['A'] END AS F0,
+                           CASE WHEN B='X' THEN ['B'] END AS F1, CASE WHEN B='X' THEN ['B'] END AS F2
+                    FROM FOO)
+                    SELECT LIST_CONCAT(F0, F1, F2) AS COMBINED_FLAGS FROM X
+
+Binder Error: No function matches the given name and argument types 'list_concat(VARCHAR[], VARCHAR[], VARCHAR[])'. You might need to add explicit type casts.
+        Candidate functions:
+        list_concat(ANY[], ANY[]) -> ANY[]
+
+LINE 5: SELECT LIST_CONCAT(F0, F1, F2) AS COMBINED_FLAGS FROM X...
+               ^
+
+----
+
+The solution is to stack the `LIST_CONCAT`s: 
+
+[source,sql]
+----
+current_dbt.duckdb> WITH X AS (SELECT A, B,
+                           CASE WHEN A='X' THEN ['A'] END AS F0,
+                           CASE WHEN B='X' THEN ['B'] END AS F1, CASE WHEN B='X' THEN ['B'] END AS F2
+                    FROM FOO)
+                    SELECT LIST_CONCAT(LIST_CONCAT(F0, F1), F2) AS COMBINED_FLAGS FROM X
+
++-----------------+
+| COMBINED_FLAGS  |
++-----------------+
+| ['B', 'B']      |
+| ['A']           |
+| ['A', 'B', 'B'] |
++-----------------+
+3 rows in set
+Time: 0.009s
+----
+
+After a bit of fiddling here's the bit of the dbt model code to generate this necessary SQL: 
+
+[source,sql]
+----
+[…]
+SELECT    […], 
+          -- LIST_CONCAT takes two parameters, so we're going to stack them. 
+          -- Write a nested LIST_CONCAT for all but one occurance of the tracks
+          {% for x in range((tracks|length -1)) -%}
+            LIST_CONCAT(
+          {% endfor -%}
+          -- For every track…
+          {% for t in tracks -%}
+            -- Write out the field number
+            F{{ loop.index }} 
+            -- Unless it's the first one, add a close parenthesis
+            {% if loop.index !=1  %}) {% endif %} 
+            -- Unless it's the last one, add a comma
+            {% if loop.index < tracks|length %}, {% endif %}
+          {% endfor -%} 
+          AS track 
+FROM      source_data
+----
+
+Which compiles into this monstrosity: 
+
+[source,sql]
+----
+SELECT    […]
+          LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT ( LIST_CONCAT (
+                        F1 , F2 ) , F3 ) , F4 ) , F5 ) , F6 ) , F7 ) , F8 ) , F9 ) , F10 ) , F11 ) , F12 ) , F13 )
+          AS track
+FROM      source_data
+----
+
+The resulting transformed data looks like this - exactly what we wanted, with a single field and zero or more instances of the Track value: 
+
+[source,sql]
+----
++-------------------------------------------------------+
+| track                                                 |
++-------------------------------------------------------+
+| ['Kafka Summit', 'Modern Data Flow']                  |
+| ['Panel']                                             |
+| <null>                                                |
+| ['Kafka Summit', 'Streaming Technologies']            |
+| ['Event Streaming in Academia and Beyond']            |
+[…]
+----
+
+Over on the friendly https://discord.com/invite/tcvwpjfnZx[DuckDB Discord group] there were a couple of suggestions how this SQL might be written more effectively and neatly, including using https://duckdb.org/docs/sql/functions/nested#filter[`list_filter()` with a lambda], or using list comprehension functionality which was added recently. I didn't try either of these yet so let me know if you have done!
+
