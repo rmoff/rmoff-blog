@@ -374,6 +374,8 @@ I'd rather narrow the table into a single https://duckdb.org/docs/sql/data_types
 
 ## My First Model 👨‍🎓
 
+### Staging model #1: Rating Detail (`stg_rating`)
+
 Following the pattern of the https://github.com/dbt-labs/jaffle_shop_duckdb[jaffle shop] demo, I'm going to use staging tables to tidy up the raw data to start with. 
 
 We'll check the pattern works first with one table (`rating_detail`) and then move on to the other. 
@@ -648,6 +650,64 @@ $ duckdb current_dbt.duckdb -c "select * from stg_ratings using sample 5;"
 
 (actual footage of me with my lockdown beard 😉 )
 
+The last thing we need to do is #5 in the spec above -- pivot the rating types into in individual columns. First I'll get the unique set of values: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct rating_type from stg_ratings;
++--------------------+
+| rating_type        |
++--------------------+
+| Overall Experience |
+| Presenter          |
+| Content            |
++--------------------+
+3 rows in set
+Time: 0.010s
+----
+
+and build this into a Jinja variable in the model: 
+
+[source,python]
+----
+{% set rating_types = ['Overall Experience','Presenter', 'Content'] %}
+----
+
+and then use this to build several `CASE` statements: 
+
+[source,python]
+----
+-- Spec #5: Pivot rating type into individual columns
+{% for r in rating_types -%}
+  CASE WHEN rating_type = '{{ r }}' THEN rating END AS {{ r.lower().replace(' ','_') }}_rating,
+  CASE WHEN rating_type = '{{ r }}' THEN "comment" END AS {{ r.lower().replace(' ','_') }}_comment,
+{% endfor -%}
+----
+
+Note the use of `.lower()` and `.replace` to force the name to lowercase and replace spaces with underscores. Otherwise you end up with column names like `"Overall Experience_comment"` instead of `overall_experience_comment`. 
+
+The resulting table looks like this: 
+
+[source,sql]
+----
++-----+----------------------------+---------+
+| cid | name                       | type    |
++-----+----------------------------+---------+
+| 0   | session_name               | VARCHAR |
+| 1   | overall_experience_rating  | INTEGER |
+| 2   | overall_experience_comment | VARCHAR |
+| 3   | presenter_rating           | INTEGER |
+| 4   | presenter_comment          | VARCHAR |
+| 5   | content_rating             | INTEGER |
+| 6   | content_comment            | VARCHAR |
+| 7   | attendee_type              | VARCHAR |
+| 8   | virtual_attendee           | INTEGER |
++-----+----------------------------+---------+
+----
+
+
+### Staging model #2: Session Scans (`stg_scans`)
+
 Let's build the other staging model now. The only point of interest here is combining the numerous fields that represent all the tracks and have a value in them if the associated session was in that track. For this I'm going to try my hand at some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] since this feels like a great place for it. 
 
 The SQL pattern I want to replicate is this: 
@@ -891,7 +951,7 @@ $ dbt run --select stg_scans                                                    
 
 The problem is this bit of code: 
 
-§[source,sql]
+[source,sql]
 ----
 LIST_CONCAT(
   {% for t in tracks -%}
@@ -984,7 +1044,7 @@ LINE 5: SELECT LIST_CONCAT(F0, F1, F2) AS COMBINED_FLAGS FROM X...
 
 ----
 
-The solution is to stack the `LIST_CONCAT`s: 
+The solution is to stack the `LIST_CONCAT` s: 
 
 [source,sql]
 ----
@@ -1056,4 +1116,1009 @@ The resulting transformed data looks like this - exactly what we wanted, with a 
 ----
 
 Over on the friendly https://discord.com/invite/tcvwpjfnZx[DuckDB Discord group] there were a couple of suggestions how this SQL might be written more effectively and neatly, including using https://duckdb.org/docs/sql/functions/nested#filter[`list_filter()` with a lambda], or using list comprehension functionality which was added recently. I didn't try either of these yet so let me know if you have done!
+
+The other thing to say here is that the point of the Jinja templating is to make models reusable and flexible - but arguably that soup of `{{` `{%` `(` etc above may not be as straightforward to maintain in the long run _given a static data set_ as simply copy and pasting the SQL with the hard-coded values whilst the logic is fresh in one's head. Right tool, right job. 
+
+### Staging model #3: Session IDs
+
+The last thing that I want to add to both staging tables is a surrogate key to represent the unique session (#6 in the spec list above). There's a https://docs.getdbt.com/blog/sql-surrogate-keys[nice doc about surrogate keys] on the dbt website itself. To do this I'll create a utility staging table to generate the IDs across both sources (`stg_scans`, `stg_ratings`), and then use this in the subsequent join that I'll do afterwards. 
+
+The two sources of data (scans and ratings) have a different number of sessions: 
+
+[source,sql]
+----
+current_dbt.duckdb> select count (distinct session_name) from stg_scans;
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 157                          |
++------------------------------+
+1 row in set
+Time: 0.009s
+current_dbt.duckdb> select count (distinct session_name) from stg_ratings
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 123                          |
++------------------------------+
+1 row in set
+Time: 0.008s
+----
+
+So `stg_scans` has the most rows, and we can check which table(s) has unique sessions in: 
+
+[source,sql]
+----
+current_dbt.duckdb> select session_name from stg_ratings 
+                      where session_name not in 
+                        (select session_name 
+                           from stg_scans);
+0 rows in set
+Time: 0.006s
+current_dbt.duckdb> select session_name from stg_scans 
+                      where session_name not in 
+                        (select session_name 
+                           from stg_ratings);
+117 rows in set
+Time: 0.032s
+----
+
+This tells us that all sessions that are in `stg_ratings` are also in `stg_scans`, but `stg_scans` has sessions that _aren't_ in `stg_ratings`. 
+
+Let's try out creating a surrogate key using the `md5` hash function. 
+
+By creating a `UNION` across the two tables we should get a unique list of sessions. So long as the session has the same name, it'll have the same md5 value, and thus the same key value. We'll try it out first for one session that we know is on both tables: 
+
+[source,sql]
+----
+current_dbt.duckdb> select session_name 
+                      from stg_scans 
+                    where session_name in 
+                      (select session_name 
+                         from stg_ratings) 
+                    fetch first 1 row only;
++---------------------------------+
+| session_name                    |
++---------------------------------+
+| "Why Wait?" Real-time Ingestion |
++---------------------------------+
+1 row in set
+Time: 0.009s
+
+current_dbt.duckdb> SELECT    'stg_ratings'     AS source,
+                              MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_ratings
+                    WHERE     session_name = '"Why Wait?" Real-time Ingestion'
+                    UNION
+                    SELECT    'stg_scans'       AS source,
+                              MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_scans
+                    WHERE     session_name = '"Why Wait?" Real-time Ingestion';
++-------------+----------------------------------+---------------------------------+
+| source      | session_id                       | session_name                    |
++-------------+----------------------------------+---------------------------------+
+| stg_ratings | 43f10e52cd2f23100571189beee23450 | "Why Wait?" Real-time Ingestion |
+| stg_scans   | 43f10e52cd2f23100571189beee23450 | "Why Wait?" Real-time Ingestion |
++-------------+----------------------------------+---------------------------------+
+2 rows in set
+Time: 0.011s
+
+----
+
+Note I've created a field called `source` just to show which table the value is coming from. If I remove that then the `UNION` de-duplicates the remaining content to give us just the one value: 
+
+[source,sql]
+----
+current_dbt.duckdb> SELECT    MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_ratings
+                    WHERE     session_name = '"Why Wait?" Real-time Ingestion'
+                    UNION
+                    SELECT    MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_scans
+                    WHERE     session_name = '"Why Wait?" Real-time Ingestion';
++----------------------------------+---------------------------------+
+| session_id                       | session_name                    |
++----------------------------------+---------------------------------+
+| 43f10e52cd2f23100571189beee23450 | "Why Wait?" Real-time Ingestion |
++----------------------------------+---------------------------------+
+1 row in set
+Time: 0.010s
+----
+
+Let's check that it works where a session is only in one source table and not the other: 
+
+[source,sql]
+----
+current_dbt.duckdb> select session_name
+                      from stg_scans
+                     where session_name not in
+                      (select session_name
+                          from stg_ratings)
+                    fetch first 1 row only;
+
+
++----------------------------------------------------------------------------------+
+| session_name                                                                     |
++----------------------------------------------------------------------------------+
+| A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia  |
++----------------------------------------------------------------------------------+
+1 row in set
+Time: 0.009s
+
+current_dbt.duckdb> SELECT    'stg_ratings'     AS source,
+                              MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_ratings
+                    WHERE     session_name = 'A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia'
+                    UNION
+                    SELECT    'stg_scans'       AS source,
+                              MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_scans
+                    WHERE     session_name = 'A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia';
+
++-------------+----------------------------------+---------------------------------------------------------------------------------+
+| source      | session_id                       | session_name                                                                    |
++-------------+----------------------------------+---------------------------------------------------------------------------------+
+| stg_ratings | a8b8ea81d950cee37061756ddebc67a0 | A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia |
++-------------+----------------------------------+---------------------------------------------------------------------------------+
+1 row in set
+Time: 0.012s
+----
+
+Combining the two test session names gives us this: 
+
+[source,sql]
+----
+current_dbt.duckdb> SELECT    MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_ratings
+                    WHERE     session_name IN ('"Why Wait?" Real-time Ingestion', 'A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia')
+                    UNION
+                    SELECT    MD5(session_name) AS session_id,
+                              session_name
+                    FROM      stg_scans
+                    WHERE     session_name IN ('"Why Wait?" Real-time Ingestion', 'A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia')
+
++----------------------------------+---------------------------------------------------------------------------------+
+| session_id                       | session_name                                                                    |
++----------------------------------+---------------------------------------------------------------------------------+
+| 43f10e52cd2f23100571189beee23450 | "Why Wait?" Real-time Ingestion                                                 |
+| a8b8ea81d950cee37061756ddebc67a0 | A Systematic Literature Review and Meta-Analysis of Event Streaming in Academia |
++----------------------------------+---------------------------------------------------------------------------------+
+2 rows in set
+Time: 0.012s
+----
+
+Let's build that into a model called `stg_sessionid` in dbt. This will be the driving model for the joins we'll be doing afterwards. The data above shows that in this case we _could_ use `stg_scans` (because it has all of the sessions) but I'd rather do it properly and cater for the chance we have unique sessions on either side of the join. 
+
+[source,sql]
+----
+WITH      source_data AS (
+          -- Spec #6: Create a unique ID for each session 
+          SELECT    md5(session_name)  AS session_id,
+                    session_name
+          FROM      {{ ref('stg_ratings') }}
+          UNION 
+          SELECT    md5(session_name)  AS session_id,
+                    session_name
+          FROM      {{ ref('stg_scans') }}
+          )
+
+SELECT    *
+FROM      source_data
+----
+
+When I do `dbt run` now you'll notice that it knows automagically to build `stg_ratings` and `stg_scans` **before** `stg_sessionid` because the latter depends on the first two. 
+
+[source,bash]
+----
+$ dbt run
+08:32:55  Running with dbt=1.1.1
+08:32:55  Found 3 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+08:32:55
+08:32:55  Concurrency: 1 threads (target='dev')
+08:32:55
+08:32:55  1 of 3 START view model main.stg_ratings ....................................... [RUN]
+08:32:55  1 of 3 OK created view model main.stg_ratings .................................. [OK in 0.07s]
+08:32:55  2 of 3 START view model main.stg_scans ......................................... [RUN]
+08:32:55  2 of 3 OK created view model main.stg_scans .................................... [OK in 0.04s]
+08:32:55  3 of 3 START view model main.stg_sessionid ..................................... [RUN]
+08:32:55  3 of 3 OK created view model main.stg_sessionid ................................ [OK in 0.07s]
+08:32:55
+08:32:55  Finished running 3 view models in 0.30s.
+08:32:55
+08:32:55  Completed successfully
+08:32:55
+08:32:55  Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+----
+
+BUT… what's this? Our shiny new table (well, technically it's a view) shows a number I'm not expecting. Instead of 157 (the number of unique sessions in `stg_ratings` seen above), it's 241. 
+
+[source,sql]
+----
+current_dbt.duckdb> select count(*) from stg_sessionid;
++--------------+
+| count_star() |
++--------------+
+| 241          |
++--------------+
+1 row in set
+Time: 0.009s
+----
+
+#### A debugging tangent
+
+If you're just at this article for the tl;dr, or you've already spotted the error in my SQL above then feel free to skip ahead. There's something up with the SQL I've written and here I'm going to work it through to see what. 
+
+Problem statement: two sets of data that I believe should have a combined unique count of 157 are resulting in a view that returns a unique count of 241. 
+
+Here is the unique count of data for the two data sets: 
+
+[source,sql]
+----
+current_dbt.duckdb> select 'stg_scans' as source_table, count(distinct session_name) from stg_scans 
+                    union select 'stg_ratings' as source_table, count(distinct session_name) from stg_ratings ;
++--------------+------------------------------+
+| source_table | count(DISTINCT session_name) |
++--------------+------------------------------+
+| stg_scans    | 157                          |
+| stg_ratings  | 123                          |
++--------------+------------------------------+
+2 rows in set
+Time: 0.011s
+----
+
+Of the 157 unique `session_name` values in `stg_scans`, 117 are not in `stg_ratings` whilst 40 are: 
+
+[source,sql]
+----
+current_dbt.duckdb> select count(distinct session_name) from stg_scans
+                                          where session_name not in
+                                            (select session_name
+                                               from stg_ratings)
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 117                          |
++------------------------------+
+1 row in set
+Time: 0.011s
+current_dbt.duckdb> select count(distinct session_name) from stg_scans
+                                          where session_name in
+                                            (select session_name
+                                               from stg_ratings)
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 40                           |
++------------------------------+
+1 row in set
+Time: 0.010s
+----
+
+In reverse, of the the `123` unique `session_name` values in `stg_ratings`, 40 are also in `stg_scans` (which matches the above), and 0 aren't… this is getting a bit weird
+
+[source,sql]
+----
+current_dbt.duckdb> select count(distinct session_name) from stg_ratings
+                                          where session_name in
+                                            (select session_name
+                                               from stg_scans)
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 40                           |
++------------------------------+
+1 row in set
+Time: 0.010s
+current_dbt.duckdb> select count(distinct session_name) from stg_ratings
+                                          where session_name not in
+                                            (select session_name
+                                               from stg_scans)
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 0                            |
++------------------------------+
+1 row in set
+Time: 0.009s
+----
+
+Surely if there are zero in `stg_ratings` that are not in `stg_scans` then by definition they should all be in `stg_scans` (rather than just 40 or the 123 unique values). 
+
+++++
+<div class="tenor-gif-embed" data-postid="22475884" data-share-method="host" data-aspect-ratio="0.909375" data-width="100%"><a href="https://tenor.com/view/huh-heh-interesting-confused-confusion-gif-22475884">Huh Heh GIF</a>from <a href="https://tenor.com/search/huh-gifs">Huh GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+Let's look at this logically. We're talking about a Venn diagram in which two sets overlap partially. We can export the data: 
+
+[source,bash]
+----
+$ duckdb current_dbt.duckdb -noheader -list -c 'select distinct session_name from stg_scans order by 1' > /tmp/scans.txt
+$ duckdb current_dbt.duckdb -noheader -list -c 'select distinct session_name from stg_ratings order by 1' > /tmp/ratings.txt
+----
+
+and then drop the two resulting text files into a http://www.interactivenn.net/[neat tool that I found] to visualise the unique session names and the relationship between the two sets: 
+
+image::/images/2022/10/venn01.png[Venn diagram]
+
+The tool usefully shows the resulting sets, and the four `stg_ratings` sessions shown are: 
+
+[source,bash]
+----
+Apache Kafka with Spark Structured Streaming and Beyond: Building Real-Time Data Processing and Analytics with Databricks
+Data Streaming Celebration
+Intersectional Happy Hour
+Unofficial 5K Fun Run
+----
+
+So let's see if we can track those down, taking just one as an example. It's definitely in `stg_ratings`: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings where session_name = 'Unofficial 5K Fun Run';
++-----------------------+
+| session_name          |
++-----------------------+
+| Unofficial 5K Fun Run |
++-----------------------+
+1 row in set
+Time: 0.007s
+----
+
+And it's definitely not in `stg_scans`: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_scans where session_name = 'Unofficial 5K Fun Run';
+0 rows in set
+Time: 0.001s
+----
+
+So what's up with my subselect and `not in` logic that means it's not being returned? 
+
+It turns out my SQL-foo is a tad rusty. The https://duckdb.org/docs/sql/expressions/subqueries[subquery documentation on DuckDB] is nice and clearly written - what I need is a _correlated subquery_
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings r
+                                          where  session_name = 'Unofficial 5K Fun Run' 
+                                            and session_name not in
+                                            (select s.session_name
+                                               from stg_scans s 
+                                               where s.session_name=r.session_name);
++-----------------------+
+| session_name          |
++-----------------------+
+| Unofficial 5K Fun Run |
++-----------------------+
+1 row in set
+Time: 0.010s
+----
+
+Let's test it a step further. Based on the above tool (since I don't trust my SQL logic, clearly for good reasons) I've got three sessions that I'll use for testing: 
+
+* Only in `stg_scans`: `Data Streaming: The Paths Taken`
+* In both: `Advancing Apache NiFi Framework Security`
+* Only in `stg_ratings`: `Unofficial 5K Fun Run`
+
+So with those in the query amended to use a correlated subquery gives us this: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings r
+                                          where  session_name in ( 'Data Streaming: The Paths Taken', 
+                                                                   'Advancing Apache NiFi Framework Security', 
+                                                                   'Unofficial 5K Fun Run' ) 
+                                            and session_name not in
+                                            (select s.session_name
+                                               from stg_scans s where s.session_name=r.session_name);
++------------------------------------------+
+| session_name                             |
++------------------------------------------+
+| Advancing Apache NiFi Framework Security |
+| Unofficial 5K Fun Run                    |
++------------------------------------------+
+2 rows in set
+Time: 0.010s
+current_dbt.duckdb>
+----
+
+…which is *not* what we expected. The `Advancing Apache NiFi Framework Security` session is supposedly in both tables. Let's check: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings where session_name = 'Advancing Apache NiFi Framework Security';
++------------------------------------------+
+| session_name                             |
++------------------------------------------+
+| Advancing Apache NiFi Framework Security |
++------------------------------------------+
+1 row in set
+Time: 0.007s
+current_dbt.duckdb> select distinct session_name from stg_scans where session_name = 'Advancing Apache NiFi Framework Security';
+0 rows in set
+Time: 0.001s
+----
+
+Hmmm. What about this: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_scans where session_name like '%NiFi%';
++-------------------------------------------+
+| session_name                              |
++-------------------------------------------+
+| Advancing Apache NiFi Framework Security  |
++-------------------------------------------+
+1 row in set
+Time: 0.007s
+----
+
+Ahhhh. Or should that be "arrgghhh"? Either way - we have a bit of progress. If you look closely you can see that there's an errant whitespace (or at least unprintable character) at the end of the session name. 
+
+Let's try it like this: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_scans where trim(session_name) = 'Advancing Apache NiFi Framework Security';
++-------------------------------------------+
+| session_name                              |
++-------------------------------------------+
+| Advancing Apache NiFi Framework Security  |
++-------------------------------------------+
+1 row in set
+Time: 0.008s
+----
+
+OK, so `trim` helps here. Applying this to the above query gives us this: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings r
+                    where  session_name in ( 'Data Streaming: The Paths Taken',
+                                              'Advancing Apache NiFi Framework Security',
+                                              'Unofficial 5K Fun Run' )
+                      and trim(session_name) not in
+                      (select trim(s.session_name)
+                          from stg_scans s where trim(s.session_name)=trim(r.session_name));
++-----------------------+
+| session_name          |
++-----------------------+
+| Unofficial 5K Fun Run |
++-----------------------+
+1 row in set
+Time: 0.013s
+----
+
+Alrighty then! This is what we expected for these three test values. 
+
+++++
+<div class="tenor-gif-embed" data-postid="7715492" data-share-method="host" data-aspect-ratio="1.22549" data-width="100%"><a href="https://tenor.com/view/alrighty-then-jim-carrey-ace-ventura-gif-7715492">Alrighty Then Jim Carrey GIF</a>from <a href="https://tenor.com/search/alrighty+then-gifs">Alrighty Then GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+Instead of jamming `trim` throughout our queries, let's clean the data further up the pipeline, and amend the two staging models to include it once. Here's where you start to really appreciate the elegance of dbt. By defining models once it's easy to put the logic in the right place instead of bodging it in subsequent queries. 
+
+[source,bash]
+----
+$ git diff models/staging/stg_ratings.sql
+[…]
+-          SELECT    title           AS session_name,
++          SELECT    TRIM(title)     AS session_name,
+
+$ git diff models/staging/stg_scans.sql
+[…]
+-          SELECT    NAME            AS session_name,
++          SELECT    TRIM(name)      AS session_name,
+----
+
+After making that change we do a `dbt run` and re-run the test query above to see how things look now. I'm going to add three more test session values too, one for each category (in one, in the other, in both)
+
+[source,sql]
+----
+current_dbt.duckdb> -- Two sessions only in stg_ratings
+                    select distinct session_name from stg_ratings r
+                      where  session_name in ( 'Data Streaming: The Paths Taken', 'Streaming Use Cases and Trends',
+                                                'Advancing Apache NiFi Framework Security', 'Bootiful Kafka: Get the Message!',
+                                                'Unofficial 5K Fun Run', 'Data Streaming Celebration' )
+                        -- only in the first set
+                        --               👇️  👇️
+                        and session_name not in (select s.session_name from stg_scans s where s.session_name=r.session_name);
+
++----------------------------+
+| session_name               |
++----------------------------+
+| Data Streaming Celebration |
+| Unofficial 5K Fun Run      |
++----------------------------+
+2 rows in set
+Time: 0.009s
+current_dbt.duckdb> -- Two sessions in both stg_ratings and stg_scans
+                    select distinct session_name from stg_ratings r
+                      where  session_name in ( 'Data Streaming: The Paths Taken', 'Streaming Use Cases and Trends',
+                                                'Advancing Apache NiFi Framework Security', 'Bootiful Kafka: Get the Message!',
+                                                'Unofficial 5K Fun Run', 'Data Streaming Celebration' )
+                        -- in both sets  👇️
+                        and session_name in (select s.session_name from stg_scans s where s.session_name=r.session_name);
+
++------------------------------------------+
+| session_name                             |
++------------------------------------------+
+| Advancing Apache NiFi Framework Security |
+| Bootiful Kafka: Get the Message!         |
++------------------------------------------+
+2 rows in set
+Time: 0.009s
+current_dbt.duckdb> -- Two sessions in only stg_scans
+                    select distinct session_name from stg_scans s
+                      where  session_name in ( 'Data Streaming: The Paths Taken', 'Streaming Use Cases and Trends',
+                                                'Advancing Apache NiFi Framework Security', 'Bootiful Kafka: Get the Message!',
+                                                'Unofficial 5K Fun Run', 'Data Streaming Celebration' )
+                        -- only in the first set
+                        --               👇️  👇️
+                        and session_name not in (select r.session_name from stg_ratings r where r.session_name=s.session_name);
+
++---------------------------------+
+| session_name                    |
++---------------------------------+
+| Data Streaming: The Paths Taken |
+| Streaming Use Cases and Trends  |
++---------------------------------+
+2 rows in set
+Time: 0.015s
+----
+
+OK, we're looking good. Let's try it without the predicates. There should be four rows returned for sessions only in `stg_ratings`: 
+
+[source,sql]
+----
+current_dbt.duckdb> select distinct session_name from stg_ratings r
+                        -- only in the first set
+                        --               👇️  👇️
+                     where session_name not in (select s.session_name from stg_scans s where s.session_name=r.session_name);
++---------------------------------------------------------------------------------------------------------------------------+
+| session_name                                                                                                              |
++---------------------------------------------------------------------------------------------------------------------------+
+| Apache Kafka with Spark Structured Streaming and Beyond: Building Real-Time Data Processing and Analytics with Databricks |
+| Data Streaming Celebration                                                                                                |
+| Unofficial 5K Fun Run                                                                                                     |
+| Intersectional Happy Hour                                                                                                 |
++---------------------------------------------------------------------------------------------------------------------------+
+4 rows in set
+Time: 0.013s
+----
+
+💥💥💥💥
+
+Remember that Venn diagram above? This one: 
+
+image::/images/2022/10/venn01.png[Venn diagram]
+
+Let's check those numbers against our newly-fixed SQL and data: 
+
+[source,sql]
+----
+current_dbt.duckdb> -- In ONLY stg_scans
+                    select COUNT(distinct session_name) from stg_scans s
+                        -- only in the first set
+                        --               👇️  👇️
+                     where session_name not in (select r.session_name from stg_ratings r where r.session_name=s.session_name);
+
+
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 38                           |
++------------------------------+
+1 row in set
+Time: 0.012s
+
+current_dbt.duckdb> -- In BOTH stg_ratings and stg_scans
+                    select COUNT(distinct session_name) from stg_ratings r
+                        --         in BOTH sets
+                        --              👇️
+                     where session_name in (select s.session_name from stg_scans s where s.session_name=r.session_name);
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 119                          |
++------------------------------+
+1 row in set
+Time: 0.014s
+
+
+current_dbt.duckdb> -- In ONLY stg_ratings
+                    select COUNT(distinct session_name) from stg_ratings r
+                        -- only in the first set
+                        --               👇️  👇️
+                     where session_name not in (select s.session_name from stg_scans s where s.session_name=r.session_name);
++------------------------------+
+| count(DISTINCT session_name) |
++------------------------------+
+| 4                            |
++------------------------------+
+1 row in set
+Time: 0.012s
+----
+
+#### Normal service has been resumed…
+
+_If you stayed with me on that tangent… bravo. If you didn't, that's understandable. It's like being at a conference where the speaker doing a demo "Um"s an "Ah"s and "It was working when I tried it before" through an error and everyone else gets restless and goes to check Twitter._
+
+So I made a mistake in my initial analysis and numbers. Instead of 157 unique sessions there should be 38 + 119 + 4 = 161. Let's see what the fix we put in for whitespace (`trim`) has done to the results of `stg_sessionid`: 
+
+[source,sql]
+----
+current_dbt.duckdb> select count(*) from stg_sessionid;
++--------------+
+| count_star() |
++--------------+
+| 162          |
++--------------+
+1 row in set
+Time: 0.012s
+----
+
+162! It's _almost_ 161! But not quite! 
+
+How about this, on a hunch: 
+
+[source,sql]
+----
+current_dbt.duckdb> select count(*) from stg_sessionid where session_name is not null;
++--------------+
+| count_star() |
++--------------+
+| 161          |
++--------------+
+1 row in set
+Time: 0.013s
+----
+
+There we have it ladies and gentlemen! The number that we were (eventually) expecting. Let's check the data first to make sure we've not a data issue that we need to fix upstream (i.e. valid data but no session name): 
+
+[source,sql]
+----
+current_dbt.duckdb> select * from stg_scans where session_name is null;
++--------------+----------+--------+-----------+--------+
+| session_name | speakers | scans  | rating_ct | track  |
++--------------+----------+--------+-----------+--------+
+| <null>       | <null>   | <null> | <null>    | <null> |
+| <null>       | <null>   | <null> | <null>    | <null> |
++--------------+----------+--------+-----------+--------+
+2 rows in set
+Time: 0.012s
+----
+
+That looks good to remove, so we'll tweak the `stg_sessionid` model to exclude `NULL` sessions: 
+
+[source,bash]
+----
+diff --git a/current_dbt/models/staging/stg_sessionid.sql b/current_dbt/models/staging/stg_sessionid.sql
+index 1eb3743..5fbe8de 100644
+--- a/current_dbt/models/staging/stg_sessionid.sql
++++ b/current_dbt/models/staging/stg_sessionid.sql
+@@ -11,3 +11,4 @@ WITH      source_data AS (
+
+ SELECT    *
+ FROM      source_data
++WHERE     session_name IS NOT NULL
+----
+
+After re-running all the models, the `stg_sessionid` is showing exactly the right count: 
+
+[source,sql]
+----
+current_dbt.duckdb> select count(*) from stg_sessionid;
++--------------+
+| count_star() |
++--------------+
+| 161          |
++--------------+
+1 row in set
+Time: 0.013s
+----
+
+### Staging model 3.5 - Sessions
+
+It's probably going to be more useful to have a unique list of sessions and their associated attributes (speaker, etc), so I'm going to amend the `stg_sessionid` to be `stg_session` and add these in. There are couple of factual attributes (number of scans, number of ratings) which are arguably facts, but I'll worry about that another day. For now it's all at the same grain (session) and so makes sense in the same place: 
+
+[source,sql]
+----
+WITH      source_data AS (
+          -- Spec #6: Create a unique ID for each session 
+          SELECT    md5(session_name)  AS session_id,
+                    session_name
+          FROM      {{ ref('stg_ratings') }}
+          UNION 
+          SELECT    md5(session_name)  AS session_id,
+                    session_name
+          FROM      {{ ref('stg_scans') }}
+          )
+
+SELECT    src.session_id,
+          src.session_name,
+          sc.speakers,
+          sc.track,
+          SUM(sc.scans) AS scans,
+          SUM(sc.rating_ct) AS rating_ct
+FROM      src.source_data src
+          LEFT OUTER JOIN
+          {{ ref('stg_scans') }} sc
+          ON src.session_name = sc.session_name
+WHERE     src.session_name IS NOT NULL
+GROUP BY  src.session_id,
+          src.session_name,
+          sc.speakers,
+          sc.track
+----
+
+You'll notice a `SUM` and `GROUP BY` in there, because some sessions had multiple scan and rating data which needed rolling up. This also highlighted a type error in the `stg_scans` which I went back and fixed in the model (instead of just kludging it in-place here): 
+
+[source,bash]
+----
+diff --git a/current_dbt/models/staging/stg_scans.sql b/current_dbt/models/staging/stg_scans.sql
+[…]
+-                    scans                  AS scans,
++                    TRY_CAST(scans AS INT) AS scans,
+----
+
+## The finished result - Model 1: Session Rating Detail
+
+For this, we'll just instantiate the session rating detail that we just built in staging, joined with the session dimension data: 
+
+[source,sql]
+----
+SELECT s.session_id, 
+       s.session_name, 
+       s.speakers, 
+       r.virtual_attendee,
+       r.overall_experience_rating, 
+       r.presenter_rating,
+       r.content_rating,
+       r.overall_experience_comment, 
+       r.presenter_comment,
+       r.content_comment
+  FROM  {{ ref('stg_ratings')}} r
+          LEFT JOIN 
+          {{ ref('stg_session') }} s
+          ON s.session_name = r.session_name
+----
+
+When we run the whole project we can see again that dbt just figures out the dependencies so that everything's built in the right order: 
+
+[source,bash]
+----
+$ dbt run
+11:43:23  Running with dbt=1.1.1
+11:43:23  Found 4 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+11:43:23
+11:43:23  Concurrency: 1 threads (target='dev')
+11:43:23
+11:43:23  1 of 4 START view model main.stg_ratings ....................................... [RUN]
+11:43:23  1 of 4 OK created view model main.stg_ratings .................................. [OK in 0.07s]
+11:43:23  2 of 4 START view model main.stg_scans ......................................... [RUN]
+11:43:23  2 of 4 OK created view model main.stg_scans .................................... [OK in 0.07s]
+11:43:23  3 of 4 START view model main.stg_session ....................................... [RUN]
+11:43:23  3 of 4 OK created view model main.stg_session .................................. [OK in 0.04s]
+11:43:23  4 of 4 START table model main.session_ratings_detail ........................... [RUN]
+11:43:23  4 of 4 OK created table model main.session_ratings_detail ...................... [OK in 0.08s]
+11:43:23
+11:43:23  Finished running 3 view models, 1 table model in 0.41s.
+11:43:23
+11:43:23  Completed successfully
+11:43:23
+11:43:23  Done. PASS=4 WARN=0 ERROR=0 SKIP=0 TOTAL=4
+----
+
+Over in DuckDB we can see our seed data, three staging views, and a table…
+
+[source,sql]
+----
+$ duckdb current_dbt.duckdb -c "select table_schema, table_name, table_type from information_schema.tables;"
+
+┌────────────────┬────────────────────────┬────────────┐
+│  table_schema  │  table_name            │ table_type │
+├────────────────┼────────────────────────┼────────────┤
+│ main_seed_data │ session_scans          │ BASE TABLE │
+│ main_seed_data │ rating_detail          │ BASE TABLE │
+│ main           │ stg_session            │ VIEW       │
+│ main           │ stg_ratings            │ VIEW       │
+│ main           │ stg_scans              │ VIEW       │
+│ main           │ session_ratings_detail │ VIEW       │
+└────────────────┴────────────────────────┴────────────┘
+----
+
+Except - our finished table (`session_ratings_detail`) is still a VIEW. Over in `dbt_project.yml` I need to tell dbt to actually materialise it: 
+
+[source,yaml]
+----
+[…]
+models:
+  current_dbt:
+    materialized: table
+    staging:
+      +materialized: view
+----
+
+Which has the desired effect: 
+
+[source,sql]
+----
+$ duckdb current_dbt.duckdb -c "select table_schema, table_name, table_type from information_schema.tables;"
+
+┌────────────────┬────────────────────────┬────────────┐
+│  table_schema  │  table_name            │ table_type │
+├────────────────┼────────────────────────┼────────────┤
+│ main_seed_data │ session_scans          │ BASE TABLE │
+│ main_seed_data │ rating_detail          │ BASE TABLE │
+│ main           │ session_ratings_detail │ BASE TABLE │
+│ main           │ stg_session            │ VIEW       │
+│ main           │ stg_ratings            │ VIEW       │
+│ main           │ stg_scans              │ VIEW       │
+└────────────────┴────────────────────────┴────────────┘
+----
+
+And a sample of the finished data: 
+
+[source,sql]
+----
+current_dbt.duckdb> select session_id, overall_experience_comment, presenter_rating, content_rating from session_ratings_detail;
++----------------------------------+----------------------------+------------------+----------------+
+| session_id                       | overall_experience_comment | presenter_rating | content_rating |
++----------------------------------+----------------------------+------------------+----------------+
+| 2487f06e9800cbe86e35df66d8df2e27 | I want more Flink!         | <null>           | <null>         |
+| 2487f06e9800cbe86e35df66d8df2e27 | <null>                     | 4                | <null>         |
+| 2487f06e9800cbe86e35df66d8df2e27 | <null>                     | <null>           | 4              |
+| 2487f06e9800cbe86e35df66d8df2e27 | <null>                     | 5                | <null>         |
+| 2487f06e9800cbe86e35df66d8df2e27 | <null>                     | <null>           | 5              |
+----
+
+## The finished result - Model 2: Session Summary
+
+The breakdown of individual ratings data as we just created is useful for deep-dive analysis, but what's going to be useful overall is a summary of each session's data, which is what we'll create with the `sessions.sql` model. Check out the explanation below for notes. 
+
+[source,sql]
+----
+{% set rating_areas = ['overall_experience','presenter', 'content'] %}
+{% set rating_types = ['rating','comment'] %}
+
+WITH ratings_agg AS (
+  SELECT session_id, 
+         {% for a in rating_areas -%}
+          {% for r in rating_types -%}
+            LIST_SORT(
+              LIST({{a}}_{{r}}),
+              'DESC') AS {{a}}_{{r}},
+          {% endfor -%}
+         {% endfor -%}
+    FROM {{ ref('session_ratings_detail')}}
+  GROUP BY session_id
+)
+
+SELECT s.session_id, 
+       s.session_name, 
+       s.speakers, 
+       s.track, 
+       s.scans,
+        {% for a in rating_areas -%}
+          LIST_FILTER({{a}}_rating,x->x IS NOT NULL) AS {{a}}_rating_detail,
+          LIST_MEDIAN({{a}}_rating) AS {{a}}_rating_median,
+          LIST_FILTER({{a}}_comment,x->x IS NOT NULL) AS {{a}}_comments,
+        {% endfor -%}
+       s.rating_ct
+  FROM  {{ ref('stg_session')}} s
+          LEFT JOIN 
+          ratings_agg r
+          ON s.session_id = r.session_id
+----
+
+The main point of interest in the model here is compressing the above `session_ratings_detail` using the https://duckdb.org/docs/sql/data_types/list[`LIST`] data type and subsequent filter, aggregate, and sort functions. 
+
+* Build a `LIST` as an aggregate: 
++
+[source,sql]
+----
+SELECT LIST(content_rating) FROM session_ratings_detail GROUP BY session_id;
+----
++
+Note that the `LIST` gets an entry even if there's no value:
++
+[source,sql]
+----
++----------------------------------------------------------+
+| list(content_rating)                                     |
++----------------------------------------------------------+
+|[None, None, 4, None, None, None, None, 5, None, None, 3] |
+----
+
+* Sort the list with https://duckdb.org/docs/sql/functions/nested#sorting-lists[`LIST_SORT`]: 
++
+[source,sql]
+----
+SELECT LIST_SORT(LIST(content_rating),'DESC') FROM session_ratings_detail 
+GROUP BY session_id;
+----
++
+[source,sql]
+----
++-----------------------------------------------------------+
+| list_sort(list(content_rating), 'DESC')                   |
++-----------------------------------------------------------+
+| [None, None, None, None, None, None, None, None, 5, 4, 3] |
++-----------------------------------------------------------+
+----
+
+* Filter the list using https://duckdb.org/docs/sql/functions/nested#filter[`LIST_FILTER`] and a Lambda
++
+[source,sql]
+----
+WITH agg AS (SELECT session_id, 
+                    LIST_SORT(LIST(content_rating),'DESC') as my_list
+               FROM session_ratings_detail 
+             GROUP BY session_id)
+SELECT LIST_FILTER(my_list, returned_field -> returned_field IS NOT NULL)
+  FROM agg;
+----
++
+[source,sql]
+----
++----------------------------------------------------------------------+
+| list_filter(my_list, returned_field -> (returned_field IS NOT NULL)) |
++----------------------------------------------------------------------+
+| [5, 4, 3]                                                            |
+----
+
+* Aggregate the contents of the list using https://duckdb.org/docs/sql/functions/nested#list-aggregates[`LIST_AGGREGATE`] which provides a list of rewrites - you'll see in the following example both return the same result:
++
+[source,sql]
+----
+WITH agg AS (SELECT session_id, 
+                    LIST_SORT(LIST(content_rating),'DESC') as my_list
+               FROM session_ratings_detail 
+             GROUP BY session_id)
+SELECT my_list,
+       LIST_AGGREGATE(my_list, 'median'), 
+       LIST_MEDIAN(my_list) 
+  FROM agg;
+----
++
+The resulting data looks like this: 
++
+[source,sql]
+----
++-----------------------------------------------------------+-----------------------------------+----------------------+
+| my_list                                                   | list_aggregate(my_list, 'median') | list_median(my_list) |
++-----------------------------------------------------------+-----------------------------------+----------------------+
+| [None, None, None, None, None, None, None, None, 5, 4, 3] | 4.0                               | 4.0                  |
+----
+
+The resulting `sessions` table looks like this: 
+
+[source,sql]
+----
+current_dbt.duckdb> select *
+                     from sessions 
+
++----------------------------------+---------------------------------------+-------------+-------------------------------------------------+-------+----------------------------------+----------------------------------+-----------------------------------------------------------------+--------------------------+-------------------------+----------------------+--------------------------+-----------------------+------------------+-----------+
+| session_id                       | session_name                          | speakers    | track                                           | scans | overall_experience_rating_detail | overall_experience_rating_median | overall_experience_comments                                     | presenter_rating_detail  | presenter_rating_median | presenter_comments   | content_rating_detail    | content_rating_median | content_comments | rating_ct |
++----------------------------------+---------------------------------------+-------------+-------------------------------------------------+-------+----------------------------------+----------------------------------+-----------------------------------------------------------------+--------------------------+-------------------------+----------------------+--------------------------+-----------------------+------------------+-----------+
+| 4eac7c6d30952b9a20f216c897a5a5ef | Never Gonna Give you Up               | Rick Astley | ['Data Development Life Cycle', 'Kafka Summit'] | 107   | [5, 5, 5, 5, 5, 4, 4, 3]         | 5.0                              | ['Very informative and hope to bring ideas back to my company'] | [5, 5, 5, 5, 5, 5, 5, 3] | 5.0                     | ['Very well spoken'] | [5, 5, 5, 5, 5, 4, 4, 3] | 5.0                   | []               | 24        |
++----------------------------------+---------------------------------------+-------------+-------------------------------------------------+-------+----------------------------------+----------------------------------+-----------------------------------------------------------------+--------------------------+-------------------------+----------------------+--------------------------+-----------------------+------------------+-----------+
+----
+
+### Wrapping up
+
+With the seed, staging, and main models built, I've got a project that transforms two raw CSV files into a nicely (-ish) modelled set of data. I've not touched things like incremental loads, `schema.yml` definitions, tests, snapshots, and all the rest of it. But I _have_ picked up an appreciation for what dbt can do, and why there is such a fuss about it. 
+
+Could I have written this all myself without dbt? Sure. Would I have wanted to? Perhaps. Would it have been so easy to easily go back and change definitions of staging tables as I realised I'd missed columns, mis-typed data, etc? Definitely not. Would it have been possible to give a list of values and iterate over them to dynamically build SQL? I guess, but coding anything other than SQL really isn't my bag - "just enough" coding here seems the perfect amount, sticking to the declarative power of SQL for the vast bulk of transformation work. 
+
+### Comments?
+
+This is my first proper outing with dbt, other than link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[following along someone else's code] previously. I'd love to hear any feedback on my approach with it - what did I do wrong? What wasn't https://www.getdbt.com/dbt-learn/lessons/dbtonic-jinja/#1[_dbtonic_]? What other features should I dig into? Hit me up on https://twitter.com/rmoff/[twitter] or https://www.linkedin.com/in/robinmoffatt[LinkedIn] 😁
 
