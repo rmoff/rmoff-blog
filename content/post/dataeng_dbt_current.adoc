@@ -1,9 +1,9 @@
 ---
-draft: true
-title: 'Hands-on with dbt - wrangling the feedback data from Current 22'
-date: "2022-10-20T16:27:14Z"
-image: "/images/2022/10/"
-thumbnail: "/images/2022/10/"
+draft: false
+title: 'Data Engineering in 2022: Wrangling the feedback data from Current 22 with dbt'
+date: "2022-10-24T12:27:14Z"
+image: "/images/2022/10/h_IMG_8834.jpeg"
+thumbnail: "/images/2022/10/t_IMG_8835.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - dbt
@@ -40,9 +40,9 @@ python3 -m pip install -r requirements.txt
 source venv/bin/activate
 ----
 
-Create a ✨sparkly new dbt project with `dbt init`: 
+Create a ✨sparkly new dbt project✨ with `dbt init`: 
 
-[source,bash]
+[source]
 ----
 $ dbt init
 16:40:45  Running with dbt=1.1.1
@@ -153,7 +153,7 @@ The source data is two files:
 
 Both are CSV exports, which I've placed in the `current_dbt/seeds` folder. 
 
-To start with I'm simply going to see if I get use `dbt seed` to load these into DuckDB. 
+To start with I'm simply going to see if I can use `dbt seed` to load these into DuckDB. 
 
 [source,bash]
 ----
@@ -176,7 +176,7 @@ $ dbt seed
 09:03:21  Done. PASS=2 WARN=0 ERROR=0 SKIP=0 TOTAL=2
 ----
 
-There's now a DuckDB file created, and within it two tables holding data!
+Holy smokes! There's now a DuckDB file created, and within it two tables holding data! And all I did was drop two CSV files into a folder and run `dbt seed`. 
 
 [source,bash]
 ----
@@ -237,7 +237,7 @@ Time: 0.009s
 current_dbt.duckdb>
 ----
 
-Pretty nice!
+Pretty nice! So let's think now about what we want to do with this data. 
 
 ## Data Wrangling: The Spec
 
@@ -333,8 +333,8 @@ current_dbt.duckdb> select "Attendee type" , count(*)
 Time: 0.008s
 ----
 
-8. Exclude session data for mealtimes (this data's important, but outside my scope of analysis)
-9. Pivot the session track into a single field. Currently the data has a field for each track and a check in the appropriate one: 
+8. Exclude session data for mealtimes (whilst this data is important, it's outside my scope of analysis)
+9. Pivot the session track into a single field. Currently the data has a field for each track and a check in the appropriate one. Very spreadsheet-y, not very RDBMS-y: 
 +
 [source,sql]
 ----
@@ -389,7 +389,7 @@ with source as (
 )
 ----
 
-If my source raw data is called `rating_detail` then it's going to get mighty confusing. I want to either use a name prefix or perhaps a separate database catalog (schema) for this raw data that I've loaded. Checking the docs I found the https://docs.getdbt.com/reference/seed-configs[seed configuration] including an option to https://docs.getdbt.com/reference/seed-configs#apply-the-schema-configuration-to-all-seeds[set the schema]. 
+Although the `ref` here is to the seed data, it made me think about the database object names. If my source raw data is going to be loaded into a table called `rating_detail` then it's potentially going to get rather confusing. I want to either use a name prefix or perhaps a separate database catalog (schema) for this raw data that I've loaded. Checking the docs I found the https://docs.getdbt.com/reference/seed-configs[seed configuration] including an option to https://docs.getdbt.com/reference/seed-configs#apply-the-schema-configuration-to-all-seeds[set the schema]. 
 
 So I've added to my `dbt_project.yml` the following: 
 
@@ -441,7 +441,7 @@ $ duckdb current_dbt.duckdb -c "select table_schema, table_name, table_type from
 <div class="tenor-gif-embed" data-postid="16333599" data-share-method="host" data-aspect-ratio="1.26482" data-width="100%"><a href="https://tenor.com/view/shaun-the-sheep-thumbs-up-okay-alright-good-job-gif-16333599">Shaun The Sheep Thumbs Up GIF</a>from <a href="https://tenor.com/search/shaun+the+sheep-gifs">Shaun The Sheep GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
 ++++
 
-So back to my staging model. Here's my first pass at the clean up of `rating_detail` based on the relevant points of the spec above to implement at this stage. 
+So back to my staging model. Here's my first pass at the clean up of `rating_detail` based on the relevant points of the link:#_data_wrangling_the_spec[spec above] to implement at this stage. 
 
 [source,sql]
 ----
@@ -569,9 +569,7 @@ Hmmm. So it turns out that the compile will compile _but not parse_ the SQL for 
 [source,sql]
 ----
   "Attendee Type" AS attendee_type
-  -- Spec #7 Create a new field showing if attendee was in-person or not
   CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
-  -- Spec #3: Remove PII data of those who left ratings
 ----
 
 Can you see it? Or rather, not see it? 
@@ -580,18 +578,16 @@ How about now?
 
 [source,sql]
 ----
+  --                             👇️👀
   "Attendee Type" AS attendee_type,
-  -- Spec #7 Create a new field showing if attendee was in-person or not
   CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 AS virtual_attendee
-  -- Spec #3: Remove PII data of those who left ratings
 ----
 
-With the errant comma put in its place, and then subsequently the missing `END` that the eagle-eyed amongst you will have spotted inserted in the `CASE` statement, things look better: 
+With the errant comma put in its place after `attendee_type`, and then subsequently the missing `END` that the eagle-eyed amongst you will have spotted inserted in the `CASE` statement, things look better: 
 
 [source,sql]
 ----
   "Attendee Type" AS attendee_type,
-  -- Spec #7 Create a new field showing if attendee was in-person or not
   CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 END AS virtual_attendee
 ----
 
@@ -650,7 +646,39 @@ $ duckdb current_dbt.duckdb -c "select * from stg_ratings using sample 5;"
 
 (actual footage of me with my lockdown beard 😉 )
 
-The last thing we need to do is #5 in the spec above -- pivot the rating types into in individual columns. First I'll get the unique set of values: 
+The last thing we need to do is #5 in the link:#_data_wrangling_the_spec[spec above] -- pivot the rating types into in individual columns, turning this: 
+
+[source,sql]
+----
++-----------+-----------+--------+
+| SessionID |Rating Type| rating |
++-----------+-----------+--------+
+| 42        | Overall   | 5      |
+| 42        | Presenter | 5      |
+| 42        | Content   | 4      |
+| 42        | Overall   | 5      |
+| 42        | Presenter | 5      |
+| 42        | Content   | 5      |
++-----------+-----------+--------+
+----
+
+into this: 
+
+[source,sql]
+----
++------------+----------------+------------------+----------------+
+| session_id | content_rating | presenter_rating | overall_rating |
++------------+----------------+------------------+----------------+
+| 42         | <null>         | <null>           | 5              |
+| 42         | <null>         | 5                | <null>         |
+| 42         | 4              | <null>           | <null>         |
+| 42         | <null>         | <null>           | 5              |
+| 42         | <null>         | 5                | <null>         |
+| 42         | 5              | <null>           | <null>         |
++------------+----------------+------------------+----------------+
+----
+
+For this I'm going to try my hand at some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] since this feels like a great place for it. To start with, I'll first get the unique set of values: 
 
 [source,sql]
 ----
@@ -686,7 +714,34 @@ and then use this to build several `CASE` statements:
 
 Note the use of `.lower()` and `.replace` to force the name to lowercase and replace spaces with underscores. Otherwise you end up with column names like `"Overall Experience_comment"` instead of `overall_experience_comment`. 
 
-The resulting table looks like this: 
+Here's the finished model: 
+
+[source,sql]
+----
+{% set rating_types = ['Overall Experience','Presenter', 'Content'] %}
+
+WITH      source_data AS (
+          -- Spec #4: Rename fields to remove spaces etc
+          SELECT    TRIM(title)      AS session_name,
+                    -- Spec #5: Pivot rating type into individual columns
+                    {% for r in rating_types -%}
+                      CASE WHEN "Rating Type" = '{{ r }}' THEN rating END AS {{ r.lower().replace(' ','_') }}_rating,
+                      CASE WHEN "Rating Type" = '{{ r }}' THEN "comment" END AS {{ r.lower().replace(' ','_') }}_comment,
+                    {% endfor -%}
+                    -- Spec #7 Create a new field showing if attendee was in-person or not
+                    CASE WHEN "Attendee Type" = 'Virtual' THEN 1 ELSE 0 END AS virtual_attendee
+                    -- Spec #3: Remove PII data of those who left ratings
+          FROM      {{ ref('rating_detail') }}
+          )
+
+SELECT    *
+FROM      source_data
+-- Spec #8: Exclude irrelevant sessions
+WHERE     session_name NOT IN ('Breakfast', 'Lunch', 'Registration')
+----
+
+
+Which creates a table that looks like this: 
 
 [source,sql]
 ----
@@ -708,7 +763,7 @@ The resulting table looks like this:
 
 ### Staging model #2: Session Scans (`stg_scans`)
 
-Let's build the other staging model now. The only point of interest here is combining the numerous fields that represent all the tracks and have a value in them if the associated session was in that track. For this I'm going to try my hand at some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] since this feels like a great place for it. 
+Let's build the other staging model now. The only point of interest here is combining the numerous fields that represent all the tracks and have a value in them if the associated session was in that track. 
 
 The SQL pattern I want to replicate is this: 
 
@@ -747,7 +802,7 @@ SELECT LIST_CONCAT(F0, F1) AS COMBINED_FLAGS FROM X
 +----------------+
 ----
 
-So here's my `stg_scans` model using this approach. Note also the use of `loop.index` to create the required number of field aliases that can then be referenced in the subsequent `SELECT`. 
+Here's my `stg_scans` model using this approach. Note also the use of `loop.index` to create the required number of field aliases that can then be referenced in the subsequent `SELECT`. 
 
 [source,sql]
 ----
@@ -878,7 +933,6 @@ SELECT    session_name,
             F1,
             F2,
 […]
-
             ) AS track
 FROM      source_data
 ----
@@ -924,32 +978,35 @@ We're making progress! The field name needs double-quoting, and we need to work 
 
 …which turns out to not be so simple because the dbt version I'm using (1.1.1) needs to be >=1.2 to use the function. For now I'm going to omit the problematic track and worry about it at a later point if I have chance to figure out upgrading :) 
 
-Now when I run the code I get a new problem (which you can actually see above already if you look _really_ closely). 
+So, having figured out the first Jinja problem (and hacked our way around it by fudging the data), let's go back to the error that we had before: 
 
 [source,bash]
 ----
-$ dbt run --select stg_scans                                                                                           1 ↵
-16:46:06  Running with dbt=1.1.1
-16:46:06  Found 2 models, 0 tests, 0 snapshots, 0 analyses, 167 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
-16:46:06
-16:46:06  Concurrency: 1 threads (target='dev')
-16:46:06
-16:46:06  1 of 1 START view model main.stg_scans ......................................... [RUN]
-16:46:06  1 of 1 ERROR creating view model main.stg_scans ................................ [ERROR in 0.06s]
-16:46:06
-16:46:06  Finished running 1 view model in 0.26s.
-16:46:06
-16:46:06  Completed with 1 error and 0 warnings:
-16:46:06
-16:46:06  Runtime Error in model stg_scans (models/staging/stg_scans.sql)
-16:46:06    Parser Error: syntax error at or near ")"
-16:46:06    LINE 60:             ) AS track
-16:46:06                         ^
-16:46:06
-16:46:06  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
+Parser Error: syntax error at or near ")"
+LINE 60:             ) AS track
 ----
 
-The problem is this bit of code: 
+If we look at the compiled SQL, we'll see this: 
+
+[source,sql]
+----
+[…]
+SELECT    session_name,
+          speakers,
+          scans,
+          rating_ct,
+          LIST_CONCAT(
+            F1,
+            F2,
+[…]
+            F13,
+            ) AS track
+FROM      source_data
+----
+
+Notice that trailing comma *after* the final field iteration (`F13`)? That's causing the error. 
+
+The problem comes from this bit of code: 
 
 [source,sql]
 ----
@@ -960,24 +1017,16 @@ LIST_CONCAT(
 ) AS track 
 ----
 
-The loop includes a field seperator `,` every iteration which is _mostly_ what we want—except we don't want it on the final iteration as it then looks like this (notice after `F14` the erroneous comma): 
-
-[source,sql]
-----
-LIST_CONCAT(
-  F1,
-  F2,
-[…]
-  F13,
-  ) AS track
-----
-
-Let's see if we can code around that by checking our index in the iteration (`loop.index`) against the length of the list (`tracks|length`):
+The loop includes a field seperator `,` *every* iteration which is _mostly_ what we want—except we don't want it on the final iteration. Let's see if we can code around that by checking our index in the iteration (`loop.index`) against the length of the list (`tracks|length`):
 
 [source,sql]
 ----
 LIST_CONCAT(
   {% for t in tracks -%}
+--  Literal                 If the current loop index    Literal
+--  |    Loop index         is not the last one THEN     |      end if                                          
+--  |       |                       |                    |      |          
+--  V\--------------/ \---------------------------------/V \---------/                                                               
     F{{ loop.index }} {% if loop.index < tracks|length %}, {% endif %}
   {% endfor -%}
 ) AS track 
@@ -1025,7 +1074,7 @@ ed to add explicit type casts.
 16:54:14  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1
 ----
 
-Turns out I mis-read the docs for `LIST_CONCAT` — it concatenates **two** lists, not many. We can see this if I expand my test case from above: 
+Turns out I mis-read https://duckdb.org/docs/sql/functions/nested#list-functions[the docs for `LIST_CONCAT`] — it concatenates **two** lists, not many. We can see this if I expand my test case from above: 
 
 [source,sql]
 ----
@@ -1044,13 +1093,14 @@ LINE 5: SELECT LIST_CONCAT(F0, F1, F2) AS COMBINED_FLAGS FROM X...
 
 ----
 
-The solution is to stack the `LIST_CONCAT` s: 
+The solution is to stack the `LIST_CONCAT` statements, as demonstrated here: 
 
 [source,sql]
 ----
 current_dbt.duckdb> WITH X AS (SELECT A, B,
                            CASE WHEN A='X' THEN ['A'] END AS F0,
-                           CASE WHEN B='X' THEN ['B'] END AS F1, CASE WHEN B='X' THEN ['B'] END AS F2
+                           CASE WHEN B='X' THEN ['B'] END AS F1, 
+                           CASE WHEN B='X' THEN ['B'] END AS F2
                     FROM FOO)
                     SELECT LIST_CONCAT(LIST_CONCAT(F0, F1), F2) AS COMBINED_FLAGS FROM X
 
@@ -1089,7 +1139,7 @@ SELECT    […],
 FROM      source_data
 ----
 
-Which compiles into this monstrosity: 
+Which compiles into this monstrosity (minus the whitespaces and verbose comments): 
 
 [source,sql]
 ----
@@ -1121,7 +1171,7 @@ The other thing to say here is that the point of the Jinja templating is to make
 
 ### Staging model #3: Session IDs
 
-The last thing that I want to add to both staging tables is a surrogate key to represent the unique session (#6 in the spec list above). There's a https://docs.getdbt.com/blog/sql-surrogate-keys[nice doc about surrogate keys] on the dbt website itself. To do this I'll create a utility staging table to generate the IDs across both sources (`stg_scans`, `stg_ratings`), and then use this in the subsequent join that I'll do afterwards. 
+The last thing that I want to add to both staging tables is a surrogate key to represent the unique session (#6 in the link:#_data_wrangling_the_spec[spec list above]). There's a https://docs.getdbt.com/blog/sql-surrogate-keys[nice doc about surrogate keys] on the dbt website itself. To do this I'll create a utility staging table to generate the IDs across both sources (`stg_scans`, `stg_ratings`), and then use this in the subsequent join that I'll do afterwards. 
 
 The two sources of data (scans and ratings) have a different number of sessions: 
 
@@ -1164,6 +1214,8 @@ Time: 0.032s
 ----
 
 This tells us that all sessions that are in `stg_ratings` are also in `stg_scans`, but `stg_scans` has sessions that _aren't_ in `stg_ratings`. 
+
+NOTE: I made an error in my SQL above - the narrative below is still valid, but read on afterwards for a correction. 
 
 Let's try out creating a surrogate key using the `md5` hash function. 
 
@@ -1351,9 +1403,14 @@ current_dbt.duckdb> select count(*) from stg_sessionid;
 Time: 0.009s
 ----
 
+
+++++
+<div class="tenor-gif-embed" data-postid="5632788" data-share-method="host" data-aspect-ratio="2" data-width="100%"><a href="https://tenor.com/view/squirrel-doug-up-dog-distraction-gif-5632788">Squirrel Doug GIF</a>from <a href="https://tenor.com/search/squirrel-gifs">Squirrel GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
 #### A debugging tangent
 
-If you're just at this article for the tl;dr, or you've already spotted the error in my SQL above then feel free to skip ahead. There's something up with the SQL I've written and here I'm going to work it through to see what. 
+_If you're just here for the tl;dr, or you've already spotted the error in my SQL above then feel free to skip ahead. But there's something up with the SQL I've written and here I'm going to work it through to see what._
 
 Problem statement: two sets of data that I believe should have a combined unique count of 157 are resulting in a view that returns a unique count of 241. 
 
@@ -1461,7 +1518,8 @@ So let's see if we can track those down, taking just one as an example. It's def
 
 [source,sql]
 ----
-current_dbt.duckdb> select distinct session_name from stg_ratings where session_name = 'Unofficial 5K Fun Run';
+current_dbt.duckdb> select distinct session_name from stg_ratings 
+                    where session_name = 'Unofficial 5K Fun Run';
 +-----------------------+
 | session_name          |
 +-----------------------+
@@ -1475,23 +1533,30 @@ And it's definitely not in `stg_scans`:
 
 [source,sql]
 ----
-current_dbt.duckdb> select distinct session_name from stg_scans where session_name = 'Unofficial 5K Fun Run';
+current_dbt.duckdb> select distinct session_name from stg_scans 
+                    where session_name = 'Unofficial 5K Fun Run';
 0 rows in set
 Time: 0.001s
 ----
 
 So what's up with my subselect and `not in` logic that means it's not being returned? 
 
-It turns out my SQL-foo is a tad rusty. The https://duckdb.org/docs/sql/expressions/subqueries[subquery documentation on DuckDB] is nice and clearly written - what I need is a _correlated subquery_
+👉️ 🤦‍♂️ It turns out my SQL-foo is a tad rusty. 
+
+++++
+<div class="tenor-gif-embed" data-postid="7466691" data-share-method="host" data-aspect-ratio="2.135" data-width="100%"><a href="https://tenor.com/view/brain-idiot-wrong-big-bang-theory-sheldon-cooper-gif-7466691">Brain Idiot GIF</a>from <a href="https://tenor.com/search/brain-gifs">Brain GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+++++
+
+The https://duckdb.org/docs/sql/expressions/subqueries[subquery documentation on DuckDB] is nice and clearly written - what I need is a _correlated subquery_
 
 [source,sql]
 ----
 current_dbt.duckdb> select distinct session_name from stg_ratings r
-                                          where  session_name = 'Unofficial 5K Fun Run' 
-                                            and session_name not in
-                                            (select s.session_name
-                                               from stg_scans s 
-                                               where s.session_name=r.session_name);
+                    where  session_name = 'Unofficial 5K Fun Run' 
+                      and session_name not in
+                      (select s.session_name
+                         from stg_scans s 
+                         where s.session_name=r.session_name);
 +-----------------------+
 | session_name          |
 +-----------------------+
@@ -1507,17 +1572,17 @@ Let's test it a step further. Based on the above tool (since I don't trust my SQ
 * In both: `Advancing Apache NiFi Framework Security`
 * Only in `stg_ratings`: `Unofficial 5K Fun Run`
 
-So with those in the query amended to use a correlated subquery gives us this: 
+So with those in the query amended to use a correlated subquery gives us this view of sessions that are only in `stg_ratings`: 
 
 [source,sql]
 ----
 current_dbt.duckdb> select distinct session_name from stg_ratings r
-                                          where  session_name in ( 'Data Streaming: The Paths Taken', 
-                                                                   'Advancing Apache NiFi Framework Security', 
-                                                                   'Unofficial 5K Fun Run' ) 
-                                            and session_name not in
-                                            (select s.session_name
-                                               from stg_scans s where s.session_name=r.session_name);
+                    where  session_name in ( 'Data Streaming: The Paths Taken', 
+                                             'Advancing Apache NiFi Framework Security', 
+                                             'Unofficial 5K Fun Run' ) 
+                      and session_name not in
+                      (select s.session_name
+                         from stg_scans s where s.session_name=r.session_name);
 +------------------------------------------+
 | session_name                             |
 +------------------------------------------+
@@ -1533,7 +1598,8 @@ current_dbt.duckdb>
 
 [source,sql]
 ----
-current_dbt.duckdb> select distinct session_name from stg_ratings where session_name = 'Advancing Apache NiFi Framework Security';
+current_dbt.duckdb> select distinct session_name from stg_ratings 
+                    where session_name = 'Advancing Apache NiFi Framework Security';
 +------------------------------------------+
 | session_name                             |
 +------------------------------------------+
@@ -1541,16 +1607,20 @@ current_dbt.duckdb> select distinct session_name from stg_ratings where session_
 +------------------------------------------+
 1 row in set
 Time: 0.007s
-current_dbt.duckdb> select distinct session_name from stg_scans where session_name = 'Advancing Apache NiFi Framework Security';
+current_dbt.duckdb> select distinct session_name from stg_scans 
+                    where session_name = 'Advancing Apache NiFi Framework Security';
 0 rows in set
 Time: 0.001s
 ----
 
-Hmmm. What about this: 
+Hmmm 🤔🤔🤔🤔
+
+What about this: 
 
 [source,sql]
 ----
-current_dbt.duckdb> select distinct session_name from stg_scans where session_name like '%NiFi%';
+current_dbt.duckdb> select distinct session_name from stg_scans 
+                    where session_name like '%NiFi%';
 +-------------------------------------------+
 | session_name                              |
 +-------------------------------------------+
@@ -1560,13 +1630,14 @@ current_dbt.duckdb> select distinct session_name from stg_scans where session_na
 Time: 0.007s
 ----
 
-Ahhhh. Or should that be "arrgghhh"? Either way - we have a bit of progress. If you look closely you can see that there's an errant whitespace (or at least unprintable character) at the end of the session name. 
+💡Ahhhh (_or should that be "arrgghhh"?_) Either way - we have a bit of progress. If you look closely you can see that there's an errant whitespace (or at least unprintable character) at the end of the session name. 
 
 Let's try it like this: 
 
 [source,sql]
 ----
-current_dbt.duckdb> select distinct session_name from stg_scans where trim(session_name) = 'Advancing Apache NiFi Framework Security';
+current_dbt.duckdb> select distinct session_name from stg_scans 
+                    where trim(session_name) = 'Advancing Apache NiFi Framework Security';
 +-------------------------------------------+
 | session_name                              |
 +-------------------------------------------+
@@ -1602,7 +1673,7 @@ Alrighty then! This is what we expected for these three test values.
 <div class="tenor-gif-embed" data-postid="7715492" data-share-method="host" data-aspect-ratio="1.22549" data-width="100%"><a href="https://tenor.com/view/alrighty-then-jim-carrey-ace-ventura-gif-7715492">Alrighty Then Jim Carrey GIF</a>from <a href="https://tenor.com/search/alrighty+then-gifs">Alrighty Then GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
 ++++
 
-Instead of jamming `trim` throughout our queries, let's clean the data further up the pipeline, and amend the two staging models to include it once. Here's where you start to really appreciate the elegance of dbt. By defining models once it's easy to put the logic in the right place instead of bodging it in subsequent queries. 
+Instead of jamming `trim` throughout our queries, let's clean the data further up the pipeline, and amend the two staging models upstream to include it once. Here's where you start to really appreciate the elegance of dbt. By defining models once it's easy to put the logic in the right place instead of bodging it in subsequent queries. 
 
 [source,bash]
 ----
@@ -1780,7 +1851,7 @@ current_dbt.duckdb> select count(*) from stg_sessionid where session_name is not
 Time: 0.013s
 ----
 
-There we have it ladies and gentlemen! The number that we were (eventually) expecting. Let's check the data first to make sure we've not a data issue that we need to fix upstream (i.e. valid data but no session name): 
+There we have it ladies and gentlemen! The number that we were (eventually) expecting. Let's check the data first to make sure we've not got a data issue that we need to fix upstream (i.e. valid data but no session name): 
 
 [source,sql]
 ----
@@ -2112,13 +2183,26 @@ current_dbt.duckdb> select *
 +----------------------------------+---------------------------------------+-------------+-------------------------------------------------+-------+----------------------------------+----------------------------------+-----------------------------------------------------------------+--------------------------+-------------------------+----------------------+--------------------------+-----------------------+------------------+-----------+
 ----
 
-### Wrapping up
+## Wrapping up
 
-With the seed, staging, and main models built, I've got a project that transforms two raw CSV files into a nicely (-ish) modelled set of data. I've not touched things like incremental loads, `schema.yml` definitions, tests, snapshots, and all the rest of it. But I _have_ picked up an appreciation for what dbt can do, and why there is such a fuss about it. 
+With the seed, staging, and main models built, I've got a project that transforms two raw CSV files into a nicely (-ish) modelled set of data. I've not touched things like incremental loads, `schema.yml` definitions, docs, tests, snapshots, and all the rest of it. But I _have_ picked up an appreciation for what dbt can do, and why there is such a fuss about it. 
 
 Could I have written this all myself without dbt? Sure. Would I have wanted to? Perhaps. Would it have been so easy to easily go back and change definitions of staging tables as I realised I'd missed columns, mis-typed data, etc? Definitely not. Would it have been possible to give a list of values and iterate over them to dynamically build SQL? I guess, but coding anything other than SQL really isn't my bag - "just enough" coding here seems the perfect amount, sticking to the declarative power of SQL for the vast bulk of transformation work. 
 
-### Comments?
+## Comments?
 
 This is my first proper outing with dbt, other than link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[following along someone else's code] previously. I'd love to hear any feedback on my approach with it - what did I do wrong? What wasn't https://www.getdbt.com/dbt-learn/lessons/dbtonic-jinja/#1[_dbtonic_]? What other features should I dig into? Hit me up on https://twitter.com/rmoff/[twitter] or https://www.linkedin.com/in/robinmoffatt[LinkedIn] 😁
 
+'''
+
+## Data Engineering in 2022
+
+* link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[Introduction]
+* link:/2022/09/14/data-engineering-in-2022-storage-and-access/[Storage and Access]
+* link:/2022/09/16/data-engineering-in-2022-exploring-lakefs-with-jupyter-and-pyspark/[Exploring LakeFS with Jupyter and PySpark]
+* link:/2022/10/02/data-engineering-in-2022-architectures-terminology/[Architectures & Terminology]
+* link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[Exploring dbt with DuckDB]
+// * link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt[Wrangling the feedback data from Current 22 with dbt]
+* Query & Transformation Engines [TODO]
+* ETL/ELT tools & Orchestration [TODO]
+* link:/2022/09/14/data-engineering-resources/[Resources]
