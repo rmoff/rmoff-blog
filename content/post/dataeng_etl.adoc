@@ -1,11 +1,15 @@
 ---
 draft: true
 title: 'Data Engineering in 2022: ETL/ELT tools & Orchestration'
-date: "2022-09-29T17:07:04Z"
-// image: "/images/2022/09/h_IMG_8389.jpeg"
-// thumbnail: "/images/2022/09/t_IMG_5037.jpeg"
+date: "2022-11-03T09:46:39Z"
+image: "/images/2022/11/"
+thumbnail: "/images/2022/11/"
 credit: "https://twitter.com/rmoff/"
 categories:
+- ELT
+- dbt
+- FiveTran
+- AirByte
 - Data Engineering
 ---
 
@@ -14,18 +18,63 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-In link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[my quest] to bring myself up to date with where the data & analytics engineering world is at nowadays I'm going to build on my exploration of the link:/2022/09/14/data-engineering-in-2022-storage-and-access/[storage and access] technologies and look at how the tools we use for load and transforming this data. 
+In link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[my quest] to bring myself up to date with where the data & analytics engineering world is at nowadays I'm going to build on my exploration of the link:/2022/09/14/data-engineering-in-2022-storage-and-access/[storage and access] technologies and look at the tools we use for loading and transforming data. 
 
 <!--more-->
 
+The approach that many people use now is one of **EL-T**. That is, get the [raw] data in, and _then_ transform it. I link:/2022/10/02/data-engineering-in-2022-architectures-terminology/[wrote about this in more detail elsewhere]—in this article I'm going to look more at the tools themselves. That said, it's worth recapping why the shift has come about. From my perspective it's driven by two things. 
+
+One is the technology - storage is often decoupled from compute (HDFS, S3, etc), or is cheap enough with the associated Cloud datawarehouse (BigQuery, Snowflake, et al) that ingesting a _lot_ of data in some cases is absolutely no problem. In the past we _had_ to transform the data before loading simply to keep it at a manageable size. Not having to do this any more lots of benefits, since at the point of ingest you don't know all of the possible uses for the data. If you rationalise that data down to just the set of fields and/or aggregate it up to fit just a specific use case then you lose the fidelity of the data that could be useful elsewhere. This is one of the premises and benefits of a data lake done well. Of course, despite what the "data is the new oil" vendors told you back in the day, you can't _just_ chuck raw data in and assume that magic will happen on it, but that's a rant for another day ;-) 
+
+The second shift that I see is the broadening of scope in teams and roles that are involved in handling data. If you only have a single central data team they can require and enforce tight control of the data and the processing. This has changed in recent years and now it's much more likely you'll have multiple teams working with data, perhaps one sourcing the raw data, and another (or several others) processing it. That processing isn't just aggregating it for a weekly printout for the board meeting, but quite possibly for multiple different analytical uses across teams, as well as fun stuff like https://www.linkedin.com/posts/gwenshapira_reverse-etl-why-is-it-a-big-deal-activity-6929868882778222592-FnZs/?trk=public_profile_like_view[Reverse ETL] and training ML models. 
+
+So what are the kind of tools we're talking about here, and what are they like to use? 
+
+## Transformation - dbt
+
+Let's cut to the chase on this one because it's the easiest. Once your data it loaded (and we'll get to _how_ we load it after this), the transformation work that is done on it will quite likely be done by dbt. And if it's not, you'll invariably encounter dbt on your journey of tool selection. 
+
 image::/images/2022/09/dbt.jpeg[dbt is everywhere]
 
-The star of the show in 2022 seems to be very much dbt. Everywhere I look, it's dbt. People writing about data & analytics engineering are using dbt. Companies in the space with products to sell are cosying up to dbt and jumping on their bandwagon. 
+The star of the show in 2022 seems to be very much dbt. Everywhere I look, it's dbt. People writing about data & analytics engineering are using dbt. Companies in the space with products to sell are cosying up to dbt and jumping on their bandwagon. It's possible https://benn.substack.com/p/how-dbt-fails[it could fail]…but not for now.
 
-It took me a while to grok where dbt comes in the stack but now that I (_think_) I have it, it makes a lot of sense. I can also see why, with my background, I had trouble doing so. Just as Apache Kafka isn't easily explained as simply another database, another message queue, etc, dbt isn't just another Informatica, another Oracle Data Integrator. It's not about ETL or ELT - it's about T alone. With that understood, things slot into place. 
+It took me a while to grok where dbt comes in the stack but now that I (_think_) I have it, it makes a lot of sense. I can also see why, with my background, I had trouble doing so. Just as Apache Kafka isn't easily explained as simply another database, another message queue, etc, dbt isn't just another Informatica, another Oracle Data Integrator. **It's not about ETL or ELT - it's about T alone**. With that understood, things slot into place. This isn't just my take on it either - dbt themselves call it out https://www.getdbt.com/blog/what-exactly-is-dbt/[on their blog]: 
 
-image::/images/2022/09/km_in_action.gif[Oracle Data Integrator overview] 
-(https://docs.oracle.com/cd/E28280_01/integrate.1111/e12643/intro.htm#ODIDG122[src])
+> dbt is the T in ELT
+
+> image::https://www.getdbt.com/ui/img/blog/what-exactly-is-dbt/1-BogoeTTK1OXFU1hPfUyCFw.png[dbt high-level view]
+
+
+So what dbt does is use SQL with templating (and recently added support for Python) to express data transformations, build dependency graphs between those, and executes them. It does a bunch of things around this including testing, incremental loading, documentation, handling environments, and so on—but at its heart that's all its doing. This raw table of website clicks here, let's rename these fields, un-nest this one, mask that one, and aggregate that other one. Use the result of that to join to order data to produce a unified view of website/order metrics. 
+
+Here's a simple example:
+
+image::/images/2022/11/sql01.png[Extract of SQL from https://github.com/rmoff/current-dbt/blob/main/models/staging/stg_session.sql]
+
+In this the only difference from straight-up regular SQL is `{{ ref('stg_scans') }}` which refers to another SQL definition (known as a 'model'), and which gives dbt the smarts to know to build that one before this. 
+
+A more complex example looks like this: 
+
+image::/images/2022/11/sql02.png[Extract of SQL from https://github.com/rmoff/current-dbt/blob/main/models/staging/stg_ratings.sql]
+
+Here we're just some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] (_which technically the_ `ref()` _is above but let's not nit-pick_) to iterate over three different values of an entity (`rating_type`) in order to generate some denormalised SQL. 
+
+That, in a nutshell, is what dbt does. You can read more about link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[my experiments] with it as well as check out their super-friendly and helpful https://community.getdbt.com/[community]
+
+## So we've figured out Transformation…what about Extract and Load? 
+
+
+----
+
+Data engineers shouldn’t write ETL 
+Stitch fix blo
+
+Relates to data mesh and decentralisation of bi function 
+
+ELT makes more sense on cloud DW. Network effect / economy of scale. Not just where the work, but where the resulting data, who can use it?
+
+Also storage is cheap, makes more sense to keep more and provision compute as needed. Don’t optimise prematurely for one use case. Keep the data and build optimisations for all. 
+
 
 
 '''
