@@ -2,8 +2,8 @@
 draft: true
 title: 'Data Engineering in 2022: ETL/ELT tools & Orchestration'
 date: "2022-11-03T09:46:39Z"
-image: "/images/2022/11/"
-thumbnail: "/images/2022/11/"
+image: "/images/2022/11/h_IMG_8786.jpeg"
+thumbnail: "/images/2022/11/t_IMG_9297.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - ELT
@@ -18,25 +18,29 @@ categories:
 :rouge-css: style
 :rouge-style: github
 
-In link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[my quest] to bring myself up to date with where the data & analytics engineering world is at nowadays I'm going to build on my exploration of the link:/2022/09/14/data-engineering-in-2022-storage-and-access/[storage and access] technologies and look at the tools we use for loading and transforming data. 
+In link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[my quest] to bring myself up to date with where the data & analytics engineering world is at nowadays, I'm going to build on my exploration of the link:/2022/09/14/data-engineering-in-2022-storage-and-access/[storage and access] technologies and look at the tools we use for loading and transforming data. 
 
 <!--more-->
 
-The approach that many people use now is one of **EL-T**. That is, get the [raw] data in, and _then_ transform it. I link:/2022/10/02/data-engineering-in-2022-architectures-terminology/[wrote about this in more detail elsewhere]—in this article I'm going to look more at the tools themselves. That said, it's worth recapping why the shift has come about. From my perspective it's driven by two things. 
+The approach that many people use now is one of **EL-T**. That is, get the [raw] data in, and _then_ transform it. I link:/2022/10/02/data-engineering-in-2022-architectures-terminology/[wrote about this in more detail elsewhere]—in this article I'm going to look more at the tools themselves. That said, it's worth recapping why the shift has come about. From my perspective it's driven by a few things. 
 
-One is the technology - storage is often decoupled from compute (HDFS, S3, etc), or is cheap enough with the associated Cloud datawarehouse (BigQuery, Snowflake, et al) that ingesting a _lot_ of data in some cases is absolutely no problem. In the past we _had_ to transform the data before loading simply to keep it at a manageable size. Not having to do this any more lots of benefits, since at the point of ingest you don't know all of the possible uses for the data. If you rationalise that data down to just the set of fields and/or aggregate it up to fit just a specific use case then you lose the fidelity of the data that could be useful elsewhere. This is one of the premises and benefits of a data lake done well. Of course, despite what the "data is the new oil" vendors told you back in the day, you can't _just_ chuck raw data in and assume that magic will happen on it, but that's a rant for another day ;-) 
+* One is the **technology**. It's _cheaper_ to store more data when storage is _decoupled from compute_ (HDFS, S3, etc). It's also possible to _process bigger volumes of data_, with the prevalence of distributed systems (such as Apache Spark) whether on-premises or the ubiquitous _Cloud datawarehouses_ (BigQuery, Snowflake, et al). 
++
+The result of it being cheaper, and possible, to handle larger volumes of data means that we don't have to over-optimise the front of the pipeline. In the past we _had_ to transform the data before loading simply to keep it at a manageable size. 
++
+This has lots of benefits, since at the point of ingest you don't know all of the possible uses for the data. If you rationalise that data down to just the set of fields and/or aggregate it up to fit just a specific use case then you lose the fidelity of the data that could be useful elsewhere. This is one of the premises and benefits of a data lake done well. _Of course, despite what the "data is the new oil" vendors told you back in the day, you can't_ just _chuck raw data in and assume that magic will happen on it, but that's a rant for another day ;-)_
 
-The second shift that I see is the broadening of scope in teams and roles that are involved in handling data. If you only have a single central data team they can require and enforce tight control of the data and the processing. This has changed in recent years and now it's much more likely you'll have multiple teams working with data, perhaps one sourcing the raw data, and another (or several others) processing it. That processing isn't just aggregating it for a weekly printout for the board meeting, but quite possibly for multiple different analytical uses across teams, as well as fun stuff like https://www.linkedin.com/posts/gwenshapira_reverse-etl-why-is-it-a-big-deal-activity-6929868882778222592-FnZs/?trk=public_profile_like_view[Reverse ETL] and training ML models. 
+* The second shift—which is quite possibly related to the one above—that I see is the **broadening of scope in teams and roles that are involved in handling data**. If you only have a single central data team they can require and enforce tight control of the data and the processing. This has changed in recent years and now it's much more likely you'll have multiple teams working with data, perhaps one sourcing the raw data, and another (or several others) processing it. That processing isn't just aggregating it for a weekly printout for the board meeting, but quite possibly for multiple different analytical uses across teams, as well as fun stuff like https://www.linkedin.com/posts/gwenshapira_reverse-etl-why-is-it-a-big-deal-activity-6929868882778222592-FnZs/?trk=public_profile_like_view[Reverse ETL] and training ML models. 
 
 So what are the kind of tools we're talking about here, and what are they like to use? 
 
 ## Transformation - dbt
 
-Let's cut to the chase on this one because it's the easiest. Once your data it loaded (and we'll get to _how_ we load it after this), the transformation work that is done on it will quite likely be done by dbt. And if it's not, you'll invariably encounter dbt on your journey of tool selection. 
+Let's cut to the chase on this one because it's the easiest. Once your data it loaded (and we'll get to _how_ we load it after this), the transformation work that is done on it will quite likely be done by https://www.getdbt.com/[dbt]. And if it's not, you'll invariably encounter dbt on your journey of tool selection. 
 
 image::/images/2022/09/dbt.jpeg[dbt is everywhere]
 
-The star of the show in 2022 seems to be very much dbt. Everywhere I look, it's dbt. People writing about data & analytics engineering are using dbt. Companies in the space with products to sell are cosying up to dbt and jumping on their bandwagon. It's possible https://benn.substack.com/p/how-dbt-fails[it could fail]…but not for now.
+Everywhere I look, it's dbt. People writing about data & analytics engineering are using dbt. Companies in the space with products to sell are cosying up to dbt and jumping on their bandwagon. It's possible https://benn.substack.com/p/how-dbt-fails[it could fail]…but not for now.
 
 It took me a while to grok where dbt comes in the stack but now that I (_think_) I have it, it makes a lot of sense. I can also see why, with my background, I had trouble doing so. Just as Apache Kafka isn't easily explained as simply another database, another message queue, etc, dbt isn't just another Informatica, another Oracle Data Integrator. **It's not about ETL or ELT - it's about T alone**. With that understood, things slot into place. This isn't just my take on it either - dbt themselves call it out https://www.getdbt.com/blog/what-exactly-is-dbt/[on their blog]: 
 
@@ -45,7 +49,7 @@ It took me a while to grok where dbt comes in the stack but now that I (_think_)
 > image::https://www.getdbt.com/ui/img/blog/what-exactly-is-dbt/1-BogoeTTK1OXFU1hPfUyCFw.png[dbt high-level view]
 
 
-So what dbt does is use SQL with templating (and recently added support for Python) to express data transformations, build dependency graphs between those, and executes them. It does a bunch of things around this including testing, incremental loading, documentation, handling environments, and so on—but at its heart that's all its doing. This raw table of website clicks here, let's rename these fields, un-nest this one, mask that one, and aggregate that other one. Use the result of that to join to order data to produce a unified view of website/order metrics. 
+So what dbt does is use SQL with templating (and recently added support for Python) to express data transformations, build dependency graphs between those, and executes them. It does a bunch of things around this including testing, incremental loading, documentation, handling environments, and so on—but at its heart that's all its doing. _This raw table of website clicks here, let's rename these fields, un-nest this one, mask that one, and aggregate that other one. Use the result of that to join to order data to produce a unified view of website/order metrics_. 
 
 Here's a simple example:
 
@@ -57,24 +61,59 @@ A more complex example looks like this:
 
 image::/images/2022/11/sql02.png[Extract of SQL from https://github.com/rmoff/current-dbt/blob/main/models/staging/stg_ratings.sql]
 
-Here we're just some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] (_which technically the_ `ref()` _is above but let's not nit-pick_) to iterate over three different values of an entity (`rating_type`) in order to generate some denormalised SQL. 
+Here we've got some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] (_which technically the_ `ref()` _is above but let's not nit-pick_) to iterate over three different values of an entity (`rating_type`) in order to generate some denormalised SQL. 
 
 That, in a nutshell, is what dbt does. You can read more about link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[my experiments] with it as well as check out their super-friendly and helpful https://community.getdbt.com/[community]
 
 ## So we've figured out Transformation…what about Extract and Load? 
 
+Whilst dbt seems to be dominant in the Transform space, the ingest of data prior to transformation (a.k.a. "Extract & Load") is offered by numerous providers. Almost all are "no-code" or "low-code", and an interesting shift from times of yore is that the sources from which data is extracted is often not an in-house RDBMS but a SaaS provider - less Oracle EBS in your local data center and more Salesforce in the Cloud. 
 
-----
+https://www.fivetran.com/[FiveTran] is an established name here, along with many others including https://www.stitchdata.com/[Stitch] (now owned by Talend), https://airbyte.com/[Airbyte], https://azure.microsoft.com/en-gb/products/data-factory/[Azure Data Factory], https://segment.com/[Segment], https://www.matillion.com/[Matillion], and more. Many of these also offer some light transformation of data along the way (such as masking or dropping sensitive fields, or massaging the schema of the data). I've taken a look at a couple side-by-side to understand what they do, what it's like to use them, and any particular differences. I picked **FiveTran** and **Airbyte**, the former because it's so commonly mentioned, the latter because they were at https://2022.currentevent.io/website/39543/sponsors/[Current 2022] and had nice swag :D Airbyte offer a comparison https://airbyte.com/etl-tools/fivetran-alternative-airbyte[between themselves and FiveTran] - taken with a pinch of salt it's probably a useful starting point if you want to get into the differences between them. Airbyte is https://github.com/airbytehq/airbyte[open-source and available to run yourself], and also as a cloud service (which is what I'm going to use).  
 
-Data engineers shouldn’t write ETL 
-Stitch fix blo
+'''
 
-Relates to data mesh and decentralisation of bi function 
+Both services offer a 14-day free trial, with fairly painless signup forms 
 
-ELT makes more sense on cloud DW. Network effect / economy of scale. Not just where the work, but where the resulting data, who can use it?
+image::/images/2022/11/ftab01.png[FiveTran and Airbyte - signup forms pt 1]
 
-Also storage is cheap, makes more sense to keep more and provision compute as needed. Don’t optimise prematurely for one use case. Keep the data and build optimisations for all. 
+Fivetran wants more data from me and makes me validate my email before letting me in whilst Airbyte wants to validate my email but lets me straight into the dashboard which is nice. 
 
+image::/images/2022/11/ftab02.png[FiveTran and Airbyte - signup forms pt 2]
+
+The first screen that I land on after signup for Airbyte feels nicer - a big "Set up your first connection" button, which resonates more than Fivetran's "Add destination". For me that's back-to-front since I want to tell it where to get data from and then I'll explain where to put it. But perhaps that's just me. 
+
+image::/images/2022/11/ftab03.png[FiveTran and Airbyte - initial dashboard after signup]
+
+For both services I'm going to use Google Analytics and GitHub as a source, and BigQuery as my target, with the theoretical idea of creating a single view of my blog traffic interlaced with when I publish articles (it's link:/categories/github/[hosted on GitHub], hence I can pull data about articlem publishing from it). 
+
+I click the big "Add destination" button in Fivetran and get asked what destination I want to create. This is a bit confusing, and I can see listed already one destination called "Warehouse". I cancel that dialog, and click on the "Edit" button next to the existing destination. This just renames it, so I cancel that. Third time lucky—I click on the "Warehouse" destination name itself and now I've launched a 🧙🪄wizard! I click "Skip question".
+
+image::/images/2022/11/ftab04.png[FiveTran can be confusing]
+
+Several clicks and some confusion later I've caught up with where Airbyte was after the single obvious "Set up your first connection" click - selecting my source. 
+
+image::/images/2022/11/ftab05.png[FiveTran and Airbyte - selecting a source]
+
+Airbyte lists the connectors alphabetically, and you can also search. Fivetran lists its connectors…randomly?? and its search seem to return odd partial match results 
+
+image::/images/2022/11/ftab06.png[FiveTran and Airbyte - searching for a connector]
+
+With the GitHub connector selected on both, I can now configure it. Both have a nice easy "Authenticate" button which triggers the authentication with my GitHub account. Once done I can select for which repository I want to pull data. Airbyte lets me type it freeform (which is faster but error prone and relies on me knowing the exact name and owner), whilst Fivetran insists that I only pick from an available list that it has to fetch (mildly annoying if you know the exact name already)
+
+Airbyte slightly annoyingly insists that I enter a "Start date" which I would definitely want the _option_ to do but not mandatory. By default I'd assume I want all data (which is presumably the assumption that Fivetran made because I didn't have to enter it). I have to freeform enter an ISO timestamp, which the tooltip helpfully shows the format for but is still an extra step nonetheless. 
+
+Both connectors run a connection test after the configuration is complete
+
+image::/images/2022/11/ftab07.png[FiveTran and Airbyte - testing a connector]
+
+Now we specify the target for the data. The BigQuery connector is easy to find on the list of destinations that each provide. As a side note, one thing I've noticed with the FiveTran UI is that it's the more old-school "select, click next, select, click next" vs Airbyte's which tends to just move on between screens once you select the option. 
+
+For my BigQuery account I've created and exported a private key for a service account (under `IAM & Admin` -> `Service Accounts`, then select the service account and `Keys` tab, and `Create new key`). Both Fivetran and Airbyte just have a password field into which to paste the multi-line JSON. It seems odd but it works. 
+
+Other than the authentication key, Fivetran just needs the Project ID and it's ready to go. Airbyte also needs a default Dataset location and ID. On the click-click-click done stakes, Fivetran is simpler in this respect (few options that _have_ to be set).
+
+image::/images/2022/11/ftab08.png[FiveTran and Airbyte - setting up BigQuery destination]
 
 
 '''
