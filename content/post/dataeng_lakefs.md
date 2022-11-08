@@ -843,6 +843,6 @@ main.show(n=1,vertical=True)
 * [Storage and Access](/2022/09/14/data-engineering-in-2022-storage-and-access/)
 * [Architectures & Terminology](/2022/10/02/data-engineering-in-2022-architectures-terminology/)
 * [Exploring dbt with DuckDB](/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/)
+* [ETL/ELT tools](/2022/11/03/data-engineering-in-2022-etl/elt-tools-orchestration/)
 * Query & Transformation Engines [TODO]
-* ETL/ELT tools & Orchestration [TODO]
 * [Resources](/2022/09/14/data-engineering-resources/)
