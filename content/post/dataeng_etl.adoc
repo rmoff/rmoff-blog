@@ -1,6 +1,6 @@
 ---
 draft: true
-title: 'Data Engineering in 2022: ETL/ELT tools & Orchestration'
+title: 'Data Engineering in 2022: ETL/ELT tools'
 date: "2022-11-03T09:46:39Z"
 image: "/images/2022/11/h_IMG_8786.jpeg"
 thumbnail: "/images/2022/11/t_IMG_9297.jpeg"
@@ -8,7 +8,7 @@ credit: "https://twitter.com/rmoff/"
 categories:
 - ELT
 - dbt
-- FiveTran
+- Fivetran
 - AirByte
 - Data Engineering
 ---
@@ -28,7 +28,9 @@ The approach that many people use now is one of **EL-T**. That is, get the [raw]
 +
 The result of it being cheaper, and possible, to handle larger volumes of data means that we don't have to over-optimise the front of the pipeline. In the past we _had_ to transform the data before loading simply to keep it at a manageable size. 
 +
-This has lots of benefits, since at the point of ingest you don't know all of the possible uses for the data. If you rationalise that data down to just the set of fields and/or aggregate it up to fit just a specific use case then you lose the fidelity of the data that could be useful elsewhere. This is one of the premises and benefits of a data lake done well. _Of course, despite what the "data is the new oil" vendors told you back in the day, you can't_ just _chuck raw data in and assume that magic will happen on it, but that's a rant for another day ;-)_
+Working with the raw data has lots of benefits, since at the point of ingest you don't know all of the possible uses for the data. If you rationalise that data down to just the set of fields and/or aggregate it up to fit just a specific use case then you lose the fidelity of the data that could be useful elsewhere. This is one of the premises and benefits of a data lake done well. 
++
+> _Of course, despite what the "data is the new oil" vendors told you back in the day, you can't_ just _chuck raw data in and assume that magic will happen on it, but that's a rant for another day ;-)_
 
 * The second shift—which is quite possibly related to the one above—that I see is the **broadening of scope in teams and roles that are involved in handling data**. If you only have a single central data team they can require and enforce tight control of the data and the processing. This has changed in recent years and now it's much more likely you'll have multiple teams working with data, perhaps one sourcing the raw data, and another (or several others) processing it. That processing isn't just aggregating it for a weekly printout for the board meeting, but quite possibly for multiple different analytical uses across teams, as well as fun stuff like https://www.linkedin.com/posts/gwenshapira_reverse-etl-why-is-it-a-big-deal-activity-6929868882778222592-FnZs/?trk=public_profile_like_view[Reverse ETL] and training ML models. 
 
@@ -36,7 +38,7 @@ So what are the kind of tools we're talking about here, and what are they like t
 
 ## Transformation - dbt
 
-Let's cut to the chase on this one because it's the easiest. Once your data it loaded (and we'll get to _how_ we load it after this), the transformation work that is done on it will quite likely be done by https://www.getdbt.com/[dbt]. And if it's not, you'll invariably encounter dbt on your journey of tool selection. 
+Let's cut to the chase on this one because it's the easiest. Once your data is loaded (and we'll get to _how_ we load it after this), the transformation work that is done on it will quite likely be done by https://www.getdbt.com/[dbt]. And if it's not, you'll invariably encounter dbt on your journey of tool selection. 
 
 image::/images/2022/09/dbt.jpeg[dbt is everywhere]
 
@@ -49,7 +51,7 @@ It took me a while to grok where dbt comes in the stack but now that I (_think_)
 > image::https://www.getdbt.com/ui/img/blog/what-exactly-is-dbt/1-BogoeTTK1OXFU1hPfUyCFw.png[dbt high-level view]
 
 
-So what dbt does is use SQL with templating (and recently added support for Python) to express data transformations, build dependency graphs between those, and executes them. It does a bunch of things around this including testing, incremental loading, documentation, handling environments, and so on—but at its heart that's all its doing. _This raw table of website clicks here, let's rename these fields, un-nest this one, mask that one, and aggregate that other one. Use the result of that to join to order data to produce a unified view of website/order metrics_. 
+What dbt does is use SQL with https://docs.getdbt.com/docs/build/jinja-macros#overview[templating] (and https://docs.getdbt.com/docs/building-a-dbt-project/building-models/python-models[recently added support for Python]) to express data transformations, build dependency graphs between those, and executes them. It does a bunch of things around this including testing, incremental loading, documentation, handling environments, and so on—but at its heart that's all its doing. _This raw table of website clicks here, let's rename these fields, un-nest this one, mask that one, and aggregate that other one. Use the result of that to join to order data to produce a unified view of website/order metrics_. 
 
 Here's a simple example:
 
@@ -63,89 +65,89 @@ image::/images/2022/11/sql02.png[Extract of SQL from https://github.com/rmoff/cu
 
 Here we've got some https://docs.getdbt.com/docs/build/jinja-macros[Jinja] (_which technically the_ `ref()` _is above but let's not nit-pick_) to iterate over three different values of an entity (`rating_type`) in order to generate some denormalised SQL. 
 
-That, in a nutshell, is what dbt does. You can read more about link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[my experiments] with it as well as check out their super-friendly and helpful https://community.getdbt.com/[community]
+That, in a nutshell, is what dbt does. You can read more about link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[my experiments] with it as well as check out their super-friendly and helpful https://community.getdbt.com/[community].
 
 ## So we've figured out Transformation…what about Extract and Load?
 
 Whilst dbt seems to be dominant in the Transform space, the ingest of data prior to transformation (a.k.a. "Extract & Load") is offered by numerous providers. Almost all are "no-code" or "low-code", and an interesting shift from times of yore is that the sources from which data is extracted is often not an in-house RDBMS but a SaaS provider - less Oracle EBS in your local data center and more Salesforce in the Cloud. 
 
-https://www.fivetran.com/[FiveTran] is an established name here, along with many others including https://www.stitchdata.com/[Stitch] (now owned by Talend), https://airbyte.com/[Airbyte], https://azure.microsoft.com/en-gb/products/data-factory/[Azure Data Factory], https://segment.com/[Segment], https://www.matillion.com/[Matillion], and more. Many of these also offer some light transformation of data along the way (such as masking or dropping sensitive fields, or massaging the schema of the data). 
+https://www.fivetran.com/[Fivetran] is an established name here, along with many others including https://www.stitchdata.com/[Stitch] (now owned by Talend), https://airbyte.com/[Airbyte], https://azure.microsoft.com/en-gb/products/data-factory/[Azure Data Factory], https://segment.com/[Segment], https://www.matillion.com/[Matillion], and more. Many of these also offer some light transformation of data along the way (such as masking or dropping sensitive fields, or massaging the schema of the data). 
 
 ## Checking out Fivetran and Airbyte
 
-I've taken a look at a couple of SaaS E/L providers side-by-side to understand what they do, what it's like to use them, and any particular differences. I picked **FiveTran** and **Airbyte**, the former because it's so commonly mentioned, the latter because they were at https://2022.currentevent.io/website/39543/sponsors/[Current 2022] and had nice swag :D 
+I've taken a look at a couple of SaaS E/L providers side-by-side to understand what they do, what it's like to use them, and any particular differences. I picked **Fivetran** and **Airbyte**, the former because it's so commonly mentioned, the latter because they were at https://2022.currentevent.io/website/39543/sponsors/[Current 2022] and had nice swag :D 
 
-Airbyte offer a comparison https://airbyte.com/etl-tools/fivetran-alternative-airbyte[between themselves and FiveTran] - taken with a pinch of salt it's probably a useful starting point if you want to get into the differences between them. Airbyte is https://github.com/airbytehq/airbyte[open-source and available to run yourself], and also as a cloud service (which is what I'm going to use).  
+Airbyte offer a comparison https://airbyte.com/etl-tools/fivetran-alternative-airbyte[between themselves and Fivetran] - taken with a pinch of salt it's probably a useful starting point if you want to get into the differences between them. Airbyte is https://github.com/airbytehq/airbyte[open-source and available to run yourself], and also as a cloud service (which is what I'm going to use).  
 
 ### Signup 
 
 Both services offer a 14-day free trial, with fairly painless signup forms 
 
-image::/images/2022/11/ftab01.png[FiveTran and Airbyte - signup forms pt 1]
+image::/images/2022/11/ftab01.png[Fivetran and Airbyte - signup forms pt 1]
 
 Fivetran wants more data from me and makes me validate my email before letting me in whilst Airbyte wants to validate my email but lets me straight into the dashboard which is nice. Fivetran also sends annoying SDR nurture emails after signup which Airbyte doesn't.
 
-image::/images/2022/11/ftab02.png[FiveTran and Airbyte - signup forms pt 2]
+image::/images/2022/11/ftab02.png[Fivetran and Airbyte - signup forms pt 2]
 
 ### Getting started 
 
 The first screen that I land on after signup for Airbyte feels nicer - a big "Set up your first connection" button, which resonates more than Fivetran's "Add destination". For me that's back-to-front since I want to tell it where to get data from and then I'll explain where to put it. But perhaps that's just me. 
 
-image::/images/2022/11/ftab03.png[FiveTran and Airbyte - initial dashboard after signup]
+image::/images/2022/11/ftab03.png[Fivetran and Airbyte - initial dashboard after signup]
 
 For both services I'm going to use GitHub as a source, and BigQuery as my target, with the theoretical idea of creating an analysis of my blog updates (it's link:/categories/github/[hosted on GitHub]). To this I could add in the future other data sources such as Google Analytics. 
 
 I click the big "Add destination" button in Fivetran and get asked what destination I want to create. This is a bit confusing, and I can see listed already one destination called "Warehouse". I cancel that dialog, and click on the "Edit" button next to the existing destination. This just renames it, so I cancel that. Third time lucky—I click on the "Warehouse" destination name itself and now I've launched a 🧙🪄wizard! I click "Skip question".
 
-image::/images/2022/11/ftab04.png[FiveTran can be confusing]
+image::/images/2022/11/ftab04.png[Fivetran can be confusing]
 
 ### Selecting the source 
 
-Several clicks and some confusion later I've caught up with where Airbyte was after the single obvious "Set up your first connection" click - selecting my source. 
+Several clicks in Fivetran and some confusion later, I've caught up with where Airbyte was after the single obvious "Set up your first connection" click - selecting my source. 
 
-image::/images/2022/11/ftab05.png[FiveTran and Airbyte - selecting a source]
+image::/images/2022/11/ftab05.png[Fivetran and Airbyte - selecting a source]
 
 Airbyte lists the connectors alphabetically, and you can also search. Fivetran lists its connectors…randomly?? and its search seem to return odd partial match results 
 
-image::/images/2022/11/ftab06.png[FiveTran and Airbyte - searching for a connector]
+image::/images/2022/11/ftab06.png[Fivetran and Airbyte - searching for a connector]
 
 ### Configuring the source
 
-With the GitHub connector selected on both, I can now configure it. Both have a nice easy "Authenticate" button which triggers the authentication with my GitHub account. Once done I can select for which repository I want to pull data. Airbyte lets me type it freeform (which is faster but error prone and relies on me knowing the exact name and owner), whilst Fivetran insists that I only pick from an available list that it has to fetch (mildly annoying if you know the exact name already)
+With the GitHub connector selected on both, I can now configure it. Both have a nice easy "Authenticate" button which triggers the authentication with my GitHub account. Once done I can select for which repository I want to pull data. Airbyte lets me type it freeform (which is faster but error-prone and relies on me knowing the exact name and owner), whilst Fivetran insists that I only pick from an available list that it has to fetch (mildly annoying if you know the exact name already)
 
-Airbyte slightly annoyingly insists that I enter a "Start date" which I would definitely want the _option_ to do but not mandatory. By default I'd assume I want all data (which is presumably the assumption that Fivetran made because I didn't have to enter it). I have to freeform enter an ISO timestamp, which the tooltip helpfully shows the format for but is still an extra step nonetheless. 
+Airbyte slightly annoyingly insists that I enter a "Start date" which I would definitely want the _option_ to do but not mandatory. By default I'd assume I want all data (which is presumably the assumption that Fivetran made because I didn't have to enter it). I have to freeform enter an ISO timestamp, for which the tooltip helpfully shows the format but is still an extra step nonetheless. 
 
 Both connectors run a connection test after the configuration is complete
 
-image::/images/2022/11/ftab07.png[FiveTran and Airbyte - testing a connector]
+image::/images/2022/11/ftab07.png[Fivetran and Airbyte - testing a connector]
 
 ### Configuring the target
 
-Now we specify the target for the data. The BigQuery connector is easy to find on the list of destinations that each provide. As a side note, one thing I've noticed with the FiveTran UI is that it's the more old-school "select, click next, select, click next" vs Airbyte's which tends to just move on between screens once you select the option. 
+Now we specify the target for the data. The BigQuery connector is easy to find on the list of destinations that each provide. As a side note, one thing I've noticed with the Fivetran UI is that it's the more old-school "select, click next, select, click next" vs Airbyte's which tends to just move on between screens once you select the option. 
 
 For my BigQuery account I've created and exported a private key for a service account (under `IAM & Admin` -> `Service Accounts`, then select the service account and `Keys` tab, and `Create new key`). Both Fivetran and Airbyte just have a password field into which to paste the multi-line JSON. It seems odd but it works. 
 
 Other than the authentication key, Fivetran just needs the Project ID and it's ready to go. Airbyte also needs a default Dataset location and ID. On the click-click-click done stakes, Fivetran is simpler in this respect (few options that _have_ to be set).
 
-image::/images/2022/11/ftab08.png[FiveTran and Airbyte - setting up BigQuery destination]
+image::/images/2022/11/ftab08.png[Fivetran and Airbyte - setting up BigQuery destination]
 
 ### Configuring the extract
 
-Once the connection has been validated, Fivetran and Airbyte move on to what data is to be sync'd, and how. The screens diverge a bit here so I'll discuss them one at a time. 
+Once the connection has been validated, Fivetran and Airbyte move on to what data is to be synced, and how. The screens diverge a bit here so I'll discuss them one at a time. 
 
-Fivetran keeps things simple with an option to just `Sync all data` (default), or `Choose columns to block or hash`. If I select the latter than Fivetran goes off the get the schema and then somewhat jarringly does a "don't call us we'll call you" screen…
+Fivetran keeps things simple with an option to just `Sync all data` (default), or `Choose columns to block or hash`. If I select the latter than Fivetran goes off the get the schema and then somewhat jarringly does a "don't call us, we'll call you" screen, promising to email me when things are ready…
 
-image::/images/2022/11/ftab09.png[FiveTran - masking sensitive data]
+image::/images/2022/11/ftab09.png[Fivetran - masking sensitive data]
 
 …after which `Continue` dumps you on a dashboard from which it's kinda unclear what I do now. Did I create my connector? Is it syncing everything (there's a spinning action icon next to `Status` so perhaps?). 
 
-image::/images/2022/11/ftab10.png[FiveTran - I'm confused.]
+image::/images/2022/11/ftab10.png[Fivetran - I'm confused.]
 
 Clicking on the pipeline provides the clarity that was missing previously:
 
-image::/images/2022/11/ftab11.png[FiveTran - I'm less confused.]
+image::/images/2022/11/ftab11.png[Fivetran - I'm less confused.]
 
-Whilst I sit tight, barely able to control my anticipation at getting the promised email from Fivetran about the schema, I head over to Airbyte. The last thing I did here was confirm my BigQuery connection details, which were successfully tested. If we remember what Fivetran did—a simple screen with two simple buttons "Let's go" or "Let's mask some fields", Airbyte's is somewhat different. You could say bewildering, you could say powerful - tomato/tomato, potato/potato.
+Whilst I sit tight, barely able to control my anticipation at getting the promised email from Fivetran about the schema, I head over to Airbyte. The last thing I did here was confirm my BigQuery connection details, which were successfully tested. If we remember what Fivetran did—a simple screen with two simple buttons "Let's go" or "Let's mask some fields", Airbyte's is somewhat different. You could say bewildering; you could say powerful - 🍅tomato/🍅tomato, 🥔potato/🥔potato.
 
 image::/images/2022/11/ftab12.png[Airbyte - Connection configuration screen]
 
@@ -153,9 +155,14 @@ It starts off simple - how often do we want to sync, what do we call it. Then wh
 
 image::/images/2022/11/ftab13.png[Airbyte - Stream activation]
 
+++++
+<a name="airbyte-ui"></a>
+++++
+
 My two big issues with this are: 
 
-1. I'm thrown in hard and deep to the world of *Sync mode*, *Cursor field*, and more. These things exist, and are important, but I'm just a humble n00b trying to find my way in the world. Do I _need_ to know this stuff now? If Fivetran can abstract it, hide it, or set some suitable defaults, why can't Airbyte? Sure, give me an "advanced options" button to display this, but I'm pretty daunted now. Which brings me onto my next issue
+1. I'm thrown in hard and deep to the world of *Sync mode*, *Cursor field*, and more. These things exist, and are important, but I'm just a humble n00b trying to find my way in the world. Do I _need_ to know this stuff now? If Fivetran can abstract it, hide it, or set some suitable defaults, why can't Airbyte? Sure, give me an "advanced options" button to display this, but I'm pretty daunted now. This brings me to my next issue:
+
 
 2. The user interface (UI) is _not clear_.
 
@@ -213,13 +220,13 @@ Fivetran and Airbyte load the data from the GitHub API into quite different tabl
 
 image::/images/2022/11/ftab26.png[Fivetran and AirByte - Data loaded into BigQuery]
 
-Fivetran publish an https://docs.google.com/presentation/d/1lx6ez7-x-s-n2JCnCi3SjG4XMmx9ysNUvaNCaWc3I_I/edit[Entity Relationship Diagram (ERD) for their GitHub model] (_proving that data modeling never died and is actually remarkably useful…_) as well as https://fivetran.com/docs/applications/github#features[general documentation] about how the connector handles deletes etc. It also ships a https://fivetran.com/docs/transformations/data-models/github-data-model/github-source-model[dbt model of this ingested data] as well as https://fivetran.com/docs/transformations/data-models/github-data-model/github-transform-model[enrichment transformations for dbt] for the data in this format. 
+Fivetran have published an https://docs.google.com/presentation/d/1lx6ez7-x-s-n2JCnCi3SjG4XMmx9ysNUvaNCaWc3I_I/edit[Entity Relationship Diagram (ERD) for their GitHub model] (_proving that data modelling never died and is actually remarkably useful_) as well as https://fivetran.com/docs/applications/github#features[general documentation] about how the connector handles deletes etc. It also ships a https://fivetran.com/docs/transformations/data-models/github-data-model/github-source-model[dbt model of this ingested data] as well as https://fivetran.com/docs/transformations/data-models/github-data-model/github-transform-model[enrichment transformations for dbt] for the data in this format. 
 
-Airbyte's documentation covers the https://docs.airbyte.com/integrations/sources/github/#supported-sync-modes[connector's characteristics] but nothing about the model itself. From what I can tell in the docs the objects written to BigQuery are basically a literal representation of what the GitHub API returns (and these are what are linked to in the docs, such as the https://docs.github.com/en/rest/commits/commits#list-commits[`commits`] object). 
+Airbyte's documentation and model palls in comparison to Fivetran's. Their docs cover the https://docs.airbyte.com/integrations/sources/github/#supported-sync-modes[connector's characteristics] but nothing about the model itself. From what I can tell in the docs the objects written to BigQuery are basically a literal representation of what the GitHub API returns (and these are what are linked to in the docs, such as the https://docs.github.com/en/rest/commits/commits#list-commits[`commits`] object). As we'll see in the next section, this makes the data much harder to work with. 
 
 ### Analysing the data
 
-Going back to the idea of this exercise, I've got GitHub data so now I'll try and analyse it. The Fivetran model is easy to work with, and just needs a single join out to another table to pull in the repository name and show a list of individual commits by author: 
+Going back to the idea of this exercise, I've got GitHub data so now I'll try and analyse it. The Fivetran model is easy to work with, and just needs a single join out to another table which is easily identified to pull in the repository name and show a list of individual commits by author: 
 
 [source,sql]
 ----
@@ -269,21 +276,25 @@ image::/images/2022/11/ftab30.png[Querying Airbyte's GitHub data model]
 
 But we're missing the repository name. Now since we specified in the Airbyte extract to _only pull data for the_ `rmoff-blog` _repo_ then we could brush this under the carpet. Otherwise we need to work out how to relate `commits_commit` to other tables and find one with the repo name in too…which for now I'm going to punt into the `TODO` realm :D 
 
-## FiveTran and Airbyte - Summary
+## Fivetran and Airbyte - Summary
 
-Both tools work well for easily ingesting data from GitHub into BigQuery. My assumption is that the experience is similar for all of the other sources and destinations that they support. Select the connector, configure it, and hit the big "Start Sync" button. Some connectors especially https://fivetran.com/docs/databases/oracle/setup-guide[in the RDBMS world] are probably going to be more fiddly to configure but Fivetran definitely leant nicely into the approach of using sensible defaults and only insisting on user input where necessary. 
+Both tools work well for easily ingesting data from GitHub into BigQuery. My assumption is that the experience is similar for all of the other sources and destinations that they support. Select the connector, configure it, and hit the big "Start Sync" button. Some connectors especially https://fivetran.com/docs/databases/oracle/setup-guide[in the RDBMS world] are probably going to be more fiddly to configure. Of the two tools, Fivetran definitely leans more nicely into the approach of using sensible defaults and only insisting on user input where necessary when compared to Airbyte. 
 
-Each have their own UI quirks, especially Airbyte's "Stream activation" section. 
+Each have their own UI quirks, especially Airbyte's "Stream activation" section that I link:#airbyte-ui[grumbled about above]. 
 
-The resulting data is more nicely modelled by Fivetran whereas Airbyte just gives you the raw API output (from what I can tell). The ERD that Fivetran publishes is a very nice touch, as are the https://fivetran.com/docs/transformations/data-models[dbt data models] since it's a fair assumption folk will be interested to use these to speed up the "time to delivery" further. 
+The resulting data is more nicely modelled by Fivetran whereas Airbyte just gives you the raw API output (from what I can tell). The ERD that Fivetran publishes is a very nice touch, as are the https://fivetran.com/docs/transformations/data-models[dbt data models] since it's a fair assumption folk will be interested in using these to speed up the "time to delivery" further. 
 
-### Going off on a tangent - bespoke API ingest
+I had the privilege of ignoring one of the big real-world evaluation criteria for tool selection: cost. Both tools had a 14-day free trial, and selective browsing on Reddit suggests that the costs can quickly mount up with these tools (as with many SaaS offerings) if not used carefully.
 
-Something that I'd not spotted how to do yet was ingest data from a bespoke [REST] API. All the SaaS E/L tools have the usual list of cloud-and-on-premises data sources, but there are innumerable other sources of data that expose an API. This could be an in-house system for which the backend database isn't made available (and the API given as the only interface from which to fetch data), or it could be a third-party system that only offers a API. My example of the latter would be the kind of data sources I've used for https://github.com/confluentinc/demo-scene/[projects in the past], including http://environment.data.gov.uk/flood-monitoring/doc/reference#api-summary[flood monitoring data] from a REST API, or the position of https://www.kystverket.no/en/navigation-and-monitoring/ais/access-to-ais-data/[ships near Norway] using an AIS endpoint.
+## Going off on a tangent - Bespoke API Ingest
 
-I asked this question on https://www.reddit.com/r/dataengineering/comments/ykznde/what_tooltechnique_do_you_use_for_polling_data/[`r/dataengineering`] and https://www.linkedin.com/posts/robinmoffatt_dataengineering-datapipelines-analyticsengineering-activity-6993956725842178048-egI1?utm_source=share&utm_medium=member_desktop[LinkedIn] and got a great set of replies, which I'll summarise here. One of the things that I learnt from this is that there's not a straight-forward answer - a lot of the solutions drop back into either writing some code, and/or self-managing something. I thought there might be an obvious Fivetran equivalent, but it doesn't seem so. 
+Something that I'd not spotted yet on my travels was a canonical pattern for ingesting data from a bespoke [REST] API. All the SaaS E/L tools have the usual list of cloud-and-on-premises data sources, but there are innumerable other sources of data that expose an API. This could be an in-house system for which the backend database isn't made available (and the API provided as the only interface from which to fetch data), or it could be a third-party system that only offers a API. 
 
-* Go write some code
+Some examples of public third-party APIs would be the kind of data sources I've used for https://github.com/confluentinc/demo-scene/[projects in the past], including http://environment.data.gov.uk/flood-monitoring/doc/reference#api-summary[flood monitoring data] from a REST API, or the position of https://www.kystverket.no/en/navigation-and-monitoring/ais/access-to-ais-data/[ships near Norway] using an AIS endpoint.
+
+I asked this question on https://www.reddit.com/r/dataengineering/comments/ykznde/what_tooltechnique_do_you_use_for_polling_data/[`r/dataengineering`] and https://www.linkedin.com/posts/robinmoffatt_dataengineering-datapipelines-analyticsengineering-activity-6993956725842178048-egI1?utm_source=share&utm_medium=member_desktop[LinkedIn] and got a good set of replies, which I'll summarise here. One of the things that I learnt from this is that there's not a single answer or pattern here—it's definitely much more of an area in which you'll have to roll up your sleeves, whether to write some code or evaluate a bunch of tools with no clear leader in the field. A lot of the solutions drop back into either writing some code, and/or self-managing something. I thought there might be an obvious Fivetran equivalent, but it doesn't seem so. 
+
+* Go write some code and run it with an orchestrator
 +
 ** https://airflow.apache.org/[Apache Airflow], and the https://airflow.apache.org/docs/apache-airflow-providers-http/stable/operators.html[HttpOperator] 
 ** https://www.linkedin.com/feed/update/urn:li:activity:6993956725842178048?commentUrn=urn%3Ali%3Acomment%3A%28activity%3A6993956725842178048%2C6994006307997413378%29[Azure Data Factory]
@@ -292,16 +303,18 @@ I asked this question on https://www.reddit.com/r/dataengineering/comments/ykznd
 
 * No/low-code
 +
-** Portable.io[https://portable.io/] -- Gold star ⭐️ to https://www.reddit.com/r/dataengineering/comments/ykznde/comment/iv2bov8/?utm_source=reddit&utm_medium=web2x&context=3[ethan-aaron] who actually filmed a video example of this in action
+** https://portable.io/[Portable.io] -- Gold star ⭐️ to https://www.reddit.com/r/dataengineering/comments/ykznde/comment/iv2bov8/?utm_source=reddit&utm_medium=web2x&context=3[`ethan-aaron`] who actually filmed a video example of this in action in response to my question
 ** https://nifi.apache.org/[Apache NiFi] 
 ** https://www.linkedin.com/feed/update/urn:li:activity:6993956725842178048?commentUrn=urn%3Ali%3Acomment%3A%28activity%3A6993956725842178048%2C6994025171967778816%29[Google Cloud Workflows or AWS Step functions]
 ** https://airbytehq.github.io/connector-development/config-based/low-code-cdk-overview/[Airbyte]
 
-I definitely want to try out some of these - perhaps the Airbyte one since that's what I've already been using here. Stay tuned for another installment :) 
+I definitely want to try out some of these - perhaps the Airbyte one since that's what I've already been using here. Stay tuned for another instalment :) 
 
 '''
 
 ## Data Engineering in 2022
+
+_Check out my other articles in this series of explorations of the world of data engineering in 2022._
 
 * link:/2022/09/14/stretching-my-legs-in-the-data-engineering-ecosystem-in-2022/[Stretching my Legs]
 * link:/2022/09/14/data-engineering-in-2022-storage-and-access/[Storage and Access]
