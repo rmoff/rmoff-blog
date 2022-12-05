@@ -7,13 +7,9 @@ classes:
 
 ---
 
-_I also write on my [employer's blog](https://www.confluent.io/blog/author/robin/) ([previously](http://ritt.md/rmoff))._
-
----
-
 ### `whoami`
 
-> Robin is a Staff Developer Advocate at Confluent, the company founded by the original creators of Apache Kafka, as well as an Oracle ACE Director (Alumnus). 
+> Robin is a Principal DevEx Engineer at LakeFS. 
 
 > He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. 
 
