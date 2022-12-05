@@ -7,7 +7,7 @@ thumbnail: "/images/2022/10/t_DSCF7575.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - DuckDB
-- Current
+- Current 2022
 - Jupyter
 ---
 
