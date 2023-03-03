@@ -34,7 +34,7 @@ $ duckdb drones.duckdb
 
 A `DESCRIBE` gives me the schema: 
 ```sql
-D DESCRIBE SELECT * FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-*.parquet') ;
+D DESCRIBE SELECT * FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-*.parquet') ;
 ┌─────────────────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
 │       column_name       │ column_type │  null   │   key   │ default │  extra  │
 │         varchar         │   varchar   │ varchar │ varchar │ varchar │ varchar │
@@ -59,15 +59,16 @@ Now I should be able to query a [sample](https://duckdb.org/docs/sql/query_synta
 
 ```sql
 D SELECT * 
-  FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-*.parquet') 
+  FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-*.parquet') 
   USING SAMPLE 5 ROWS;
-100% ▕████████████████████████████████████████████████████████████▏ Error: Conversion Error: Could not convert string 'V1M 2K9' to INT64
+100% ▕████████████████████████████████████████████████████████████▏ 
+Error: Conversion Error: Could not convert string 'V1M 2K9' to INT64
 ```
 
 Huh. That sucks. Let's try it on a single file: 
 
 ```sql
-D SELECT * FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet') USING SAMPLE 5 ROWS;
+D SELECT * FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet') USING SAMPLE 5 ROWS;
 ┌──────────────────────┬─────────────────────┬─────────────────┬──────────────┬───┬──────────────────────┬────────────────┬──────────────────────┬─────────────────────┐
 │  Registration Date   │ Registion Expire Dt │   Asset Type    │ RID Equipped │ … │ Physical Postal Code │  Mailing City  │ Mailing State/Prov…  │ Mailing Postal Code │
 │       varchar        │       varchar       │     varchar     │   boolean    │   │        int64         │    varchar     │       varchar        │        int64        │
@@ -125,11 +126,11 @@ Here's one way to fix things with a `UNION ALL`. Note the use of `filename` meta
 
 ```sql
 SELECT filename, CAST("Physical Postal Code" AS VARCHAR) AS "Physical Postal Code"
-  FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
+  FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
 USING SAMPLE 5 ROWS
 UNION  ALL
 SELECT filename, "Physical Postal Code"
-  FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2017.parquet', filename=true)
+  FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2017.parquet', filename=true)
 USING SAMPLE 5 ROWS;
 ```
 
@@ -177,11 +178,11 @@ Let's test this with the `UNION`:
 
 ```sql
 SELECT filename, CAST("Physical Postal Code" AS VARCHAR) AS "Physical Postal Code"
-  FROM parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
+  FROM read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
 USING SAMPLE 5 ROWS
 UNION  ALL
 SELECT filename, "Physical Postal Code"
-  FROM parquet_scan(['s3://drones03/main/drone-registrations/Registations-P107-Active-201[7-9].parquet',
+  FROM read_parquet(['s3://drones03/main/drone-registrations/Registations-P107-Active-201[7-9].parquet',
                      's3://drones03/main/drone-registrations/Registations-P107-Active-202*.parquet'], filename=true)
 USING SAMPLE 5 ROWS;
 ```
@@ -221,7 +222,7 @@ WITH x AS (SELECT   "Registration Date",
                     "Mailing State/Province",
                     CAST("Mailing Postal Code" AS VARCHAR) AS "Mailing Postal Code",
                     filename
-            FROM    parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
+            FROM    read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
             UNION ALL 
             SELECT *
             FROM   read_parquet  (['s3://drones03/main/drone-registrations/Registations-P107-Active-201[7-9].parquet',
@@ -267,7 +268,7 @@ WITH x AS (SELECT   "Registration Date",
                     "Mailing State/Province",
                     CAST("Mailing Postal Code" AS VARCHAR) AS "Mailing Postal Code",
                     filename
-            FROM    parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
+            FROM    read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
             UNION ALL 
             SELECT *
             FROM   read_parquet  (['s3://drones03/main/drone-registrations/Registations-P107-Active-201[7-9].parquet',
@@ -312,7 +313,7 @@ WITH x AS (SELECT   "Registration Date",
                     "Mailing State/Province",
                     CAST("Mailing Postal Code" AS VARCHAR) AS "Mailing Postal Code",
                     filename
-            FROM    parquet_scan('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
+            FROM    read_parquet('s3://drones03/main/drone-registrations/Registations-P107-Active-2016.parquet', filename=true)
             UNION ALL 
             SELECT *
             FROM   read_parquet  (['s3://drones03/main/drone-registrations/Registations-P107-Active-201[7-9].parquet',
