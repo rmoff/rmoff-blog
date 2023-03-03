@@ -1,6 +1,6 @@
 ---
 title: rmoff's random ramblings
-subtitle: "✨ Kafka, ksqlDB, and other random geekery 🤓"
+subtitle: "✨ Data Engineering, Kafka, and other random geekery 🤓"
 ---
 
 --- 
