@@ -253,9 +253,9 @@ USING SAMPLE 10 ROWS;
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-This looks good, but we should check we're getting data from all files. Because the query's been shoved into a CTE it's nice and easy to build an aggregate into the query on the resulting data: 
+This looks good, but we should check we're getting data from all files. We'll do that with a `COUNT` aggregate against the CTE: 
 
-```sql
+{{< highlight sql "hl_lines=20-26" >}}
 WITH x AS (SELECT   "Registration Date",
                     "Registion Expire Dt",
                     "Asset Type",
@@ -279,7 +279,7 @@ SELECT filename, COUNT(*)
 FROM x 
 GROUP BY filename
 ORDER BY filename;
-```
+{{< / highlight >}}
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┬──────────────┐
@@ -299,7 +299,7 @@ Looks good to me!
 
 For a finishing touch we could even wrap it in a `VIEW`: 
 
-```sql
+{{< highlight sql "hl_lines=1" >}}
 CREATE OR REPLACE VIEW Registations_P107_Active AS
 WITH x AS (SELECT   "Registration Date",
                     "Registion Expire Dt",
@@ -321,7 +321,7 @@ WITH x AS (SELECT   "Registration Date",
                                    filename=true)
             )
 SELECT * FROM x;
-```
+{{< / highlight>}}
 
 Which then can be used the same as above like this:
 
