@@ -20,7 +20,7 @@ You see, [I have a soft spot for Alfred](https://rmoff.net/2021/07/29/why-i-use-
 
 The subsequent short thread only drew me in further
 
-{{< tweet user="rmoff" id="1623650512183652353" >}}
+{{< tweet user="rewtraw" id="1623715318958034944" >}}
 
 {{< tweet user="rewtraw" id="1623730947358359553" >}}
 
