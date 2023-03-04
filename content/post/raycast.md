@@ -38,29 +38,17 @@ But…time moves on.
 
 ## What is Raycast? 
 
-[Raycast](https://www.raycast.com/) is a launcher, kinda like Spotlight that comes built into macOS. To say that is to understate things somewhat significantly. It's an all-sining and all-dancing productivity tool for your Mac that you really should try out. 
+[Raycast](https://www.raycast.com/) is a launcher, kinda like Spotlight that comes built into macOS. To say that is to understate things somewhat significantly. It's an all-singing and all-dancing productivity tool for your Mac that you really should try out. 
 
 ## Introducing Raycast, the new(ish) kid on the block. 
 
 Raycast is like Alfred, but better. Sorry Alfred. Whatever Alfred can do, Raycast can do, and usually better, in a simpler and more intuitive user interface. 
 
-Almost everything in Raycast is driven through its menu system which has been brilliantly thought out. The other killer feature is its Store. Whilst Alfred has got Workflows, you have to go and find them, install them, etc. 
-
-In Raycast extensions are discoverable and installable as part of the app itself. Interested in ~~losing all your money on a ponzi scheme~~ crypto? Let's see what Raycast has for that: 
-
-![](/images/2023/03/Kapture%202023-03-03%20at%2022.37.23.gif)
-
-1. Cmd-Space to launch
-2. Start to type `store` and hit enter
-3. Start to type `Crypto` and hit enter
-4. Pick an extension and hit enter
-5. Press enter to launch the extension
-
-This is all without your hands leaving the keyboard, which I think is probably where the power of Raycast comes in. It soon becomes part of your muscle-memory. 
+Almost everything in Raycast is driven through its menu system which has been brilliantly thought out, along with a fantastic ecosystem of extensions accessed through the built-in "store".  
 
 ## A Superb User Experience
 
-The user interface of Raycast has been superbly thought out to make it joyfully simple and straightforward, but also richly featured for more advanced uses when you need it - without the need to shift gear. 
+The user interface of Raycast has been superbly thought out to make it joyfully simple and straightforward, but also richly featured for more advanced uses when you need it - without the need to context switch. 
 
 Let's say we've launched the GitHub extension to interact with our PRs etc. 
 
@@ -74,7 +62,17 @@ We hit enter to select `My Pull Requests`. The next screen has the same UI as al
 
 Alfred was Alfred. You can have the car in any colour so long as it's black. Well, there are [workflows](https://www.alfredapp.com/workflows/) but I need to go to a web page to browse and read and … gosh it's just not as simple as pressing `Cmd-Space`, typing `Store` (or the first couple of characters), and then searching for whatever you want. 
 
-![](/images/2023/03/Pasted%20image%2020230303225031.png)
+Interested in ~~losing all your money on a ponzi scheme~~ crypto? Let's see what Raycast has for that: 
+
+1. Cmd-Space to launch
+2. Start to type `store` and hit enter
+3. Start to type `Crypto` and hit enter
+4. Pick an extension and hit enter
+5. Press enter to launch the extension
+
+![](/images/2023/03/Kapture%202023-03-03%20at%2022.37.23.gif)
+
+This is all without your hands leaving the keyboard, which I think is probably where the power of Raycast comes in. It soon becomes part of your muscle-memory. 
 
 Raycast becomes the platform for a potentially vast ecosystem of plugins. It's the kitchen utensils for making whatever nice meal you'd like, instead of the pre-packaged ready meal you bought from the supermarket. That ready meal might be really nice, but you get what you get and nothing more. The half-assed metaphor breaks down because of course you *can* extend Alfred. It just never felt like it was designed from the outset to be used that way. 
 
@@ -92,7 +90,8 @@ You get your text, obviously, but also your images. You get the metadata for eac
 
 ![](/images/2023/03/Pasted%20image%2020230303225558.png)
 You can drag and drop from the clipboard history onto a file prompt or into an application. 
-![](/images/2023/03/Kapture%202023-03-03%20at%2022.57.46.gif)
+
+<video autoplay="true" loop="true" width=800 src="/images/2023/03/Kapture 2023-03-03 at 22.57.46.mp4"></video>
 
 ## Emojis
 
@@ -110,11 +109,15 @@ Because Raycast has such a good framework for extensions and each command within
 Similar to the search engines you can define in Chrome, Quicklinks in Chrome lets you take a URL with a pattern for a search term and make it into a command accessible from the launcher at any time. Here's an example for being able to search LinkedIn without first opening your web browser. 
 
 1. Create Quicklink (which itself is accessed through the Raycast menu)
-   ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.28.51.png)
-   2. Define the Quicklink based on the URL syntax of a LinkedIn search page URL `https://www.linkedin.com/search/results/all/?keywords={Query}`
-      ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.29.38.png)
-  3. Now you can enter the name of the quicklink (or partial) and search to your heart's content: 
-     ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.30.10.png)
+
+    ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.28.51.png)
+
+2. Define the Quicklink based on the URL syntax of a LinkedIn search page URL `https://www.linkedin.com/search/results/all/?keywords={Query}`
+
+    ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.29.38.png)
+3. Now you can enter the name of the quicklink (or partial) and search to your heart's content: 
+
+    ![](/images/2023/03/CleanShot%202023-02-14%20at%2009.30.10.png)
 
 ## Switch windows with filtering
 Like command-tab but without all the annoyance of a mouse 🤯
