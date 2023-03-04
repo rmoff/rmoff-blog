@@ -58,6 +58,7 @@ We hit enter to select `My Pull Requests`. The next screen has the same UI as al
 
 ![](/images/2023/03/Pasted_Image_03_03_2023__22_44.png)
 
+
 ## The Store
 
 Alfred was Alfred. You can have the car in any colour so long as it's black. Well, there are [workflows](https://www.alfredapp.com/workflows/) but I need to go to a web page to browse and read and … gosh it's just not as simple as pressing `Cmd-Space`, typing `Store` (or the first couple of characters), and then searching for whatever you want. 
@@ -127,6 +128,12 @@ Like command-tab but without all the annoyance of a mouse 🤯
 ## Alfred snippets -> Raycast snippets = easy peasy
 
 Along with clipboard history, _snippets_ are a fantastic productivity tool. Whether auto-expanding your email address when you type `ep`, entering the current timestamp, or even pasting your resume, it just speeds things up. The good news is that Raycast supports snippets, and [David Brownman](https://xavd.id/) wrote a nice tutorial on [how to migrate your Alfred snippets to Raycast](https://xavd.id/blog/post/migrating-alfred-snippets-to-raycast/). Just make sure that each snippet has a name otherwise the import will fail. It's fine to give it a dummy name - but it can't be blank. 
+
+## GitHub extension 
+
+Think of all the tasks that you do on your computer each day. Many of those will have a Raycast extension that you can use to make it quicker and easier to get things done. Here's an example with the GitHub extension to merge [the PR](https://github.com/rmoff/rmoff-blog/pull/34) to publish this blog :) 
+
+<video autoplay="true" loop="true" width=800 src="/images/2023/03/gh.mp4"></video>
 
 ## Sorry, but the time has come. 
 
