@@ -59,7 +59,7 @@ We hit enter to select `My Pull Requests`. The next screen has the same UI as al
 ![](/images/2023/03/Pasted_Image_03_03_2023__22_44.png)
 
 
-## The Store
+## The Store 🛒
 
 Alfred was Alfred. You can have the car in any colour so long as it's black. Well, there are [workflows](https://www.alfredapp.com/workflows/) but I need to go to a web page to browse and read and … gosh it's just not as simple as pressing `Cmd-Space`, typing `Store` (or the first couple of characters), and then searching for whatever you want. 
 
@@ -96,7 +96,7 @@ You can drag and drop from the clipboard history onto a file prompt or into an a
 
 ## Emojis
 
-Who doesn't like a good emoji? The emoji plugin in Raycast is just much smarter than the [Alfred workflow which I was using before](https://github.com/mr-pennyworth/alfred-fastest-emoji#fastest-emoji-search-famos) and feels clunky in comparison.
+Who doesn't like a good emoji? The emoji plugin in Raycast is just much smarter and less clunky than the [Alfred workflow which I was using before](https://github.com/mr-pennyworth/alfred-fastest-emoji#fastest-emoji-search-famos).
 ![](/images/2023/03/CleanShot%202023-02-13%20at%2011.29.45.png)
 
 ## Alfred was first, now Raycast's coming for you too…
