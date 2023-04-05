@@ -24,7 +24,7 @@ Py4JJavaError: An error occurred while calling o45.save.
 Failed to find data source: delta.
 ```
 
-**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net) / [twitter](https://twitter.com/rmoff/) / [mastodon](https://data-folks.masto.host/@rmoff)) why this is and if what I've ended up with is the right code_. **UPDATE: Damon Cortesi explained it to me :) See below for details.** 
+**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net) / [twitter](https://twitter.com/rmoff/) / [mastodon](https://data-folks.masto.host/@rmoff)) why this is and if what I've ended up with is the right code_. **UPDATE: Damon Cortesi explained it to me :) See [below](#why-did-it-do-what-it-did) for details.** 
 
 Here're the salient points of the Jupyter notebook: 
 
@@ -251,7 +251,7 @@ To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLeve
 23/04/05 16:30:36 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
 ```
 
-## Why Did it Do What It Did? 
+## Why Did It Do What It Did? 
 
 Courtesy of [Damon Cortesi](https://www.linkedin.com/feed/update/urn:li:activity:7049423288099319809?commentUrn=urn%3Ali%3Acomment%3A%28activity%3A7049423288099319809%2C7049433950406021120%29&dashCommentUrn=urn%3Ali%3Afsd_comment%3A%287049433950406021120%2Curn%3Ali%3Aactivity%3A7049423288099319809%29): 
 
@@ -265,7 +265,7 @@ Courtesy of [Damon Cortesi](https://www.linkedin.com/feed/update/urn:li:activity
 > 
 > This post does a pretty good job of explaining what's going on: [A tale of Spark Session and Spark Context](https://medium.com/@achilleus/spark-session-10d0d66d1d24)
 
-## Proving it to myself
+## Proving It To Myself
 
 Damon's explanation and the linked blog were good, so to close the loop I wanted to prove to myself that I could reproduce this explanation locally. Here's [the notebook itself if you want to try it](https://gist.github.com/rmoff/1d86204b559f8ffce83be4b3206b1fa0) and reproduced here too: 
 
