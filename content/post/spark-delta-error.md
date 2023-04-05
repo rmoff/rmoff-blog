@@ -24,7 +24,7 @@ Py4JJavaError: An error occurred while calling o45.save.
 Failed to find data source: delta.
 ```
 
-**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net) / [twitter](https://twitter.com/rmoff/) / [mastodon](https://data-folks.masto.host/@rmoff)) why this is and if what I've ended up with is the right code_. 
+**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net) / [twitter](https://twitter.com/rmoff/) / [mastodon](https://data-folks.masto.host/@rmoff)) why this is and if what I've ended up with is the right code_. **UPDATE: Damon Cortesi explained it to me :) See below for details.** 
 
 Here're the salient points of the Jupyter notebook: 
 
@@ -250,3 +250,204 @@ To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLeve
 23/04/05 16:30:36 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
 23/04/05 16:30:36 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
 ```
+
+## Why Did it Do What It Did? 
+
+Courtesy of [Damon Cortesi](https://www.linkedin.com/feed/update/urn:li:activity:7049423288099319809?commentUrn=urn%3Ali%3Acomment%3A%28activity%3A7049423288099319809%2C7049433950406021120%29&dashCommentUrn=urn%3Ali%3Afsd_comment%3A%287049433950406021120%2Curn%3Ali%3Aactivity%3A7049423288099319809%29): 
+
+> In the example that doesn't work, you explicitly create a `SparkContext` first with `sc = SparkContext('local[*]')`.
+> 
+> When you use `SparkSession.builder`...`getOrCreate()`, it reuses the `SparkContext` you already created. You should be able to see this by running `spark.sparkContext`. That `SparkContext` unfortunately doesn't have the config variables you specified and, based on some reason I don't totally understand, the config variables you specify later are not updated. I'm guessing this is because `SparkContext` spins up a JVM and some options (like `spark.jars.packages`) would need to be specified before you spin up the JVM.
+> 
+> In the example that works, it doesn't have a `SparkContext` to reuse, so it creates a one using the config you provided.
+> 
+> 😅 I love Spark! /s
+> 
+> This post does a pretty good job of explaining what's going on: [A tale of Spark Session and Spark Context](https://medium.com/@achilleus/spark-session-10d0d66d1d24)
+
+## Proving it to myself
+
+Damon's explanation and the linked blog were good, so to close the loop I wanted to prove to myself that I could reproduce this explanation locally. Here's [the notebook itself if you want to try it](https://gist.github.com/rmoff/1d86204b559f8ffce83be4b3206b1fa0) and reproduced here too: 
+
+```python
+import sys
+import pyspark
+print("Kernel:", sys.executable)
+print("Python version:", sys.version)
+print("PySpark version:", pyspark.__version__)
+
+```
+
+    Kernel: /opt/conda/bin/python
+    Python version: 3.9.7 | packaged by conda-forge | (default, Oct 10 2021, 15:08:54) 
+    [GCC 9.4.0]
+    PySpark version: 3.2.0
+
+
+## Spark Context and Session - no config to pick up
+
+
+```python
+from pyspark.context import SparkContext
+from pyspark import SparkFiles
+from pyspark.sql.session import SparkSession
+```
+
+
+```python
+sc = SparkContext('local')
+
+spark = SparkSession(sc)
+```
+
+
+```python
+spark.sparkContext.getConf().getAll()
+```
+
+
+
+
+    [('spark.master', 'local'),
+     ('spark.app.startTime', '1680720996903'),
+     ('spark.executor.id', 'driver'),
+     ('spark.app.name', 'pyspark-shell'),
+     ('spark.driver.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.driver.port', '33339'),
+     ('spark.driver.host', '358d949974bd'),
+     ('spark.rdd.compress', 'True'),
+     ('spark.serializer.objectStreamReset', '100'),
+     ('spark.app.id', 'local-1680720997412'),
+     ('spark.submit.pyFiles', ''),
+     ('spark.submit.deployMode', 'client'),
+     ('spark.executor.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.ui.showConsoleProgress', 'true')]
+
+
+
+_Now restart the kernel_
+
+---
+
+## No explicit Spark Context - picks up config as expected
+
+
+```python
+from pyspark.context import SparkContext
+from pyspark import SparkFiles
+from pyspark.sql.session import SparkSession
+```
+
+
+```python
+spark = (
+    SparkSession.builder.master("local[*]")
+    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .getOrCreate()
+)        
+```
+
+
+```python
+spark.sparkContext.getConf().getAll()
+```
+
+
+
+
+    [('spark.repl.local.jars',
+      'file:///home/jovyan/.ivy2/jars/io.delta_delta-core_2.12-2.2.0.jar,file:///home/jovyan/.ivy2/jars/io.delta_delta-storage-2.2.0.jar,file:///home/jovyan/.ivy2/jars/org.antlr_antlr4-runtime-4.8.jar'),
+     ('spark.app.id', 'local-1680721007128'),
+     ('spark.app.startTime', '1680721006667'),
+     ('spark.files',
+      'file:///home/jovyan/.ivy2/jars/io.delta_delta-core_2.12-2.2.0.jar,file:///home/jovyan/.ivy2/jars/io.delta_delta-storage-2.2.0.jar,file:///home/jovyan/.ivy2/jars/org.antlr_antlr4-runtime-4.8.jar'),
+     ('spark.app.initial.file.urls',
+      'file:///home/jovyan/.ivy2/jars/org.antlr_antlr4-runtime-4.8.jar,file:///home/jovyan/.ivy2/jars/io.delta_delta-core_2.12-2.2.0.jar,file:///home/jovyan/.ivy2/jars/io.delta_delta-storage-2.2.0.jar'),
+     ('spark.executor.id', 'driver'),
+     ('spark.app.name', 'pyspark-shell'),
+     ('spark.driver.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.app.initial.jar.urls',
+      'spark://358d949974bd:41145/jars/io.delta_delta-core_2.12-2.2.0.jar,spark://358d949974bd:41145/jars/io.delta_delta-storage-2.2.0.jar,spark://358d949974bd:41145/jars/org.antlr_antlr4-runtime-4.8.jar'),
+     ('spark.jars.packages', 'io.delta:delta-core_2.12:2.2.0'),
+     ('spark.driver.host', '358d949974bd'),
+     ('spark.sql.warehouse.dir', 'file:/home/jovyan/spark-warehouse'),
+     ('spark.sql.extensions', 'io.delta.sql.DeltaSparkSessionExtension'),
+     ('spark.rdd.compress', 'True'),
+     ('spark.submit.pyFiles',
+      '/home/jovyan/.ivy2/jars/io.delta_delta-core_2.12-2.2.0.jar,/home/jovyan/.ivy2/jars/io.delta_delta-storage-2.2.0.jar,/home/jovyan/.ivy2/jars/org.antlr_antlr4-runtime-4.8.jar'),
+     ('spark.driver.port', '41145'),
+     ('spark.jars',
+      'file:///home/jovyan/.ivy2/jars/io.delta_delta-core_2.12-2.2.0.jar,file:///home/jovyan/.ivy2/jars/io.delta_delta-storage-2.2.0.jar,file:///home/jovyan/.ivy2/jars/org.antlr_antlr4-runtime-4.8.jar'),
+     ('spark.serializer.objectStreamReset', '100'),
+     ('spark.master', 'local[*]'),
+     ('spark.submit.deployMode', 'client'),
+     ('spark.executor.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.ui.showConsoleProgress', 'true'),
+     ('spark.sql.catalog.spark_catalog',
+      'org.apache.spark.sql.delta.catalog.DeltaCatalog')]
+
+
+
+---
+
+_Now restart the kernel_
+
+---
+
+## Existing Spark Context with attempted config for the Session 💀
+
+_SparkContext gets implictly reused by the Spark Session and so config is ignored_
+
+
+```python
+from pyspark.context import SparkContext
+from pyspark import SparkFiles
+from pyspark.sql.session import SparkSession
+```
+
+
+```python
+sc = SparkContext('local')
+
+spark = (
+    SparkSession.builder.master("local[*]")
+    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .getOrCreate()
+)        
+```
+
+
+```python
+spark.sparkContext.getConf().getAll()
+```
+
+
+
+
+    [('spark.master', 'local'),
+     ('spark.app.startTime', '1680721019537'),
+     ('spark.executor.id', 'driver'),
+     ('spark.app.name', 'pyspark-shell'),
+     ('spark.app.id', 'local-1680721020036'),
+     ('spark.driver.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.driver.host', '358d949974bd'),
+     ('spark.sql.warehouse.dir', 'file:/home/jovyan/spark-warehouse'),
+     ('spark.rdd.compress', 'True'),
+     ('spark.serializer.objectStreamReset', '100'),
+     ('spark.submit.pyFiles', ''),
+     ('spark.driver.port', '46397'),
+     ('spark.submit.deployMode', 'client'),
+     ('spark.executor.extraJavaOptions',
+      '-Dio.netty.tryReflectionSetAccessible=true'),
+     ('spark.ui.showConsoleProgress', 'true')]
+
+
