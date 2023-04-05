@@ -195,3 +195,58 @@ data.write.format("delta").save("/tmp/delta-table")
     	at org.apache.spark.sql.execution.datasources.DataSource$.lookupDataSource(DataSource.scala:656)
     	... 16 more
 
+## Notebook Log 
+
+I did notice in the notebook that in the version I ran without setting `SparkContext` the Delta library was downloaded: 
+
+```
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.apache.spark.unsafe.Platform (file:/usr/local/spark-3.2.0-bin-hadoop3.2/jars/spark-unsafe_2.12-3.2.0.jar) to constructor java.nio.DirectByteBuffer(long,int)
+WARNING: Please consider reporting this to the maintainers of org.apache.spark.unsafe.Platform
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+:: loading settings :: url = jar:file:/usr/local/spark-3.2.0-bin-hadoop3.2/jars/ivy-2.5.0.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /home/jovyan/.ivy2/cache
+The jars for the packages stored in: /home/jovyan/.ivy2/jars
+io.delta#delta-core_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-86ca6813-f39f-472c-b6a2-dfe988ab0404;1.0
+    confs: [default]
+    found io.delta#delta-core_2.12;2.0.0 in central
+    found io.delta#delta-storage;2.0.0 in central
+    found org.antlr#antlr4-runtime;4.8 in central
+    found org.codehaus.jackson#jackson-core-asl;1.9.13 in central
+:: resolution report :: resolve 94ms :: artifacts dl 4ms
+    :: modules in use:
+    io.delta#delta-core_2.12;2.0.0 from central in [default]
+    io.delta#delta-storage;2.0.0 from central in [default]
+    org.antlr#antlr4-runtime;4.8 from central in [default]
+    org.codehaus.jackson#jackson-core-asl;1.9.13 from central in [default]
+    ---------------------------------------------------------------------
+    |                  |            modules            ||   artifacts   |
+    |       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+    ---------------------------------------------------------------------
+    |      default     |   4   |   0   |   0   |   0   ||   4   |   0   |
+    ---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-86ca6813-f39f-472c-b6a2-dfe988ab0404
+    confs: [default]
+    0 artifacts copied, 4 already retrieved (0kB/3ms)
+23/04/05 16:29:30 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+```
+
+whilst the version that did set `SparkContext` didn't. 
+
+```
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.apache.spark.unsafe.Platform (file:/usr/local/spark-3.2.0-bin-hadoop3.2/jars/spark-unsafe_2.12-3.2.0.jar) to constructor java.nio.DirectByteBuffer(long,int)
+WARNING: Please consider reporting this to the maintainers of org.apache.spark.unsafe.Platform
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+Using Spark's default log4j profile: org/apache/spark/log4j-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+23/04/05 16:30:36 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+23/04/05 16:30:36 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+```
