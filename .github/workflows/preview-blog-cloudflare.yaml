@@ -1,0 +1,36 @@
+name: Build and Deploy PR Preview to CloudFlare Pages
+
+on:
+  pull_request:
+
+jobs:
+  build_preview:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Ruby Dev                     
+      run: sudo apt-get install ruby-dev
+
+    - name: Install AsciiDoctor
+      run: sudo gem install asciidoctor
+      
+    - name: Install Rouge
+      run: sudo gem install rouge -v 3.30.0
+
+    - name: Setup Hugo                           
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: '0.105.0'
+
+    - name: Build                                
+      run: hugo --baseURL https://rmoff-blog-preview.pages.dev/
+
+    - name: Publish to Cloudflare Pages
+      uses: cloudflare/pages-action@v1
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: 8d56a7ca471ccdf550c9feffa02d05ba
+        projectName: rmoff-blog-preview
+        directory: public
+        gitHubToken: ${{ secrets.GITHUB_TOKEN }}
