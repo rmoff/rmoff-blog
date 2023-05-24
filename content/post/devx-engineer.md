@@ -3,14 +3,14 @@ draft: false
 title: 'What Does This DevEx Engineer Do?'
 date: "2023-05-23T23:56:16Z"
 image: "/images/2023/05/h_IMG_2564.jpeg"
-thumbnail: "/images/2023/05/t_IMG_2564.jpeg"
+thumbnail: "/images/2023/05/t_IMG_2342.jpeg"
 credit: "https://twitter.com/rmoff/"
 categories:
 - devrel
 - devex
 ---
 
-_This was originally titled more broadly "What Does *A* DevEX Engineer Do", but that made it into a far too tedious and long-winding etymological exploration of the discipline. Instead, I'm going to tell you what this particular instantiation of the entity does 😄_
+_This was originally titled more broadly "What Does *A* DevEx Engineer Do", but that made it into a far too tedious and long-winding etymological exploration of the discipline. Instead, I'm going to tell you what this particular instantiation of the entity does 😄_
 
 <!--more-->
 
