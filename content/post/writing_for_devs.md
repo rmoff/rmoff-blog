@@ -68,7 +68,7 @@ Some types of writing are going to have greater scope for individuality than oth
 
 #### Personality and Voice
 
-This is all about whether the voice of the author should be allowed to come through in the writing. Sometimes this is what makes an article stand out. It can also be deeply distracting, so is quite a balance to get right.
+Should the 'voice' of the author be allowed to come through in the writing? 
 
 This is very much a sliding scale. I’ve jotted down _some_ of the characteristics you might associate with either extreme of the scale. This is not to say that by definition you’d put cuss words into a blog so as to convey your voice—but as an example of something that you might see at that end of the spectrum and definitely not at the other.
 
