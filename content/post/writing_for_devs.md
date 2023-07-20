@@ -16,21 +16,25 @@ Never one to miss a chance to write and share something, here’s my response to
 
 <!--more-->
 
+To begin with I want to cover briefly the motivations behind writing. 
+
 ## Why Do **I** Write?
 
 Firstly, I like **to share information**. That could be a new [tool](https://rmoff.net/2021/03/04/quick-profiling-of-data-in-apache-kafka-using-kafkacat-and-visidata/) or [technique](https://lakefs.io/blog/data-engineering-patterns-write-audit-publish/) that I’ve learnt, [a clever trick](https://rmoff.net/2020/09/30/setting-key-value-when-piping-from-jq-to-kafkacat/) I’ve discovered, or sometimes away from the technical and into the realms of [life pondering](https://rmoff.net/2019/02/09/travelling-for-work-with-kids-at-home/) and [navel gazing](https://rmoff.net/2023/05/23/what-does-this-devex-engineer-do/). In the case of this very blog, it’s to share my thoughts on something that interests me. I could have written some notes and sent them directly back to the person who asked the original question, but if it was useful to them it’s hopefully useful to others—so therefore it’s worth writing up and publishing.
 
 The second reason that I’ll write is **to learn about something**. It’s one thing to hand-wave one’s way through a presentation. It’s another to commit pen to paper (well, bytes to disk) and [explain something](https://rmoff.net/2018/08/02/kafka-listeners-explained/). Quite often I’ll realise that there’s a gap—or gaps—in my knowledge that I need to explore first before I can properly write about something, and that’s the very reason that I do it.
 
-There are several pleasant side-effects from writing too. Anything in the public domain (such as your blog, but also open-source project documentation, etc) helps establish your credibility in an area and awareness by others of you. We may never reach the stratospheric heights of someone such as Kelsey Hightower, who has wowed a generation of developers with their [Tetris-playing skills](https://youtu.be/HlAXp0-M6SY?t=718), but being known as _that guy_ who wrote a really useful blog that helped others is still a really nice feeling. :)
+There are several pleasant side-effects from writing too. Anything in the public domain (such as your blog, but also open-source project documentation, etc) helps establish your credibility in an area and awareness by others of you. We may never reach the stratospheric heights of someone such as Kelsey Hightower, who has wowed a generation of developers with their [Tetris-playing skills](https://youtu.be/HlAXp0-M6SY?t=718), but being known as _that guy_ who wrote a really useful blog that helped others is still a really nice feeling :)
 
 ## HOW do I Write for Developers?
 
-### 🛑 STOP! Watch This First🎥
+### 🛑 STOP! Watch This First 🎥
 
 Go and watch this excellent lecture called [The Craft of Writing Effectively](https://www.youtube.com/watch?v=vtIzMaLkCaM). It’s given by Larry McEnerney who is the Director of the University of Chicago’s Writing Program and knows a thing or two about writing. There are direct parallels between his observations on how and why academics communicate, and communication between developers.
 
-I’ve seen it recommended several times but to my embarrassment, the length (1hr+) put me off, but I wish it hadn’t as it’s superb. If you’d rather listen instead of watch you can use [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to download it as audio (`--extract-audio --audio-format mp3`).
+👉🏻 I’ve seen it recommended several times but to my embarrassment, the length put me off—but I wish it hadn’t as it’s superb. 
+
+_If you’d rather listen instead of watch you can use [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to download it as audio (`--extract-audio --audio-format mp3`)._
 
 ### So, how do I write for developers? 
 
@@ -58,20 +62,23 @@ What do these different dimensions mean in practice? Let’s explore that.
 
 The first of these dimensions is pretty straightforward and shouldn’t really vary. Whatever you write, for whomever you write it, **it has to be clear**. Writing clearly means everything from sentence construction and paragraph breaks through to the structure of your article. It can be surprisingly hard to do but is crucial if you want to write material that people will _want_ to read.
 
-Some types of writing are going to have greater scope for individuality than others, but all have the potential to be at least accessible and clear. For example, just because you’re writing documentation doesn’t give you a pass to copy and paste the requirements doc in all its generic and obscure complexity. Write documentation that you as a developer would like to read. It can be complex and precise, yet still accessible.
+One neat trick when it comes to clarity is to remember that _what you leave out_ is as important as what you leave in. This is going to be very context-specific. Documentation, by definition, should be comprehensive. A blog, on the other hand, might want to get to the point sooner and just provide a link to background material for the reader should they want it. Less is often more, as they say.
 
+Some types of writing are going to have greater scope for individuality than others, but all have the potential to at least be accessible and clear. For example, just because you’re writing documentation doesn’t give you a pass to copy and paste the requirements doc in all its generic and obscure complexity. Write documentation that you as a developer would like to read. It can be complex and precise, yet still accessible.
 
 #### Personality and Voice
 
-What we want to think about here is whether the voice of the author should be allowed to come through, or if that would be distracting. You’ll find that generally writing mediums such as a project report to stakeholders or product documentation requires a neutral voice. That’s not to say _boring_, but it is to say that a certain uniformity is required. In the case of a project report, the message mustn’t be obscured by colloquialisms and the such. And can you imagine the cognitive dissonance if a set of documentation were written by multiple writers each looking to stamp their personality on the pages?
-
-When we get to things like blogs and other types of writing we _deliberately_ want to include some personality. How much is up to you to calibrate with your audience and yourself. There is a “Goldilocks” zone here—enough personality and genuine voice coming through to convince the reader that they are reading something that was written by someone who is actually interested and informed on the matter, but not so much that it gets in the way of the content.
+This is all about whether the voice of the author should be allowed to come through in the writing. Sometimes this is what makes an article stand out. It can also be deeply distracting, so is quite a balance to get right.
 
 This is very much a sliding scale. I’ve jotted down _some_ of the characteristics you might associate with either extreme of the scale. This is not to say that by definition you’d put cuss words into a blog so as to convey your voice—but as an example of something that you might see at that end of the spectrum and definitely not at the other.
 
 <img src="/images/2023/07/03.svg" height=300/>
 
-For some types of writing, there’s a huge variance. How you decide where to pitch your voice on this scale will come down to your preference, audience, and general area and discipline. If you spend much time on Twitter you’ll notice that InfoSec Twitter is different from DevOps Twitter, which is different again from DataEng Twitter. Each has its own cliques and customs, and also a varying range to which an author’s voice shines through in published writing.
+How you decide where to pitch your voice on this scale will come down to your preference, audience, and general area and discipline. If you spend much time on Twitter you’ll notice that InfoSec Twitter is different from DevOps Twitter, which is different again from DataEng Twitter. Each has its own cliques and customs, and also a varying range to which an author’s voice shines through in published writing.
+
+You’ll generally find that generally writing mediums such as a project report to stakeholders or product documentation requires a neutral voice. That’s not to say _boring_, but it is to say that a certain uniformity is required. In the case of a project report, the message mustn’t be obscured by colloquialisms and the such. And can you imagine the cognitive dissonance if a set of documentation were written by multiple writers each looking to stamp their personality on the pages?
+
+When we get to things like blogs and other types of writing we _deliberately_ want to include some personality. How much is up to you to calibrate with your audience and yourself. There is a “Goldilocks” zone here—enough personality and genuine voice coming through to convince the reader that they are reading something that was written by someone who is actually interested and informed on the matter, but not so much that it gets in the way of the content.
 
 #### Uniformity and Standardisation
 
@@ -111,18 +118,29 @@ Like a favourite pair of jeans that’s well-worn, comfy, and slightly saggy rou
 
 What this looks like in practice is something along these lines:
 
-1. An intro—What is this thing, and why should you give af? Perhaps why am I interested in it or why would you want to read my take on it? The key thing is you’re relating to your audience here. Not everyone wants to read everything you write, and that’s ok.  \
-Let people self-select out (or in, hopefully) at this stage, but make it nice and easy. If you’re writing about data engineering, make it clear to the appdev crowd that they should move on as there’s nothing to see here (or stick around and learn something new, but as a visitor, not the target audience).
-2. The article itself
-3. A recap—and this is where marketing would like to introduce you to the acronym CTA (Call To Action) and as an author you can decide how or if to weave that into your narrative.  \
-Either way, you’re going to summarise what you just did and give people something to _do_ with it next.  \
-Are there code samples they can go and run or inspect? A new service to sign up for? A video to watch? Or just a general life reflection upon which to ponder. But don’t just finish your article with a figurative mic drop - tie up nicely with a bow (a 🙇🏻 or a 🎀, either works).
+1. **An intro**
+
+    What is this thing, and why should the reader ~~give af~~ be interested?
+
+    This could be a brief explanation of why I am interested in it, or why you would want to read my take on it. The key thing is you’re relating to your audience here. Not everyone wants to read everything you write, and that’s ok.
+    
+    Let people self-select out (or in, hopefully) at this stage, but make it nice and easy. For example, if you’re writing about data engineering, make it clear to the appdev crowd that they should move on as there’s nothing to see here (or stick around and learn something new, but as a visitor, not the target audience).
+
+2. **The article itself**
+3. **A recap**
+
+    Make sure you don’t just finish your article with a figurative mic drop—tie up it nicely with a bow (a 🙇🏻 or a 🎀, either works).
+    
+    This is where marketing would like to introduce you to the acronym CTA (Call To Action) 😉. As an author you can decide how or if to weave that into your narrative.
+
+    Either way, you’re going to summarise what you just did and give people something to _do_ with it next. Are there code samples they can go and run or inspect? A new service to sign up for? A video to watch? Or just a general life reflection upon which to ponder. 
+    
 
 ## ✍🏻 The Physical Act of Writing: JFDI ;-)
 
-At the risk of repeating the owl meme I would give the following advice: just start writing!
-
 ![](/images/2023/07/07.png)
+
+At the risk of repeating the [owl meme](https://knowyourmeme.com/memes/how-to-draw-an-owl) I would give the following advice: just start writing!
 
 I don’t mean just go write an article. I mean start writing **something**, **_anything._**
 
