@@ -180,6 +180,7 @@ Ah, the meta-blog post about tooling. Each to their own, but here’s my stack:
 * 📕[Technical Blogging](https://pragprog.com/titles/actb2/technical-blogging-second-edition/), by [Antonio Cangiano](https://antoniocangiano.com/)
 * [Avoiding Anti-patterns in Technical Communication](https://www.youtube.com/watch?v=kOnZovTFTHc) - good conference talk from [Sophie Watson](https://www.linkedin.com/in/sophwats/)
 * A nice blog from [Dmitry Kudryavtsev](https://www.linkedin.com/in/kudmitry/) on [Why engineers should focus on writing](https://www.yieldcode.blog/post/why-engineers-should-write)
+* [Technical Writing Courses - Google Developers](https://developers.google.com/tech-writing)
 
 ## Footnote: _What_ Should I Write?
 
