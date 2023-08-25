@@ -9,7 +9,7 @@ classes:
 
 ### `whoami`
 
-> Robin is a Principal DevEx Engineer at LakeFS. 
+> Robin is a Principal DevEx Engineer.
 
 > He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. 
 
