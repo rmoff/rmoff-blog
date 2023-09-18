@@ -9,7 +9,7 @@ classes:
 
 ### `whoami`
 
-> Robin is a Principal DevEx Engineer.
+> Robin is a Principal DevEx Engineer at [Decodable](https://decodable.co).
 
 > He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. 
 
