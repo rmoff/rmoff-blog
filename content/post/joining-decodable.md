@@ -54,3 +54,5 @@ Srsly tho: my starting point for this answer is my blog from earlier this year [
 ## Stream Processing - We've Only Just Got Started
 
 So, time for me to get back into stream processing land. I'll save you the fluff and gumpf about the business value of stream processing, the use cases, all the evils and perils of batch, yada yada. If you know, you know. And if you don't, well, join me for the ride :)
+
+<video autoplay="true" loop="true" height=300 src="/images/2023/09/saddle-up-partner-dumb-and-dumber.mp4">Saddle up, partner! Jim Carrey - Dumb & Dumber</video>
