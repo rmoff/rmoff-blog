@@ -11,11 +11,12 @@ categories:
 - DevEx
 ---
 
-This week I joined [Decodable](https://decodable.co). I'm grateful to my former colleagues at Treeverse for allowing me to [join them](/2022/12/09/looking-forwards-and-looking-backwards/) on the journey with [lakeFS](https://lakefs.io) - but something about the streaming world was too strong to resist :)
-
-I spent several years previously at Confluent bringing my data engineer's view of the world to help [advocate](https://rmoff.net/categories/kafka-connect/) [for](http://youtube.com/rmoff) what was being built within Confluent as [ksqlDB](https://ksqldb.io/)—and within the broader Apache Kafka community in [Kafka Connect](https://kafka.apache.org/documentation.html#connect)—as a coherent platform on which analytics and data integration solutions could be built. 
+This week I joined [Decodable](https://decodable.co). I'm grateful to my former colleagues at Treeverse for allowing me to [join them](/2022/12/09/looking-forwards-and-looking-backwards/) on the journey with [lakeFS](https://lakefs.io) - but something about the streaming world was too strong to resist 😁.
 
 <!--more-->
+
+I spent several years previously at Confluent bringing my data engineer's view of the world to help [advocate](https://rmoff.net/categories/kafka-connect/) [for](http://youtube.com/rmoff) what was being built within Confluent as [ksqlDB](https://ksqldb.io/)—and the broader Apache Kafka community in [Kafka Connect](https://kafka.apache.org/documentation.html#connect)—as a coherent platform on which analytics and data integration solutions could be built. 
+
 
 <video autoplay="true" loop="true" width=800 src="/images/2023/09/just-when-i-thought-i-was-out.mp4">Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather</video>
 
@@ -28,7 +29,7 @@ In short, I have unfinished business with streaming.
 
 <video autoplay="true" loop="true" height=400 src="/images/2023/09/im.mp4">I Am Not Finished! - Yara Greyjoy - Game of Thrones</video>
 
-Unsuprising really, since event streams _are_ unbounded 🤓 `<groan/>`
+Unsuprising really, since event streams _are_ unbounded 🤓 `<groan/>`.
 
 
 ## A.B.L. (Always Be Learning)
