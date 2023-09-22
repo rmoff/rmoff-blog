@@ -42,7 +42,7 @@ _Well, there's never been any danger of that at any of my previous gigs—I've b
 
 One of the things that really sealed the deal for me during the interview process was just how damn smart the folk were. Not in a "*I ask you stupidly pointless question to highlight how smart I am, you wriggle for an answer that I'll not really listen to, rinse & repeat*" kind of way. But in a focussed and probing and inquisitive way, with true dialogue and listening. That's the kind of stuff you can't LeetCode for, and is a hugely positive indicator. 
 
-As well as being lovely people to chat to and sharp as a sharp thing that's just been sharpened, there's some extensive and deep knowledge about the stream processing world in general and the projects which Decodable uses. These include folk such as [Eric Sammer](https://www.linkedin.com/in/esammer/), [Sharon Xie](https://www.linkedin.com/in/sharonxr/), Flink PMC [Robert Metzger](https://home.apache.org/phonebook.html?uid=rmetzger), and former lead on the [Debezium](https://debezium.io/) project [Gunnar Morling](https://www.morling.dev/). 
+As well as being lovely people to chat to and sharp as a sharp thing that's just been sharpened, there's some extensive and deep knowledge about the stream processing world in general and the projects which Decodable uses. These include folk such as [Eric Sammer](https://www.linkedin.com/in/esammer/), [Sharon Xie](https://www.linkedin.com/in/sharonxr/), Flink PMC Chair [Robert Metzger](https://home.apache.org/phonebook.html?uid=rmetzger), and former lead on the [Debezium](https://debezium.io/) project [Gunnar Morling](https://www.morling.dev/). 
 
 ## What Will I Be Doing at Decodable? 
 
