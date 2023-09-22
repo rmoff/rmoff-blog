@@ -20,7 +20,6 @@ I spent several years previously at Confluent bringing my data engineer's view o
 
 <video autoplay="true" loop="true" width=800 src="/images/2023/09/just-when-i-thought-i-was-out.mp4">Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather</video>
 
-
 Turns out, stream processing was only really just getting started. In the last 12-18 months a veritable plethora of stream processing projects and companies have shown up, demonstrating that there is not only demand for it but also different approaches to take too. 
 
 The advent of real-time data stores such as [Apache Druid](https://druid.apache.org/), [Apache Pinot](https://pinot.apache.org/), and [Clickhouse](https://clickhouse.com/) further complicates the picture (or makes it more interesting, depending on your view). How much do you serve from your operational application, your streams, or your dedicated realtime store? What's driving the need for the data, and what kind of access patterns do you have? 
@@ -46,14 +45,14 @@ As well as being lovely people to chat to and sharp as a sharp thing that's just
 
 ## What Will I Be Doing at Decodable? 
 
-Who knows?! That's the fun part of joining a 30-person startup 😉
+Who knows?! That's the fun part of joining a 30-person startup 😉.
 
-![Conference badge that reads "Robin Moffatt: Chief Shitposter and Meme Artist"](/images/2023/09/IMG_5699.jpeg)
+![Conference badge that reads "Robin Moffatt: Principal Shitposter and Meme Artist"](/images/2023/09/IMG_5699.jpeg)
 
-Srsly tho: my starting point for this answer is my blog from earlier this year [_What Does This DevEx Engineer Do?_](/2023/05/23/what-does-this-devex-engineer-do/). But very shortly after that my answer is: getting stuck in and helping build a really awesome streaming platform. Friction logs, blogs, <del>shitposting</del>, community, docs, making videos…whatever needs doing to make the experience for developers the very best 🏆
+Srsly tho: my starting point for this answer is my blog from earlier this year [_What Does This DevEx Engineer Do?_](/2023/05/23/what-does-this-devex-engineer-do/). But very shortly after that my answer is: getting stuck in and helping build a really awesome streaming platform. Friction logs, blogs, <del>shitposting</del>, community, docs, making videos…whatever needs doing to make the experience for developers the very best 🏆.
 
 ## Stream Processing - We've Only Just Got Started
 
-So, time for me to get back into stream processing land. I'll save you the fluff and gumpf about the business value of stream processing, the use cases, all the evils and perils of batch, yada yada. If you know, you know. And if you don't, well, join me for the ride :)
+So, time for me to get back into stream processing land. I'll save you the fluff and gumpf about the business value of stream processing, the use cases, all the evils and perils of batch, yada yada. If you know, you know. And if you don't, well, join me for the ride 🙃.
 
 <video autoplay="true" loop="true" height=300 src="/images/2023/09/saddle-up-partner-dumb-and-dumber.mp4">Saddle up, partner! Jim Carrey - Dumb & Dumber</video>
