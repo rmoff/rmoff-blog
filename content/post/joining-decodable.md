@@ -17,8 +17,7 @@ This week I joined [Decodable](https://decodable.co). I'm grateful to my former 
 
 I spent several years previously at Confluent bringing my data engineer's view of the world to help [advocate](https://rmoff.net/categories/kafka-connect/) [for](http://youtube.com/rmoff) what was being built within Confluent as [ksqlDB](https://ksqldb.io/)—and the broader Apache Kafka community in [Kafka Connect](https://kafka.apache.org/documentation.html#connect)—as a coherent platform on which analytics and data integration solutions could be built. 
 
-
-<video autoplay="true" loop="true" width=800 src="/images/2023/09/just-when-i-thought-i-was-out.mp4">Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather</video>
+![Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather](/images/2023/09/just-when-i-thought-i-was-out-they-pull-me-back-in.gif)
 
 Turns out, stream processing was only really just getting started. In the last 12-18 months a veritable plethora of stream processing projects and companies have shown up, demonstrating that there is not only demand for it but also different approaches to take too. 
 
@@ -26,7 +25,7 @@ The advent of real-time data stores such as [Apache Druid](https://druid.apache.
 
 In short, I have unfinished business with streaming. 
 
-<video autoplay="true" loop="true" height=400 src="/images/2023/09/im.mp4">I Am Not Finished! - Yara Greyjoy - Game of Thrones</video>
+![I Am Not Finished! - Yara Greyjoy - Game of Thrones](/images/2023/09/notdone-got.gif)
 
 Unsuprising really, since event streams _are_ unbounded 🤓 `<groan/>`.
 
@@ -55,4 +54,4 @@ Srsly tho: my starting point for this answer is my blog from earlier this year [
 
 So, time for me to get back into stream processing land. I'll save you the fluff and gumpf about the business value of stream processing, the use cases, all the evils and perils of batch, yada yada. If you know, you know. And if you don't, well, join me for the ride 🙃.
 
-<video autoplay="true" loop="true" height=300 src="/images/2023/09/saddle-up-partner-dumb-and-dumber.mp4">Saddle up, partner! Jim Carrey - Dumb & Dumber</video>
+![Saddle up, partner! Jim Carrey - Dumb & Dumber](/images/2023/09/saddle-up-partner-dumb-and-dumber.gif)
