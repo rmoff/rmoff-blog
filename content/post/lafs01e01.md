@@ -18,7 +18,7 @@ I [joined Decodable](/2023/09/21/an-itch-that-just-has-to-be-scratched-or-why-am
 
 ![An image of a squirrel at a laptop looking at a map, preparing to navigate the wonderful world of Apache Flink](/images/2023/09/20230929134244.webp)
 
-Just like the aforementioned kid with a new toy, what else would I do except run around with wild excitement (figuratively), clicking on all the Apache Flink links and demos and tutorials and presentations and videos that I could find! And then I realised I should take somewhat of a more measured approach to my learning, and started to map out the different areas. 
+Just like the aforementioned kid with a new toy, what else would I do except run around (figuratively) with wild excitement, clicking on all the Apache Flink links and demos and tutorials and presentations and videos that I could find! And then I realised I should take somewhat of a more measured approach to my learning, and started to map out the different areas. 
 
 ![A mindmap of the areas of Apache Flink about which I want to learn](/images/2023/09/learningflink.webp)
 
