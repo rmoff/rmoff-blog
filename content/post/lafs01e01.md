@@ -1,5 +1,5 @@
 ---
-draft: true
+draft: false
 title: 'Learning Apache Flink S01E01: Where Do I Start?'
 date: "2023-09-29T12:57:04Z"
 image: "/images/2023/09/h_IMG_5288.webp"
@@ -7,7 +7,7 @@ thumbnail: "/images/2023/09/t_IMG_5443.webp"
 credit: "https://twitter.com/rmoff/"
 categories:
 - Apache Flink
-- Learning Apache Flink
+- LAF
 ---
 
 Like a fortunate child on Christmas Day, I've got a brand new toy! A brand new—to me—open-source technology to unwrap, learn, and perhaps even aspire to master elements of within. 
