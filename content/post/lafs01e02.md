@@ -37,10 +37,10 @@ I found a couple of [excellent](https://www.dataengineeringpodcast.com/apache-fl
 * It was donated to [Apache Software Foundation](https://www.apache.org/) in 2014. 
 * Version 1.0 released 2016, latest version is [1.17](https://flink.apache.org/downloads/#apache-flink-1171) .
 * Whilst it was originally designed for batch, it always used streaming principles, making its move into stream processing a logical one
-* Hadoop revolutionised the distributed processing of data at scale, but was "dumb". Flink aimed to use some of the principles whilst bringing in important learnings from the RDBMS world that had been missed in Hadoop
+* Hadoop revolutionised the distributed processing of data at scale, but was "dumb". Flink aimed to use some of the principles whilst bringing in important learnings from the RDBMS world that had been missed in Hadoop. Flink includes a bunch of things that you'd have to build for yourself in Hadoop, such as pipelined execution (e.g. all stages run concurrently and stream data), native join operators, and it re-use of data properties such as the data being sorted or partitioned already in a certain way.
 * JVM-based. [SQL](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/overview/) and [PyFlink](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/overview/) added in recent years.
 * Flink is a Distributed system. [Each](https://overcast.fm/+H1YOnxO3I/05:50 ) worker stores state. 
-* It [supports](https://overcast.fm/+H1YOnxO3I/23:29) exactly once state guarantee with checkpointing across workers that stores the state and metadata of input sources (e.g. Kafka topics offsets) all on a distributed filesystem (e.g. S3)
+* It [supports](https://overcast.fm/+H1YOnxO3I/23:29) exactly once state guarantee with checkpointing across workers that stores the processing state (such as aggregations), as well as the metadata of input sources (e.g. Kafka topics offsets) all on a distributed filesystem (e.g. S3)
 * Event time processing. [Uses](https://overcast.fm/+H1YOnxO3I/21:42) watermarks (same as Google data flow), which enable you to trade off between completeness and latency.
 * 🤯 Everything is a stream; it's just some streams are bounded, whilst others are unbounded.
 	* _**Wait, What? Everything is a Stream?**_
