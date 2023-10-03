@@ -98,6 +98,14 @@ Users with **recent** (in the last ~two years) published use cases include:
 
 See also the Powered By Flink [highlights](https://flink.apache.org/powered-by/) and [complete list](https://cwiki.apache.org/confluence/display/FLINK/Powered+by+Flink).
 
+### "What Can Flink Do" vs "Where Will You Find Flink"
+
+After I posted the first draft of this post, my colleague (and Apache Flink PMC Chair!) Robert Metzger shared this useful slide with me. 
+
+I like this because it spells out *what* Flink does (e.g. Windowing, Streaming Joins, Filtering, etc), and separately, *where* it gets used for that.
+
+![Slide showing what Flink can do, and what applications it is found doing this within](/images/2023/10/flink_uses.webp)
+
 ## How do you run Flink?
 
 ### Self-Managed
