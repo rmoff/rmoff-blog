@@ -1,5 +1,5 @@
 ---
-draft: true
+draft: false
 title: '{{ replace .TranslationBaseName "-" " " | title }}'
 date: "{{ .Date }}"
 image: "/images/{{ now.Format "2006/01" }}/"
