@@ -1,6 +1,6 @@
 ---
 draft: false
-title: 'A [Partial] Exploration of the Flink SQL Client'
+title: 'Learning Apache Flink S01E04: A [Partial] Exploration of the Flink SQL Client'
 date: "2023-10-10T16:27:22Z"
 image: "/images/2023/10/squirrel.webp"
 thumbnail: "/images/2023/10/squirrel.webp"
