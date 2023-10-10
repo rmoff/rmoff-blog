@@ -81,7 +81,7 @@ GROUP BY name;
 
 it defaults to an interactive table view (`result-mode`=`table`)
 
-![](/images/2023/10/CleanShot_2023-10-09_at_16.27.33.png)
+![](/images/2023/10/CleanShot_2023-10-09_at_16.27.33.webp)
 
 This is probably useful for streaming, but perhaps less so for a one-off static query?
 
@@ -89,7 +89,7 @@ The next `result-mode` is similar but shows the table as a change log (a concept
 ```sql
 SET 'sql-client.execution.result-mode' = 'changelog';
 ```
-![](/images/2023/10/CleanShot_2023-10-09_at_16.32.08.png)
+![](/images/2023/10/CleanShot_2023-10-09_at_16.32.08.webp)
 
 (_If you are wondering how there is an `UPDATE` operation in a simple `SELECT` then take a close look at the `FROM` clause of the SQL being run . The `name` value `Bob` appears twice, and so the aggregate state change from a `COUNT` of 1 to 2_)
 
@@ -99,7 +99,7 @@ A more conventional way to display the results just as SQL\*Plus in Oracle would
 SET 'sql-client.execution.result-mode' = 'tableau';
 ```
 
-![](/images/2023/10/CleanShot_2023-10-09_at_16.34.42.png)
+![](/images/2023/10/CleanShot_2023-10-09_at_16.34.42.webp)
 
 For a "normal" result display (in a tabular view, no change log, just the final state) we set another parameter, `runtime-mode`:  
 
@@ -107,11 +107,11 @@ For a "normal" result display (in a tabular view, no change log, just the final 
 SET 'execution.runtime-mode' = 'batch';
 ```
 
-![](/images/2023/10/CleanShot_2023-10-09_at_16.38.14.png)
+![](/images/2023/10/CleanShot_2023-10-09_at_16.38.14.webp)
 
 ## A Stream is a Table is a Stream
 
-![](/images/2023/10/Pasted_image_20231010102731.png)
+![](/images/2023/10/Pasted_image_20231010102731.webp)
 
 I want to start digging into how Flink's view of everything being a stream—just [bounded or unbounded](https://flink.apache.org/what-is-flink/flink-architecture/#process-unbounded-and-bounded-data)—works alongside the SQL semantics of a `TABLE`. 
 
@@ -187,7 +187,7 @@ Nice! We've read from a flat file using Flink. At the moment it's bounded data; 
 
 ## Reading a CSV file as a stream
 
-![](/images/2023/10/Pasted_image_20231009171747.png)
+![](/images/2023/10/Pasted_image_20231009171747.webp)
 
 Let's take a guess and change the `runtime-mode`: 
 
@@ -285,7 +285,7 @@ java.lang.IllegalArgumentException
 
 ### It was all going so well 😅…
 
-![](/images/2023/10/Pasted_image_20231010140254.png)
+![](/images/2023/10/Pasted_image_20231010140254.webp)
 
 In the root of the Flink directory (from which I launched the cluster and the SQL Client) is a folder called `log`. In there I looked at the recently changed files and searched for `IllegalArgumentException` which yielded the following in `flink-rmoff-standalonesession-0-asgard08.log`: 
 
@@ -381,11 +381,11 @@ This in fact happened whether I added to data or not; if I left the `SELECT` run
 
 Remembering the Flink Web UI that I saw [last time](/2023/10/05/learning-apache-flink-s01e03-running-my-first-flink-cluster-and-application/) I headed over to see what I could see there. A whole lotta `CANCELED`! 
 
-![](/images/2023/10/CleanShot_2023-10-10_at_14.49.19.png)
+![](/images/2023/10/CleanShot_2023-10-10_at_14.49.19.webp)
 
 Via this you can get to the Job Manager and Task Manager logs (just as I did from the `log` folder, but this time through the Web UI). It also reminds me that I still need to figure out where these components come in the runtime architecture 😅
 
-![](/images/2023/10/CleanShot_2023-10-10_at_16.15.25.png)
+![](/images/2023/10/CleanShot_2023-10-10_at_16.15.25.webp)
 
 * Job Manager
 
