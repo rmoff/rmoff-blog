@@ -90,7 +90,7 @@ SET 'sql-client.execution.result-mode' = 'changelog';
 ```
 ![](/images/2023/10/CleanShot_2023-10-09_at_16.32.08.webp)
 
-(_If you are wondering how there is an `UPDATE` operation in a simple `SELECT` then take a close look at the `FROM` clause of the SQL being run . The `name` value `Bob` appears twice, and so the aggregate state change from a `COUNT` of 1 to 2_)
+(_If you are wondering how there is an `UPDATE` operation in a simple `SELECT` then take a close look at the `FROM` clause of the SQL being run. The `name` value `Bob` appears twice, and so the aggregate state change from a `COUNT` of 1 to 2_)
 
 A more conventional way to display the results just as SQL\*Plus in Oracle would, psql in PostgreSQL etc, is `tableau`. Note that you get the changelog operations shown just as when you explicitly set it in the previous option. 
 
@@ -122,7 +122,7 @@ I've not dug into Flink's connector capabilities yet so am navigating this one c
 * DataStream Connectors
 * Table API
 
-One of the areas that [I identified previously](/2023/09/29/learning-apache-flink-s01e01-where-do-i-start/) to look at was an understanding of Flink's architecture and concepts—which I still need to do. For now, I'm going on the basis that I've seen "Table API" and "SQL" alongside each other before, so take a punt on the **Table API** menu section, which yielded the [FileSystem SQL Connector](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/connectors/table/filesystem/) . It looks like it supports a variety of [formats](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/connectors/table/filesystem/#file-formats), although not the option to derive columns and names from headers which is a shame. 
+One of the areas that [I identified previously](/2023/09/29/learning-apache-flink-s01e01-where-do-i-start/) to look at was an understanding of Flink's architecture and concepts—which I still need to do. For now, I'm going on the basis that I've seen "Table API" and "SQL" alongside each other before, so take a punt on the **Table API** menu section, which yielded the [FileSystem SQL Connector](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/connectors/table/filesystem/). It looks like it supports a variety of [formats](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/connectors/table/filesystem/#file-formats), although not the option to derive columns and names from headers which is a shame. 
 
 > _NOTE: there is also a [DataGen](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/connectors/table/datagen/) connector, but the File System one at this stage looked simpler for working with just a handful of rows to understand what was going on._
 
@@ -166,7 +166,7 @@ Flink SQL> SELECT * FROM firewall;
 java.lang.NumberFormatException: For input string: "source_prt"
 ```
 
-I knew it was too good to be true 😅 My guess was that perhaps the header was tripping things up (trying to store the `source_prt` as the defined `INT`). The [first hit on Stack Overflow](https://stackoverflow.com/questions/67543961/flink-sql-table-backed-by-csv-with-header) was pretty useful and pointed to a few options if I needed to keep the header. For the sake of expediency I just removed it and tried the `SELECT` again: 
+I knew it was too good to be true 😅 My guess was that perhaps the header was tripping things up (trying to store the `source_prt` as the defined `INT`). The [first hit on Stack Overflow](https://stackoverflow.com/questions/67543961/flink-sql-table-backed-by-csv-with-header) was pretty useful and pointed to a few options if I needed to keep the header. For the sake of expediency, I just removed it and tried the `SELECT` again: 
 
 ```sql
 Flink SQL> SET 'sql-client.execution.result-mode' = 'tableau';
@@ -213,7 +213,7 @@ I got the interactive-looking screen:
 
 But note the `Table program finished` in the top left—and when I added a row to the CSV file nothing changed in the results. 
 
-This is where the documentation comes in handy ;-) Above, I set the `runtime-mode` to `batch` - so is there a `streaming` counterpart? I struggled to find a clear documentation of this via the search, but under **DataStream API** I found [an explanation of it](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/datastream/execution_mode/#configuring-batch-execution-mode). At this stage I'm still randomly-jiggling things but I do need to go back and understand the relationship between the APIs properly. Anyway, let's try changing it:
+This is where the documentation comes in handy ;-) Above, I set the `runtime-mode` to `batch` - so is there a `streaming` counterpart? I struggled to find a clear documentation of this via the search, but under **DataStream API** I found [an explanation of it](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/datastream/execution_mode/#configuring-batch-execution-mode). At this stage, I'm still randomly-jiggling things but I do need to go back and understand the relationship between the APIs properly. Anyway, let's try changing it:
 
 ```sql
 SET 'execution.runtime-mode' = 'STREAMING';
@@ -223,7 +223,7 @@ I got the same behaviour as before - no changes picked up by the query. What abo
 
 > By default, the file system connector is bounded
 
-However it does have an option for streaming, whereby it monitors a folder for new files. Since we've started down this path, let's keep going. I'll create a dedicated folder locally for my CSV files, and recreate the table: 
+However, it does have an option for streaming, whereby it monitors a folder for new files. Since we've started down this path, let's keep going. I'll create a dedicated folder locally for my CSV files, and recreate the table: 
 
 ```sql
 DROP TABLE firewall;
@@ -413,6 +413,8 @@ Via this you can get to the Job Manager and Task Manager logs (just as I did fro
 
 ![](/images/2023/10/timeout.gif)
 
-At this point I've got the basics of a query running, I've learnt something about tables and connectors - and I'm stuck. I'm going to step back, and learn more about the Flink architecture and components before digging myself a deeper hole on this particular issue 😁 Particular things I've come across during my reading include the [SQL Gateway](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/sql-gateway/overview/#introduction), [Dynamic Tables](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/concepts/dynamic_tables/), and the [Flink Architecture](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/concepts/flink-architecture/) docs. 
+At this point I've got the basics of a query running, I've learnt something about tables and connectors - and I'm stuck! 
+
+I'm going to step back, and learn more about the Flink architecture and components before digging myself a deeper hole on this particular issue 😁 Particular things I've come across during my reading that I want to find out more about include the [SQL Gateway](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/sql-gateway/overview/#introduction), [Dynamic Tables](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/concepts/dynamic_tables/), and the [Flink Architecture](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/concepts/flink-architecture/) docs. 
 
 _Join me next time for more fun and stack traces…_
