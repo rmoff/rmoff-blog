@@ -2,8 +2,8 @@
 draft: false
 title: 'A [Partial] Exploration of the Flink SQL Client'
 date: "2023-10-10T16:27:22Z"
-image: "/images/2023/10/"
-thumbnail: "/images/2023/10/"
+image: "/images/2023/10/squirrel.webp"
+thumbnail: "/images/2023/10/squirrel.webp"
 credit: "https://twitter.com/rmoff/"
 categories:
 - LAF
@@ -12,7 +12,6 @@ categories:
 ---
 
 So far I've plotted out a bit of a [map for my exploration](/2023/09/29/learning-apache-flink-s01e01-where-do-i-start/) of Apache Flink, looked at [what  Flink _is_](/2023/10/02/learning-apache-flink-s01e02-what-is-flink/), and [run my first Flink application](/2023/10/05/learning-apache-flink-s01e03-running-my-first-flink-cluster-and-application/). Being an absolutely abysmal coder—but knowing a thing or two about SQL—I figure that Flink SQL is where my focus is going to lie (_I'm also intrigued by PyFlink, but that's for another day…_). 
-
 
 <!--more-->
 
@@ -414,6 +413,6 @@ Via this you can get to the Job Manager and Task Manager logs (just as I did fro
 
 ![](/images/2023/10/timeout.gif)
 
-At this point I'm stuck I'm going to step back, and learn more about the Flink architecture and components before digging myself a deeper hole on this particular issue 😁 Particular things I've come across during my reading include the [SQL Gateway](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/sql-gateway/overview/#introduction), [Dynamic Tables](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/concepts/dynamic_tables/), and the [Flink Architecture](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/concepts/flink-architecture/) docs. 
+At this point I've got the basics of a query running, I've learnt something about tables and connectors - and I'm stuck. I'm going to step back, and learn more about the Flink architecture and components before digging myself a deeper hole on this particular issue 😁 Particular things I've come across during my reading include the [SQL Gateway](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/sql-gateway/overview/#introduction), [Dynamic Tables](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/dev/table/concepts/dynamic_tables/), and the [Flink Architecture](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/concepts/flink-architecture/) docs. 
 
-_Join me next time for more fun and stacktraces…_
+_Join me next time for more fun and stack traces…_
