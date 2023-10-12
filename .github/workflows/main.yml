@@ -1,0 +1,30 @@
+name: Docs Link Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "00 8 * * *"
+    
+jobs:
+  link-check:
+    name: Check links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check links
+        id: lychee
+        uses: lycheeverse/lychee-action@v1.8.0
+        with:
+          args: https://rmoff.net --no-progress 
+          fail: true
+          jobSummary: true
+          format: markdown
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Create Issue From File
+        if: env.lychee_exit_code != 0
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: Link Checker Report
+          content-filepath: ./lychee/out.md
+          labels: report, automated issue          
