@@ -409,6 +409,10 @@ Via this you can get to the Job Manager and Task Manager logs (just as I did fro
 	2023-10-10 16:13:07,610 INFO org.apache.flink.runtime.taskmanager.Task [] - Source: firewall[27] -> Sink: Collect table sink (1/1)#0 (18449605df5a8d831d44b7cb4e2d74cb_cbc357ccb763df2852fee8c4fc7d55f2_0_0) switched from CANCELING to CANCELED.
 	```
 
+> **UPDATE**: I've logged [**\[FLINK-33251\] SQL Client query execution aborts after a few seconds: ConnectTimeoutException - ASF JIRA**](https://issues.apache.org/jira/browse/FLINK-33251). 
+>
+> _One short-term workaround I did find was to simply use 1.16.2 where this error doesn't seem to happen._
+
 ## Time out
 
 ![](/images/2023/10/timeout.gif)
