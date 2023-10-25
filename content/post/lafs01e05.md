@@ -34,7 +34,7 @@ $ pip install apache-flink
 This failed with the following output (truncated, for readability)
 
 ```
-$ pip3 install apache-flink
+$ pip install apache-flink
 Collecting apache-flink
   Using cached apache-flink-1.18.0.tar.gz (1.2 MB)
   Preparing metadata (setup.py) ... done
@@ -74,7 +74,7 @@ note: This error originates from a subprocess, and is likely not a problem with 
 Looking at the error I spot `No matching distribution found for numpy==1.21.4` so maybe I just try a different version? 
 
 ```
-$ pip3 install numpy==1.22.0
+$ pip install numpy==1.22.0
 Collecting numpy==1.22.0
   Downloading numpy-1.22.0.zip (11.3 MB)
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.3/11.3 MB 443.6 kB/s eta 0:00:00
@@ -95,7 +95,7 @@ Hey, a different error! I found a GitHub issue for this error that suggests [a n
 ## Try installing the latest version of numpy
 
 ```
-$ pip3 install numpy==1.26.1
+$ pip install numpy==1.26.1
 Collecting numpy==1.26.1
   Downloading numpy-1.26.1-cp311-cp311-macosx_11_0_arm64.whl.metadata (115 kB)
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 115.1/115.1 kB 471.4 kB/s eta 0:00:00
@@ -111,7 +111,7 @@ Yay!
 But… still no dice with installing PyFlink
 
 ```
-$ pip3 install apache-flink
+$ pip install apache-flink
 […]
       ERROR: No matching distribution found for numpy==1.21.4
       [end of output]
@@ -145,7 +145,7 @@ A quick Google throws up `pyenv` as a good tool for managing Python versions (le
 
 ```bash
 $ brew install pyenv
-$ echo 'PATH=$(pyenv root)/shims:$PATH' >> ~/.zshrcpy
+$ echo 'PATH=$(pyenv root)/shims:$PATH' >> ~/.zshrc
 ```
 
 Install a new version:
