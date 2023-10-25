@@ -180,3 +180,7 @@ Successfully installed apache-beam-2.48.0 apache-flink-1.18.0 apache-flink-libra
 👏 Success! 
 
 Now to go and actually use PyFlink…stay tuned :-D
+
+---
+
+_Note: thanks to Sergey Nuyanzin for pointing out that in Flink 1.19 there will be support for Python 3.11 ([FLINK-33030](https://issues.apache.org/jira/browse/FLINK-33030))_
