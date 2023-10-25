@@ -1,6 +1,6 @@
 ---
 draft: false
-title: 'Learning Apache Flink S01E05: Installing PyFlink (with some bumps along the way)'
+title: 'Learning Apache Flink S01E05: Installing PyFlink (with some bumps along the way…)'
 date: "2023-10-25T15:27:22Z"
 image: "/images/2023/10/pyflink1.webp"
 thumbnail: "/images/2023/10/IMG_6173.webp"
