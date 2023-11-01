@@ -18,7 +18,7 @@ In this post we'll see how you can use [ngrok](https://ngrok.com/) to, in their 
 
 ## Overview
 
-Why? In my case, I wanted to expose my local Kafka as a source to [Decodable](https://decodable.co/) so that I can ingest streams of data for processing with Apache Flink through the managed service.
+Why? In my case, I wanted to expose my local Kafka as a source (and target) to [Decodable](https://decodable.co/) so that I can process streams of data with Apache Flink through the managed service that Decodable provides.
 
 ![Overview of Kafka solution](/images/2023/11/ngrok01.webp)
 
@@ -26,11 +26,13 @@ The example I'm going to show has ngrok and the Kafka broker running in a Docker
 
 ![Overview of Kafka/ngrok solution](/images/2023/11/ngrok02.webp)
 
-_ngrok has a free tier to use which works jsut fine for this, but you will need to [create a free account](https://dashboard.ngrok.com/signup) to get your [auth token](https://dashboard.ngrok.com/get-started/your-authtoken). In this article I'm assuming you've exported your auth token to the environment variable `NGROK_AUTH_TOKEN`_.
+### ngrok
+
+ngrok has a free tier to use which works just fine for this, but you will need to [create a free account](https://dashboard.ngrok.com/signup) to get your [auth token](https://dashboard.ngrok.com/get-started/your-authtoken). In this article I'm assuming you've exported your auth token to the environment variable `NGROK_AUTH_TOKEN`.
 
 ## Kafka and Listeners and Advertised Listeners…oh my
 
-In theory, using ngrok is easy. You configure a _tunnel_ which routes a publicly-accessible host/port to one accessed from the ngrok agent running locally.
+In theory, using ngrok is straightforward. You configure a _tunnel_ which routes a publicly-accessible host/port to one accessed from the ngrok agent running locally. Here we're telling it to route the public tunnel to a machine called `broker` on port `9092`:
 
 ```bash
 ngrok tcp broker:9092 --authtoken $NGROK_AUTH_TOKEN
@@ -69,13 +71,17 @@ $ echo "hello world" | kcat -b 6.tcp.eu.ngrok.io:13075 -P -t test_topic
 
 oh no! 😖 
 
-So here's what's happening. The **`advertised.listener`** is the address at which the broker tells the client that it is to be found. 
+So here's what's happening. Kafka is a distributed system; it's only in sandbox/demo environments that you'd ever be running just a single broker. For this reason, you have a _bootstrap_ address for one or more servers in the cluster. When you _initially_ connect it's to the bootstrap server (`6.tcp.eu.ngrok.io:13075`). 
 
-![The intitial bootstrap/advertised listeners exchange between Kafka broker and client](/images/2023/11/ngrok03.webp)
+![The initial bootstrap connection between Kafka broker and client](/images/2023/11/ngrok03a.webp)
 
-After the initial bootstrap connection its the address which the client will then connect to when producing or consuming records. 
+The server returns the **`advertised.listener`** for each of the brokers in the cluster as the address at which each of them can be found for subsequent connections. 
 
-![The intitial bootstrap/advertised listeners exchange between Kafka broker and client](/images/2023/11/ngrok04.webp)
+![The advertised listeners exchange between Kafka broker and client](/images/2023/11/ngrok03b.webp)
+
+After the initial bootstrap connection, the client uses the address that was returned to connect to when producing or consuming records. 
+
+![The Kafka client using advertised.listener to find which the broker's connection address for produce/consume](/images/2023/11/ngrok04.webp)
 
 If we introduce ngrok into the mix it looks like this: 
 
@@ -193,9 +199,9 @@ I've then overriden the `entrypoint` of the container. First, it will wait for t
 ```bash
 echo "Waiting for ngrok tunnel to be created"
 while : ; do
-    curl_status=$$(curl -s -o /dev/null -w %{http_code} http://ngrok:4040/api/tunnels/command_line)
-    echo -e $$(date) "\tTunnels API HTTP state: " $$curl_status " (waiting for 200)"
-    if [ $$curl_status -eq 200 ] ; then
+    curl_status=$(curl -s -o /dev/null -w %{http_code} http://ngrok:4040/api/tunnels/command_line)
+    echo -e $(date) "\tTunnels API HTTP state: " $curl_status " (waiting for 200)"
+    if [ $curl_status -eq 200 ] ; then
     break
     fi
     sleep 5 
@@ -207,8 +213,8 @@ Then—in the absence of `jq` on the `confluentinc/cp-kafka` image—I use some 
 
 ```bash
 NGROK_LISTENER=$(curl -s  http://ngrok:4040/api/tunnels/command_line | grep -Po '"public_url":.*?[^\\]",' | cut -d':' -f2- | tr -d ',"' | sed 's/tcp:\/\//NGROK:\/\//g')
-export KAFKA_ADVERTISED_LISTENERS="$$KAFKA_ADVERTISED_LISTENERS, $$NGROK_LISTENER"
-echo "KAFKA_ADVERTISED_LISTENERS is set to " $$KAFKA_ADVERTISED_LISTENERS
+export KAFKA_ADVERTISED_LISTENERS="$KAFKA_ADVERTISED_LISTENERS, $NGROK_LISTENER"
+echo "KAFKA_ADVERTISED_LISTENERS is set to " $KAFKA_ADVERTISED_LISTENERS
 ```
 
 And then, finally, we launch the Kafka broker (using the original value of the Docker image's `entrypoint`): 
