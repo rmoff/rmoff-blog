@@ -1,11 +1,10 @@
 +++
-categories = ["logstash", "kafka", "goldengate", "avro", "elasticsearch"]
+categories = ["logstash", "Apache Kafka", "goldengate", "avro", "elasticsearch"]
 date = 2016-03-16T22:01:00Z
 description = ""
 draft = false
 image = "/images/2016/03/2016-03-16_23-12-54.png"
 slug = "oracle-goldengate-kafka-hive-on-bigdatalite-4-4"
-tag = ["logstash", "kafka", "goldengate", "avro", "elasticsearch"]
 title = "Fun and Games with Oracle GoldenGate, Kafka, and Logstash on BigDataLite 4.4"
 
 +++

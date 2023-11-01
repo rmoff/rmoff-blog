@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "key", "spelling", "pebcak"]
+categories = ["Apache Kafka", "key", "spelling", "pebcak"]
 date = 2017-05-12T00:52:41Z
 description = ""
 draft = false
 image = "/images/2017/05/1__screen_and_3__oracle_vbgeneric____ssh_.png"
 slug = "kafka-common-kafkaexception-no-key-found-on-line-1"
-tag = ["kafka", "key", "spelling", "pebcak"]
 title = "kafka.common.KafkaException: No key found on line 1"
 
 +++

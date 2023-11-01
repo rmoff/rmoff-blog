@@ -1,11 +1,10 @@
 +++
-categories = ["cdc", "ksql", "kafka", "jdbc sink"]
+categories = ["cdc", "ksql", "Apache Kafka", "jdbc sink"]
 date = 2018-10-11T15:13:59Z
 description = ""
 draft = false
 image = "/images/2018/10/IMG_6257--1--1.jpg"
 slug = "flatten-cdc-records-in-ksql"
-tag = ["cdc", "ksql", "kafka", "jdbc sink"]
 title = "Flatten CDC records in KSQL"
 
 +++

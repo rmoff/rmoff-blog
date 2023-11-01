@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "avro", "kafka connect", "SchemaProjectorException"]
+categories = ["Apache Kafka", "avro", "kafka connect", "SchemaProjectorException"]
 date = 2016-07-19T14:36:52Z
 description = ""
 draft = false
 image = "/images/2016/07/photo-1466046690866-98181611563d.jpeg"
 slug = "kafka-connect-hdfs-with-hive-integration-schemaprojectorexception-schema-version-required"
-tag = ["kafka", "avro", "kafka connect", "SchemaProjectorException"]
 title = "Kafka Connect - HDFS with Hive Integration - SchemaProjectorException - Schema version required"
 
 +++

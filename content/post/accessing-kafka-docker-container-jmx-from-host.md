@@ -1,11 +1,10 @@
 +++
-categories = ["jmx", "kafka", "docker"]
+categories = ["jmx", "Apache Kafka", "docker"]
 date = 2018-09-17T15:29:48Z
 description = ""
 draft = false
 image = "/images/2018/09/2018-09-17_17-38-42.png"
 slug = "accessing-kafka-docker-container-jmx-from-host"
-tag = ["jmx", "kafka", "docker"]
 title = "Accessing Kafka Docker containers' JMX from host"
 
 +++

@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "log4j", "kafka connect"]
+categories = ["Apache Kafka", "log4j", "kafka connect"]
 date = 2017-06-12T15:28:15Z
 description = ""
 draft = false
 image = "/images/2017/05/1__screen.png"
 slug = "configuring-kafka-connect-to-log-rest-http-messages-to-a-separate-file"
-tag = ["kafka", "log4j", "kafka connect"]
 title = "Configuring Kafka Connect to log REST HTTP messages to a separate file"
 
 +++
