@@ -1,10 +1,9 @@
 +++
-categories = ["kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
+categories = ["Apache Kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
 date = 2016-11-24T20:58:44Z
 description = ""
 draft = false
 slug = "kafka-connect-java-lang-incompatibleclasschangeerror"
-tag = ["kafka", "kafka connect", "IncompatibleClassChangeError", "classpath"]
 title = "Kafka Connect - java.lang.IncompatibleClassChangeError"
 
 +++

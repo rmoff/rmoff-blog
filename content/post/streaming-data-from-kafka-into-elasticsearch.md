@@ -1,11 +1,10 @@
 +++
-categories = ["kafka connect", "elasticsearch", "kafka", "oracle", "streaming etl"]
+categories = ["kafka connect", "elasticsearch", "Apache Kafka", "oracle", "streaming etl"]
 date = 2018-03-06T22:21:00Z
 description = ""
 draft = false
 image = "/images/2018/02/IMG_8618.JPG"
 slug = "streaming-data-from-kafka-into-elasticsearch"
-tag = ["kafka connect", "elasticsearch", "kafka", "oracle", "streaming etl"]
 title = "Streaming data from Kafka into Elasticsearch"
 
 +++

@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "ksql", "jmx", "jmxterm"]
+categories = ["Apache Kafka", "ksql", "jmx", "jmxterm"]
 date = 2018-09-19T08:11:00Z
 description = ""
 draft = false
 image = "/images/2018/09/IMG_5520.jpg"
 slug = "exploring-jmx-with-jmxterm"
-tag = ["kafka", "ksql", "jmx", "jmxterm"]
 title = "Exploring JMX with jmxterm"
 
 +++

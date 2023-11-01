@@ -1,11 +1,10 @@
 +++
-categories = ["kafkacat", "kafka", "multiline"]
+categories = ["kafkacat", "Apache Kafka", "multiline"]
 date = 2018-09-04T08:26:51Z
 description = ""
 draft = false
 image = "/images/2018/09/2018-09-04_10-25-48-1.png"
 slug = "sending-multiline-messages-to-kafka"
-tag = ["kafkacat", "kafka", "multiline"]
 title = "Sending multiline messages to Kafka"
 
 +++

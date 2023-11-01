@@ -1,11 +1,10 @@
 +++
-categories = ["debezium", "kafka", "kafka connect", "mysql"]
+categories = ["debezium", "Apache Kafka", "kafka connect", "mysql"]
 date = 2018-03-24T14:58:14Z
 description = ""
 draft = false
 image = "/images/2018/03/IMG_0699.jpg"
 slug = "streaming-data-from-mysql-into-kafka-with-kafka-connect-and-debezium"
-tag = ["debezium", "kafka", "kafka connect", "mysql"]
 title = "Streaming Data from MySQL into Kafka with Kafka Connect and Debezium"
 
 +++

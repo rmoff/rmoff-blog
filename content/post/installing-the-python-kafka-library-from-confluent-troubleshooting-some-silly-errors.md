@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "confluent", "python", "apt-get"]
+categories = ["Apache Kafka", "confluent", "python", "apt-get"]
 date = 2018-03-06T22:18:24Z
 description = ""
 draft = false
 image = "/images/2018/03/2018-03-06_22-17-48.png"
 slug = "installing-the-python-kafka-library-from-confluent-troubleshooting-some-silly-errors"
-tag = ["kafka", "confluent", "python", "apt-get"]
 title = "Installing the Python Kafka library from Confluent - troubleshooting some silly errors…"
 
 +++

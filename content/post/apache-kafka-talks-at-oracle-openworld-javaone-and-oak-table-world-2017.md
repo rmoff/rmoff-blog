@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "openworld", "javaone", "oow", "san francisco", "oaktable world"]
+categories = ["Apache Kafka", "openworld", "javaone", "oow", "san francisco", "oaktable world"]
 date = 2017-09-20T15:46:00Z
 description = ""
 draft = false
 image = "/images/2017/09/2014-09-27-11.35.21.jpg"
 slug = "apache-kafka-talks-at-oracle-openworld-javaone-and-oak-table-world-2017"
-tag = ["kafka", "openworld", "javaone", "oow", "san francisco", "oaktable world"]
 title = "Apache Kafka™ talks at Oracle OpenWorld, JavaOne, and Oak Table World 2017"
 
 +++

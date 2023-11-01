@@ -1,11 +1,10 @@
 +++
-categories = ["apache kafka", "kafka", "logstash", "elastic", "elasticsearch", "kibana", "elastic v5", "zookeeper"]
+categories = ["apache kafka", "Apache Kafka", "logstash", "elastic", "elasticsearch", "kibana", "elastic v5", "zookeeper"]
 date = 2016-04-12T21:50:46Z
 description = ""
 draft = false
 image = "/images/2016/04/kd05a-1.png"
 slug = "decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example"
-tag = ["apache kafka", "kafka", "logstash", "elastic", "elasticsearch", "kibana", "elastic v5", "zookeeper"]
 title = "Decoupling the Data Pipeline with Kafka - A (Very) Simple Real Life Example"
 
 +++

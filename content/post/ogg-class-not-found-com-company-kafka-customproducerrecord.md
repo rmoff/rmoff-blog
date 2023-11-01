@@ -1,11 +1,10 @@
 +++
-categories = ["ogg", "goldengate", "kafka"]
+categories = ["ogg", "goldengate", "Apache Kafka"]
 date = 2016-07-28T16:34:37Z
 description = ""
 draft = false
 image = "/images/2016/07/download.jpg"
 slug = "ogg-class-not-found-com-company-kafka-customproducerrecord"
-tag = ["ogg", "goldengate", "kafka"]
 title = "OGG -  Class not found: \"com.company.kafka.CustomProducerRecord\""
 
 +++

@@ -1,11 +1,10 @@
 +++
-categories = ["elasticsearch", "goldengate", "kafka", "logstash", "oracle"]
+categories = ["elasticsearch", "goldengate", "Apache Kafka", "logstash", "oracle"]
 date = 2016-04-14T22:51:43Z
 description = ""
 draft = false
 image = "/images/2016/04/ogges02-1.png"
 slug = "streaming-data-through-oracle-goldengate-to-elasticsearch"
-tag = ["elasticsearch", "goldengate", "kafka", "logstash", "oracle"]
 title = "Streaming Data through Oracle GoldenGate to Elasticsearch"
 
 +++

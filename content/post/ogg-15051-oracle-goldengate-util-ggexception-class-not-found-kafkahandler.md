@@ -1,11 +1,10 @@
 +++
-categories = ["kafka", "goldengate", "ogg", "ogg-15051"]
+categories = ["Apache Kafka", "goldengate", "ogg", "ogg-15051"]
 date = 2016-07-29T07:47:30Z
 description = ""
 draft = false
 image = "/images/2016/07/download1.jpg"
 slug = "ogg-15051-oracle-goldengate-util-ggexception-class-not-found-kafkahandler"
-tag = ["kafka", "goldengate", "ogg", "ogg-15051"]
 title = "OGG-15051 oracle.goldengate.util.GGException:  Class not found: \"kafkahandler\""
 
 +++
