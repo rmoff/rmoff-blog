@@ -50,3 +50,6 @@ I found [this issue](https://github.com/orbstack/orbstack/issues/58) but it says
 
 [This issue](https://github.com/orbstack/orbstack/issues/739) is more recent but not directly relevant from what I can see.
 
+I've logged this issue: [Hugo does not detect changed files when run under OrbStack; works fine with Docker Desktop #797](https://github.com/orbstack/orbstack/issues/797)
+
+I've 
