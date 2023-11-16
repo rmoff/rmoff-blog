@@ -46,10 +46,6 @@ Total in 163 ms
 
 ---
 
-I found [this issue](https://github.com/orbstack/orbstack/issues/58) but it says it's fixed in OrbStack  0.8, and I'm running 1.1.0. 
+I found [this issue](https://github.com/orbstack/orbstack/issues/58) but it says it's fixed in OrbStack  0.8, and I'm running 1.1.0. [This issue](https://github.com/orbstack/orbstack/issues/739) is more recent but not directly relevant from what I can see.
 
-[This issue](https://github.com/orbstack/orbstack/issues/739) is more recent but not directly relevant from what I can see.
-
-I've logged this issue: [Hugo does not detect changed files when run under OrbStack; works fine with Docker Desktop #797](https://github.com/orbstack/orbstack/issues/797)
-
-I've 
+💡 I've logged this issue: [Hugo does not detect changed files when run under OrbStack; works fine with Docker Desktop #797](https://github.com/orbstack/orbstack/issues/797)
