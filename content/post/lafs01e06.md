@@ -1,6 +1,6 @@
 ---
 draft: false
-title: 'Learning Apache Flink S01E06: JDBC and Flink'
+title: 'Learning Apache Flink S01E06: The Flink JDBC Driver'
 date: "2023-11-16T15:20:20Z"
 image: "/images/2023/11/h_IMG_6386.webp"
 thumbnail: "/images/2023/11/t_IMG_6381.webp"
