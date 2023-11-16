@@ -12,7 +12,7 @@ categories:
 - Apache Flink
 ---
 
-As a new-comer to Apache Flink one of the first things I did was join the [Slack community](https://flink.apache.org/what-is-flink/community/#slack) (which is vendor-neutral and controlled by the Flink PMC). At the moment I'm pretty much in full-time lurker mode, soaking up the kind of questions that people have and how they're using Flink. 
+As a newcomer to Apache Flink one of the first things I did was join the [Slack community](https://flink.apache.org/what-is-flink/community/#slack) (which is vendor-neutral and controlled by the Flink PMC). At the moment I'm pretty much in full-time lurker mode, soaking up the kind of questions that people have and how they're using Flink. 
 
 One [question](https://apache-flink.slack.com/archives/C03G7LJTS2G/p1699672468626739) that caught my eye was from Marco Villalobos, in which he asked about the Flink JDBC driver and a `SQLDataException`  he was getting with a particular datatype. Now, unfortunately, I have no idea about the answer to this question—but the idea of a JDBC driver through which Flink SQL could be run sounded like a fascinating path to follow after [previously looking at the SQL Client](/2023/10/10/learning-apache-flink-s01e04-a-partial-exploration-of-the-flink-sql-client/). 
 
@@ -30,7 +30,7 @@ At this point in time (and I would love to be corrected if I'm wrong!) my unders
 
 ## What are the JDBC options with Flink?
 
-The docs don't particularly help with this confusion, instead having two seemingly-unconnected examples both with JDBC, and each using the SQL Gateway.
+The docs don't particularly help with this confusion, instead having two seemingly unconnected examples both with JDBC, and each using the SQL Gateway.
 
 * [Flink JDBC via SQL Gateway REST Endpoint](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/jdbcdriver/#use-with-a-jdbc-tool)
 * [Hive JDBC via SQL Gateway HiveServer2 Endpoint](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/hive-compatibility/hiveserver2/#clients--tools)
@@ -52,7 +52,7 @@ I suspect at some point I will have to bite this bullet because Flink itself doe
 
 > HiveCatalog is the only persistent catalog provided out-of-box by Flink.
 
-When we talk about catalogs and persisting metadata we're talking about the tables and other objects that we define being there the next time we connect to the system. For transient processing, and indeed for sandbox and experimentation purposes, this might not be an issue. But this is something so fundamental that for something like an RDBMS that we wouldn't even to think to check that it does it - we just assume that whether MySQL, Oracle, or whatever, when we create a table it will _of course_ be there next time we connect to the server.
+When we talk about catalogs and persisting metadata we're talking about the tables and other objects that we define being there the next time we connect to the system. For transient processing, and indeed for sandbox and experimentation purposes, this might not be an issue. But this is something so fundamental that for something like an RDBMS that we wouldn't even think to check that it does it - we just assume that whether MySQL, Oracle, or whatever, when we create a table it will _of course_ be there next time we connect to the server.
 
 ---
 
@@ -128,13 +128,13 @@ Caused by: java.lang.ClassNotFoundException: org.slf4j.LoggerFactory
         ... 5 more
 ```
 
-One of the challenges for non-Java users of Flink (like me) is navigating these stacktraces which [pop up](/2023/10/10/learning-apache-flink-s01e04-a-partial-exploration-of-the-flink-sql-client/#it-was-all-going-so-well-) even when you're using the SQL side of things. From bitter experience I know that `NoClassDefFoundError` means I'm probably missing a jar, or have a jar but in the wrong place, or the wrong colour, or something.
+One of the challenges for non-Java users of Flink (like me) is navigating these stacktraces which [pop up](/2023/10/10/learning-apache-flink-s01e04-a-partial-exploration-of-the-flink-sql-client/#it-was-all-going-so-well-) even when you're using the SQL side of things. From bitter experience, I know that `NoClassDefFoundError` means I'm probably missing a jar, or have a jar but in the wrong place, or the wrong colour, or something.
 
-There's also a line in [the docs](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/jdbcdriver/#use-with-sqlline) that I missed the first time round: 
+There's also a line in [the docs](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/jdbcdriver/#use-with-sqlline) that I missed the first time around: 
 
 > _Notice that you need to copy slf4j-api-{slf4j.version}.jar to `target` which will be used by flink JDBC driver_
 
-This jar is for the [SLF4J API Module](https://www.slf4j.org/). It's beyond my pay-grade to explain why this isn't included with the Flink JDBC driver, so for now we'll deal with the sharp edge and just go and download that too.
+This jar is for the [SLF4J API Module](https://www.slf4j.org/). It's beyond my pay grade to explain why this isn't included with the Flink JDBC driver, so for now we'll deal with the sharp edge and just go and download that too.
 
 ```bash
 $ curl https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.9/slf4j-api-2.0.9.jar -O
@@ -167,7 +167,7 @@ metaData.getDriverName(): "org.apache.flink.table.jdbc.FlinkDriver"
 metaData.getDriverVersion(): "1.18.0"
 ```
 
-Nice, we're getting somewhere! Unfortunately this is as far as we get. If we remove the `-driverinfo` flag (which gave us the driver info as seen above) so that we can get into the SQL prompt itself, we hit a problem:
+Nice, we're getting somewhere! Unfortunately, this is as far as we get. If we remove the `-driverinfo` flag (which gave us the driver info as seen above) so that we can get into the SQL prompt itself, we hit a problem:
 
 ```bash
 $ java -cp "$PWD/*" \
@@ -181,7 +181,7 @@ SLF4J: See https://www.slf4j.org/codes.html#noProviders for further details.
 SQLException : SQL state: null java.sql.SQLFeatureNotSupportedException: FlinkConnection#clearWarnings is not supported yet. ErrorCode: 0
 ```
 
-`SQLFeatureNotSupportedException` is a recurred theme with the Flink JDBC Driver. In this case it's [`clearWarnings`](https://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html#clearWarnings--) that isn't supported. 
+`SQLFeatureNotSupportedException` is a recurred theme with the Flink JDBC Driver. In this case, it's [`clearWarnings`](https://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html#clearWarnings--) that isn't supported. 
 
 Even if I go into the code and comment out the call to `clearWarnings` and rebuild jisql (_look at me delving into Java code which I have no idea about what I'm doing!_ 🤪), it soon bombs out on further `SQLFeatureNotSupportedException` errors.
 
@@ -249,7 +249,7 @@ Let's run a query using the same example as [last time](/2023/10/10/learning-apa
 5 rows selected (1.044 seconds)
 ```
 
-What about streaming? We'll create a table using [the `datagen` connector ](https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/datagen/). This connector basically stuffs random values into each field to match the respective data type.
+What about streaming? We'll create a table using [the `datagen` connector](https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/datagen/). This connector basically stuffs random values into each field to match the respective data type.
 
 ```sql
 0: jdbc:flink://localhost:8083> CREATE TABLE foo (
@@ -278,17 +278,17 @@ It's not pretty, but it is effective. Here's a bounded query against the table:
 5 rows selected (0.832 seconds)
 ```
 
-Without the `LIMIT` clause it's unbounded: 
+Without the `LIMIT` clause, it's unbounded: 
 
 <script async id="asciicast-SPNS2j5ci6Tu7QE0ggRdiNxqq" src="https://asciinema.org/a/SPNS2j5ci6Tu7QE0ggRdiNxqq.js"></script>
 
-One of the issues with using the JDBC Driver is that there is _extreme_ verbosity. This might be from the REST endpoint rather than the JDBC driver itself (I'm not sure) but either way the user is left with a screenful of noise if they try to do something that causes a problem. For example, if you tell Flink to run as a batch job: 
+One of the issues with using the JDBC Driver is that there is _extreme_ verbosity. This might be from the REST endpoint rather than the JDBC driver itself (I'm not sure) but either way, the user is left with a screenful of noise if they try to do something that causes a problem. For example, if you tell Flink to run as a batch job: 
 
 ```sql
 SET execution.runtime-mode=batch;
 ```
 
-and then run a `SELECT` against the above `foo` table which is defined as an unbounded source you get a sensible and well formed error: 
+and then run a `SELECT` against the above `foo` table (which is defined as an unbounded source) you get a sensible and well-formed error: 
 
 ```
 org.apache.flink.table.api.ValidationException:
@@ -296,11 +296,11 @@ Querying an unbounded table 'default_catalog.default_database.foo' in batch mode
 The table source is unbounded.
 ```
 
-However, this is lost amongst the stacktrace noise. Here's what ***one*** error looks like—I had to zoom my font size right down to even get all the messages on the viewable screen:
+However, this error is buried amongst vast stacktrace noise. Here's what the above ***one*** error looks like—I had to zoom my font size right down to even get all the messages on the viewable screen:
 
 ![JDBC Stack Trace](/images/2023/11/jdbc_stack.webp)
 
-As a side-note—since we've gone down this bounded/unbounded batch/streaming path—you can also use datagen as a bounded source by setting the `number-of-rows` [option](https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/datagen/#connector-options) in the DDL: 
+As a side note—since we've gone down this bounded/unbounded batch/streaming path—you can also use datagen as a bounded source by setting the `number-of-rows` [option](https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/datagen/#connector-options) in the DDL: 
 
 ```sql
 CREATE TABLE bar (
