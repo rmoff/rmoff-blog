@@ -11,7 +11,7 @@ categories:
 - Productivity Tools
 ---
 
-AI, what a load of hyped-up bollocks, right? Yet here I am, legit writing as blog about it and not for the clickbait but…gasp…because it's actually useful.
+AI, what a load of hyped-up bollocks, right? Yet here I am, legit writing a blog about it and not for the clickbait but…_gasp_…because it's actually useful.
 
 Used correctly, it's just like any other tool on your desktop. It helps you get stuff done quicker, better—or both. 
 
