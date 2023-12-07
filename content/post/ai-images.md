@@ -143,4 +143,4 @@ For comparison, this is how the other generators deal with the same prompt:
 
 ## Summary
 
-There's not one tool which beats all the others. If I had to have access to just one, I'd go with DALL·E 3 for sure. But some of the Midjourney images styles are really nice, the text generation on Ideogram is best, and the tooling in Firefly is rather handy too.
+There's not one tool which beats all the others. If I had to have access to just one, I'd go with DALL·E 3 for sure. But some of the Midjourney image styles are really nice, the text generation on Ideogram is best, and the tooling in Firefly is rather handy too.
