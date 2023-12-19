@@ -8,6 +8,7 @@ credit: "https://twitter.com/rmoff/"
 categories:
 - Antora
 - GitHub
+- Personal Access Token
 - Cloudflare
 ---
 
@@ -96,25 +97,6 @@ _Note the trailing `:` after the PAT and before the `@`_.
 
 I used this to iterate over different permutations below to figure out quite what was going on.
 
-#### ✅ Valid Token, Valid Permissions
-
-This is what we're aiming for - a valid token, which has the necessary permissions to access the repository.
-
-* **HTTP code**: 200
-* **Antora message**: Site generation complete!
-
-To create a fine-grained PAT go to your GitHub's account [Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens](https://github.com/settings/tokens?type=beta). Specify the organisation's repository that Antora needs to access, and add **Read access to code and metadata** for permissions. Depending on your organisations settings, you may need to get the org owner to grant the PAT request before you can use it.
-
-#### ❌ Valid Token, Invalid Permissions
-
-This is the problem that I hit. My PAT was valid—I check literally a gazillion times—but still the Antora build failed.
-
-* **HTTP code**: 403
-* **HTTP response message**: `` `my_org` forbids access via a personal access token (classic). Please use a GitHub App, OAuth App, or a personal access token with fine-grained permissions.``
-* **Antora message**: `FATAL (antora): HTTP Error: 403 Forbidden`
-
-As the HTTP reponse message tells me, I'm using a "classic" PAT, and the GitHub org whose repo I'm trying to access prohibits this. Looking at the Antora message this is literally true (403 Forbidden) but if you're not clued up on the nuances of PATs may well escape you (it had me scratching my head for several hours).
-
 #### ❌ Invalid Token
 
 This looks similar to the above, but you get a different error:
@@ -128,6 +110,25 @@ To fix this one you need to generate a valid PAT. Also make sure that you're con
 ```bash
 https://my_pat_goes_here:@github.com
 ```
+
+#### ❌ Valid Token, Invalid Permissions
+
+This is the problem that I hit. My PAT was valid—I check _literally_ a **gazillion** times—but still the Antora build failed.
+
+* **HTTP code**: 403
+* **HTTP response message**: `` `my_org` forbids access via a personal access token (classic). Please use a GitHub App, OAuth App, or a personal access token with fine-grained permissions.``
+* **Antora message**: `FATAL (antora): HTTP Error: 403 Forbidden`
+
+As the HTTP reponse message tells me, I'm using a "classic" PAT, and the GitHub org whose repo I'm trying to access prohibits this. Looking at the Antora message this is literally true (403 Forbidden) but if you're not clued up on the nuances of PATs may well escape you (it had me scratching my head for several hours).
+
+#### ✅ Valid Token, Valid Permissions
+
+This is what we're aiming for - a valid token, which has the necessary permissions to access the repository.
+
+* **HTTP code**: 200
+* **Antora message**: Site generation complete!
+
+To create a fine-grained PAT go to your GitHub's account [Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens](https://github.com/settings/tokens?type=beta). Specify the organisation's repository that Antora needs to access, and add **Read access to code and metadata** for permissions. Depending on your organisations settings, you may need to get the org owner to grant the PAT request before you can use it.
 
 ## Using PATs with GitHub Actions and Antora
 
