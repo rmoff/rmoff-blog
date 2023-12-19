@@ -84,7 +84,7 @@ curl  -w "\n\nHTTP code: %{http_code}\n" -s -L \
 
 This gives you both the response, and the HTTP code. 
 
-In conjunction with this you can hardcode the credentials into the `antora-playbook.yml` (**WHICH IS A REALLY BAD IDEA M'KAY**) to avoid any complications with environment variables (which we get into later), like this:
+In conjunction with this you can hardcode the credentials into the `antora-playbook.yml` (**WHICH IS A REALLY BAD IDEA M'KAY**) just for testing as this helps to avoid any complications with environment variables (which we get into later), like this:
 
 ```yaml
 content:
