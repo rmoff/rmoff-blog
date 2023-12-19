@@ -22,7 +22,7 @@ As you would expect for a documentation tool, the [Antora documentation](https:/
 
 I've got two git repositories in GitHub, under the same organisation. Both are private. One holds the Antora configuration including the list of content sources which includes source files in the second repository.
 
-![](/images/2023/12/gh1.png)
+![](/images/2023/12/gh1.webp)
 
 ## Building Antora using a GitHub Action
 
@@ -144,7 +144,7 @@ To make the credentials available to Antora we make use of the [`GIT_CREDENTIALS
 
 In the repository under which the Antora build GitHub Action will be running (`docs-platform` in the example I'm using here) add a [Repository secret](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) called `GIT_CREDENTIALS`:
 
-![](/images/2023/12/gh2.png)
+![](/images/2023/12/gh2.webp)
 
 With that repository secret set you can now access it from your GitHub Action workflow with the `env` key:
 
@@ -153,7 +153,7 @@ With that repository secret set you can now access it from your GitHub Action wo
       GIT_CREDENTIALS: ${{ secrets.GIT_CREDENTIALS }}
 ```
 
-![](/images/2023/12/gh3.png)
+![](/images/2023/12/gh3.webp)
 
 ## Building and Deploying Antora to Cloudflare Pages
 
