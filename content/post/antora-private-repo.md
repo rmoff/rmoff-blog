@@ -53,13 +53,13 @@ That is:
 
 Again, the Antora docs discuss how to handle [private repository authentication](https://docs.antora.org/antora/latest/playbook/private-repository-auth/). Because [the docs](https://docs.antora.org/antora/latest/playbook/private-repository-auth/#credential-types) are based around git and not GitHub specifically there is a bit of groking to do if you're working with GitHub but it boils down to:
 
-1. You _could_ use your GitHub credentials (username/password) but this would be a really bad security practice, and also not even possible if you've got two-factor authentication (2FA) enabled (which you really should have).
+1. You _could_ use your GitHub credentials (username/password) but **this would be a really bad security practice**, and also not even possible if you've got two-factor authentication (2FA) enabled (which you really should have).
 2. You should use a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens) (PAT).
 
 **NOTE:** per the docs you cannot use deploy tokens or keys on GitHub:
 
-> Deploy keys cannot be used with Antora since they require the use of SSH authentication, which the git client in Antora does not support.
-> GitHub does not support deploy tokens at this time [December 2023 / Antora 3.1]
+> * Deploy keys cannot be used with Antora since they require the use of SSH authentication, which the git client in Antora does not support.
+> * GitHub does not support deploy tokens at this time [December 2023 / Antora 3.1]
 
 ### Types of PAT
 
