@@ -99,8 +99,6 @@ I used this to iterate over different permutations below to figure out quite wha
 
 #### ❌ Invalid Token
 
-This looks similar to the above, but you get a different error:
-
 * **HTTP code**: 401
 * **HTTP response message**: ``Bad credentials``
 * **Antora message**: `FATAL (antora): Content repository not found or credentials were rejected`
