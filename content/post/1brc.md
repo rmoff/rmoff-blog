@@ -53,9 +53,11 @@ _I'm running this on my M1 Macbook._
 
 ## Load the data into DuckDB
 
-I'll show you the steps I put this together with first, and then how to run it all in one go.
+I'll start by showing you the steps that I went through to put this together, and then how to run it all in one go.
 
-First, we use the [`read_csv_auto`](https://duckdb.org/docs/data/csv/overview) function. Let's check that this works as expected:
+The first thing I did was read the CSV file into a DuckDB table. This is in-memory; whilst you can save it as a native DuckDB database I didn't since the reading of the CSV file is part of the timed challenge.
+
+To get the CSV file into DuckDB I used the [`read_csv_auto`](https://duckdb.org/docs/data/csv/overview) function. Let's check that this works as expected:
 
 ```sql
 🟡◗ SELECT * FROM READ_CSV_AUTO('measurements.txt') LIMIT 5;
@@ -153,7 +155,7 @@ so let's do this, and at the same time alias the calculated fields to useful nam
 The 1BRC spec says that the output needs to be
 
 > * sorted alphabetically by station name
-> * the result values per station in the format <min>/<mean>/<max>
+> * the result values per station in the format \<min\>/\<mean\>/\<max\>
 > * rounded to one fractional digit
 
 With the example given as:
@@ -371,4 +373,4 @@ user 203.98
 sys 2.65
 ```
 
-Seems that the formatting doesn't really change things—it's getting the data off disk that's the slow thing here.
+Seems that the formatting doesn't really change things.
