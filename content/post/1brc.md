@@ -12,7 +12,7 @@ categories:
 
 **Why should the Java folk have all the fun?!**
 
-My friend and collegue [Gunnar Morling](https://twitter.com/gunnarmorling/) [launched a fun challenge](https://www.morling.dev/blog/one-billion-row-challenge/) this week: how fast can you aggregate and summarise a billion rows of data? Cunningly named The One Billion Row Challenge (1BRC for short), it's aimed at Java coders to look at new features in the language and optimisation techniques.
+My friend and colleague [Gunnar Morling](https://twitter.com/gunnarmorling/) [launched a fun challenge](https://www.morling.dev/blog/one-billion-row-challenge/) this week: how fast can you aggregate and summarise a billion rows of data? Cunningly named The One Billion Row Challenge (1BRC for short), it's aimed at Java coders to look at new features in the language and optimisation techniques.
 
 Not being a Java coder myself, and seeing how the challenge has already unofficially spread to other communities [including Rust and Python](https://www.reddit.com/r/rust/comments/18ws370/optimizing_a_one_billion_row_challenge_in_rust/) I thought I'd join in the fun using what I know best: SQL.
 
