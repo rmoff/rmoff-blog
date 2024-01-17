@@ -40,7 +40,7 @@ The docs content lives in `code_repo` under `/docs`. The actual build and deploy
 
 image::/images/2024/01/buildanddeploy.webp[Diagram of the build and deploy process]
 
-* For *docs changes*, when a change is pushed to `main` on `code_repo` that includes a file under `/docs/`, the `docs-trigger-deploy.yaml` workflow runs. This in turn triggers the `cloudflare.yaml` workflow on the `docs-platform` repository. 
+* For *docs changes*, when a change is pushed to `main` on `code_repo` that includes a file under `/docs/`, the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-trigger-deploy-yaml[`docs-trigger-deploy.yaml`] workflow runs. This in turn triggers the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-platform-cloudflare-yaml[`cloudflare.yaml`] workflow on the `docs-platform` repository. 
 * For a *platform change* the `cloudflare.yaml` workflow on the `docs-platform` repository will run directly.
 
 === PR Preview builds
@@ -49,13 +49,26 @@ When a PR is raised against `main` on the `docs-platform` or `code_repo` repos (
 
 image::/images/2024/01/buildanddeploy_preview.webp[Diagram of the Preview build and deploy process]
 
-The build process does two additional things that the production one doesn't:
+The build process does some additional things that the production one doesn't:
 
-1. overlays a message on the preview site indicating the PR with which that it is associated.
+1. The trigger action https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-trigger-pr-preview-yml-L31-L35[passes details] about the source PR as https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-platform-preview-cloudflare-yaml-L6-L27[inputs] to the `docs-platform` workflow
+
+2. The https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-platform-preview-cloudflare-yaml[preview-cloudflare.yaml] workflow on the `docs-platform` modifies the Antora playbook to use the source branch of the PR on the `code-repo` repository (instead of `main`)
++
+[source,yaml]
+----
+- name: If not a platform PR, set the branch of the source repo for antora content
+if: github.event_name != 'pull_request'
+id: override_antora_playbook_yml
+run: |
+    sed -i '7s/main/${{ inputs.pr_branch }}/' antora-playbook.yml
+----
+
+3. It overlays a message on the preview site indicating the PR with which that it is associated.
 +
 image::/images/2024/01/pr2.webp[Screenshot of a preview docs deployment with a PR message overlaid]
 
-2. updates the originating PR with the URL of the preview site.
+4. Once deployed, it updates the originating PR with the URL of the preview site.
 +
 image::/images/2024/01/pr1.webp[Screenshot of a PR showing the preview URL]
 
