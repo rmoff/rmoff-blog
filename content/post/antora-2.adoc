@@ -34,18 +34,30 @@ GitHub Actions is used to trigger, build, and deploy the docs site.
 
 image::/images/2024/01/contents.webp[Diagram of what content is where]
 
+=== Why Two Repositories?
+
+One of the brilliant things that Antora supports is the ability to pull in the docs content from a git repository. This can be the same as the one that is hosting the Antora configuration—or as in our case, the repository that holds the code for which the documentation is written.
+
+This means that when a new feature is released the code and the docs can be kept in lock-step, both deploy and rollback if necessary.
+
+You can also pull in code from multiple repositories—Antora is super-flexible like this, and supports various styles of code organisation and control.
+
 == Build and Deploy
 
 The docs content lives in `code_repo` under `/docs`. The actual build and deploy happens on the `docs-platform` repository, and as a result the process is more complicated than it would be in a single repository.
 
 image::/images/2024/01/buildanddeploy.webp[Diagram of the build and deploy process]
 
-* For *docs changes*, when a change is pushed to `main` on `code_repo` that includes a file under `/docs/`, the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-trigger-deploy-yaml[`docs-trigger-deploy.yaml`] workflow runs. This in turn triggers the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-platform-cloudflare-yaml[`cloudflare.yaml`] workflow on the `docs-platform` repository. 
+* For *docs changes*, when a change is pushed to `main` on `code_repo` that includes a file under `/docs/`, the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-trigger-deploy-yaml[`docs-trigger-deploy.yaml`] workflow runs. This in turn triggers the https://gist.github.com/rmoff/6d06b0b258a65502828205733b6a8c8e#file-docs-platform-cloudflare-yaml[`cloudflare.yaml`] workflow on the `docs-platform` repository.
 * For a *platform change* the `cloudflare.yaml` workflow on the `docs-platform` repository will run directly.
 
 === PR Preview builds
 
-When a PR is raised against `main` on the `docs-platform` or `code_repo` repos (and includes a file under `/docs/` in the case of the `code_repo` repo) a preview docs site is built and deployed to a unique URL.
+Not everyone writes perfect docs PRs. I has ben knowwn to right mistaks with speling and grammer, and that's before you get onto the correctness of documentation which in software is particularly important to be precise and accurate.
+
+By being able to create a preview of PRs as they are raised it's easy to seek review from colleagues. However readable Asciidoc might be as a markup language, it's not going to be more readable than the parsed and rendered web page with its links and images in all their glory. The same goes for PRs against the Antora platform configuration itself—whether customising the skin, tweaking a config—all these things benefit from being able to see them in action *before* hitting the deploy button.
+
+Thus, when a PR is raised against `main` on the `docs-platform` or `code_repo` repos (and includes a file under `/docs/` in the case of the `code_repo` repo) a preview docs site is built and deployed to a unique URL.
 
 image::/images/2024/01/buildanddeploy_preview.webp[Diagram of the Preview build and deploy process]
 
@@ -104,7 +116,7 @@ This is more complicated since the two repositories are private. The following i
 
 image::/images/2024/01/securitydetail.webp[Detail of how security works for interactions requiring additional authorisation steps]
 
-The auth for these is handled using a custom https://docs.github.com/en/apps[GitHub App] (`Antora Docs Build Bot`) https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app#authentication-as-an-app-installation[installation] on each repository. 
+The auth for these is handled using a custom https://docs.github.com/en/apps[GitHub App] (`Antora Docs Build Bot`) https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app#authentication-as-an-app-installation[installation] on each repository.
 
 NOTE: The auth https://rmoff.net/2023/12/19/deploying-antora-with-github-actions-and-a-private-github-repo/[can also be done] using Personal Access Tokens (PAT) but this would then be tied to a particular user's account and is therefore not suitable for an organisation.
 
@@ -128,7 +140,7 @@ https://x-access-token:$IAT_TOKEN@github.com
 This needs to be done by a user with `Owner` rights on the GitHub organisation. The App has to be created in the GitHub organisation, and from there is installed to the two repositories. The GitHub docs https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[detail the process] - below is a short set of notes covering the essential settings:
 
 1. From https://github.com/settings/profile[your GitHub profile page] set the `settings context` to that of your organisation, and then click on `Developer settings` (at the very bottom of the page) and then `GitHub Apps`
-2. Click on `New GitHub App`. 
+2. Click on `New GitHub App`.
     a. Give the new app a name (e.g. `Antora Docs Build Bot`)
     b. Set the `Homepage URL` to that of `docs-platform` repo
     c. Disable `Webhook`
@@ -136,9 +148,9 @@ This needs to be done by a user with `Owner` rights on the GitHub organisation. 
 +
 |===========================
 | Actions       | Read/Write
-| Contents      | Read      
+| Contents      | Read
 | Issues        | Read/Write
-| Metadata      | Read      
+| Metadata      | Read
 | Pull Requests | Read/Write
 |===========================
 4. Click `Create GitHub App`
@@ -154,8 +166,8 @@ As a repo admin, on the `code_repo` repository add the following repository secr
 
 [options="header"]
 |===============================================================================================================================
-| Key             | Value                                                                                                       
-| `DOCS_APP_ID`          | GitHub App ID                                                                                               
+| Key             | Value
+| `DOCS_APP_ID`          | GitHub App ID
 | `DOCS_APP_PRIVATE_KEY` | The full text of the .pem, including the `BEGIN RSA PRIVATE KEY` and `END RSA PRIVATE KEY` header and footer
 |===============================================================================================================================
 
@@ -163,8 +175,8 @@ As a repo admin, on the `docs-platform` add the following repository secrets
 
 [options="header"]
 |===============================================================================================================================
-| Key             | Value                                                                                                       
-| `DOCS_APP_ID`          | GitHub App ID                                                                                               
+| Key             | Value
+| `DOCS_APP_ID`          | GitHub App ID
 | `DOCS_APP_PRIVATE_KEY` | The full text of the .pem, including the `BEGIN RSA PRIVATE KEY` and `END RSA PRIVATE KEY` header and footer
 | `CLOUDFLARE_API_TOKEN` | API token from Cloudflare
 |===============================================================================================================================
@@ -173,6 +185,6 @@ and the following repository variable
 
 [options="header"]
 |===============================================================================================================================
-| Key             | Value                                                                                                       
+| Key             | Value
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID
 |===============================================================================================================================
