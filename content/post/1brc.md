@@ -3,7 +3,7 @@ draft: false
 title: 1️⃣🐝🏎️🦆 (1BRC in SQL with DuckDB)
 date: "2024-01-03T12:12:32Z"
 image: "/images/2024/01/h_IMG_6977.webp"
-thumbnail: "/images/2024/01/1brc.png"
+thumbnail: "/images/2024/01/1brc.webp"
 credit: "https://twitter.com/rmoff/"
 categories:
 - DuckDB
