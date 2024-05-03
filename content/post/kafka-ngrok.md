@@ -16,7 +16,7 @@ In this post we'll see how you can use [ngrok](https://ngrok.com/) to, in their 
 
 <!--more-->
 
-TIP: If you have trouble with ngrok, make sure to link:/2024/05/03/ngrok-dns-headaches/[check that your DNS server is not blocking it].
+⚠️ If you have trouble with ngrok, make sure to [check that your DNS server is not blocking it](/2024/05/03/ngrok-dns-headaches/).
 
 ## Overview
 
