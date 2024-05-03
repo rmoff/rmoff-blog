@@ -1,0 +1,315 @@
+---
+draft: false
+title: 'ngrok DNS headaches'
+date: "2024-05-03T10:56:30Z"
+image: "/images/2024/05/h_IMG_1338.webp"
+thumbnail: "/images/2024/05/t_IMG_1316.webp"
+credit: "https://twitter.com/rmoff/"
+categories:
+- ngrok
+- dns
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+Let's not bury the lede: it was DNS. However, unlike the meme (_"It's not DNS, it's never DNS. It was DNS"_), I didn't even have an inkling that DNS might be the problem.
+
+I'm writing a new blog about streaming Apache Kafka data to Apache Iceberg and wanted to provision a local Kafka cluster to pull data from remotely. I got this working nicely just last year using link:/2023/11/01/using-apache-kafka-with-ngrok/[ngrok to expose the broker to the interwebz], so figured I'd use this again. Simple, right?
+
+Nope.
+
+<!--more-->
+
+[source,bash]
+----
+❯ kcat -L -b 4.tcp.eu.ngrok.io:16689
+%3|1714734085.241|FAIL|rdkafka#producer-1| [thrd:4.tcp.eu.ngrok.io:16689/bootstrap]: 4.tcp.eu.ngrok.io:16689/bootstrap: Connect to ipv4#0.0.0.0:16689 failed: Connection refused (after 4ms in state CONNECT)
+%3|1714734086.246|FAIL|rdkafka#producer-1| [thrd:4.tcp.eu.ngrok.io:16689/bootstrap]: 4.tcp.eu.ngrok.io:16689/bootstrap: Connect to ipv4#0.0.0.0:16689 failed: Connection refused (after 2ms in state CONNECT, 1 identical error(s) suppressed)
+% ERROR: Failed to acquire metadata: Local: Broker transport failure (Are the brokers reachable? Also try increasing the metadata timeout with -m <timeout>?)
+----
+
+Spinning up https://rmoff.net/code/docker-compose-ngrok-kafka.yml[this Docker Compose] should have worked just fine (it did last year!). But for some reason my Kafka broker couldn't be reached (`Connection refused`).
+
+## The Basic Setup
+
+After a lot of poking and prodding and changing stuff and still no luck with Kafka, I decided to strip it back. No Docker Compose, just Kafka. Just netcat listening on a port:
+
+[source,bash]
+----
+nc -lk 4242
+----
+
+From another terminal window I can test connectivity to the host/port:
+
+[source,bash]
+----
+❯ nc -z localhost 4242
+Connection to localhost port 4242 [tcp/*] succeeded!
+----
+
+Now let us layer in ngrok, and add a route for the local netcat listener:
+
+[source,bash]
+----
+❯ ngrok tcp 4242
+
+Session Status                online
+Account                       Robin Moffatt (Plan: Free)
+Version                       3.9.0
+Region                        Europe (eu)
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    tcp://0.tcp.eu.ngrok.io:13810 -> localhost:4242
+
+Connections                   ttl     opn     rt1     rt5     p50     p90
+                              0       0       0.00    0.00    0.00    0.00
+----
+
+With this, we should be able to connect with netcat on the tcp host/port given:
+
+[source,bash]
+----
+❯ nc -vz 0.tcp.eu.ngrok.io 13810
+nc: connectx to 0.tcp.eu.ngrok.io port 13810 (tcp) failed: Connection refused
+----
+
+## Let's dig into the problem
+
+One thing that I did think of early on was that I run https://nextdns.io/[nextDNS] (similar to https://pi-hole.net/[Pi-Hole], if you're familiar with that) which can occassionally have unintended sideeffects when it comes to networking and resolving names. So I disabled it, and tried again:
+
+[source,bash]
+----
+❯ nc -vz 0.tcp.eu.ngrok.io 13810
+nc: connectx to 0.tcp.eu.ngrok.io port 13810 (tcp) failed: Connection refused
+----
+
+_If this was a cop chase movie, at this point the camera would be panning to the side street where the villian is hiding and the police car just drove by…_
+
+Dusting off my troubleshooting command line toolbox, I tried a `mtr` (like `traceroute` but fancier): 
+
+[source,bash]
+----
+                                                                          My traceroute  [v0.95]
+asgard08 (192.168.10.50) -> 0.tcp.eu.ngrok.io (81.99.162.48)                                                                                     2024-05-03T13:43:42+0100
+Keys:  Help   Display mode   Restart statistics   Order of fields   quit
+                                                                                                                                 Packets               Pings
+ Host                                                                                                                          Loss%   Snt   Last   Avg  Best  Wrst StDev
+ 1. usgmoffattme                                                                                                                0.0%     4    4.2   6.3   4.2   9.0   2.2
+ 2. 10.53.34.17                                                                                                                 0.0%     4   20.8  18.1  16.4  20.8   2.0
+ 3. brad-core-2a-ae41-650.network.virginmedia.net                                                                               0.0%     4   41.3  23.7  11.4  41.3  14.0
+ 4. (waiting for reply)
+ 5. (waiting for reply)
+ 6. lang-dclcore-1a-port-channel1.network.virginmedia.net                                                                       0.0%     3   23.6  22.4  20.8  23.6   1.4
+ 7. lang-sspiprxy.network.virginmedia.net                                                                                       0.0%     3   23.4  24.3  23.4  25.3   0.9
+----
+
+What caught my eye here was the final hop—`lang-sspiprxy.network.virginmedia.net`. My ISP is Virgin Media, but the only entry I'd expected to see relating to it was my own IP.
+
+Why is traffic for `0.tcp.eu.ngrok.io` going to `81.99.162.48` (`lang-sspiprxy.network.virginmedia.net`)?
+
+image::/images/2024/05/confused.webp[Confused]
+
+Let's check the DNS resolution:
+
+[source,bash]
+----
+❯ dig 0.tcp.eu.ngrok.io
+
+; <<>> DiG 9.10.6 <<>> 0.tcp.eu.ngrok.io
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64676
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 512
+;; QUESTION SECTION:
+;0.tcp.eu.ngrok.io.             IN      A
+
+;; ANSWER SECTION:
+0.tcp.eu.ngrok.io.      0       IN      A       81.99.162.48
+
+;; Query time: 85 msec
+;; SERVER: 192.168.10.1#53(192.168.10.1)
+;; WHEN: Fri May 03 13:47:39 BST 2024
+;; MSG SIZE  rcvd: 62
+----
+
+The DNS server is my local router (`192.168.10.1`) which in turn is defaulting to the ISP's DNS servers. What about if we use a https://www.cloudflare.com/learning/dns/what-is-1.1.1.1/[trusted public DNS like Cloudflare]'s?
+
+[source,bash]
+----
+❯ dig @1.1.1.1 0.tcp.eu.ngrok.io
+
+; <<>> DiG 9.10.6 <<>> @1.1.1.1 0.tcp.eu.ngrok.io
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4513
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;0.tcp.eu.ngrok.io.             IN      A
+
+;; ANSWER SECTION:
+0.tcp.eu.ngrok.io.      60      IN      A       18.197.239.5
+
+;; Query time: 67 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1)
+;; WHEN: Fri May 03 13:49:41 BST 2024
+;; MSG SIZE  rcvd: 62
+----
+
+Huh. `18.197.239.5` is different from `81.99.162.48`, definitely. Now that we're in the realms of DNS, let's switch NextDNS back on and see what happens:
+
+[source,bash]
+----
+❯ dig 0.tcp.eu.ngrok.io
+
+; <<>> DiG 9.10.6 <<>> 0.tcp.eu.ngrok.io
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34593
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; OPT=15: 00 11 42 6c 6f 63 6b 65 64 20 62 79 20 4e 65 78 74 44 4e 53 ("..Blocked by NextDNS")
+;; QUESTION SECTION:
+;0.tcp.eu.ngrok.io.             IN      A
+
+;; ANSWER SECTION:
+0.tcp.eu.ngrok.io.      300     IN      A       0.0.0.0
+
+;; Query time: 41 msec
+;; SERVER: 192.0.2.42#53(192.0.2.42)
+;; WHEN: Fri May 03 13:52:06 BST 2024
+;; MSG SIZE  rcvd: 103
+----
+
+Well, just look at that:
+
+**`..Blocked by NextDNS`** 
+
+Now the penny is starting to drop. If you're particularly observant you'll notice the error that I showed at the very top of this blog says `Connect to ipv4#0.0.0.0:16689 failed` —and `0.0.0.0` is what the `dig` above shows NextDNS resolves the ngrok hostname to.
+
+In the logs that NextDNS provides I can see: 
+
+image::/images/2024/05/nextdns01.webp[NextDNS screenshot showing DNS resolution for ngrok blocked by Threat Intelligence Feeds blocklist]
+
+As well as blocking crap like ads and tracking domains, NextDNS also blocks DNS resolutions for sites that are deemed nefarious. It looks like ngrok ended up on one of https://www.cloudflare.com/learning/security/glossary/threat-intelligence-feed/[these lists] - probably because ngrok could be used to serve phishing websites etc. After adding `*.ngrok.io` to my NextDNS Allowlist I got this:
+
+[source,bash]
+----
+❯ nc -vz 0.tcp.eu.ngrok.io 13810
+Connection to 0.tcp.eu.ngrok.io port 13810 [tcp/*] succeeded!
+----
+
+Success!
+
+image::/images/2024/05/yay.webp[Yay]
+
+So NextDNS was, in a sense, a problem of my own making. But my ISP blocking this traffic is not something I'd expected. It turns out that Virgin Media offer "Web Safe" which includes "Virus Safe" which is enabled by default. After opting out of it, the ngrok address resolved correctly for me too:
+
+[source,bash]
+----
+❯ dig 2.tcp.eu.ngrok.io
+
+; <<>> DiG 9.10.6 <<>> 2.tcp.eu.ngrok.io
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6068
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;2.tcp.eu.ngrok.io.             IN      A
+
+;; ANSWER SECTION:
+2.tcp.eu.ngrok.io.      13      IN      A       18.197.239.5
+
+;; Query time: 76 msec
+;; SERVER: 192.168.10.1#53(192.168.10.1)
+;; WHEN: Fri May 03 14:07:49 BST 2024
+;; MSG SIZE  rcvd: 62
+----
+
+== It's all working 😅
+
+[source,bash]
+----
+❯ kcat -L -b 6.tcp.eu.ngrok.io:12916
+Metadata for all topics (from broker 1: 6.tcp.eu.ngrok.io:12916/1):
+ 1 brokers:
+  broker 1 at 6.tcp.eu.ngrok.io:12916 (controller)
+ 0 topics:
+----
+
+With ngrok on the Allowlist for NextDNS, everything works great. I'll probably leave the "Virus Safe" at my ISP switched on unless it continues to cause these kind of problems. I'm also going to switch over my router's DNS to use Cloudflare (1.1.1.1) in the future.
+
+== Footnote: A final puzzle - why does `+trace` on `dig` bypass the filtering?
+
+This is the case on both NextDNS and Virgin Media. If I put the blocks back to how they were when I started looking at this and run `dig` normally, I get the blocked IP result as expected: 
+
+[source,bash]
+----
+# NextDNS
+❯ dig +short 0.tcp.eu.ngrok.io
+0.0.0.0
+
+# Virgin Media
+❯ dig +short 0.tcp.eu.ngrok.io
+81.99.162.48
+----
+
+But if I use `+trace` then in amongst the detailed trace info, I get the correct ngrok IP resolution:
+
+[source,bash]
+----
+# NextDNS
+❯ dig +short +trace 0.tcp.eu.ngrok.io
+NS a.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS b.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS c.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS d.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS e.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS f.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS g.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS h.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS i.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS j.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS k.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS l.root-servers.net. from server 192.168.10.1 in 65 ms.
+NS m.root-servers.net. from server 192.168.10.1 in 65 ms.
+RRSIG NS 8 0 518400 20240516050000 20240503040000 5613 . Gz7tfgerwhD0FAUDn+c/U3b/SrOgMyWaFh+575O7DxjF+yv0hND7AsLL 1gYcf8+n0V77G0XnAOkPJVPpe5cj/75xL6L/+PsaBteVJ0p9ZrsRDV7V
+ c+wxa2mR5mgKy4DsAk3PjgI3KfKlzm1YIg82UWs6AFS98V9m59uHM9gK DOTLXm6q38RwaU1cSuxU+QAhxK8xjbt8cbVUjmOyE6GYilZ6Peai02r9 EljH8UM1ulBiSSl4nUo1dgoxabTSVsmV/+CmdaUN8k97alg/vAzRhFc
+L YKIg/Y0nryoSZq/wUkwweFvcrr0UrMeH0f6iR5rfaxrrjPcL7E8UrNRU 9aHjHg== from server 192.168.10.1 in 65 ms.
+A 18.158.249.75 from server 205.251.192.146 in 20 ms.
+
+# Virgin Media
+❯ dig +short +trace 0.tcp.eu.ngrok.io
+NS a.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS b.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS c.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS d.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS e.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS f.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS g.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS h.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS i.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS j.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS k.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS l.root-servers.net. from server 192.168.10.1 in 106 ms.
+NS m.root-servers.net. from server 192.168.10.1 in 106 ms.
+RRSIG NS 8 0 518400 20240516050000 20240503040000 5613 . Gz7tfgerwhD0FAUDn+c/U3b/SrOgMyWaFh+575O7DxjF+yv0hND7AsLL 1gYcf8+n0V77G0XnAOkPJVPpe5cj/75xL6L/+PsaBteVJ0p9ZrsRDV7V
+ c+wxa2mR5mgKy4DsAk3PjgI3KfKlzm1YIg82UWs6AFS98V9m59uHM9gK DOTLXm6q38RwaU1cSuxU+QAhxK8xjbt8cbVUjmOyE6GYilZ6Peai02r9 EljH8UM1ulBiSSl4nUo1dgoxabTSVsmV/+CmdaUN8k97alg/vAzRhFc
+L YKIg/Y0nryoSZq/wUkwweFvcrr0UrMeH0f6iR5rfaxrrjPcL7E8UrNRU 9aHjHg== from server 192.168.10.1 in 106 ms.
+A 18.158.249.75 from server 205.251.192.146 in 19 ms.
+----
+
+I'd love to hear from you if you can explain what's happening with this :)
