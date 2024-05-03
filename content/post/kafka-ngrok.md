@@ -16,6 +16,8 @@ In this post we'll see how you can use [ngrok](https://ngrok.com/) to, in their 
 
 <!--more-->
 
+⚠️ If you have trouble with ngrok, make sure to [check that your DNS server is not blocking it](/2024/05/03/ngrok-dns-headaches/).
+
 ## Overview
 
 Why? In my case, I wanted to expose my local Kafka as a source (and target) to [Decodable](https://decodable.co/) so that I can process streams of data with Apache Flink through the managed service that Decodable provides.
