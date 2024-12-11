@@ -4,7 +4,7 @@ title: 'Learning Apache Flink S01E01: Where Do I Start?'
 date: "2023-09-29T12:57:04Z"
 image: "/images/2023/09/h_IMG_5288.webp"
 thumbnail: "/images/2023/09/t_IMG_5443.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 - LAF

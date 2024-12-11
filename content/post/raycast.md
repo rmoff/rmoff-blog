@@ -4,7 +4,7 @@ title: 'Making the move from Alfred to Raycast'
 date: "2023-03-03T23:14:06Z"
 image: "/images/2023/03/h_DSCF8395.jpeg"
 thumbnail: "/images/2023/03/t_DSCF8412.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Alfred
 - Raycast

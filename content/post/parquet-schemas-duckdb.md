@@ -4,7 +4,7 @@ title: 'Aligning mismatched Parquet schemas in DuckDB'
 date: "2023-03-03T14:36:08Z"
 image: "/images/2023/03/h_IMG_8795.jpeg"
 thumbnail: "/images/2023/03/t_DSCF8426.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - DuckDB
 - Parquet

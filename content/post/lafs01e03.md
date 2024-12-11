@@ -4,7 +4,7 @@ title: 'Learning Apache Flink S01E03: Running my First Flink Cluster and Applica
 date: "2023-10-05T14:29:02Z"
 image: "/images/2023/10/h_IMG_8835.webp"
 thumbnail: "/images/2023/10/t_IMG_5439.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - LAF
 - Apache Flink

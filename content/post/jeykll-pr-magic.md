@@ -4,7 +4,7 @@ title: 'Building Better Docs - Automating Jekyll Builds and Link Checking for PR
 date: "2023-04-20T08:54:11Z"
 image: "/images/2023/04/h_IMG_8828.jpeg"
 thumbnail: "/images/2023/04/t_IMG_9850.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Documentation
 - Jekyll

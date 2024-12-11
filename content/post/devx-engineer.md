@@ -4,7 +4,7 @@ title: 'What Does This DevEx Engineer Do?'
 date: "2023-05-23T23:56:16Z"
 image: "/images/2023/05/h_IMG_2564.jpeg"
 thumbnail: "/images/2023/05/t_IMG_2342.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - devrel
 - devex

@@ -4,7 +4,7 @@ title: 'An Itch That Just Has to Be Scratched… (Or, Why Am I Joining Decodable
 date: "2023-09-21T14:25:39Z"
 image: "/images/2023/09/h_IMG_5397.jpeg"
 thumbnail: "/images/2023/09/t_IMG_8746.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Streaming
 - Career

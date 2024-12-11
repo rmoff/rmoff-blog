@@ -4,7 +4,7 @@ title: 'Quickly Convert CSV to Parquet with DuckDB'
 date: "2023-03-14T15:12:31Z"
 image: "/images/2023/03/h_DSCF8416.jpeg"
 thumbnail: "/images/2023/03/t_IMG_1672.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - DuckDB
 ---

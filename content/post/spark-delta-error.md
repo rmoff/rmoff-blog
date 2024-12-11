@@ -4,7 +4,7 @@ title: 'Using Delta from pySpark - `java.lang.ClassNotFoundException: delta.Defa
 date: "2023-04-05T15:51:41Z"
 image: "/images/2023/04/h_IMG_7944.jpeg"
 thumbnail: "/images/2023/04/t_IMG_2117.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - PySpark
 - Delta Lake

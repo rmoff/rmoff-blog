@@ -4,7 +4,7 @@ title: 'Learning Apache Flink S01E04: A [Partial] Exploration of the Flink SQL C
 date: "2023-10-10T16:27:22Z"
 image: "/images/2023/10/squirrel.webp"
 thumbnail: "/images/2023/10/squirrel.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - LAF
 - Apache Flink

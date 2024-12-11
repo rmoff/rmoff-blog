@@ -4,7 +4,7 @@ title: 'Current 22 - Session Analysis with DuckDB and Jupyter Notebook'
 date: "2022-10-14T16:15:57Z"
 image: "/images/2022/10/h_IMG_8722.jpeg"
 thumbnail: "/images/2022/10/t_DSCF7575.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - DuckDB
 - Current 2022

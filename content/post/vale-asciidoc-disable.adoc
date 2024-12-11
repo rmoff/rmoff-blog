@@ -1,0 +1,312 @@
+---
+draft: false
+title: 'Disabling Vale Linting Selectively in Asciidoc'
+date: "2024-12-11T12:05:07Z"
+image: "/images/2024/12/h_IMG_6387.webp"
+thumbnail: "/images/2024/12/t_IMG_6386.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- asciidoc
+- vale
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+I'm a *HUGE* fan of Docs as Code in general, and specifically tools like https://vale.sh[Vale] that lint your prose for adherence to style rule.
+
+One thing that had been bugging me though was how to selectively disable Vale for particular sections of a document.
+Usually linting issues should be addressed at root: either fix the prose, or update the style rule. Either it's a rule, or it's not, right?
+
+Sometimes though I've found a need to make a particular exception to a rule, or simply needed to skip linting for a particular file.
+I was struggling with how to do this in Asciidoc. 
+Despite https://vale.sh/docs/topics/config/#asciidoc[the documentation] showing how to, I could never get it to work reliably.
+Now I've taken some time to dig into it, I think I've finally understood :)
+
+<!--more-->
+
+There are two ways to do it:
+
+. Use a special class in the AsciiDoc and then tell Vale to ignore any text that uses that class.
+. Pass-through configuration to Vale using HTML comments (per https://vale.sh/docs/topics/config/#asciidoc[the docs]).
+It turns out line breaks are *crucial* in getting this to work (and why I found it to work so apparently inconsistently)
++
+*tl;dr*: Make sure you put a line break _before_ a Vale pass-through that re-enables linting or a particular rule, otherwise it cancels out the one that preceeded it.
+
+== A quick recap of how Vale works
+
+Vale compiles your document from its source markup (e.g. Asciidoc, Markdown, RST, etc) into HTML.
+It then parses the HTML and matches it to the rules you've defined.
+
+This is useful to know because it helps when troubleshooting because you can compare seemingly-identical source document content to what Vale is actually parsing.
+
+== Our test document
+
+I ended up creating a bare-bones document on which to test this. The source looks like this:
+
+.test.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+Let's not lint this one: KVM
+
+But not this one: FUBAR
+----
+
+With a resulting Vale output of:
+
+[source,]
+----
+ 3:27  suggestion  'NAT' has no definition.  Microsoft.Acronyms
+ 5:19  suggestion  'KVM' has no definition.  Microsoft.Acronyms
+----
+
+_The number before the colon is the line number, so you can use this to match up the message to the source._ 
+
+== Option 1: Use a dedicated class
+
+_h/t to Aidan Reilly over on the https://www.writethedocs.org/slack/[WriteTheDocs slack group] for this tip 👍_
+
+The idea here is that you create a dedicated CSS class that you add to Vale's https://vale.sh/docs/topics/config/#ignoredclasses[`IgnoredClasses` configuration], and include in your Asciidoc wherever you want Vale to skip linting.
+
+.test-option1.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+[.my-vale-ignore-class]
+Let's not lint this one: KVM
+
+But not this one: FUBAR
+----
+
+Resulting HTML:
+
+[source,html]
+----
+[…]
+<div id="content">
+<div class="paragraph">
+<p>This line has an acronym: NAT</p>
+</div>
+<div class="paragraph my-vale-ignore-class">
+<p>Let's not lint this one: KVM</p>
+</div>
+<div class="paragraph">
+<p>But not this one: FUBAR</p>
+</div>
+[…]
+----
+
+Vale config:
+
+.vale.ini
+[source,ini]
+----
+[…]
+IgnoredClasses = my-vale-ignore-class
+[…]
+----
+
+Resulting Vale output:
+
+[source,]
+----
+ 3:27  suggestion  'NAT' has no definition.    Microsoft.Acronyms
+ 8:15  suggestion  'FUBAR' has no definition.  Microsoft.Acronyms
+----
+
+So—pretty simple, and effective.
+The only issue I see with this is that you can't granularly target different Vale rules—it's either on, or off.
+
+== Now the fiddly one: Pass-through config with HTML comments
+
+The idea here is that you use Asciidoc's https://docs.asciidoctor.org/asciidoc/latest/pass/pass-macro/#inline-pass[inline `pass` macro] to embed HTML comments (`<!-- remember these? -->`) in the generated HTML, which then passes the commands to Vale like `vale off`: 
+
+Here's what I tried originally:
+
+.test-option2a.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+pass:[<!-- vale off -->]
+Let's not lint this one: KVM
+pass:[<!-- vale on -->]
+
+But not this one: FUBAR
+----
+
+and got dismayed when my Vale output was:
+
+[source,]
+----
+ 3:27  suggestion  'NAT' has no definition.    Microsoft.Acronyms
+ 6:19  suggestion  'KVM' has no definition.    Microsoft.Acronyms
+ 9:15  suggestion  'FUBAR' has no definition.  Microsoft.Acronyms
+----
+
+The generated HTML does show the comments:
+
+[source,html]
+----
+[…]
+<div id="content">
+<div class="paragraph">
+<p>This line has an acronym: NAT</p>
+</div>
+<div class="paragraph">
+<p><!-- vale off -->
+Let's not lint this one: KVM
+<!-- vale on --></p>
+</div>
+<div class="paragraph">
+<p>But not this one: FUBAR</p>
+</div>
+[…]
+----
+
+So I was stumped, until I started randomly jiggling things (and, to be fair, looking more closely at the Vale documentation itself) and noticed a difference between the effectiveness of
+
+[source,asciidoc,linenums]
+----
+pass:[<!-- vale off -->]
+Let's not lint this one: KVM
+pass:[<!-- vale on -->]
+----
+
+compared to
+
+[source,asciidoc,linenums]
+----
+pass:[<!-- vale off -->]
+Let's not lint this one: KVM
+<1>
+pass:[<!-- vale on -->]
+----
+<1> An innocuous blank line!
+
+Putting these two into a test doc:
+
+.test-option2b.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+pass:[<!-- vale off -->]
+Let's not lint this one: KVM
+pass:[<!-- vale on -->]
+
+pass:[<!-- vale off -->]
+Let's not lint this one too: SNAFU
+
+pass:[<!-- vale on -->]
+
+But not this one: FUBAR
+----
+
+Here's the Vale output:
+
+[source,]
+----
+ 3:27   suggestion  'NAT' has no definition.    Microsoft.Acronyms
+ 6:26   suggestion  'KVM' has no definition.    Microsoft.Acronyms
+ 14:19  suggestion  'FUBAR' has no definition.  Microsoft.Acronyms
+----
+
+Notice how the first one doesn't work, but the second one (`SNAFU`) with the line break before `vale on` does?
+
+What about this?
+
+.test-option2c.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+pass:[<!-- vale off -->]
+Let's not lint this one: KVM
+
+Let's not lint this one too: SNAFU
+----
+
+Vale is happy with that:
+
+[source,]
+----
+ 3:27  suggestion  'NAT' has no definition.  Microsoft.Acronyms
+----
+
+Let's take a look at the HTML generated by `test-option2b.adoc`:
+
+[source,html]
+----
+<div id="content">
+<div class="paragraph">
+<p>This line has an acronym: NAT</p>
+</div>
+<div class="paragraph">
+<p><!-- vale off -->
+Let&#8217;s not lint this one: KVM
+<!-- vale on --></p><1>
+</div>
+<div class="paragraph">
+<p><!-- vale off -->
+Let&#8217;s not lint this one too: SNAFU</p>
+</div>
+<div class="paragraph">
+<p><!-- vale on --></p><2>
+</div>
+<div class="paragraph">
+<p>But not this one: FUBAR</p>
+</div>
+</div>
+----
+<1> `vale on` is within the `<p>` tags
+<2> `vale on` is _outside_ the `<p>` tags
+
+So what seems to be happening is that Vale is parsing the whole of the paragraph (`<p>`) contents and applying the configuration to it—so if it has an `off` and then `on`, the two cancel out and thus the effect is nullified.
+
+Pass-through configuration *is* more flexible, because rather than just turning Vale on and off, you can target individual rules. As above—don't just ignore rules if they're inconvenient (they're called rules for a reason), but if you have a good reason to make an exception, you can do this:
+
+.test-option3.adoc
+[source,asciidoc,linenums]
+----
+= Test doc
+
+This line has an acronym: NAT
+
+pass:[<!-- vale Microsoft.Acronyms = NO -->]
+This should trigger one rule violation for do not, but ignore the acronym: BHAG
+
+pass:[<!-- vale Microsoft.Acronyms = YES -->]
+
+pass:[<!-- vale off -->]
+This should not trigger a rule violation for do not, nor for the acronym: GTFO
+
+pass:[<!-- vale on -->]
+
+We'll catch this acronymn tho: FUBAR
+----
+
+Vale output is as expected:
+
+[source,]
+----
+ 3:27   suggestion  'NAT' has no definition.        Microsoft.Acronyms
+ 6:44   error       Use 'don't' instead of 'do      Microsoft.Contractions
+                    not'.
+ 15:32  suggestion  'FUBAR' has no definition.      Microsoft.Acronyms
+----

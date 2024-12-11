@@ -4,7 +4,7 @@ title: Blog Writing for Developers
 date: "2023-07-19T20:59:09Z"
 image: "/images/2023/07/h_IMG_3288.jpeg"
 thumbnail: "/images/2023/07/t_IMG_3731.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - DevRel
 - Blogging

@@ -4,7 +4,7 @@ title: 'Productivity tools: AI Image Generators'
 date: "2023-12-07T19:59:41Z"
 image: "/images/2023/12/firefly.webp"
 thumbnail: "/images/2023/12/pyflink.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - AI
 - Blogging

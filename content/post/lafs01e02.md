@@ -4,7 +4,7 @@ title: 'Learning Apache Flink S01E02: What *is* Flink?'
 date: "2023-10-02T15:12:14Z"
 image: "/images/2023/10/h_IMG_5510.webp"
 thumbnail: "/images/2023/10/t_IMG_5412.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 - LAF

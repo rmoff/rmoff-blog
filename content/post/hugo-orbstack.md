@@ -4,7 +4,7 @@ title: 'Hugo not detecting changed pages on Mac'
 date: "2023-11-16T15:27:22Z"
 image: "/images/2023/11/h_IMG_5046.webp"
 thumbnail: "/images/2023/11/t_IMG_6379.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Hugo
 - Docker

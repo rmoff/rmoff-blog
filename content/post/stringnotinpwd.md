@@ -4,7 +4,7 @@ title: 'cd: string not in pwd'
 date: "2023-10-04T15:36:35Z"
 image: "/images/2023/10/h_DSCF7802.webp"
 thumbnail: "/images/2023/10/t_IMG_8657.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - zsh
 ---
