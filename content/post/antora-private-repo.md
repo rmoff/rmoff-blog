@@ -4,7 +4,7 @@ title: 'Deploying Antora with GitHub Actions and a private GitHub repo'
 date: "2023-12-19T13:35:19Z"
 image: "/images/2023/12/h_IMG_6979.webp"
 thumbnail: "/images/2023/12/t_IMG_6978.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Antora
 - GitHub

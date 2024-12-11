@@ -4,7 +4,7 @@ title: 'Data Engineering in 2022: Exploring LakeFS with Jupyter and PySpark'
 date: "2022-09-16T08:54:45Z"
 image: "/images/2022/09/h_DSCF8265.jpeg"
 thumbnail: "/images/2022/09/t_DSCF8265.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Data Engineering
 - LakeFS

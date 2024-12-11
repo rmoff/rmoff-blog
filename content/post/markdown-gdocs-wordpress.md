@@ -4,7 +4,7 @@ title: 'Authoring Wordpress blogs in Markdown (with Google Docs for review)'
 date: "2023-05-03T08:59:17Z"
 image: "/images/2023/05/h_IMG_2435.jpeg"
 thumbnail: "/images/2023/05/t_IMG_2565.jpeg"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Markdown
 - Wordpress

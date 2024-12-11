@@ -7,7 +7,7 @@ date: "2020-09-11T16:00:05+01:00"
 image: "/images/2020/09/IMG_6647.jpeg"
 thumbnail: "/images/2020/09/IMG_6647.jpeg"
 draft: false
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Kafka Connect
 - Video

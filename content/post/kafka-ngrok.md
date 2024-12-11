@@ -4,7 +4,7 @@ title: 'Using Apache Kafka with ngrok'
 date: "2023-11-01T10:07:58Z"
 image: "/images/2023/11/h_IMG_5046.webp"
 thumbnail: "/images/2023/11/ngrok02.webp"
-credit: "https://twitter.com/rmoff/"
+credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - ngrok
 - Apache Kafka
