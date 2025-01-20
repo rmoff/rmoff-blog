@@ -9,7 +9,7 @@ classes:
 
 ### `whoami`
 
-> Robin is a Principal DevEx Engineer at [Decodable](https://decodable.co).
+> Robin is a Sr. Principal Advisor, Streaming Data Technologies at [Confluent](https://confluent.io).
 
 > He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. 
 
@@ -28,7 +28,7 @@ Slides & Recordings: http://talks.rmoff.net
 
 ### Social
 
-* Twitter [@rmoff](https://twitter.com/rmoff/)
+* [Bluesky](https://bsky.app/profile/rmoff.net)
 * [Email](mailto:robin@rmoff.net)
 * [LinkedIn](https://www.linkedin.com/in/robinmoffatt)
 * [SpeakerDeck](https://speakerdeck.com/rmoff)
