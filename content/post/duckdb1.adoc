@@ -1,0 +1,117 @@
+---
+draft: false
+title: 'DuckDB tricks - renaming fields in a SELECT * across tables'
+date: "2025-02-27T09:43:20Z"
+image: "/images/2025/02/h_IMG_8100.webp"
+thumbnail: "/images/2025/02/t_IMG_7980.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- DuckDB
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+I was exploring some new data, joining across multiple tables, and doing a simple `SELECT *` as I'd not worked out yet which columns I actually wanted.
+The issue was, the same field name existing in more than one table.
+This meant that in the results from the query, it wasn't clear which field came from which table:
+
+<!--more-->
+
+image::/images/2025/02/duckdb_before.webp[]
+
+[source,sql]
+----
+describe select * 
+	from t1 inner join t2 on t1.X = t2.X;
+----
+
+So, how to avoid ending up with ambiguous fields?
+In my example X is the same value because it's the JOIN predicate, but Z could have a different value in each table but the result set has two fields called "Z".
+
+I _could_ alias each field by hand: 
+
+[source,sql]
+----
+describe select t1.X as t1_X, t1.Y as t1_Y, t1.Z as t1_Z,
+		t2.X as t2_X, t2.Z as t2_Z 
+	from t1 inner join t2 on t1.X = t2.X;
+----
+
+[source,]
+----
+┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │ default │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ t1_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Y        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+----
+
+But I've got a wide table so don't want to hand-code the aliases for each field; I want to use `SELECT *`.
+
+I *could* `DESCRIBE` each table, scrape the fields into a text editor, and use a search and replace or block edit to prefix the fields and build my SQL that way. But it's manual and not reusable.
+
+## DuckDB `COLUMNS` to the rescue
+
+Thanks to https://bsky.app/profile/did:plc:e3fe54cbnttcggrmze2al2vk[Alex Monahan] on Bluesky (https://bsky.app/hashtag/databs[`#dataBS`] FTW!), who pointed me at the https://duckdb.org/docs/sql/expressions/star.html#columns-expression[`COLUMNS` expression].
+https://duckdbsnippets.com/snippets/204/label-columns-based-on-source-table[This nice example] illustrates it in action.
+
+Applied to my query above, it looks like this: 
+
+[source,sql]
+----
+describe select columns(t1.*) as "t1_\0", 
+		columns(t2.*) as "t2_\0"
+                from t1 inner join t2 on t1.X = t2.X;
+----
+
+[source,]
+----
+┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │ default │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ t1_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Y        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+----
+ 
+Perfect!
+
+The `t1_` is the literal prefix added to the field name, and `\0` a regex identifier for the field name.
+
+You can do more fancy renaming of fields with regex too with the `COLUMNS` expression; check out the https://duckdb.org/docs/sql/expressions/star.html#renaming-columns-with-regular-expressions-in-a-columns-expression[docs] for more examples.
+
+You can also use the new https://duckdb.org/2025/02/25/prefix-aliases-in-sql[_prefix aliases_] (added in DuckDB 1.20) if you prefer:
+
+[source,sql]
+----
+describe select "t1_\0": columns(t1.*),
+                "t2_\0": columns(t2.*)
+                from t1 inner join t2 on t1.X = t2.X;
+----
+
+[source,]
+----
+┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │ default │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ t1_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Y        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t1_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_X        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ t2_Z        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+----
+
