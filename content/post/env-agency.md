@@ -59,7 +59,7 @@ CREATE TABLE floodAreas_stg AS
 └────────────────┘
 ```
 
-The API returns three fields: `@context`, `meta`, and `items`. The latter is an array holding the actual payload. The `meta` field, as its name suggests, hold metadata.
+The API returns three fields: `@context`, `meta`, and `items`. The latter is an array holding the actual payload. The `meta` field, as its name suggests, holds metadata.
 
 ```sql
 🟡◗ describe readings_stg;
@@ -284,7 +284,7 @@ The value repeats because the unique station ID is on the end of the URL—a qui
 
 That's `measures` broadly understood - each measure is unique, and relates to a `station`. Each `station` can have multiple `measures`. What about `readings`?
 
-Rill makes life so easy here. There's just over five days worth of date, and there are usually four rows per hour:
+Rill makes life so easy here. There's just over five days' worth of data, and there are usually four rows per hour:
 ![](/images/2025/02/4b43b5e7c13bc604d5570260d27f6c00.webp)
 
 However, we might have something of interest here: 
@@ -330,7 +330,7 @@ CREATE TABLE readings_stg AS
     FROM read_json('https://environment.data.gov.uk/flood-monitoring/data/readings');
 ```
 
-We can see that it is missing the `?latest` parameter, meaning that it'll pull everything—up to a limit of 500 records. Which is precisely what we've seen above—but it easy to miss when in the depths of a new dataset and dozens of columns. A graphical view of the data helps a lot to whittle these things down.
+We can see that it is missing the `?latest` parameter, meaning that it'll pull everything—up to a limit of 500 records. Which is precisely what we've seen above—but it's easy to miss when in the depths of a new dataset and dozens of columns. A graphical view of the data helps a lot to whittle these things down.
 
 Let's replace the data into the `readings_stg` table and use the `?today` parameter which should hopefully pull multiple time samples across all stations and measurements this time: 
 
@@ -359,7 +359,7 @@ The default for `maximum_object_size` is 16777216 bytes, or 16MB. Let's pump tho
 Run Time (s): real 3.758 user 0.656197 sys 0.410768
 ```
 
-Now rebuild the `readings` table (I guess we could build this into one SQL statement, but then we loose the visibility and ability to debug each stage of transformation):
+Now rebuild the `readings` table (I guess we could build this into one SQL statement, but then we lose the visibility and ability to debug each stage of transformation):
 
 ```sql
 CREATE OR REPLACE TABLE readings AS 
@@ -379,7 +379,7 @@ We've got over 170k readings:
 └──────────────┘
 ```
 
-Let's head back to Rill (after closing my DuckDB CLI session, since [two sources can't work with the DB by default](https://duckdb.org/docs/connect/concurrency)) to see what the updates readings data looks like:
+Let's head back to Rill (after closing my DuckDB CLI session, since [two sources can't work with the DB by default](https://duckdb.org/docs/connect/concurrency)) to see what the updated readings data looks like:
 
 ![](/images/2025/02/9f46e3a179b9aeadfc5f351ae6095a1b.webp)
 This looks much more complete. There's data from the beginning of today up until just now when I ran the query. If I were running this as a continual ingest I'd use the `?latest` endpoint to not pull in the data from earlier in the day.
