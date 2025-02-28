@@ -318,7 +318,7 @@ And thus, a nice illustration of the hourly water level on the [River Dikler in 
 
 ## Where are the rest of the readings?
 
-As we saw above, there are 500 readings, all for measure `level-downstage-i-15_min-mASD` at station `1029TH` (on the River Dickler, above). 
+As we saw above, there are 500 readings, all for measure `level-downstage-i-15_min-mASD` at station `1029TH` (on the River Dikler, above). 
 
 But what about all the others?
 
