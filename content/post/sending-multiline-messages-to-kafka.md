@@ -1,5 +1,5 @@
 +++
-categories = ["kafkacat", "Apache Kafka", "multiline"]
+categories = ["kcat (kafkacat)", "Apache Kafka", "multiline"]
 date = 2018-09-04T08:26:51Z
 description = ""
 draft = false
