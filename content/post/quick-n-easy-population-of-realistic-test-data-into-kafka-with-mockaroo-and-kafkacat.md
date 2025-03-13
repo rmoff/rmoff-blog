@@ -1,5 +1,5 @@
 +++
-categories = ["Apache Kafka", "kafkacat", "mockaroo", "testing"]
+categories = ["Apache Kafka", "kcat (kafkacat)", "mockaroo", "testing"]
 date = 2018-05-10T12:56:00Z
 description = ""
 draft = false
