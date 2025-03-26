@@ -1,0 +1,670 @@
+---
+draft: false
+title: 'Confluent Cloud for Apache Flink - Exploring the API'
+date: "2025-03-25T15:26:13Z"
+image: "/images/2025/03/h_IMG_1456.webp"
+thumbnail: "/images/2025/03/t_IMG_1431.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+- Confluent Cloud
+- API
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+
+https://www.confluent.io/en-gb/blog/serverless-flink-confluent-cloud-generally-available/[Confluent Cloud for Apache Flink] gives you access to run Flink workloads using a serverless platform on Confluent Cloud.
+After https://rmoff.net/2025/03/13/creating-an-http-source-connector-on-confluent-cloud-from-the-cli/[poking around the Confluent Cloud API for configuring connectors] I wanted to take a look at the same for Flink.
+
+Using the API is useful particularly if you want to script a deployment, or automate a bulk operation that might be tiresome to do otherwise.
+It's also handy if you just prefer living in the CLI :)
+
+<!--more-->
+
+TIP: As well as the Confluent Cloud API, there is the https://docs.confluent.io/confluent-cli/current/overview.html[Confluent CLI] too with nice things like a https://docs.confluent.io/confluent-cli/current/command-reference/flink/confluent_flink_shell.html[Flink shell] built in.
+
+== Understanding the deployment model within Confluent Cloud
+
+You can hack away at the API blindly, hopping between HTTP error codes and the API docs, until you succeed.
+I did this to start with, and I don't recommend it.
+Spending a bit of time understanding the basic model of components makes things much easier in the long run.
+
+image::/images/2025/03/cc-flink-01.svg[]
+
+One key thing to understand is that https://docs.confluent.io/cloud/current/flink/overview.html#ccloud-flink-overview-metadata-mapping[Flink on Confluent Cloud models Kafka topics as Flink tables].
+Not only that, but the Confluent Cloud Environment is represented in Flink SQL as a catalog, and each Confluent Cloud Kafka cluster in Flink SQL as a database.
+
+When it comes to running Flink SQL, each _statement_ runs within a https://docs.confluent.io/cloud/current/flink/concepts/compute-pools.html[_compute pool_].
+One compute pool can run many statements.
+Each environment can have many compute pools, as can each cloud provider and region within the environment.
+You might create multiple compute pools for the purpose of workload isolation, or cost management.
+
+If you want to work with Flink SQL interactively through Confluent Cloud's web interface you'll need a _workspace_.
+Each compute pool has one and only one workspace.
+You don't have to have a workspace if you're only submitting Flink SQL through the API or CLI.
+
+== Authentication
+
+To use the Confluent Cloud API you need an API key.
+More accurately, you probably need several API keys :)
+API keys are https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#resource-scopes[scoped to a particular resource]; there is no such thing as https://xkcd.com/149/[`sudo make me a sandwich`] on Confluent Cloud.
+
+image::/images/2025/03/cc-flink-02.svg[]
+
+To work with Flink you need an API key for the environment/cloud provider/region.
+Note that this is at a different granularity than a Kafka cluster, for which the API key is per-cluster.
+You'll also want a `cloud` API key for working with compute pools and API keys themselves.
+
+To create an API key you can use the https://docs.confluent.io/confluent-cli/current/command-reference/api-key/confluent_api-key_create.html[Confluent CLI], the web UI, or https://docs.confluent.io/cloud/current/api.html#tag/API-Keys-(iamv2)/operation/createIamV2ApiKey[the API itself].
+
+== 🟢 Let's get started! 🏁
+
+TIP: In this article I'm using https://httpie.io/[httpie] to make my `http` calls, as I like the syntax.
+If you prefer you can use `curl` or any other tool that makes HTTP calls :)
+
+If you don't already have your Confluent Cloud environment set up, see link:/2025/03/13/creating-an-http-source-connector-on-confluent-cloud-from-the-cli/#_setup[my previous article].
+In this we created a Confluent Cloud environment, a Kafka cluster in that environment, and also a Schema Registry which was implicitly created.
+
+Set the environment ID as an environment variable:
+
+[source,bash]
+----
+export CNFL_ENV=env-253ngy
+----
+
+If you don't know your environment ID, you can get it from the web UI:
+
+image::/images/2025/03/cc-flink-06.webp[]
+
+We'll set up an API key for the `cloud` resource:
+
+[source,bash]
+----
+$ confluent api-key create --resource cloud
+It may take a couple of minutes for the API key to be ready.
+Save the API key and secret. The secret is not retrievable later.
++------------+------------------------------------------------------------------+
+| API Key    | (XXXmy-cloud-api-keyXXX)                                         |
+| API Secret | (XXXmy-cloud-api-secretXXX)                                      |
++------------+------------------------------------------------------------------+
+----
+
+This API key I've set as an environment variable as we need it for interacting with compute pools, and to create an API key for the Flink resource.
+
+[source,bash]
+----
+export CNFL_CLOUD_API_KEY=(XXXmy-cloud-api-keyXXX)
+export CNFL_CLOUD_API_SECRET=(XXXmy-cloud-api-secretXXX)
+----
+
+Since Flink resources are region-specific I'm going to store the region details as environment variables too:
+
+[source,bash]
+----
+export REGION=us-west-2
+export CLOUD=aws
+----
+
+== Compute pools
+
+image::/images/2025/03/cc-flink-cp.svg[]
+
+Before we can do anything with Flink we need a https://docs.confluent.io/cloud/current/api.html#tag/Compute-Pools-(fcpmv2)[compute pool].
+
+=== Get compute pools
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Compute-Pools-(fcpmv2)/operation/listFcpmV2ComputePools[API doc]
+
+Let's see which, if any, compute pools exist:
+
+[source,bash]
+----
+http GET https://api.confluent.cloud/fcpm/v2/compute-pools\?environment=$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b
+----
+
+TIP: The `--print b` option is shorthand for `--print body` which prints the response body and none of the noisy response headers.
+
+The response shows us that there are no compute pools:
+[source,javascript]
+----
+{
+    "api_version": "fcpm/v2",
+    "data": [],
+    "kind": "ComputePoolList",
+    "metadata": {
+        "first": "",
+        "next": ""
+    }
+}
+----
+
+=== Create a compute pool
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Compute-Pools-(fcpmv2)/operation/createFcpmV2ComputePool[API doc]
+
+Since we got an empty metadata response from the above query, let's go ahead and create a compute pool.
+
+A compute pool has a defined capacity, expressed in CFUs.
+As well as its capacity, we'll give it a name and specify where it's to be located in terms of environment, cloud provider, and region.
+
+[source,bash]
+----
+http POST https://api.confluent.cloud/fcpm/v2/compute-pools \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b \
+    spec:='{
+        "display_name": "my-new-flink-pool",
+        "cloud": "'$CLOUD'",
+        "region": "'$REGION'",
+        "max_cfu": 20,
+        "environment": {
+            "id":"'$CNFL_ENV'"
+            }
+        }'
+----
+
+This returns a rich set of data, including the ID of the created pool.
+We want to store this as we'll need it later on.
+We could copy and paste the ID from the JSON response into a manual `export` command, but we're not heathens here—let's automate it!
+
+[source,bash]
+----
+response=$(http POST https://api.confluent.cloud/fcpm/v2/compute-pools \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b \
+    spec:='{
+        "display_name": "my-flink-pool-'$(date +%Y-%m-%d)'",
+        "cloud": "'$CLOUD'",
+        "region": "'$REGION'",
+        "max_cfu": 20,
+        "environment": {
+            "id":"'$CNFL_ENV'"
+            }
+        }')
+
+export CNFL_COMPUTE_POOL_ID=$(echo "$response" | jq -r '.id')
+----
+
+We've created a second compute pool, and this time captured the details about it into the `CNFL_COMPUTE_POOL_ID` environment variable:
+
+[source,bash]
+----
+$ echo $CNFL_COMPUTE_POOL_ID
+
+lfcp-kz3m1p
+----
+
+Let's look at what we've now got in terms of compute pools:
+
+[source,bash]
+----
+$ http GET https://api.confluent.cloud/fcpm/v2/compute-pools\?environment\=$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b \
+    | jq '.data[] | .spec.display_name + " (" + .id + "): " + .status.phase'
+
+"AWS.us-west-2.env-253ngy.c267 (lfcp-mxd977): PROVISIONED"
+"my-new-flink-pool (lfcp-8oxrj0): PROVISIONED"
+----
+
+=== Delete a compute pool
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Compute-Pools-(fcpmv2)/operation/deleteFcpmV2ComputePool[API doc]
+
+What about the `my-new-flink-pool` compute pool that we created first—it seems a waste, if not downright confusing, to keep it lying around.
+Plus it gives a good excuse to try out the delete API.
+
+First we need the compute pool's ID, which we can see from the output above (`lfcp-8oxrj0`).
+
+Then we use the `DELETE` method:
+
+[source,bash]
+----
+http DELETE https://api.confluent.cloud/fcpm/v2/compute-pools/lfcp-8oxrj0?environment\=$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET"
+----
+
+The return code should be `HTTP/1.1 204 No Content` if successful.
+
+==== Delete all compute pools
+
+What about if we've been messing about and have a ton of compute pools that we want to get rid of all at once?
+
+This is why I like using APIs, because you can start to chain specific things (managing compute pools) with general shell techniques—in this case, `xargs`:
+
+[source,bash]
+----
+http GET https://api.confluent.cloud/fcpm/v2/compute-pools\?environment\=$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b | \
+    \
+    jq -r '.data[].id' | \
+    \
+    xargs -Ifoo http DELETE https://api.confluent.cloud/fcpm/v2/compute-pools/foo\?environment\=$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET"
+----
+
+(I'm using additional line continuation characters (`\`) just to break the command up so you can see what the constituent parts of it are).
+
+== A side step: Regions
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Regions-(fcpmv2)/operation/listFcpmV2Regions[API doc]
+
+No resource to create here, just query.
+To interact with Flink we need to know the HTTP endpoint for the region in which the compute pool is located.
+We can get this using the https://docs.confluent.io/cloud/current/api.html#tag/Regions-(fcpmv2)[regions API]:
+
+[source,bash]
+----
+http GET "https://api.confluent.cloud/fcpm/v2/regions?cloud=$CLOUD&region_name=$REGION" \
+        --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b
+----
+
+[source,javascript]
+----
+{
+    "api_version": "fcpm/v2",
+    "data": [
+        {
+            "api_version": "fcpm/v2",
+            "cloud": "AWS",
+            "display_name": "Oregon (us-west-2)",
+            "http_endpoint": "https://flink.us-west-2.aws.confluent.cloud",
+            "id": "aws.us-west-2",
+            "kind": "Region",
+            "metadata": {
+                "self": ""
+            },
+            "private_http_endpoint": "https://flink.us-west-2.aws.private.confluent.cloud",
+            "region_name": "us-west-2"
+        }
+    ],
+    "kind": "RegionList",
+    "metadata": {
+        "first": "",
+        "next": "",
+        "total_size": 1
+    }
+}
+----
+
+As above with the compute pool ID, I'm going to store the Flink API endpoint (`http_endpoint`) in an environment variable:
+
+[source,bash]
+----
+export CNFL_FLINK_API_URL=$(\
+        http GET "https://api.confluent.cloud/fcpm/v2/regions?cloud=$CLOUD&region_name=$REGION" \
+        --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" | jq -r '.data[].http_endpoint')
+----
+
+== We're almost ready to start sending Flink SQL to Confluent Cloud…
+
+We've created a compute pool, we've got the Flink API endpoint; we now just need a Flink API key.
+
+=== Flink API key
+
+A Flink API key operates at the environment/cloud provider/region level.
+Before we can generate it we need the ID of our user, which we can get from…the user API:
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Users-(iamv2)/operation/listIamV2Users[API doc]
+
+[source,bash]
+----
+export CNFL_USER=$(http GET https://api.confluent.cloud/iam/v2/users \
+                    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" | \
+                    jq -r '.data[] | select (.full_name=="rmoff") | .id')
+----
+
+NOTE: I'm hardcoding my username in here.
+There may be a better way to do this :)
+
+Now we can create the Flink API key.
+I'm going to do like we did with the compute pool and store the response in an environment variable:
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/API-Keys-(iamv2)/operation/createIamV2ApiKey[API doc]
+
+[source,bash]
+----
+response=$(http POST https://api.confluent.cloud/iam/v2/api-keys \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" \
+    spec:='{
+        "owner": {"id" :"'$CNFL_USER'"},
+        "resource": {"id":"'$CNFL_ENV'.'$CLOUD'.'$REGION'"}
+    }')
+
+export CNFL_FLINK_API_KEY=$(echo "$response" | jq -r '.id')
+export CNFL_FLINK_API_SECRET=$(echo "$response" | jq -r '.spec.secret')
+----
+
+== Statements
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)[API doc]
+
+image::/images/2025/03/cc-flink-statements.svg[]
+
+Statements are how you send Flink SQL to Confluent Cloud.
+They need a compute pool and Flink API key, both of which we created above.
+
+There are just a few more variables that we need to set for when we call the statements API:
+
+* Organization ID, which we can get from the organisation API:
++
+[source,bash]
+----
+export CNFL_ORG=$(http GET "https://api.confluent.cloud/org/v2/organizations" \
+        --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" --print b | jq -r '.data[].id')
+----
++
+_This assumes that there is only one org; if that's not the case you'll need to amend it to use the correct one._
+
+* When you run a Flink SQL statement you need to provide a catalog (a Confluent Cloud environment) and database (a Kafka cluster) context.
+This may or may not be the same as where the table you're interacting with is located, but it must be provided nonetheless.
+In the web UI it's set by default so you may not even notice it—with the API you need to provide it explicitly.
++
+* Whilst we set the ID of the Confluent Cloud environment above, we need its _name_:
++
+[source,bash]
+----
+export CNFL_ENV_NAME=$(\
+    http GET https://api.confluent.cloud/org/v2/environments/$CNFL_ENV \
+    --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET" | jq -r '.display_name')
+----
++
+For the Kafka cluster, here's a way to pick the first Kafka cluster from your environment and get its ID and name:
++
+[source,bash]
+----
+response=$(http GET "https://api.confluent.cloud/cmk/v2/clusters?environment=$CNFL_ENV" \
+            --auth "$CNFL_CLOUD_API_KEY:$CNFL_CLOUD_API_SECRET")
+
+export CNFL_KAFKA_CLUSTER=$(echo "$response" | jq -r '.data[0].id')
+export CNFL_KAFKA_CLUSTER_NAME=$(echo "$response" | jq -r '.data[0].spec.display_name')
+----
+
+=== List statements
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/operation/listSqlv1Statements[API doc]
+
+This will list all the statements that have been run in the environment:
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET"
+----
+
+NOTE: The scope for this is the entire Flink deployment (environment/cloud provider/region), so you'll see statements not just those on the compute pool you've created, or even only those on compute pools that currently exist.
+This threw me at first, because if you've been running things in the Flink environment already you may well get a long list returned.
+
+With jq we can list just the statement names and status:
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" | \
+    jq '.data[]| .name + ": " + .status.phase'
+----
+
+[source,]
+----
+"ctas-measures-20250318121833: STOPPED"
+"ctas-measures-dim-20250318122944: STOPPED"
+"ctas-readings-2025-03-18-10-43-45: FAILED"
+"ctas-readings-2025-03-18-10-53-18: COMPLETED"
+"ctas-readings-2025-03-18-11-23-20: FAILED"
+"ctas-readings-enriched-20250318131826: FAILED"
+"ctas-readings-enriched-20250318131958: FAILED"
+"ctas-readings-enriched-20250318132444: STOPPED"
+"ctas-stations-20250318122308: STOPPED"
+"ctas-stations-dim-20250318123821: STOPPED"
+----
+
+=== Create a statement
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/operation/createSqlv1Statement[API doc]
+
+When you create a statement you need to specify the Flink SQL, compute pool ID, and then the environment name and Kafka cluster name as `properties` for the catalog and database:
+
+[source,bash]
+----
+http POST $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" \
+    name=my-flink-sql-statement-00 \
+    spec:='{
+        "compute_pool_id": "'$CNFL_COMPUTE_POOL_ID'",
+        "statement": "CREATE TABLE foo AS SELECT name, COUNT(*) AS cnt FROM (VALUES ('Bob'), ('Alice'), ('Greg'), ('Bob')) AS NameTable(name) GROUP BY name;",
+        "properties": {
+            "sql.current-catalog": "'$CNFL_ENV_NAME'",
+            "sql.current-database": "'$CNFL_KAFKA_CLUSTER_NAME'"
+        }
+    }'
+----
+
+You can then fetch the statement back to see its status:
+
+📕 API doc: https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/operation/getSqlv1Statement[API doc]
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/my-flink-sql-statement-00 \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET"
+----
+
+[source,javascript]
+----
+    […]
+    "spec": {
+        "properties": {
+            "sql.current-catalog": "rmoff",
+            "sql.current-database": "cluster00"
+        },
+        "statement": "CREATE TABLE foo AS SELECT name, COUNT(*) AS cnt FROM (VALUES (Bob), (Alice), (Greg), (Bob)) AS NameTable(name) GROUP BY name;",
+        […]
+    },
+    "status": {
+        "detail": "SQL validation failed. Error from line 1, column 64 to line 1, column 66.\n\nCaused by: Column 'Bob' not found in any table",
+        "network_kind": "PUBLIC",
+        "phase": "FAILED"
+    }
+----
+
+You'll notice that it says `FAILED`.
+This is where we get into the fun of calling APIs from the shell.
+Single quotes, double quotes…all are fun and have their own nuances to understand.
+If we look carefully at the `statement` value returned above we can see that indeed `Bob` et al are no longer single quoted—but should be.
+The single quotes got lost in the `http` command submission.
+
+Let's use proper quoting for the single quotes in the SQL:
+
+[source,bash]
+----
+http POST $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" \
+    name=my-flink-sql-statement-01 \
+    spec:='{
+        "compute_pool_id": "'$CNFL_COMPUTE_POOL_ID'",
+        "statement": "CREATE TABLE foo AS SELECT name, COUNT(*) AS cnt FROM (VALUES ('\''Bob'\''), ('\''Alice'\''), ('\''Greg'\''), ('\''Bob'\'')) AS NameTable(name) GROUP BY name;",
+        "properties": {
+            "sql.current-catalog": "'$CNFL_ENV_NAME'",
+            "sql.current-database": "'$CNFL_KAFKA_CLUSTER_NAME'"
+        }
+    }'
+----
+
+This time the statement works:
+
+[source,bash]
+----
+ http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/my-flink-sql-statement-01 \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" | jq '.status'
+----
+
+[source,javascript]
+----
+{
+  "detail": "",
+  "network_kind": "PUBLIC",
+  "phase": "COMPLETED",
+  "scaling_status": {
+    "last_updated": "2025-03-26T10:25:58Z",
+    "scaling_state": "OK"
+  },
+  "traits": {
+    "is_append_only": true,
+    "is_bounded": true,
+    "schema": {},
+    "sql_kind": "CREATE_TABLE_AS",
+    "upsert_columns": null
+  }
+}
+----
+
+If we load up the Confluent Cloud web UI we can see that the table has indeed been created:
+
+image::/images/2025/03/cc-flink-03.webp[width="25%"]
+
+Can we get this information (i.e. a list of tables) for ourselves from the API?
+
+We can, and it's a good excuse to look at how we get the _results_ from a statement.
+So far we've just run a statement with no result set—it just created a table.
+Like many databases, Flink SQL on Confluent Cloud provides an information schema that holds metadata about the contents of the database.
+Let's run a query to show all 'tables' (topics) in a 'database' (Kafka cluster).
+
+[source,bash]
+----
+http POST $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" \
+    name=list-tables-00 \
+    spec:='{
+        "compute_pool_id": "'$CNFL_COMPUTE_POOL_ID'",
+        "statement": "SELECT * FROM `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_TYPE = '\''BASE TABLE'\'' AND TABLE_CATALOG_ID = '\'$CNFL_ENV\'' AND TABLE_SCHEMA_ID = '\'$CNFL_KAFKA_CLUSTER\''",
+        "properties": {
+            "sql.current-catalog": "'$CNFL_ENV_NAME'",
+            "sql.current-database": "'$CNFL_KAFKA_CLUSTER_NAME'"
+        }
+    }'
+----
+
+This time, when we fetch the `status` of the statement, it's not just `COMPLETED` but gives us information about the schema of the resultset:
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/list-tables-00 \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" | jq '.status'
+----
+[source,javascript]
+----
+{
+  "detail": "",
+  "network_kind": "PUBLIC",
+  "phase": "COMPLETED",
+  "traits": {
+    "is_append_only": true,
+    "is_bounded": true,
+    "schema": {
+      "columns": [
+        {
+          "name": "TABLE_CATALOG_ID",
+          "type": {
+            "length": 2147483647,
+            "nullable": false,
+            "type": "VARCHAR"
+          }
+        },
+        {
+          "name": "TABLE_CATALOG",
+          "type": {
+            "length": 2147483647,
+            "nullable": false,
+            "type": "VARCHAR"
+          }
+    […]
+----
+
+But what about the data itself?
+
+=== Reading the results from a statement
+
+📕 API doc: https://docs.confluent.io/cloud/current/api.html#tag/Statement-Results-(sqlv1)/operation/getSqlv1StatementResult[API doc]
+
+To get the results from a statement you use the `/results` endpoint against the statement name, thus:
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/list-tables-00/results \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" --print b
+----
+
+The schema we got from the statement endpoint above (`status.traits.schema`), so the resultset just gives us the actual data, plus metadata on how to page through the results if there is more data than is returned in a single response.
+
+[source,javascript]
+----
+{
+    "api_version": "sql/v1",
+    "kind": "StatementResult",
+    "metadata": {
+        "created_at": "2025-03-26T10:41:55.989063Z",
+        "next": "",
+        "self": "https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/list-tables-00/res
+ults"
+    },
+    "results": {
+        "data": [
+            {
+                "row": [
+                    "env-253ngy",
+                    "rmoff",
+                    "lkc-qnygo6",
+                    "cluster00",
+                    "foo",
+                    "BASE TABLE",
+                    "YES",
+                    "HASH",
+                    "6",
+                    "YES",
+                    "$rowtime",
+                    "`SOURCE_WATERMARK`()",
+                    "YES",
+                    null
+                ]
+            },
+----
+
+As much as I am a fan of using APIs as a quick and powerful way to interact with something, reading SQL results is where I draw the line; trying to piece the above resultset manually together is not my idea of fun—and is why the Confluent Cloud Flink Workspace is a much nicer way to do this:
+
+image::/images/2025/03/cc-flink-04.webp[]
+
+or the Confluent CLI Flink shell:
+
+image::/images/2025/03/cc-flink-05.webp[width="50%"]
+
+=== Delete statements
+
+📕 https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/operation/deleteSqlv1Statement[API doc]
+
+Let's wrap up by tidying up after ourselves, and looking at how to delete statements.
+
+To delete a statement use the `DELETE` method on the statement's endpoint using its name:
+
+[source,bash]
+----
+http DELETE $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/list-tables-00 \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET"
+----
+
+You'll get a `HTTP/1.1 202 Accepted` response if successful.
+
+If we want to clean up your environment and delete all statements you can use something like the following.
+Use it very carefully; it'll literally delete all the statements with no undo.
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" | \
+    \
+    jq -r '.data[].name' | \
+    \
+    xargs -Ifoo http DELETE $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/foo \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET"
+----
