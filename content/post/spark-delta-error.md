@@ -24,7 +24,7 @@ Py4JJavaError: An error occurred while calling o45.save.
 Failed to find data source: delta.
 ```
 
-**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net) / [twitter](https://twitter.com/rmoff/) / [mastodon](https://data-folks.masto.host/@rmoff)) why this is and if what I've ended up with is the right code_. **UPDATE: Damon Cortesi explained it to me :) See [below](#why-did-it-do-what-it-did) for details.** 
+**In short, the problem was that I was creating both a `SparkSession` *and* a `SparkContext`**. I honestly don't understand enough about Spark to tell you why this causes the error, but through a lot of painful trial and error I can tell you that it does. _Someone more knowledgable than me can perhaps tell me ([email](mailto:robin@rmoff.net)) why this is and if what I've ended up with is the right code_. **UPDATE: Damon Cortesi explained it to me :) See [below](#why-did-it-do-what-it-did) for details.** 
 
 Here're the salient points of the Jupyter notebook: 
 
