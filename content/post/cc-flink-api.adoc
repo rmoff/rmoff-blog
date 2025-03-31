@@ -596,7 +596,7 @@ http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_E
     --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" --print b
 ----
 
-The schema we got from the statement endpoint above (`status.traits.schema`), so the resultset just gives us the actual data, plus metadata on how to page through the results if there is more data than is returned in a single response.
+The schema we got from the statement endpoint above (`status.traits.schema`), so the resultset just gives us the actual data:
 
 [source,javascript]
 ----
@@ -631,7 +631,80 @@ ults"
             },
 ----
 
-As much as I am a fan of using APIs as a quick and powerful way to interact with something, reading SQL results is where I draw the line; trying to piece the above resultset manually together is not my idea of fun—and is why the Confluent Cloud Flink Workspace is a much nicer way to do this:
+If there is more than one page of data you'll need to use the `next` element to get the actual path for the results, as shown in this example:
+
+[source,bash]
+----
+http GET $CNFL_FLINK_API_URL/sql/v1/organizations/$CNFL_ORG/environments/$CNFL_ENV/statements/my-flink-sql-statement-02/results \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" --print b
+----
+
+[source,javascript]
+----
+{
+    "api_version": "sql/v1",
+    "kind": "StatementResult",
+    "metadata": {
+        "created_at": "2025-03-31T10:12:14.066138521Z",
+        "next": "https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/my-flink-sql-statement-02/results?page_token=eyJWZXJzaW9uIjoiZTg3N2E5NjktMWRiNS00ZjMxLTk4YTEtNWY4Zjkx
+MWRjYmIzIiwiT2Zmc2V0IjowfS43YjIyNTY2NTcyNzM2OTZmNmUyMjNhMjI2NTM4MzczNzYxMzkzNjM5MmQzMTY0NjIzNTJkMzQ2NjMzMzEyZDM5Mzg2MTMxMmQzNTY2Mzg2NjM5MzEzMTY0NjM2MjYyMzMyMjJjMjI0ZjY2NjY3MzY1NzQyMjNhMzA3ZGZiZGIxZDFiMThhYTZjMDgzMjRiN2Q2NGI3MWZiNzYzNzA2OTBlMWQ",
+        "self": "https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/my-flink-sql-statement-02/results"
+    },
+    "results": {
+        "data": []
+    }
+}
+----
+
+So now we run a `GET` against the `metadata.next` URL that we got:
+
+[source,bash]
+----
+http GET https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/my-flink-sql-statement-02/results\?page_token\=eyJWZXJzaW9uIjoiZTg3N2E5NjktMWRiNS00ZjMxLTk4YTEtNWY4ZjkxMWRjYmIzIiwiT2Zmc2V0IjowfS43YjIyNTY2NTcyNzM2OTZmNmUyMjNhMjI2NTM4MzczNzYxMzkzNjM5MmQzMTY0NjIzNTJkMzQ2NjMzMzEyZDM5Mzg2MTMxMmQzNTY2Mzg2NjM5MzEzMTY0NjM2MjYyMzMyMjJjMjI0ZjY2NjY3MzY1NzQyMjNhMzA3ZGZiZGIxZDFiMThhYTZjMDgzMjRiN2Q2NGI3MWZiNzYzNzA2OTBlMWQ \
+    --auth "$CNFL_FLINK_API_KEY:$CNFL_FLINK_API_SECRET" --print b
+----
+
+This gives us the actual results (along with an updated `metadata.next` for the next page of results):
+
+[source,javascript]
+----
+{
+    "api_version": "sql/v1",
+    "kind": "StatementResult",
+    "metadata": {
+        "created_at": "2025-03-31T10:15:25.540107018Z",
+        "next": "https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/my-flink-sql-statement-02/results?page_token=eyJWZXJzaW9uIjoiZTg3N2E5NjktMWRiNS00ZjMxLTk4YTEtNWY4ZjkxMWRjYmIzIiwiT2Zmc2V0Ijo3MDE4fS43YjIyNTY2NTcyNzM2OTZmNmUyMjNhMjI2NTM4MzczNzYxMzkzNjM5MmQzMTY0NjIzNTJkMzQ2NjMzMzEyZDM5Mzg2MTMxMmQzNTY2Mzg2NjM5MzEzMTY0NjM2MjYyMzMyMjJjMjI0ZjY2NjY3MzY1NzQyMjNhMzczMDMxMzg3ZGZiZGIxZDFiMThhYTZjMDgzMjRiN2Q2NGI3MWZiNzYzNzA2OTBlMWQ",
+        "self": "https://flink.us-west-2.aws.confluent.cloud/sql/v1/organizations/178cb46b-d78e-435d-8b6e-d8d023a08e6f/environments/env-253ngy/statements/my-flink-sql-statement-02/results"
+    },
+    "results": {
+        "data": [
+            {
+                "op": 0,
+                "row": [
+                    "2025-03-13 22:30:00.000",
+                    "2653-level-stage-i-15_min-mASD",
+                    "0.089",
+                    "Water Level",
+                    "mASD",
+                    "Merestones Road",
+                    "Cheltenham",
+                    "Hatherley Brook",
+                    "Severn Vale",
+                    "Cheltenham, Merestones Rd LVL - level-stage-i-15_min-mASD",
+                    "900",
+                    "Stage",
+                    "instantaneous",
+                    "2653",
+                    "2007-01-05",
+                    "393651",
+                    "220825",
+                    "51.88594",
+                    "-2.093645"
+                ]
+            },
+----
+
+But—as much as I am a fan of using APIs as a quick and powerful way to interact with something, reading SQL results is where I draw the line; trying to piece the above resultset manually together is not my idea of fun—and is why the Confluent Cloud Flink Workspace is a much nicer way to do this:
 
 image::/images/2025/03/cc-flink-04.webp[]
 
