@@ -33,10 +33,10 @@ Perhaps at 10pm all the data from all the stores has been received and processin
 In the modern age many platforms will be much lower latency.
 PoS systems would be sending information about my tin of baked beans purchase back to a central system (probably using Apache Kafka…) as soon as it happened.
 But even then, times can differ.
-There's the natural latency that the speed of light has a strong opinion on, on top of which is any other processing or batching that might be introduced along the way.
+There's the natural latency on which the speed of light has a strong opinion, on top of which is any other processing or batching that might be introduced along the way.
 Then there are power outages and network blips and gremlins that can mean records can be significantly delayed.
 
-There's a whole category of data that wasn't a significant thing in the past—data that's generated from mobile devices.
+Then there's a whole category of data that wasn't a significant thing in the past—data that's generated from mobile devices.
 Even with improving cellular coverage and in-flight wifi, data can still be delayed by minutes or hours.
 
 So that's event time and processing time. But there are other types of time too:
@@ -50,6 +50,8 @@ I'll come back to these in detail later.
 For now, just keep in mind that there is no single "correct" time to use.
 It depends on what your processing is supposed to be doing.
 If you are trying to calculate how many orders were shipped in the last hour, then using the time that the order was created or that it landed in the processing system would give you _an_ answer—it would just be the wrong one.
+
+In this article I'm going to look at how we deal with time when it comes to using it in event-based systems such as Kafka and Apache Flink.
 
 TIP: https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[This seminal article from Tyler Akidau] is nearly ten years old, but is still a highly relevant and excellent read and covers a lot of what you need to know about time in stream processing.
 
@@ -95,51 +97,46 @@ If this is set to `CreateTime` then it uses the time from the producer (either e
 
 In theory you could use the Timestamp field of the Kafka message to hold the event time; the data is being stored anyway, so why not optimise by not holding it twice?
 The disadvantage of this comes if you're using a system which doesn't expose the timestamp metadata of a message, so if it doubt, keep it simple :)
-
-TIP: In theory it might also be useful to have both these values as it would tell you the delay between creation of events and ingesting them into Kafka.
+Plus, it might also be useful to have both these values as it would tell you the delay between creation of events and ingesting them into Kafka (assuming you're using `LogAppendTime`) if you needed this information for performance troubleshooting.
 
 == Time in Apache Flink
 
 The longer you've been working with Flink, the higher the chances are that you've heard the word "Watermark".
-I must profess to having spent the last 18 months—since I started working with Flink—with my head in the sand, somewhat Ostrich-like, when it comes to Watermarks.
+I must profess to having spent the last 18 months—since I started working with Flink—with my head in the sand, somewhat ostrich-like, when it comes to Watermarks.
 They're spoken of in hushed tones and with great reverence.
 They seem to cause great wailing and gnashing of teeth.
 Conference talks are written about them.
 
-I am going to write about Watermarks in this article…just not _quite_ yet.
+In a very rough nut-shell, watermarks define where on the sliding scale between data completeness and data freshness you want your Flink processing to be.
 
-Before we get to Watermarks, we need to understand that Flink has the concept of a *Time Attribute*.
+I am going to write about watermarks in this article…just not _quite_ yet.
+That's because I want to first look at one of the underlying building blocks for watermarks, and that is the concept of a *Time Attribute* in Flink.
 There are two types of time attribute:
 
 * Event Time
-* Processing Time (a.k.a. Wall Clock)
++
+TIP: ✨ If you don't care about event time, you can also forget about watermarks.
+**Watermarks are an event-time only thing** ✨
+* Processing Time
+** a.k.a. Wall Clock
 
 Both of these map to the explanations above; when something _happened_ (event time) and when it was _processed_ (…erm, processing time!).
 
-TIP: If you don't care about event time, you can also forget about watermarks.
-Watermarks are an event-time only thing.
-
-In a very rough nut-shell, watermarks define where on the sliding scale between data completeness and data freshness you want your Flink processing to be.
-But like I said, we'll get to watermarks later.
+The Flink documentation has some good reference pages on this topic, including https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/time/#notions-of-time-event-time-and-processing-time[📖 Notions of Time: Event Time and Processing Time] and https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#introduction-to-time-attributes[📖 Introduction to Time Attributes].
 
 Time attributes are used when doing certain processing with Flink that has a time element to it.
 If you don't have one you'll get errors like:
 
-[source,sql]
+[source,]
 ----
 The window function requires the timecol is a time attribute type
 ----
 
 Just because a column is a timestamp, it doesn't mean that it's a *time attribute*.
-A *time attribute* is a specific characteristic in a Flink table, and you need to explicitly declare it.
+A *time attribute* is a specific characteristic in a Flink SQL table, and you need to explicitly declare it:
 
-To add a time attribute for *processing time* to a table use a computed column with the `PROCTIME()` function.
-An *event time* column is denoted implicitly as a time attribute by assigning a `WATERMARK FOR` statement to it in the table DDL.
-
-Some good Flink reference pages:
-
-* https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/time/#notions-of-time-event-time-and-processing-time[📖 Notions of Time: Event Time and Processing Time]
-* https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#introduction-to-time-attributes[📖 Introduction to Time Attributes]
+* An *event time* column is denoted implicitly as a time attribute by assigning a `WATERMARK FOR` statement to it in the table DDL.
+* To add a time attribute for *processing time* to a table use a computed column with the `PROCTIME()` function.
 
 Let's look at this in practice, using a table defined over an existing Kafka topic.
 
@@ -192,7 +189,11 @@ Here we only see the event time column that we defined in the schema (`created_a
 
 [source,sql]
 ----
-Flink SQL> SELECT * FROM orders_kafka;
+SELECT * FROM orders_kafka;
+----
+
+[source,]
+----
 +----+-------------+-------------+--------------+------------+-------------------------+[…]
 | op |    order_id | customer_id | total_amount |     status |              created_at |[…]
 +----+-------------+-------------+--------------+------------+-------------------------+[…]
@@ -204,7 +205,7 @@ We can access the timestamp of the Kafka message if we add a metadata column:
 [source,sql]
 ----
 ALTER TABLE orders_kafka
-    ADD `record_time` TIMESTAMP_LTZ(3) METADATA FROM 'timestamp';
+    ADD `kafka_record_ts` TIMESTAMP_LTZ(3) METADATA FROM 'timestamp';
 ----
 
 This metadata column looks like this in the schema:
@@ -223,7 +224,7 @@ Flink SQL> DESCRIBE orders_kafka;
 |       shipped_at |     TIMESTAMP(3) |  TRUE |               |                           |           |
 | shipping_address |           STRING |  TRUE |               |                           |           |
 |   payment_method |           STRING |  TRUE |               |                           |           |
-|      record_time | TIMESTAMP_LTZ(3) |  TRUE |               | METADATA FROM 'timestamp' |           |
+|  kafka_record_ts | TIMESTAMP_LTZ(3) |  TRUE |               | METADATA FROM 'timestamp' |           |
 +------------------+------------------+-------+---------------+---------------------------+-----------+
 9 rows in set
 ----
@@ -232,18 +233,18 @@ Now we can query it:
 
 [source,sql]
 ----
-SELECT order_id, created_at, record_time FROM orders_kafka;
+SELECT order_id, created_at, kafka_record_ts FROM orders_kafka;
 ----
 
 [source,sql]
 ----
 +----+-------------+-------------------------+-------------------------+
-| op |    order_id |              created_at |             record_time |
+| op |    order_id |              created_at |         kafka_record_ts |
 +----+-------------+-------------------------+-------------------------+
 | +I |           1 | 2025-04-25 09:44:25.000 | 2025-04-25 13:26:29.625 |
 ----
 
-This matches the timestamps above that we observed in the raw Kafka message—except the `record_time` is displayed here in UTC whereas the conversion that I did above gave it in BST (UTC+1).
+This matches the timestamps above that we observed in the raw Kafka message—except the `kafka_record_ts` is displayed here in UTC whereas the conversion that I did above gave it in BST (UTC+1).
 Aren't timestamps fun!? ;)
 
 If we want the **processing time attribute** in Flink we need another special column:
@@ -258,13 +259,13 @@ Now we have three timestamps :)
 
 [source,sql]
 ----
-SELECT order_id, created_at, record_time, flink_proc_time FROM orders_kafka;
+SELECT order_id, created_at, kafka_record_ts, flink_proc_time FROM orders_kafka;
 ----
 
 [source,sql]
 ----
 +----+-------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id |              created_at |             record_time |         flink_proc_time |
+| op |    order_id |              created_at |         kafka_record_ts |         flink_proc_time |
 +----+-------------+-------------------------+-------------------------+-------------------------+
 | +I |           1 | 2025-04-25 09:44:25.000 | 2025-04-25 13:26:29.625 | 2025-04-25 15:09:57.349 |
 ----
@@ -274,21 +275,26 @@ If I re-run the query I get this: (_note that the `flink_proc_time` changes whil
 [source,sql]
 ----
 +----+-------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id |              created_at |             record_time |         flink_proc_time |
+| op |    order_id |              created_at |         kafka_record_ts |         flink_proc_time |
 +----+-------------+-------------------------+-------------------------+-------------------------+
 | +I |           1 | 2025-04-25 09:44:25.000 | 2025-04-25 13:26:29.625 | 2025-04-25 15:10:09.743 |
 ----
 
 The **processing time attribute** is literally just the time at which the data is passing through Flink.
 You may have figured already by now, but since the processing time is just the wall clock, queries using processing time are going to be non-deterministic.
-Contrast that to **event time attribute** in which it's part of the actual data, making the queries _"less non-deterministic"_.
+Contrast that to **event time attribute** in which it's part of the actual data, making the queries _less non-deterministic_… 😁.
 That is, when you re-run the query, you're more likely to get the same results.
 
-NOTE: There isn't such a thing as "less non-deterministic" 😁.
+[NOTE]
+====
+🫣 There isn't such a thing as "less non-deterministic".
+
 Whilst processing-time based queries are going to by definition be non-deterministic (because the processing time i.e. wall clock time will be different each time), _event time_ based queries can be deterministic _only if_ the watermark is generated after each event.
+
 In reality, watermarks are generated https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#i-configure-watermark-emit-strategy[periodically] when data arrives—by default, every 200ms.
 You can change this interval, as well as configure watermarks to be generated per-event (`'scan.watermark.emit.strategy'='on-event'`).
 Only the latter will result in truly deterministic processing.
+====
 
 === It's time…
 
@@ -298,9 +304,14 @@ I've added another row of data to the Kafka topic, meaning that the data in Flin
 
 [source,sql]
 ----
-Flink SQL> SELECT order_id, created_at, record_time, flink_proc_time FROM orders_kafka;
+SELECT order_id, created_at, kafka_record_ts, flink_proc_time FROM orders_kafka;
+----
+
+[source,]
+----
+
 +----+-------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id |              created_at |             record_time |         flink_proc_time |
+| op |    order_id |              created_at |         kafka_record_ts |         flink_proc_time |
 +----+-------------+-------------------------+-------------------------+-------------------------+
 | +I |           1 | 2025-04-25 09:44:25.000 | 2025-04-25 13:26:29.625 | 2025-04-25 15:10:09.743 |
 | +I |           2 | 2025-04-25 09:44:28.000 | 2025-04-25 13:26:35.928 | 2025-04-25 15:10:09.743 |
@@ -355,7 +366,7 @@ Flink SQL> DESCRIBE orders_kafka;
 |       shipped_at |                TIMESTAMP(3) |  TRUE |               |                           |           |
 | shipping_address |                      STRING |  TRUE |               |                           |           |
 |   payment_method |                      STRING |  TRUE |               |                           |           |
-|      record_time |            TIMESTAMP_LTZ(3) |  TRUE |               | METADATA FROM 'timestamp' |           |
+|  kafka_record_ts |            TIMESTAMP_LTZ(3) |  TRUE |               | METADATA FROM 'timestamp' |           |
 |  flink_proc_time | TIMESTAMP_LTZ(3) *PROCTIME* | FALSE |               |           AS `PROCTIME`() |           |
 +------------------+-----------------------------+-------+---------------+---------------------------+-----------+
 10 rows in set
@@ -397,30 +408,66 @@ That's because Flink waits for the window to close before issuing the result:
 
 ----
 
-Let's look closely at the window timestamp though.
+Let's look closely at the window timestamp though: `2025-04-25 15:11` - `2025-04-25 15:12`.
+
+Compare that to the timestamps on the record:
+
+[cols="1m,1m"]
+|===
+|order_id
+|1
+
+|created_at
+|2025-04-25 09:44:25.000
+
+|kafka_record_ts
+|2025-04-25 13:26:29.625
+|===
+
+
+The window (`15:11`) doesn't encompass either `created_at` (`09:44`) nor `kafka_record_ts` (`13:26`).
+Instead, it's the time at which we ran it—somewhere between `15:11` and `15:12`.
+
 The question we've answered here is _how many records were processed each minute_.
 What it definitely doesn't tell us is _how many orders were placed each minute_ (which is what we were trying to answer originally).
 
 For that we need to build a window using a different time field; `created_at`.
-(If we wanted to know _how many orders were written to Kafka_ we'd use the record timestamp, if we wanted to know _how many orders shipped each minute_ we'd use `shipped_at`, and so on).
+(If we wanted to know _how many orders were written to Kafka each minute_ we'd use `kafka_record_ts`, if we wanted to know _how many orders shipped each minute_ we'd use `shipped_at`, and so on).
 
 We saw above already that we can't just pass a timestamp column to the window aggregation; it has to be a column that has been marked as a **time attribute**.
 We don't want to use a **processing time attribute** because that doesn't answer our question; we need to use an **event time attribute**.
+
+In my mind here is some pseudo-SQL that I'd like to run to define a column as an event time attribute, but *is not correct Flink SQL*:
+
+[source,sql]
+----
+-- ⚠️ This is not valid Flink SQL.
+ALTER TABLE orders_kafka
+    ALTER COLUMN `created_at` TIMESTAMP_LTZ(3) AS EVENT_TIME;
+----
+
+or something like that.
+The point being, **we never explicitly say `this field is the event time attribute`**.
+What we actually do is **_implicitly_ mark it as the event time attribute by defining the watermark**.
+Since there's a watermark, the column on which the watermark is defined must be the event time.
+Obvious, right?!
 
 To mark a column as an **event time attribute** we need to use the `WATERMARK` statement.
 This is where I think things get a bit confusing until you understand it, and then it's just… _shrugs_ how Flink is.
 Let me explain…
 
-== Watermarks
+== 💧 Watermarks in Flink SQL
 
 When you run a _batch_ query the engine doing the processing knows when it's read all of the data.
 Life is simple.
 Contrast that to a streaming query in which, by definition, the source of the data is unbounded—so there's no such thing as having "read all the data".
-Not only is the source unbounded, but the data may arrive out of order.
+Not only is the source unbounded, but the data may arrive out of order, late, or not at all.
 
 **TODO: PUT A DIAGRAM HERE**
 
 _Watermarks_ are a clever idea that tell the processing engine when it's OK to consider a passage of time as complete.
+This is why we can't just define a column as an **event time attribute** on its own; we need to define the watermark that goes with it so that Flink knows when to have considered all data as having been read for a given period of that event time.
+
 **Where we set the watermark is up to us**.
 Set a watermark too short and whilst you'll get your final result quicker you're much more likely to have incomplete data because anything arriving late will be ignored.
 Then again, set the watermark too long you'll increase the chances of getting a complete set of data, but at the expense of the result taking longer to finalise.
@@ -433,26 +480,18 @@ To learn more about watermarks in detail check out these excellent resources:
 
 * https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks—David Anderson] (video)
 * https://www.youtube.com/watch?v=PWLjEyJxhg0[Watermarks in Flink SQL—David Anderson] (video)
-* https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau]
-* https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie]
+* https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau] (article)
+* https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie] (conference talk)
 ====
 
-So watermarks are a thing, and we need to configure them.
-We can't just define a column as an **event time attribute** on its own; we need to define the watermark that goes with it so that Flink knows when to have considered all data as having been read for a given time.
+One thing to be aware of is that **there is a difference between records that are _late_ and those that are _out of order_**.
+In Flink SQL if a record is _late_ then it is discarded, whilst if it is just _out of order_ then it means it arrived after an earlier record, but is still included in processing.
+This is where the watermark generation strategy comes in; if you generate watermarks too quickly (in order to cause a window to close sooner) you slide the scale away from completeness and potentially more records are classed as **late** and thus discarded.
+If the watermark period is longer, those same records arriving at the same point in the stream would instead be **out of order** and thus your completeness is higher (at the expense of latency).
+The video linked to above explains this difference well; https://youtu.be/PWLjEyJxhg0?feature=shared&t=211[skip to 3:29] if you just want the bit about late vs out of order.
 
-In my mind here is some pseudo-SQL that I'd like to run when working with an event time attribute, but *is not correct Flink SQL*:
-
-[source,sql]
-----
-ALTER TABLE orders_kafka
-    ALTER COLUMN `created_at` TIMESTAMP_LTZ(3) AS EVENT_TIME;
-----
-
-or something like that.
-The point being, **we never explicitly say `this field is the event time attribute`**.
-What we actually do is **_implicitly_ mark it as the event time attribute by defining the watermark**.
-Since there's a watermark, the column on which the watermark is defined must be the event time.
-Obvious, right?!
+So, watermarks are a thing—and we need to configure them.
+If we're going to be pernicity about terminology, we're not defining the watermark per se, but the _watermark generation strategy_.
 
 [source,sql]
 ----
@@ -506,30 +545,30 @@ FROM TABLE(
                     DESCRIPTOR(created_at),
                     INTERVAL '1' MINUTE)
             );
-+----+-------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           1 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
-| +I |           2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
++----------+-------------------------+-------------------------+-------------------------+-------------------+
+| order_id |              created_at |            window_start |              window_end | CURRENT_WATERMARK |
++----------+-------------------------+-------------------------+-------------------------+-------------------+
+|        1 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |            <NULL> |
+|        2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |            <NULL> |
 ----
 
-So we can see that the orders are being bucketed into the correct time window based on `created_at`; but `CURRENT_WATERMARK` is null, which I'm guessing is why I don't get any rows emitted for my aggregate.
+So we can see that the orders are being bucketed into the correct time window based on `created_at`; but `CURRENT_WATERMARK` is `NULL`, which I'm guessing is why I don't get any rows emitted for my aggregate.
 
-Why is there no watermark (i.e. `CURRENT_WATERMARK` is NULL)?
+Why is there no watermark (i.e. `CURRENT_WATERMARK` is `NULL`)?
 
 Well, the devil is in the detail, and there are two factors at play here.
 
 === Idle partitions
 
-If you're working with Kafka, it's vital to be aware of what's known as the "idle stream problem".
+If you're working with Kafka as a source to Flink, it's vital to be aware of what's known as the "idle stream problem".
 This is expertly described https://youtu.be/sdhwpUAjqaI?feature=shared&t=403[here].
 In short, it occurs when the Kafka source hasn't sent a watermark from **each and every partition** yet.
 
 image::/images/2025/04/2025-04-17T16-12-25-913Z.png[]
 
-The overall watermark of the job is the https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/time/#watermarks-in-parallel-streams[_minimum of the watermarks across the source partitions_].
+The watermark at each stage of the execution (known as an 'https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/glossary/#operator[operator]') is the https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/time/#watermarks-in-parallel-streams[_minimum of the watermarks across the source partitions_].
 The crucial point here is that if there is no data flowing through one (or more) partitions, that means that no watermark is generated by them either.
-This means that the overall watermark is not updated.
+This means that the watermark for the operator is not updated.
 
 To see how this impacts our situation let's first check the number of partitions on the source topic:
 
@@ -566,9 +605,9 @@ And now run the same query, but showing the partitions for each row to check the
 SELECT  order_id,
         topic_partition,
         created_at,
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
         window_start,
         window_end,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -576,48 +615,48 @@ FROM TABLE(
             );
 ----
 
-[source,]
+[source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
++----------+-----------------+-------------------------+------------------------+-------------------------+-------------------------+
+| order_id | topic_partition |              created_at |      CURRENT_WATERMARK |            window_start |              window_end |
++----------+-----------------+-------------------------+------------------------+-------------------------+-------------------------+
+|        1 |               0 | 2025-04-25 09:44:25.000 |                 <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|        2 |               2 | 2025-04-25 09:44:28.000 |                 <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
-This shows that there's no messages on partition 1, and thus no watermark is getting generated overall.
+This shows that there's no messages on partition 1, and thus no watermark is getting generated for the operator.
 
 One option here is just to add data to the partition and thus cause a watermark to be generated.
 The partition is set based on the key of the Kafka message, which is `order_id`.
-If we add more orders, then we should end up with an order on partition 1.
+If we add more orders (causing `order_id` to change), then we should soon end up with an order on partition 1.
 
 What I see after adding a row to the partition is this—even though it's in partition 1, still no watermark (based on `CURRENT_WATERMARK` being NULL)
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
++----------+-----------------+-------------------------+------------------------+-------------------------+-------------------------+
+| order_id | topic_partition |              created_at |      CURRENT_WATERMARK |            window_start |              window_end |
++----------+-----------------+-------------------------+------------------------+-------------------------+-------------------------+
 […]
-| +I |           5 |               1 | 2025-04-25 09:46:01.000 | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |                  <NULL> |
+|        5 |               1 | 2025-04-25 09:46:01.000 |                 <NULL> | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |
 ----
 
 When I add _another_ row, I then get a watermark:
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+| order_id | topic_partition |              created_at |       CURRENT_WATERMARK |            window_start |              window_end |
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
 […]
-| +I |           6 |               1 | 2025-04-25 09:46:06.000 | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |                  <NULL> |
+|        6 |               1 | 2025-04-25 09:46:06.000 | 2025-04-25 09:44:20.000 | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |
 ----
 
 We'll come back to this point (that is, why we only see `CURRENT_WATERMARK` after a second insert) shortly.
 
-First though, we've seen that the reason we weren't getting a watermark generated was an idle partition; there was no record in partition 1, and so no watermark passed downstream to the watermark for the job.
+First though, we've seen that the reason we weren't getting a watermark generated was an idle partition; there was no record in partition 1, and so no watermark passed downstream to the watermark for the operator.
 
-To deal with this we can https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#ii-configure-the-idle-timeout-of-source-table[configure an **idle timeout**] which tells the upstream watermark generator to ignore any missing watermarks after the amount of time specified.
+To deal with this we can https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#ii-configure-the-idle-timeout-of-source-table[configure an **idle timeout**] which tells the downstream watermark generator to ignore any missing watermarks after the amount of time specified.
 The configuration property is `scan.watermark.idle-timeout` and can be set as a query hint, or a table property:
 
 [source,sql]
@@ -631,21 +670,21 @@ First, no watermark:
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+| order_id | topic_partition |              created_at |       CURRENT_WATERMARK |            window_start |              window_end |
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|        1 |               0 | 2025-04-25 09:44:25.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
 but then, a watermark (note that there's only data on two of the three partitions; this is the `scan.watermark.idle-timeout` taking effect):
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:44:20.000 |
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+| order_id | topic_partition |              created_at |       CURRENT_WATERMARK |            window_start |              window_end |
++----------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|        1 |               0 | 2025-04-25 09:44:25.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|        2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:20.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
 Let's now look at why `CURRENT_WATERMARK` isn't being set on the first row—and in the example above, why it took a second row being added to partition 1 for `CURRENT_WATERMARK` to be set.
@@ -670,7 +709,7 @@ Per https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts
 
 > For sql tasks, watermark is emitted periodically by default, with a default period of 200ms, which can be changed by the parameter pipeline.auto-watermark-interval
 
-Since the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/functions/systemfunctions/[`CURRENT_WATERMARK`] function returns the watermark _at the time that the row is emitted_, and thus if it's the very beginning of the execution _can mean that a watermark hasn't been generated yet_.
+Since the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/functions/systemfunctions/[`CURRENT_WATERMARK`] function in a query returns the watermark _at the time that the row is emitted to the query output_, and thus if it's the very beginning of the execution _can mean that a watermark hasn't been generated yet_.
 
 There is a cleaner way to look at the current watermark; through the Flink UI:
 
@@ -692,9 +731,9 @@ Here's the same query as above, with no idle timeout set, and as we saw before `
 SELECT order_id,
         topic_partition,
         created_at,
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
         window_start,
         window_end,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -704,11 +743,11 @@ FROM TABLE(
 
 [source,]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |       CURRENT_WATERMARK |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
 The idle timeout can be set as a table property, but also through a query hint.
@@ -723,9 +762,9 @@ SELECT  /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
         order_id,
         topic_partition,
         created_at,
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
         window_start,
         window_end,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -737,14 +776,14 @@ The results in the SQL client look the same:
 
 [source,]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |       CURRENT_WATERMARK |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                  <NULL> |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |       CURRENT_WATERMARK |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 |                  <NULL> | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
-But crucially, over in the Flink UI we can inspect the actual watermark for the job:
+But crucially, over in the Flink UI we can inspect the actual watermark for each operator:
 
 image::/images/2025/04/2025-04-25T15-19-17-493Z.png[]
 
@@ -763,7 +802,7 @@ Thus partition 0's watermark (`09:44:25` minus 5 seconds) is used: `2025-04-25 0
 
 From the above we've learnt two things:
 
-1. We need to understand the impact of an idle partition on the overall watermark that's generated.
+1. We need to understand the impact of an idle partition on the watermark that's generated for each operator.
 By setting `scan.watermark.idle-timeout` as a query hint we can see if it resolves the problem, and if it does, modify the table's properties:
 +
 [source,sql]
@@ -845,15 +884,15 @@ FROM TABLE(
 
 [source,]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
-So there is a window that we're expecting to get emitted in our query.
-It starts at 09:44 and ends a minute later (defined by `INTERVAL '1' MINUTE` in the `TUMBLE` part of the query) at 09:45.
+Tthere is a window that we're expecting to get emitted in our query.
+It starts at `09:44` and ends a minute later (defined by `INTERVAL '1' MINUTE` in the `TUMBLE` part of the query) at `09:45`.
 The window will get emitted once it's considered 'closed'; that is, the watermark has passed the `window_end` time.
 
 It's worth reiterating here because it's so crucial to understanding what's going on: the query emits results based on the *watermark*.
@@ -863,20 +902,24 @@ So whilst I've just inserted these two rows of data, I can wait until kingdom co
 
 What's the current watermark?
 It should be the lower of the watermarks across the partitions, which as we can see from the table of data here is going to be `2025-04-25 09:44:25.000` minus five seconds (which is our declared watermark generation strategy), thus `2025-04-25 09:44:20.000`.
-If that _is_ the case, then the watermark of the job (`09:44:20`) will not be later than the window end time (`09:45:00`), and thus nothing can be emitted yet.
+If that _is_ the case, then the watermark of the operator (`09:44:20`) will not be later than the window end time (`09:45:00`), and thus nothing can be emitted yet.
 
 Let's check what the current watermark is to determine if my +++<del>wild guess</del>+++educated reasoning is correct:
 
 image::/images/2025/04/2025-04-25T13-29-08-469Z.png[]
 
-Oh no! I was wrong…or was I?
+😓 Oh no! I was wrong…or was I?
+
+😅 Because just a short while (roughly 30 seconds) later what do I see but this:
 
 image::/images/2025/04/2025-04-25T13-29-49-258Z.png[]
 
 Taking into account the timezone offset (UTC+1) I was right! The current watermark is `25/04/2025, 09:44:20`
 
-Why the delay?
+**Why the delay?**
 Because the watermark is only generated after the idle timeout period (30 seconds) has passed.
+
+image::https://media4.giphy.com/media/3WCNY2RhcmnwGbKbCi/giphy.gif[Ted Lasso - Yes!]
 
 === Monitoring the watermark
 
@@ -884,7 +927,7 @@ Here's a trick for monitoring the watermark—use the REST API.
 This is what the Flink UI is built on, and is also https://nightlies.apache.org/flink/flink-docs-master/docs/ops/rest_api/#jobs-jobid-vertices-vertexid-watermarks[documented].
 
 You can get the REST call from the Flink UI (use DevTools to copy the /watermarks call made when you click on the subtask).
-You can also construct it by figuring out the job and subtask ("vertex") ID from the https://nightlies.apache.org/flink/flink-docs-master/docs/ops/rest_api/#jobs-jobid[/jobs API endpoint].
+You can also construct it by figuring out the job and operator ("vertex") ID from the https://nightlies.apache.org/flink/flink-docs-master/docs/ops/rest_api/#jobs-jobid[/jobs API endpoint].
 
 The REST call using https://httpie.io/[httpie] will look like this:
 
@@ -935,8 +978,8 @@ Note that this **_excludes_ idle partitions**.
 An idle partition could be one in which there's no data, but it could also be a partition with data but for which no _new_ data has been received within the configured `scan.watermark.idle-timeout` time.
 
 This makes sense if you step back and think about what the whole point of watermarks is; to provide a mechanism for handling late and out-of-order data.
-What Flink is doing is saying "I cannot close this window yet because one or more of the partitions have not told me that it's got all the data [because the watermark for that partition has not passed the window close time]".
-It's also saying "Regardless of the watermark generation policy (5 seconds in our case), I'm going to class any partitions have have not produced any data for a given period of time (30 seconds in our case) as idle, and so ignore their watermark when generating the downstream watermark"
+What Flink is doing is saying "_I cannot close this window yet because one or more of the partitions have not told me that it's got all the data [because the watermark for that partition has not passed the window close time]_".
+It's also saying "_Regardless of the watermark generation policy (5 seconds in our case), I'm going to class any partitions have have not produced any data for a given period of time (30 seconds in our case) as idle, and so ignore their watermark when generating the downstream watermark_".
 
 So if I add one more row of data with a more recent `created_at` outside of the window it's not _necessarily_ going to cause the window to close.
 Why not?
@@ -953,12 +996,12 @@ Here's the data now:
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
 ----
 
 So in partition 2 the watermark is `2025-04-25 09:45:28` (`2025-04-25 09:45:33` minus five seconds) and in partition 0 the watermark would be `2025-04-25 09:44:25.000` except the partition has idled out (`scan.watermark.idle-timeout`) and so in effect is the same as partition 1—idle, and so not included in the calculation of the generated watermark:
@@ -983,23 +1026,23 @@ Since `09:45:28` is outside the window end, we get our windowed aggregate emitte
 
 [source,sql]
 ----
-+----+-------------------------+-------------------------+----------------------+
-| op |            window_start |              window_end |          event_count |
-+----+-------------------------+-------------------------+----------------------+
-| +I | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                    2 |
++-------------------------+-------------------------+----------------------+
+|            window_start |              window_end |          event_count |
++-------------------------+-------------------------+----------------------+
+| 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                    2 |
 ----
 
 Now let's add a record within the next window (`09:45`-`09:46`):
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
-| +I |           4 |               2 | 2025-04-25 09:45:38.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
+|           4 |               2 | 2025-04-25 09:45:38.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
 ----
 
 The watermark is now `2025-04-25 09:45:33` (`2025-04-25 09:45:38` minus 5 seconds).
@@ -1007,40 +1050,54 @@ If we want to make this window (`09:45`-`09:46`) emit a row we need to cause the
 
 [source,sql]
 ----
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| op |    order_id | topic_partition |              created_at |            window_start |              window_end |
-+----+-------------+-----------------+-------------------------+-------------------------+-------------------------+
-| +I |           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
-| +I |           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
-| +I |           4 |               2 | 2025-04-25 09:45:38.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
-| +I |           5 |               1 | 2025-04-25 09:46:06.000 | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|    order_id | topic_partition |              created_at |            window_start |              window_end |
++-------------+-----------------+-------------------------+-------------------------+-------------------------+
+|           2 |               2 | 2025-04-25 09:44:28.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
+|           3 |               2 | 2025-04-25 09:45:33.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
+|           4 |               2 | 2025-04-25 09:45:38.000 | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |
+|           5 |               1 | 2025-04-25 09:46:06.000 | 2025-04-25 09:46:00.000 | 2025-04-25 09:47:00.000 |
 ----
 
 The watermark moves on to `2025-04-25 09:46:01` and the aggregate window gets emitted:
 
 [source,sql]
 ----
-+----+-------------------------+-------------------------+----------------------+
-| op |            window_start |              window_end |          event_count |
-+----+-------------------------+-------------------------+----------------------+
-| +I | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                    2 |
-| +I | 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |                    2 |
++-------------------------+-------------------------+----------------------+
+|            window_start |              window_end |          event_count |
++-------------------------+-------------------------+----------------------+
+| 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |                    2 |
+| 2025-04-25 09:45:00.000 | 2025-04-25 09:46:00.000 |                    2 |
 ----
 
-== << A summary goes here >>
+image::https://emojis.slackmojis.com/emojis/images/1643514139/978/conga_parrot.gif?1643514139[alt="conga parrot",width=32]
 
-Late vs out of order: https://youtu.be/PWLjEyJxhg0?feature=shared&t=211
+== ☺️ Phew. Eighteen months since starting to learn Flink…I think I understand watermarks :)
 
-I think the thing I find most technically questionable is your repeated use of the phrase "the overall watermark of the job". There is no such thing.
-Each operator instance in your job is independently computing its local watermark based on the watermarks arriving on its input channels (plus special stream records that indicate when a channel becomes idle). One reason why it's easier to debug watermarking problems using the web UI is that you can examine the current watermark at every instance of every operator.
+image::https://media2.giphy.com/media/3o7btNhMBytxAM6YBa/giphy.gif[Neo - I know Kung Fu]
 
-=== << info on how you can run this for yourself using the docker compose etc >>
+It's taken a while, and a lot of scratching around and reading and asking smart people (huge kudos to colleague and Flink community member David Anderson), but I feel like I understand watermarks—or if not, I at least know which corners to go poking in next time I get stumped by them.
 
-== Reference
+If you're wanting to understand watermarks properly my advice would be thus:
 
-To understand watermarking I needed to digest content from across four of the Flink docs:
+1. Read and watch these excellent resources. And then go and do it again.
++
+* https://www.youtube.com/watch?v=PWLjEyJxhg0[Watermarks in Flink SQL—David Anderson] (video)
+* https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks—David Anderson] (video)
+* https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau]
+* https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie]
 
+2. Fire up the Flink UI and poke around the watermarks tab with a set of data in which you've fixed the event time.
+This makes it much easier to replicate and try out different settings.
+If you use an event time that's not fixed (such as Kafka timestamp and you're inserting new records each time) you are, as they say, peeing in the wind.
+And we know how messy that can get.
++
+TIP: I've put the Docker Compose that I used to run all the above tests https://github.com/rmoff/flink-examples/tree/main/flink-kafka-postgres[on GitHub], so you can run it and explore to your heart's content.
+
+3. Read the fine documentation.
+It's not ideal that the information is spread across the docs how it is, but that is how it is, so deal with it or file a PR :)
++
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#event-time[Event Time]
 * https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/time/[Timely Stream Processing]
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/event-time/generating_watermarks/#watermark-strategies-and-the-kafka-connector[Watermark Strategies and the Kafka Connector]
@@ -1048,9 +1105,6 @@ To understand watermarking I needed to digest content from across four of the Fl
 * https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#source-per-partition-watermarks[Source Per-Partition Watermarks]
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/config/#table-exec-source-idle-timeout[Configuration reference]
 
-The other really useful links I already shared are:
+---
 
-* https://www.youtube.com/watch?v=PWLjEyJxhg0[Watermarks in Flink SQL—David Anderson] (video)
-* https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks—David Anderson] (video)
-* https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau]
-* https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie]
+_My thanks to David Anderson and Gunnar Morling for their help with this article._
