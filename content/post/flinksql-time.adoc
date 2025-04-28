@@ -7,6 +7,7 @@ thumbnail: "/images/2025/04/t_IMG_8625.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
+- Apache Kafka
 - Watermarks
 ---
 
@@ -52,7 +53,7 @@ If you are trying to calculate how many orders were shipped in the last hour, th
 
 TIP: https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[This seminal article from Tyler Akidau] is nearly ten years old, but is still a highly relevant and excellent read and covers a lot of what you need to know about time in stream processing.
 
-== Time in Kafka
+== Time in Apache Kafka
 
 Each Kafka message is made up of https://kafka.apache.org/documentation/#record[several parts]:
 
@@ -84,7 +85,7 @@ Timestamp: 1745587589625
 There are two times here:
 
 . The _event time_ which we'll take as `created_at` from the value: `2025-04-25 09:44:25`.
-. The _processing time_ which is stored in the Kafka message timestamp `1745587589625`.
+. The timestamp of the Kafka message: `1745587589625`.
 This is the milliseconds since the epoch, and https://www.epochconverter.com/[converts] to `2025-04-25 13:26:29.625`.
 
 The timestamp of a Kafka message can be set explicitly https://kafka.apache.org/40/javadoc/org/apache/kafka/clients/producer/ProducerRecord.html[by the producer].
@@ -95,7 +96,9 @@ If this is set to `CreateTime` then it uses the time from the producer (either e
 In theory you could use the Timestamp field of the Kafka message to hold the event time; the data is being stored anyway, so why not optimise by not holding it twice?
 The disadvantage of this comes if you're using a system which doesn't expose the timestamp metadata of a message, so if it doubt, keep it simple :)
 
-== Time in Flink
+TIP: In theory it might also be useful to have both these values as it would tell you the delay between creation of events and ingesting them into Kafka.
+
+== Time in Apache Flink
 
 The longer you've been working with Flink, the higher the chances are that you've heard the word "Watermark".
 I must profess to having spent the last 18 months—since I started working with Flink—with my head in the sand, somewhat Ostrich-like, when it comes to Watermarks.
@@ -243,8 +246,7 @@ SELECT order_id, created_at, record_time FROM orders_kafka;
 This matches the timestamps above that we observed in the raw Kafka message—except the `record_time` is displayed here in UTC whereas the conversion that I did above gave it in BST (UTC+1).
 Aren't timestamps fun!? ;)
 
-Whilst we've got the Kafka message's timestamp metadata, which is akin to the processing time of the message (unless overriden by the producer), this is not the same as the **processing time attribute** in Flink.
-For this, we need another special column:
+If we want the **processing time attribute** in Flink we need another special column:
 
 [source,sql]
 ----
@@ -279,8 +281,14 @@ If I re-run the query I get this: (_note that the `flink_proc_time` changes whil
 
 The **processing time attribute** is literally just the time at which the data is passing through Flink.
 You may have figured already by now, but since the processing time is just the wall clock, queries using processing time are going to be non-deterministic.
-Contrast that to **event time attribute** in which it's part of the actual data, making the queries _deterministic_.
-That is, when you re-run the query, you'll get the same results.
+Contrast that to **event time attribute** in which it's part of the actual data, making the queries _"less non-deterministic"_.
+That is, when you re-run the query, you're more likely to get the same results.
+
+NOTE: There isn't such a thing as "less non-deterministic" 😁.
+Whilst processing-time based queries are going to by definition be non-deterministic (because the processing time i.e. wall clock time will be different each time), _event time_ based queries can be deterministic _only if_ the watermark is generated after each event.
+In reality, watermarks are generated https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#i-configure-watermark-emit-strategy[periodically] when data arrives—by default, every 200ms.
+You can change this interval, as well as configure watermarks to be generated per-event (`'scan.watermark.emit.strategy'='on-event'`).
+Only the latter will result in truly deterministic processing.
 
 === It's time…
 
@@ -390,7 +398,7 @@ That's because Flink waits for the window to close before issuing the result:
 ----
 
 Let's look closely at the window timestamp though.
-The question we've answered here is _how many records arrived for processing per minute_.
+The question we've answered here is _how many records were processed each minute_.
 What it definitely doesn't tell us is _how many orders were placed each minute_ (which is what we were trying to answer originally).
 
 For that we need to build a window using a different time field; `created_at`.
@@ -423,7 +431,8 @@ Which is right? That depends on you and your business process :)
 ====
 To learn more about watermarks in detail check out these excellent resources:
 
-* https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks] (video)
+* https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks—David Anderson] (video)
+* https://www.youtube.com/watch?v=PWLjEyJxhg0[Watermarks in Flink SQL—David Anderson] (video)
 * https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau]
 * https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie]
 ====
@@ -451,9 +460,9 @@ ALTER TABLE orders_kafka
     ADD WATERMARK FOR `created_at` AS `created_at` - INTERVAL '5' SECOND;
 ----
 
-This _basically_ tells Flink that it needs to give a five-second leeway when processing `created_at` for any late records to arrive on the stream.
+This _basically_ tells Flink that it needs to give a five-second leeway when processing `created_at` for any out of order records to arrive on the stream.
 
-NOTE: There are actually a lot more nuance to how it works, and complexities if you have partitioned input too—https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#advanced-watermark-features[the Flink docs] cover these well, as does https://www.youtube.com/watch?v=sdhwpUAjqaI[this video].
+NOTE: There is actually a lot more nuance to how it works, and complexities if you have partitioned input too. https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#advanced-watermark-features[The Flink docs] cover these well, as do https://www.youtube.com/watch?v=sdhwpUAjqaI[these] https://www.youtube.com/watch?v=PWLjEyJxhg0[videos].
 
 With the event time attribute defined on the table (by virtue of us having set the `WATERMARK`), let's try our windowed aggregation again, reverting to using `created_at` by which the aggregate is generated:
 
@@ -582,7 +591,7 @@ One option here is just to add data to the partition and thus cause a watermark 
 The partition is set based on the key of the Kafka message, which is `order_id`.
 If we add more orders, then we should end up with an order on partition 1.
 
-What I see after adding row to the partition is this—even though it's in partition 1, still no watermark (based on `CURRENT_WATERMARK` being NULL)
+What I see after adding a row to the partition is this—even though it's in partition 1, still no watermark (based on `CURRENT_WATERMARK` being NULL)
 
 [source,sql]
 ----
@@ -1021,6 +1030,13 @@ The watermark moves on to `2025-04-25 09:46:01` and the aggregate window gets em
 
 == << A summary goes here >>
 
+Late vs out of order: https://youtu.be/PWLjEyJxhg0?feature=shared&t=211
+
+I think the thing I find most technically questionable is your repeated use of the phrase "the overall watermark of the job". There is no such thing.
+Each operator instance in your job is independently computing its local watermark based on the watermarks arriving on its input channels (plus special stream records that indicate when a channel becomes idle). One reason why it's easier to debug watermarking problems using the web UI is that you can examine the current watermark at every instance of every operator.
+
+=== << info on how you can run this for yourself using the docker compose etc >>
+
 == Reference
 
 To understand watermarking I needed to digest content from across four of the Flink docs:
@@ -1031,3 +1047,10 @@ To understand watermarking I needed to digest content from across four of the Fl
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#watermark[`WATERMARK` DDL reference]
 * https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#source-per-partition-watermarks[Source Per-Partition Watermarks]
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/config/#table-exec-source-idle-timeout[Configuration reference]
+
+The other really useful links I already shared are:
+
+* https://www.youtube.com/watch?v=PWLjEyJxhg0[Watermarks in Flink SQL—David Anderson] (video)
+* https://www.youtube.com/watch?v=sdhwpUAjqaI[Event Time and Watermarks—David Anderson] (video)
+* https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/[Streaming 101: The world beyond batch—Tyler Akidau]
+* https://current.confluent.io/2024-sessions/timing-is-everything-understanding-event-time-processing-in-flink-sql[Timing is Everything: Understanding Event-Time Processing in Flink SQL—Sharon Xie]
