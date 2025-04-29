@@ -1,6 +1,6 @@
 ---
 draft: false
-title: "It's time we talked about time: Exploring Watermarks and more in Flink SQL"
+title: "It's Time We Talked About Time: Exploring Watermarks (And More) In Flink SQL"
 date: "2025-04-25T15:26:56Z"
 image: "/images/2025/04/h_IMG_8913.webp"
 thumbnail: "/images/2025/04/t_IMG_8625.webp"
@@ -30,7 +30,7 @@ At 9am a supermarket opens and I buy a tin of baked beans.
 At 6pm the store closes, the end-of-day runs on the in-store PoS, and sends the data back to head office.
 Perhaps at 10pm all the data from all the stores has been received and processing starts.
 
-In the modern age many platforms will be much lower latency.
+In the modern age, many platforms will be much lower latency.
 PoS systems would be sending information about my tin of baked beans purchase back to a central system (probably using Apache Kafka…) as soon as it happened.
 But even then, times can differ.
 There's the natural latency on which the speed of light has a strong opinion, on top of which is any other processing or batching that might be introduced along the way.
@@ -65,7 +65,7 @@ Each Kafka message is made up of https://kafka.apache.org/documentation/#record[
 . Timestamp
 
 Here's an example record.
-The value is in JSON, which I've pretty-printed to make is easier to follow:
+The value is in JSON, which I've pretty-printed to make it easier to follow:
 
 [source,javascript]
 ----
@@ -96,7 +96,7 @@ The timestamp that's included in the message written by the broker depends on th
 If this is set to `CreateTime` then it uses the time from the producer (either explicit or implicitly set), or it can use the time on the broker when the record is written (`LogAppendTime`).
 
 In theory you could use the Timestamp field of the Kafka message to hold the event time; the data is being stored anyway, so why not optimise by not holding it twice?
-The disadvantage of this comes if you're using a system which doesn't expose the timestamp metadata of a message, so if it doubt, keep it simple :)
+The disadvantage of this comes if you're using a system which doesn't expose the timestamp metadata of a message, so if in doubt, keep it simple :)
 Plus, it might also be useful to have both these values as it would tell you the delay between creation of events and ingesting them into Kafka (assuming you're using `LogAppendTime`) if you needed this information for performance troubleshooting.
 
 == Time in Apache Flink
@@ -185,7 +185,7 @@ CREATE TABLE orders_kafka (
 );
 ----
 
-Here we only see the event time column that we defined in the schema (`created_at`):
+Here, we only see the event time column that we defined in the schema (`created_at`):
 
 [source,sql]
 ----
@@ -547,7 +547,7 @@ If the watermark period is longer, those same records arriving at the same point
 The video linked to above explains this difference well; https://youtu.be/PWLjEyJxhg0?feature=shared&t=211[skip to 3:29] if you just want the bit about late vs out of order.
 
 So, watermarks are a thing—and we need to configure them.
-If we're going to be pernicity about terminology, we're not defining the watermark per se, but the _watermark generation strategy_.
+If we're going to be pernickity about terminology, we're not defining the watermark per se, but the _watermark generation strategy_.
 
 [source,sql]
 ----
@@ -663,9 +663,9 @@ And now run the same query, but showing the partitions for each row to check the
 SELECT  order_id,
         topic_partition,
         created_at,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK,
         window_start,
-        window_end,
+        window_end
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -789,9 +789,9 @@ Here's the same query as above, with no idle timeout set, and as we saw before `
 SELECT order_id,
         topic_partition,
         created_at,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK,
         window_start,
-        window_end,
+        window_end
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -820,9 +820,9 @@ SELECT  /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
         order_id,
         topic_partition,
         created_at,
-        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK
+        CURRENT_WATERMARK(created_at) AS CURRENT_WATERMARK,
         window_start,
-        window_end,
+        window_end
 FROM TABLE(
             TUMBLE(TABLE orders_kafka,
                     DESCRIPTOR(created_at),
@@ -949,14 +949,14 @@ FROM TABLE(
 |           1 |               0 | 2025-04-25 09:44:25.000 | 2025-04-25 09:44:00.000 | 2025-04-25 09:45:00.000 |
 ----
 
-Tthere is a window that we're expecting to get emitted in our query.
+There is a window that we're expecting to get emitted in our query.
 It starts at `09:44` and ends a minute later (defined by `INTERVAL '1' MINUTE` in the `TUMBLE` part of the query) at `09:45`.
 The window will get emitted once it's considered 'closed'; that is, the watermark has passed the `window_end` time.
 
 It's worth reiterating here because it's so crucial to understanding what's going on: the query emits results based on the *watermark*.
 The watermark is driven by *event time* and _not wall clock_.
 
-So whilst I've just inserted these two rows of data, I can wait until kingdom come, just because a minute has passed on the wallclock, **nothing is getting emitted until the watermark moves on past the end of the window**.
+So whilst I've just inserted these two rows of data, I can wait until kingdom come; just because a minute has passed on the wallclock, **nothing is getting emitted until the watermark moves on past the end of the window**.
 
 What's the current watermark?
 It should be the lower of the watermarks across the partitions, which as we can see from the table of data here is going to be `2025-04-25 09:44:25.000` minus five seconds (which is our declared watermark generation strategy), thus `2025-04-25 09:44:20.000`.
