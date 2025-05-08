@@ -33,12 +33,12 @@ On Confluent Cloud for Apache Flink watermarks are handled differently.
 Let's see how!
 
 TIP: If you're not familiar with how watermarks work in Apache Flink, please do go back over link:/2025/04/25/its-time-we-talked-about-time-exploring-watermarks-and-more-in-flink-sql/[my previous article].
-You'll also find a lot of good content on https://developer.confluent.io[Confluent Developer], including https://www.youtube.com/watch?v=sdhwpUAjqaI[these] https://www.youtube.com/watch?v=PWLjEyJxhg0[videos] from David Anderson.
+You'll also find a lot of good content on https://developer.confluent.io[Confluent Developer], https://www.youtube.com/watch?v=ZaU_vSZvjLE[including] https://www.youtube.com/watch?v=sdhwpUAjqaI[these] https://www.youtube.com/watch?v=PWLjEyJxhg0[videos] from David Anderson and Wade Waldron.
 In this post I'm going to go straight into the detail, talking about things like _event time_ and _idle partitions_ and _watermark strategy_.
 
 == Quick recap: What's a watermark strategy?
 
-TIP: A Flink watermark strategy defines _when_ a watermark is generated, and the strategy of _what value_ for the watermark is generated
+**A Flink watermark strategy defines _when_ a watermark is generated, and the strategy of _what value_ for the watermark is generated.**
 
 * **What value** is defined by the `WATERMARK` DDL on a table.
 For example:
@@ -48,7 +48,10 @@ For example:
 WATERMARK FOR `created_at` AS `created_at` - INTERVAL '5' SECOND
 ----
 +
-This is what is often referred to as the _watermark generation strategy_ and is important to put in place because without it Flink won't treat the column against which its defined as an event time attribute.
+This is what is often referred to as the _watermark generation strategy_.
+Here the value of the watermark will be whatever `created_at` is, minus five seconds.
++
+It is important to put in place because without it Flink won't treat the column against which its defined as an _event time attribute_.
 
 * **When** a watermark is generated (or "emitted") based on the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/concepts/time_attributes/#i-configure-watermark-emit-strategy[watermark emit strategy configuration], which can be set as a property for the table or as a query hint.
 
@@ -190,7 +193,7 @@ Eyeballing this we can see three windows:
 
 So why is the query only emitting one of these windows?
 
-Because the watermark strategy says to generate a watermark *five seconds behind the value of `created_at`:
+Because the watermark strategy says to generate a watermark *five seconds behind the value of `created_at`*:
 
 [source,sql]
 ----
@@ -229,10 +232,10 @@ If we add another row of data to the table:
 ║3        2025-04-25 10:45:33.000 2025-04-25 10:45:28.000   ║
 ║4        2025-04-25 10:45:38.000 2025-04-25 10:45:33.000   ║
 ║5        2025-04-25 10:46:03.000 2025-04-25 10:45:58.000   ║
-║6        2025-04-25 10:47:03.000 2025-04-25 10:46:58.000   ║
+║6        2025-04-25 10:46:51.000 2025-04-25 10:46:46.000   ║
 ----
 
-The `created_at` of `10:47:03` pushes the watermark forward to `10:46:58`, thus meaning that Flink can close the previous window, and we get our result:
+The `created_at` of `10:46:51` pushes the watermark forward to `10:46:46`, thus meaning that Flink can close the previous window, and we get our result:
 
 [source,sql]
 ----
