@@ -1,0 +1,1087 @@
+---
+draft: false
+title: 'Exploring Joins and Changelogs in Flink SQL'
+date: "2025-05-09T09:30:36Z"
+image: "/images/2025/05/"
+thumbnail: "/images/2025/05/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Flink SQL
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: github
+
+**SQL**.
+_Ess Queue Ell_.
+`/ˌɛs kjuː ˈɛl/`
+Three simple letters.
+
+In the data world they bind us together, yet separate us.
+
+As the saying goes, England and America are two countries divided by the same language, and the same goes for the batch and streaming world and some elements of SQL.
+
+<!--more-->
+
+In Flink SQL all objects are tables.
+_(This differs from ksqlDB in which there is are tables and streams each as first class objects and each with their own defined semantics)._
+
+So how does Flink SQL deal with the idea of a 'table' that in the RDBMS world is a static lump of data (a.k.a. 'bounded'), but in Flink's world can be either bounded or _unbounded_ (streaming)?
+
+The answer is what the Flink docs call https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/dynamic_tables/#dynamic-tables[*Dynamic Tables*] and _changelogs_.
+Some of this will be visible to you, and some of it won't unless you go poking around for it.
+
+Bear in mind that a table is a table in Flink SQL; you don't go and declare a "dynamic table"; it's a conceptual thing.
+
+In this blog post I'm going to start with a simple `SELECT * FROM` and build up from there, looking at the changelog implications at each stage along the way.
+
+== Getting Started
+
+I'm using a local Apache Flink 2.0 environment running under Docker Compose that you can spin up from https://github.com/rmoff/flink-examples/tree/main/flink-kafka[here].
+
+First we'll create a simple `orders` fact table and `customers` dimension table, using Kafka to hold the data:
+
+[source,sql]
+----
+CREATE TABLE orders (
+    order_id STRING,
+    customer_id STRING,
+    order_date TIMESTAMP(3),
+    total_amount DECIMAL(10, 2),
+    PRIMARY KEY (order_id) NOT ENFORCED
+) WITH (
+    'connector' = 'upsert-kafka',
+    'topic' = 'orders',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'key.format' = 'json',
+    'value.format' = 'json'
+);
+
+CREATE TABLE customers (
+    customer_id STRING,
+    name STRING,
+    PRIMARY KEY (customer_id) NOT ENFORCED
+) WITH (
+    'connector' = 'upsert-kafka',
+    'topic' = 'customers',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'key.format' = 'json',
+    'value.format' = 'json'
+);
+----
+
+Now we'll populate both tables with a light sprinkling of data:
+
+[source,sql]
+----
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+VALUES
+    ('1001', 'CUST-5678', TIMESTAMP '2025-05-09 14:30:00', 199.99),
+    ('1002', 'CUST-9012', TIMESTAMP '2025-05-09 15:45:00', 349.50),
+    ('1003', 'CUST-5678', TIMESTAMP '2025-05-09 16:15:00', 75.25);
+
+INSERT INTO customers (customer_id, name)
+VALUES
+    ('CUST-3456', 'Yelena Belova'),
+    ('CUST-5678', 'Bucky Barnes'),
+    ('CUST-9012', 'Valentina Allegra de Fontaine');
+----
+
+== What could be more simple than a `SELECT`?
+
+[source,sql]
+----
+SELECT * FROM orders;
+----
+
+This gives us this:
+
+image::/images/2025/05/query02.gif[]
+
+Notice how the `Updated:` keeps changing?
+That's because it's a streaming query, and if I add another row to the table, it'll appear in the results.
+
+What about if we switch the `result-mode` from the default `table` to `tableau`:
+
+[source,sql]
+----
+SET 'sql-client.execution.result-mode' = 'tableau';
+----
+
+image::/images/2025/05/query01.gif[]
+
+Now we get a new column, `op`—short for "operation".
+This shows us the changelog view of what's going on when the query is executing.
+
+Here the three rows are all `+I` for `INSERT`.
+
+Probably the simplest example of a changelog other than just `+I` (i.e. append-only) is an aggregate, in which the value changes as new data is read:
+
+[source,sql]
+----
+Flink SQL> SELECT COUNT(*) AS order_ct FROM orders;
++----+----------------------+
+| op |             order_ct |
++----+----------------------+
+| +I |                    1 |
+| -U |                    1 |
+| +U |                    2 |
+| -U |                    2 |
+| +U |                    3 |
+----
+
+The first order is read and so the count is 1, which is `+I` to the query output.
+When the next order is read the count becomes two.
+For the purposes of the changelog, this is first a `-U` operation to remove the existing value, and then a `+U` to replace it.
+
+TIP: You can learn more about https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/dynamic_tables/#dynamic-tables-amp-continuous-queries[continuous queries] and https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/overview/#stateful-operators[stateful operators and pipelines] in the docs.
+
+The different operations have terms that you can find mentioned https://nightlies.apache.org/flink/flink-docs-master/api/java/org/apache/flink/types/RowKind.html[in the Flink docs]:
+
+[cols="1m,3m"]
+|===
+| Operation | Description
+
+| +I
+| INSERT
+
+| -U
+| UPDATE_BEFORE
+
+| +U
+| UPDATE_AFTER
+
+| -D
+| DELETE
+
+|===
+
+Update operations don't have to be for an aggregate.
+Here's another example in which an `UPDATE_AFTER` is used to remove a row that no longer matches a query predicate.
+
+Here's the original `orders` query, now with a predicate:
+
+[source,sql]
+----
+Flink SQL> select * from orders WHERE total_amount >70;
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |
+| +I |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+----
+
+Leaving this query running, in a second Flink SQL session I add another row to the `orders` table; note that it is for an existing value of the primary key (`order_id`), order `1003`:
+
+[source,sql]
+----
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+VALUES ('1003', 'CUST-5678', TIMESTAMP '2025-05-09 16:15:00', 65.25);
+----
+
+The output from the `SELECT` updates, and retracts the row for `order_id=1003`, because its value is now outside the `total_amount` predicate:
+
+[source,sql]
+----
+Flink SQL> select * from orders WHERE total_amount >70;
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |
+| +I |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+| -U |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+----
+
+== Changelogs in JOINs
+
+What about when we do a `JOIN`?
+This is where it gets interesting!
+(`interesting`, as in the curse, "_may you live in interesting times_")
+
+Let's join the `orders` to the `customers` to find out the name of the customer who placed the respective order.
+
+[source,sql]
+----
+SELECT o.order_id,
+        o.total_amount,
+        c.name
+    FROM orders o
+        LEFT OUTER JOIN
+        customers c
+        ON o.customer_id = c.customer_id
+    WHERE order_id='1001';
+----
+
+This is a `LEFT OUTER JOIN`.
+You'll sometimes see it written as `LEFT JOIN`; it means that it'll always return the row on the *left* (based on the order of the `ON` predicate), and if there is a match the value on the right, and if not a `NULL`.
+
+TIP: To learn more about the different types of `JOIN` see https://dataschool.com/how-to-teach-people-sql/left-right-join-animated/[these] https://learnsql.com/blog/sql-joins-types-explained/#left-join[articles] (and https://medium.com/data-science/can-we-stop-with-the-sql-joins-venn-diagrams-insanity-16791d9250c3[learn why you shouldn't use Venn diagrams] to represent the different `JOIN` types).
+
+What's really cool with the changelog view is that we get an insight into _how_ the query gets run:
+
+[source,sql]
+----
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| +I |                           1001 |       199.99 |                         <NULL> |
+| -D |                           1001 |       199.99 |                         <NULL> |
+| +I |                           1001 |       199.99 |                   Bucky Barnes |
+----
+
+This shows the `orders` row first emitted with only the left side of the join; the `order_id` and `total_amount`, with no match for `customers` so a `<NULL>` in `name`.
+Then the `customers` source catches up and is matched, so Flink retracts the `<NULL>` with a `-D` and then restates the record with a `+I` that includes the full record value this time.
+
+[NOTE]
+====
+The execution plan on this kind of query is not deterministic!
+
+After running the same query a few more times, I then saw this as the output:
+
+[source,sql]
+----
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| +I |                           1001 |       199.99 |                   Bucky Barnes |
+----
+
+You can run `EXPLAIN PLAN FOR` if you want to poke around the optimisation decisions Flink is making when it executes the query to see the difference.
+In this example it's the same join but different fields in the projection:
+
+image::/images/2025/05/2025-05-12T14-20-25-902Z.png[]
+====
+
+=== What happens if you update the customer data?
+
+WARNING: ⚠️ Tangent up ahead!
+
+Out of interest, I added a couple of new records to the `customers` table, using the same `customer_id` and thus representing a logical update to the record.
+Here's what happened:
+
+. First, the existing record is replaced with a `<NULL>`
++
+[source,sql]
+----
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| -U |                           1001 |       199.99 |                   Bucky Barnes |
+| +I |                           1001 |       199.99 |                         <NULL> |
+----
+
+. Then the `<NULL>` is removed (with a `-D`, compared to a `-U` above), and the new value written:
++
+[source,sql]
+----
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| -D |                           1001 |       199.99 |                         <NULL> |
+| +I |                           1001 |       199.99 |                Fred Flintstone |
+----
+
+So each time the _customer_ data changes, the _order_ is re-emitted with the updated customer information.
+
+This pattern continued for as long as I continued making changes to the relevant record on `customers`, which got me to thinking: how long is Flink holding these values from each side of the join in order to emit an updated join result if one changes?
+
+== Staying Regular
+
+The above join, a humble `LEFT OUTER JOIN` (or `LEFT JOIN` if you prefer brevity), is what's known as a https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/sql/queries/joins/#regular-joins[_regular join_].
+
+Per the docs:
+
+> it requires to keep both sides of the join input in Flink state forever.
+> Thus, **the required state for computing the query result might grow infinitely** depending on the number of distinct input rows of all input tables and intermediate join results
+
+Here's the batch-based SQL world meeting the streaming one.
+In batch, we resolve the join once and once only, because we have a bounded set of data.
+
+In the streaming world the data is unbounded and so we need to decide what to do if a join's results are changed by the arrival of a new record on either side.
+Using the standard SQL `JOIN` syntax you get an updated result from the `JOIN` any time a new row arrives that impacts the result.
+
+If you've got big volumes of data coming through your pipeline, this might cause problems.
+
+image::/images/2025/05/2025-05-12T16-15-21-035Z.png[]
+
+=== The YOLO approach: discarding state in regular joins
+
+One way to avoid this, _assuming you don't want to get updated results_, is to tell Flink to https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/config/#table-exec-state-ttl[discard the state after a period of time].
+You configure this by setting a 'time to live' (TTL) for the state:
+
+[source,sql]
+----
+SET 'table.exec.state.ttl'='5sec';
+----
+
+Any new `customers` records arriving after this time _will not_ cause a new join result to be issued. New records on `orders` will continue to be emitted as they arrive, joining to the latest result on `customers`.
+
+However, this is a relatively crude—if effective—approach that can end up with different results each time you run it depending on when records arrive.
+
+Imagine you have a pipeline in which a customer update arrives after the TTL has expired.
+Flink will ignore it, per the configuration.
+The order(s) it relates to therefore only be passed downstream with the _original_ customer details.
+Now we re-run the pipeline, and since the customer update has already arrived, will be processed by Flink _within the 5 second TTL timeout_, and now the same orders get joined to the _newer version of the customer data_.
+
+Perhaps this is what you want, or a tolerable compromise to make.
+But it's very important to be aware of it because you're changing the data that's being passed downstream.
+Flink will do exactly what you tell it to, including sending "wrong" data if you tell it to.
+Only you can decide if it's "wrong" though, per the business requirements of the system.
+
+In short, we're relying on execution logic and the vagaries of when a record might arrive to implement what is business logic (_which version of customer data should we use to join to the order; should we wait for any changes to that data and if so for how long_).
+The rest of the business logic resides in the SQL; let's see how we can do this for the join logic too.
+
+== Temporal joins
+
+If we're going to really adopt SQL in the streaming world we need to break free from the training wheels of regualar joins, and instead embrace https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/sql/queries/joins/#temporal-joins[temporal joins].
+
+image::/images/2025/05/2025-05-12T16-15-47-212Z.png[]
+
+As the name suggests, a temporal join uses time as an element in evaluating the join.
+This way we can encode in the SQL statement what logic we actually want to use in the join.
+Combined with link:/2025/04/25/its-time-we-talked-about-time-exploring-watermarks-and-more-in-flink-sql/[watermarks] Flink gives us a powerful way to express if, and for how long, we want to continue to wait for a match or update in the join result.
+This avoids the exploding state problem, whilst also formalising the expected results from a query.
+
+Here's the same query as above but with a temporal join.
+Flink will use the event time (`order_date`) and look at the state of `customers` at that time to determine the value of the corresponding record (if there is one).
+
+[source,sql]
+----
+SELECT o.order_id,
+        o.total_amount,
+        c.name
+    FROM orders AS o
+        LEFT OUTER JOIN
+        customers
+            FOR SYSTEM_TIME AS OF o.order_date
+            AS c
+        ON o.customer_id = c.customer_id;
+----
+
+Before we can do it we need to update the definitions of the tables, otherwise we get:
+
+[source,sql]
+----
+org.apache.flink.table.api.ValidationException:
+Temporal table join currently only supports 'FOR SYSTEM_TIME AS OF' left table's time attribute field
+----
+
+The `left table` is `orders`, which _does_ have `order_date` but _not defined as a time attribute field_.
+This is what caught me out with watermarks the first time round too; link:/2025/04/25/its-time-we-talked-about-time-exploring-watermarks-and-more-in-flink-sql/#_time_in_apache_flink[read this bit here of my blog] to understand more about *time attribute fields* in Flink SQL if you need to.
+
+We'll add an _event time attribute_ to `orders` using the `order_date` field and a five second lag in the watermark strategy, to allow for out of order records to arrive within that time frame:
+
+[source,sql]
+----
+ALTER TABLE orders
+    ADD WATERMARK FOR `order_date` AS `order_date` - INTERVAL '5' SECONDS;
+----
+
+Having done that, we still get an error when we try the temporal join query again:
+
+[source,sql]
+----
+org.apache.flink.table.api.ValidationException:
+Event-Time Temporal Table Join requires both primary key and row time attribute in versioned table, but no row time attribute can be found.
+----
+
+In short, we've added a time attribute to `orders` but not `customers`, and if we're joining based on time, we need one.
+But whilst `orders` has the obvious `order_date` event time column, `customers` doesn't.
+
+We could use a standard data modelling technique—which is good practice anyway—and have a `valid_from` / `valid_to` set of columns on the `customers` table.
+That way we can report on order data based on the customer value at the time of the order.
+
+What we're going to do here is simpler.
+We'll just take the timestamp of the Kafka records that `customers` is built from and use that as the *event time attribute*.
+
+[source,sql]
+----
+ALTER TABLE customers
+    ADD `record_time` TIMESTAMP(3) METADATA FROM 'timestamp';
+
+ALTER TABLE customers
+    ADD WATERMARK FOR `record_time` AS `record_time`;
+----
+
+Now when we run the query we get… nothing:
+
+image::/images/2025/05/query03.gif[]
+
+Why?
+
+image::/images/2025/05/watermarks.jpg[]
+
+Watermarks.
+It's always watermarks.
+
+Looking at the Apache Flink dashboard we can see the `orders` source is producing a watermark, whilst the `customers` source isn't.
+
+image::/images/2025/05/watermark01.png[]
+
+In this case it's our friend the link:/2025/04/25/its-time-we-talked-about-time-exploring-watermarks-and-more-in-flink-sql/#_idle_partitions[idle partition].
+We can verify this by looking at the topic partitions in which the customer data resides.
+Since Flink doesn't store the data per se, but is just reading it from a Kafka topic, I'm going to create a second Flink table over the same `customers` topic in order to examine the partitions, whilst leaving the current `customers` unchanged:
+
+[source,sql]
+----
+CREATE TABLE customers_tmp (
+    topic_partition INT METADATA FROM 'partition',
+    customer_id STRING,
+    name STRING,
+    `record_time` TIMESTAMP(3) METADATA FROM 'timestamp',
+    WATERMARK FOR `record_time` AS `record_time`,
+    PRIMARY KEY (customer_id) NOT ENFORCED
+) WITH (
+    'connector' = 'upsert-kafka',
+    'topic' = 'customers',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'key.format' = 'json',
+    'value.format' = 'json'
+);
+
+Flink SQL> SELECT topic_partition, customer_id FROM customers_tmp;
++----+-----------------+--------------------------------+
+| op | topic_partition |                    customer_id |
++----+-----------------+--------------------------------+
+| +I |               2 |                      CUST-5678 |
+| +I |               1 |                      CUST-3456 |
+| +I |               1 |                      CUST-9012 |
+----
+
+Since there's no record in partition 0, the `customers` operator won't generate a watermark.
+
+But why does a lack of a watermark on `customers` stop the join from working?
+At this point we need to handle two separate paths of logic when mentally evaluating this `LEFT OUTER JOIN`:
+
+1. Just as in an RDBMS batch world, what are the rows of data on the left of the join, and are there any matching to return as part of a `LEFT OUTER JOIN`?
+2. Since the processing is time-based, **for what point in time does Flink consider each source to be complete**?
++
+This is defined by the current watermark, and watermarks are generated by each source and allow for any records that may have arrived out of order (as defined by the watermark generation stategy).
+In the case of `customers` we're not allowing for that (`WATERMARK FOR record_time AS record_time) and on `orders` we are allowing a five second grace (`WATERMARK FOR order_date AS order_date - INTERVAL '5' SECONDS`).
++
+To determine the watermark for the join operator Flink will take the watermarks from the two source operators (`orders` and `customers`) and choose the earlier of the two.
+If either is null, then the watermark for the join operator will also be null.
++
+The watermark on the join operator defines the point in time at which Flink considers data to have arrived for both sides of the join and thus ready to be emitted, based on the `LEFT OUTER JOIN` conditions (per point (1) above).
++
+**If the watermark is null (or earlier than the records in the tables being joined)**, then the join operator won't emit records because Flink can't be sure that there might not be out of order records still to arrive.
+
+In this instance, Flink hasn't got a watermark from the `customers` source (because of the idle partition), and thus the join operator doesn't have a watermark, meaning that it cannot emit any rows yet because logically it doesn't know if there may be more to arrive before considering that point in time complete.
+
+To fix this we'll configure the `customers` table to ignore partitions that are idle for longer than five seconds:
+
+[source,sql]
+----
+ALTER TABLE customers
+    SET ('scan.watermark.idle-timeout'='5 sec');
+----
+
+Now when we re-run the same query, we get a watermark generated by the `customers` operator:
+
+image::/images/2025/05/2025-05-15T10-19-25-773Z.png[]
+
+**BUT** we still don't get any query results!
+
+If you look closely at the screenshot above you'll see that the **Records Sent** for each source operator is 3 (three orders, three customers), and the join operator has _received_ six records (2x3 = 6).
+However, the join operator has sent zero records—which is why our query is still stubbornly stuck showing no results from the join:
+
+image::/images/2025/05/query03.gif[]
+
+Why?
+
+Watermarks!! 🤪 😭
+
+image::/images/2025/05/2025-05-15T10-25-03-925Z.png[]
+
+This time it's not the absence of a watermark (as above), it's the fact that the watermark on the join operator exists, _and is earlier than any of the records received_.
+Since the watermark is earlier, then Flink will not emit the records.
+
+[TIP]
+====
+A quick aside; why is the watermark `09/05/2025, 14:29:55`?
+
+Let's look at the operator watermarks in the Flink UI (I've overlaid the translation from epoch milliseconds to make it easier to follow):
+
+image::/images/2025/05/watermark03.png[]
+
+The downstream operator (in this case, the join operator) will take the _earliest of the upstream watermarks_. The `orders` watermark is thus used.
+
+
+* From `customers` we have a watermark that reflects when the records were written to Kafka, and is several days later than the `order_date` on the `orders` records.
+
+* To understand why the `orders` watermark is the value it is, let's break it down.
++
+The watermark for `orders` is based on the **latest value** of the data in _each partition_, and then the overall watermark is the **earliest of those values**.
++
+The `orders` topic happens to have three partitions, and it happens that each order record is a different partition.
+I'll do the same as I did above, and create a new table on top of the existing `orders` topic to inspect the topic partition assignments:
++
+[source,sql]
+----
+CREATE TABLE orders_tmp (
+    topic_partition INT METADATA FROM 'partition', order_id STRING,
+    customer_id STRING,
+    order_date TIMESTAMP(3),
+    total_amount DECIMAL(10, 2),
+    PRIMARY KEY (order_id) NOT ENFORCED
+) WITH (
+    'connector' = 'upsert-kafka',
+    'topic' = 'orders',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'key.format' = 'json',
+    'value.format' = 'json'
+);
+----
++
+In this query we can also calculate what we expect the watermark to be for each row (based on `order_date` minus 5 seconds, per our watermark generation strategy declared on the `orders` table):
++
+[source,sql]
+----
+Flink SQL> SELECT topic_partition,
+                    order_id,
+                    order_date,
+                    order_date - INTERVAL '5' SECONDS AS expected_watermark
+            FROM orders_tmp;
++----+-----------------+-----------+-------------------------+-------------------------+
+| op | topic_partition |  order_id |              order_date |      expected_watermark |
++----+-----------------+-----------+-------------------------+-------------------------+
+| +I |               0 |      1002 | 2025-05-09 15:45:00.000 | 2025-05-09 15:44:55.000 |
+| +I |               1 |      1001 | 2025-05-09 14:30:00.000 | 2025-05-09 14:29:55.000 |
+| +I |               2 |      1003 | 2025-05-09 16:15:00.000 | 2025-05-09 16:14:55.000 |
+----
++
+So of these three values, take the earliest (`2025-05-09 14:29:55.000`)—and that's what we indeed see as the current watermark of the `orders` operator in the Flink UI.
+====
+
+=== Fixing the stuck watermark
+
+To advance the watermark, we need to give Flink another record with an event time later than the current watermark.
+
+[source,sql]
+----
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+    VALUES ('1042', 'CUST-5678', TIMESTAMP '2025-05-09 15:50:00', 42.00);
+----
+
+But the watermark stays stuck and still no data. This is because my Kafka topic is partitioned, and whilst I've moved the watermark on for partition 0 (where the new order, `1042`, happened to end up) the overall watermark for the `orders` operator remains the same (`2025-05-09 14:29:55.000`):
+
+[source,sql]
+----
++----+-----------------+--------------------------------+-------------------------+-------------------------+
+| op | topic_partition |                       order_id |              order_date |      expected_watermark |
++----+-----------------+--------------------------------+-------------------------+-------------------------+
+| +I |               0 |                           1002 | 2025-05-09 15:45:00.000 | 2025-05-09 15:44:55.000 |
+| +I |               0 |                           1042 | 2025-05-09 15:50:00.000 | 2025-05-09 15:49:55.000 |
+| +I |               1 |                           1001 | 2025-05-09 14:30:00.000 | 2025-05-09 14:29:55.000 |
+| +I |               2 |                           1003 | 2025-05-09 16:15:00.000 | 2025-05-09 16:14:55.000 |
+----
+
+set idle partition? but it's wall clock, lol.
+
+
+
+=== _(why can't we use `SET 'table.exec.source.idle-timeout' = '5 sec';`? and also btw `SET 'table.exec.source.idle-timeout' = '1 sec';` _does_ work, wtf)_
+
+
+
+So what's going on? Why am I getting a `<NULL>` in my join output?
+
+Here are the respective records that in a regular ole' batch query would be a simple match.
+On the left of the join, we have the `orders` row:
+
+[source,sql]
+----
+Flink SQL> SELECT order_id, customer_id, order_date FROM orders  WHERE order_id='1001';
++----+--------------------------------+--------------------------------+-------------------------+
+| op |                       order_id |                    customer_id |              order_date |
++----+--------------------------------+--------------------------------+-------------------------+
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |
+----
+
+On the right is `customers`, which holds the following for `CUST-5678`:
+
+[source,sql]
+----
+Flink SQL> SELECT customer_id, name FROM customers WHERE customer_id = 'CUST-5678';
++----+--------------------------------+--------------------------------+
+| op |                    customer_id |                           name |
++----+--------------------------------+--------------------------------+
+| +I |                      CUST-5678 |                   Bucky Barnes |
+----
+
+Given that we've got a valid record for `CUST-5678`, why does the `JOIN` above emit a `<NULL>`?
+
+Looking at our join logic, we're asking Flink to join a record on `orders` to `customers` based on the state of the `customers` table as it was at the time of `order_date`.
+Perhaps we now see the problem.
+On 9th May, **there was no entry on `customers` for `CUST_5678`**.
+
+Since there was in effect no entry, we get a `<NULL>`, just as we would if there was no match on `customer_id` in a regular batch query.
+
+Let's prove this out, by creating an order for this customer with an `order_date` that _does_ fall within the times for which we have an entry.
+
+NOTE: _For some reason I couldn't `INSERT` a value with the partition metadata column present, even though I wasn't trying to insert to that column, failing with the error `org.apache.flink.table.api.ValidationException: Invalid metadata key 'partition' in column 'topic_partition' of table 'default_catalog.default_database.orders'.  The Dynamic TableSink class 'org.apache.flink.streaming.connectors.kafka.table.KafkaDynamicSink' supports the following metadata keys for writing: headers timestamp`._
+
+[source,sql]
+----
+ALTER TABLE orders DROP topic_partition;
+
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+VALUES ('1042', 'CUST-5678', TIMESTAMP '2025-05-14 09:45:00', 42.00);
+----
+
+But the new order isn't shown:
+
+image::/images/2025/05/query04.gif[]
+
+----
+
+here is the orders table:
+
+Flink SQL> select * from orders;
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |
+| +I |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+
+When I run this join query:
+
+SELECT  /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
+        o.order_id,
+        o.total_amount,
+        c.name
+    FROM orders AS o
+        LEFT OUTER JOIN
+        customers
+            FOR SYSTEM_TIME AS OF o.order_date
+            AS c
+        ON o.customer_id = c.customer_id;
+The first time it doesn't return results. I cancelled it and reran it, and then it did (which I don't understand).
+
+It gives me the results which I would kind of expect (NULL on customer data because of the timestamp of those records, that bit is fine)
+
+│+----+--------------------------------+--------------+--------------------------------+
+│| op |                       order_id | total_amount |                           name |
+│+----+--------------------------------+--------------+--------------------------------+
+│| +I |                           1001 |       199.99 |                         <NULL> |
+│| +I |                           1003 |        75.25 |                         <NULL> |
+│| +I |                           1002 |       349.50 |                         <NULL> |
+
+Using the Flink UI I can see that at this point the watermark on orders source is 2025-05-09 14:29:55.000 (per order id 1001 - the topic is partitioned, the three orders end up across three partitions).
+The watermark on customers source is 2025-05-14, 08:34:14 .
+Thus the watermark on the join operator is 2025-05-09 14:29:55.000  (the earlier of the two watermarks, so using orders)
+
+-> Given that the order_date is greater than this watermark, at this point it suggests that the left side of a join is not constrained by the current watermark, right?
+
+But if I add a new row to the orders table:
+
+Flink SQL> select * from orders;
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |
+| +I |                           1042 |                      CUST-5678 | 2025-05-14 09:45:00.000 |        42.00 |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |
+| +I |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+This row isn't emitted in the join output, why not?
+The orders watermark is now 14/05/2025, 09:44:55 .
+The join operator watermark uses customers watermark as it's lower of the two: 14/05/2025, 08:34:14
+
+ If I add another order:
+
+Flink SQL> select * from orders;
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |
++----+--------------------------------+--------------------------------+-------------------------+--------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |
+| +I |                           1042 |                      CUST-5678 | 2025-05-14 09:45:00.000 |        42.00 |
+| +I |                           1043 |                      CUST-5678 | 2025-05-14 09:45:10.000 |        42.00 |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |
+| +I |                           1003 |                      CUST-5678 | 2025-05-09 16:15:00.000 |        75.25 |
+
+the join the emits the previous order (1042):
+
+Flink SQL> SELECT  /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
+>         o.order_id,
+>         o.total_amount,
+>         c.name
+>     FROM orders AS o
+>         LEFT OUTER JOIN
+>         customers
+>             FOR SYSTEM_TIME AS OF o.order_date
+>             AS c
+>         ON o.customer_id = c.customer_id;
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| +I |                           1001 |       199.99 |                         <NULL> |
+| +I |                           1003 |        75.25 |                         <NULL> |
+| +I |                           1002 |       349.50 |                         <NULL> |
+| +I |                           1042 |        42.00 |                   Bucky Barnes | <----- this one
+the join output for 1042 is correct, as I'd expect.
+the orders watermark is 14/05/2025, 09:45:05
+the join operator watermark is still the lower of the two sources (orders, customers), at 14/05/2025, 09:34:14
+
+--> So the behaviour here from the orders operator is more like it is constraining its output based on watermark (only 1042 is emitted once the watermark moves past its order_date) -- but if that's the case, why were order 1001-1003 emitted if the watermark for orders was earlier than the order_date on them to start with? Wouldn't they only get emitted once the watermark moved on (triggered by order 1042) ?
+
+
+--------
+
+image::/images/2025/05/2025-05-13T16-58-26-447Z.png[]
+
+orders: 13/05/2025, 11:44:55
+JOIN: 13/05/2025, 11:44:55
+custoemrs: 13/05/2025, 16:17:39
+
+If watermark is required for left join to emit, why do we get orders 1001-1003 in original query run, if watermark is `2025-05-09 14:29:55` which is less than `order_time` on all of them?
+
+Let's push the watermark along, by adding another `orders` record:
+
+[source,sql]
+----
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+    VALUES ('1043', 'CUST-9012', TIMESTAMP '2025-05-13 11:45:25', 42.00);
+----
+
+The `orders` (and join) watermark moves to `13/05/2025, 11:45:20`—but still no 1042 or 1043 order emitted.
+
+Add another:
+
+[source,sql]
+----
+INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+VALUES ('1044', 'CUST-9012', TIMESTAMP '2025-05-13 11:46:30', 42.00);
+----
+
+`orders` and join watermark `13/05/2025, 12:46:25`
+
+no rows on join query.
+
+Rerun join query:
+
+
+
+This unblocked the join query, causing it to emit the 'stuck' order `1042`—and not only emit it, but emit it with a successful `customers` temporal join result too!
+
+[source,sql]
+----
+Flink SQL> SELECT  /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
+>         o.order_id,
+>         o.total_amount, order_date,
+>         c.name
+>     FROM orders AS o
+>         LEFT OUTER JOIN
+>         customers
+>             FOR SYSTEM_TIME AS OF o.order_date
+>             AS c
+>         ON o.customer_id = c.customer_id
+>     WHERE order_id IN ('1001','1042');
++----+--------------------------------+--------------+-------------------------+--------------------------------+
+| op |                       order_id | total_amount |              order_date |                           name |
++----+--------------------------------+--------------+-------------------------+--------------------------------+
+| +I |                           1001 |       199.99 | 2025-05-09 14:30:00.000 |                         <NULL> |
+| +I |                           1042 |        42.00 | 2025-05-13 11:45:00.000 |                   Bucky Barnes |
+----
+
+This now makes some sense to me.
+The watermark from `orders` is always going to be five seconds behind the latest `order_date`, and thus the most recent record will never be emitted until a one with an `order_date` more than five seconds ahead of it comes in to move the watermark on.
+
+Here is the current state of the watermarks:
+
+* `orders`:      `2025-05-13 11:45:55`
+* `customers`:   `2025-05-13 10:52:34`
+* Join operator: `2025-05-13 10:52:34` (the lower of the two upstream watermarks)
+
+If you're paying particularly close attention you might notice a bit of a discrepancy here.
+
+When we were waiting for order `1042` above, the watermark for `orders` table was `2025-05-09 14:29:55`.
+Now, it's `2025-05-13 11:45:55` (five seconds before the `order_date` of order `1042`).
+Looking closely at the `orders` table, I'm wondering why the watermark wasn't `2025-05-13 11:44:55.000` (five seconds before the `order_date` of order `1043`).
+
+[source,sql]
+----
+Flink SQL> SELECT order_id, order_date, order_date - INTERVAL '5' SECONDS AS calc_watermark, topic_partition
+>             FROM orders;
++----+--------------------------------+-------------------------+-------------------------+-----------------+
+| op |                       order_id |              order_date |          calc_watermark | topic_partition |
++----+--------------------------------+-------------------------+-------------------------+-----------------+
+| +I |                           1002 | 2025-05-09 15:45:00.000 | 2025-05-09 15:44:55.000 |               0 |
+| +I |                           1042 | 2025-05-13 11:45:00.000 | 2025-05-13 11:44:55.000 |               0 |
+| +I |                           1043 | 2025-05-13 11:46:00.000 | 2025-05-13 11:45:55.000 |               0 |
+| +I |                           1001 | 2025-05-09 14:30:00.000 | 2025-05-09 14:29:55.000 |               1 |
+| +I |                           1003 | 2025-05-09 16:15:00.000 | 2025-05-09 16:14:55.000 |               2 |
+----
+
+What I think is happening here is the `scan.watermark.idle-timeout` coming into play.
+
+When I first ran the query it was actually after having already cancelled it once already and run the `INSERT` of the order `1042`.
+This meant that Flink was reading all the records from the `orders` source at once, and thus no partitions were idle, hence the lowest watermark across all partitions was chosen (partition 1, ` 2025-05-09 14:29:55.000`).
+
+After going off to make a cup of tea I came back and added order `1043`, causing the Kafka source to generate a new watermark.
+At this point though partitions 1 and 2 were idle, so only the watermark from partition 0 was used, and thus the watermark becomes `2025-05-13 11:45:55.000`.
+
+To check this theory I cancelled the `JOIN` query and reran it.
+If my theory was correct, we'd see the watermark from `orders` revert to `2025-05-09 14:29:55` because none of the partitions would be idle, and thus only orders `1001`, `1002`, and `1003` would be emitted:
+
+
+
+
+[source,sql]
+----
+SELECT   /*+ OPTIONS('scan.watermark.idle-timeout'='5sec') */
+        o.order_id,
+        o.total_amount,
+        c.name
+    FROM orders AS o
+        LEFT OUTER JOIN
+        customers
+            FOR SYSTEM_TIME AS OF o.order_date
+            AS c
+        ON o.customer_id = c.customer_id
+    WHERE order_id='1001';
++----+--------------------------------+--------------+--------------------------------+
+| op |                       order_id | total_amount |                           name |
++----+--------------------------------+--------------+--------------------------------+
+| +I |                           1001 |       199.99 |                         <NULL> |
+----
+
+
+
+
+We'll just say whatever value has been read from the `customers` table at the time of the join is what'll be output.
+To do this we add a _processing time attribute_ to the table:
+
+[source,sql]
+----
+ALTER TABLE customers
+    ADD `flink_proc_time` AS PROCTIME();
+----
+
+----
+
+
+- Just join to what's there (interval + month)
+- effective from date
+
+
+
+update vs insert (append) changelog output: https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/dynamic_tables/#update-and-append-queries
+
+
+
+ref
+
+https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/overview/
+`COMPILE PLAN '/path/to/plan.json' FOR`
+
+https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/dynamic_tables/
+https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/determinism/#32-non-deterministic-update-in-streaming
+https://nightlies.apache.org/flink/flink-docs-release-2.0/docs/dev/table/concepts/versioned_tables/
+
+
+
+https://confluent.slack.com/archives/C044A8FNSJ0/p1742407335643819
+
+> A fact table is usually append, if you join it using a temporal table join it stays append.
+> If you use a regular join it becomes updating.
+
+
+> I think you can get around this by basically creating a window of the changelog to convert it to an append table, but yes ideally it would support upserts for the changelog data
+> basically, if you wrap your window in a tumbling window, it'll convert it to a +I rather than an UPDATE/DELETE etc. We had to do this when writing to Kinesis at AWS because it also doesn't support changelog events
+
+>>  Were customers OK with that? It basically means that Deletes are shown as Inserts
+
+>> If i use a temporal join, the rows need to exist on my dimension tables (measures, stations) with a $rowtime earlier than the $rowtime on the fact table (readings), is that right? i.e. load data into the dimension tables before loading the fact data?
+>> and can you do FOR SYSTEM_TIME BETWEEN col1 AND col2? it doesn't look like it from the docs, but it'd then fit with traditional dimension modelling of valid_from / valid_to TS fields.
+
+> Yes dimension records need to exist before facts. You can add some delta in the expression if needed.
+> valid_to is not really used in streaming because it requires an update of old records. What does it give you in comparison?
+
+---
+
+
+
+
+https://confluent.slack.com/archives/C044A8FNSJ0/p1747157714628059?thread_ts=1747061540.285099&cid=C044A8FNSJ0
+> I think a regular physical join with TTLs specified per-table is often much easier for users to reason about than a temporal join, but if a user knows enough about their kafka data to trust their kafka timestamps then a temporal join on $rowtime is relatively easy to reason about as well...but that's only in CCF, not Apache Flink
+> a warning that with State TTLs, they are based on wall clock time, rather than event time, so they can be a bit problematic in that regard.
+> Yes, event time TTLs would certainly be better. The current method of doing it with wall-clock is certainly still better than nothing, but does come with some strange complications / results, particularly in situations where you're doing backfill or reading from a large historical topic to rebuild state
+
+---
+
+difference between kafka and kafka-upsert connector. does that change the JOIN behaviour?
+
+---
+
+
+
+
+
+
+Flink SQL> EXPLAIN SELECT * FROM orders;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| == Abstract Syntax Tree ==
+LogicalProject(order_id=[$0], customer_id=[$1], order_date=[$2], total_amount=[$3], status=[$4])
++- LogicalTableScan(table=[[default_catalog, default_database, orders]])
+
+== Optimized Physical Plan ==
+ChangelogNormalize(key=[order_id])
++- Exchange(distribution=[hash[order_id]])
+   +- TableSourceScan(table=[[default_catalog, default_database, orders]], fields=[order_id, customer_id, order_date, total_amount, status])
+
+== Optimized Execution Plan ==
+ChangelogNormalize(key=[order_id])
++- Exchange(distribution=[hash[order_id]])
+   +- TableSourceScan(table=[[default_catalog, default_database, orders]], fields=[order_id, customer_id, order_date, total_amount, status])
+ |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+1 row in set
+
+Flink SQL> SET 'sql-client.execution.result-mode' = 'tableau';
+[INFO] Execute statement succeeded.
+
+Flink SQL> select * from orders;
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |                         status |
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |
+| +I |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |
+
+
+Flink SQL> CREATE TABLE print_sink_3  WITH (
+>   'connector' = 'print',
+>   'print-identifier' = 'debug-output',
+>   'standard-error' = 'true'
+> ) as select * from orders;
+[INFO] Submitting SQL update statement to the cluster...
+[INFO] SQL update statement has been successfully submitted to the cluster:
+Job ID: eb675ba464bf36322bccccd3991d0c13
+
+
+Flink SQL>
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+jobmanager     | 2025-05-09 10:32:14,325 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - ChangelogNormalize[49] -> ConstraintEnforcer[50] -> Sink: print_sink_3[50] (1/1) (2e192da37bbe07b09c3ac2b0d35994e4_20ba6b65f97481d5570070de90e
+4e791_0_0) switched from INITIALIZING to RUNNING.
+taskmanager-1  | 2025-05-09 10:32:14,335 INFO  org.apache.flink.kafka.shaded.org.apache.kafka.clients.Metadata [] - [Consumer clientId=KafkaSource--8929508067403983326-0, groupId=null] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+taskmanager-1  | 2025-05-09 10:32:14,343 INFO  org.apache.flink.kafka.shaded.org.apache.kafka.clients.consumer.internals.SubscriptionState [] - [Consumer clientId=KafkaSource--8929508067403983326-0, groupId=null] Resetting offset for partition orders-0 to
+ position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[broker:9092 (id: 1 rack: null)], epoch=0}}.
+taskmanager-1  | 2025-05-09 10:32:14,343 INFO  org.apache.flink.kafka.shaded.org.apache.kafka.clients.consumer.internals.SubscriptionState [] - [Consumer clientId=KafkaSource--8929508067403983326-0, groupId=null] Resetting offset for partition orders-1 to
+ position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[broker:9092 (id: 1 rack: null)], epoch=0}}.
+taskmanager-1  | 2025-05-09 10:32:14,343 INFO  org.apache.flink.kafka.shaded.org.apache.kafka.clients.consumer.internals.SubscriptionState [] - [Consumer clientId=KafkaSource--8929508067403983326-0, groupId=null] Resetting offset for partition orders-2 to
+ position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[broker:9092 (id: 1 rack: null)], epoch=0}}.
+taskmanager-1  | debug-output> +I[1002, CUST-9012, 2025-05-09T15:45, 349.50, PROCESSING]
+taskmanager-1  | debug-output> +I[1001, CUST-5678, 2025-05-09T14:30, 199.99, PENDING]
+taskmanager-1  | debug-output> +I[1003, CUST-3456, 2025-05-09T16:15, 75.25, COMPLETED]
+
+
+
+----
+
+
+Flink SQL> select COUNT(*) from orders;
++----+----------------------+
+| op |               EXPR$0 |
++----+----------------------+
+| +I |                    1 |
+| -U |                    1 |
+| +U |                    2 |
+| -U |                    2 |
+| +U |                    3 |
+
+
+
+Flink SQL> EXPLAIN select COUNT(*) from orders;
+
+| == Abstract Syntax Tree ==
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
++- LogicalProject($f0=[0])
+   +- LogicalTableScan(table=[[default_catalog, default_database, orders]])
+
+== Optimized Physical Plan ==
+GroupAggregate(select=[COUNT_RETRACT(*) AS EXPR$0])
++- Exchange(distribution=[single])
+   +- Calc(select=[0 AS $f0])
+      +- ChangelogNormalize(key=[order_id])
+         +- Exchange(distribution=[hash[order_id]])
+            +- Calc(select=[order_id])
+               +- TableSourceScan(table=[[default_catalog, default_database, orders]], fields=[order_id, customer_id, order_date, total_amount, status])
+
+== Optimized Execution Plan ==
+GroupAggregate(select=[COUNT_RETRACT(*) AS EXPR$0])
++- Exchange(distribution=[single])
+   +- Calc(select=[0 AS $f0])
+      +- ChangelogNormalize(key=[order_id])
+         +- Exchange(distribution=[hash[order_id]])
+            +- Calc(select=[order_id])
+               +- TableSourceScan(table=[[default_catalog, default_database, orders]], fields=[order_id, customer_id, order_date, total_amount, status])
+
+
+Flink SQL> CREATE TABLE print_sink_2  WITH (
+>   'connector' = 'print',
+>   'print-identifier' = 'debug-output',
+>   'standard-error' = 'true'
+> ) as select COUNT(*) from orders;
+[INFO] Submitting SQL update statement to the cluster...
+[INFO] SQL update statement has been successfully submitted to the cluster:
+Job ID: 4f365e101c5570a7d650420e7a91619a
+
+
+Flink SQL>
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[broker:9092 (id: 1 rack: null)], epoch=0}}.
+taskmanager-1  | 2025-05-09 10:31:41,999 INFO  org.apache.flink.kafka.shaded.org.apache.kafka.clients.consumer.internals.SubscriptionState [] - [Consumer clientId=KafkaSource--6002560951678165853-0, groupId=null] Resetting offset for partition orders-2 to
+ position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[broker:9092 (id: 1 rack: null)], epoch=0}}.
+taskmanager-1  | 2025-05-09 10:31:42,006 INFO  org.apache.flink.runtime.taskmanager.Task                    [] - GroupAggregate[45] -> ConstraintEnforcer[46] -> Sink: print_sink_2[46] (1/1)#0 (51db1a23b3d1c93847e8c30c6d184ace_dc2290bb6f8f5cd2bd42536884349
+4fe_0_0) switched from INITIALIZING to RUNNING.
+jobmanager     | 2025-05-09 10:31:42,008 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - GroupAggregate[45] -> ConstraintEnforcer[46] -> Sink: print_sink_2[46] (1/1) (51db1a23b3d1c93847e8c30c6d184ace_dc2290bb6f8f5cd2bd425368843494f
+e_0_0) switched from INITIALIZING to RUNNING.
+taskmanager-1  | debug-output> +I[1]
+taskmanager-1  | debug-output> -U[1]
+taskmanager-1  | debug-output> +U[2]
+taskmanager-1  | debug-output> -U[2]
+taskmanager-1  | debug-output> +U[3]
+
+
+----
+
+
+Flink SQL> SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.customer_id;
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+-------------------------+--------------------------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |                         status |                   customer_id0 |                           name |                          email |             signup_date |                        status0 |
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+-------------------------+--------------------------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |                      CUST-5678 |                       Jane Doe |           jane.doe@example.com | 2025-02-20 14:45:00.000 |                         ACTIVE |
+| -U |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |                      CUST-5678 |                       Jane Doe |           jane.doe@example.com | 2025-02-20 14:45:00.000 |                         ACTIVE |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| -D |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1001 |                      CUST-5678 | 2025-05-09 14:30:00.000 |       199.99 |                        PENDING |                      CUST-5678 |                   Bucky Barnes |       bucky.barnes@example.com | 2025-02-20 14:45:00.000 |                         ACTIVE |
+| -D |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                      CUST-3456 |                     John Smith |         john.smith@example.com | 2025-01-15 09:30:00.000 |                         ACTIVE |
+| -D |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                      CUST-9012 |                 Robert Johnson |           robert.j@example.com | 2025-03-10 11:15:00.000 |                         ACTIVE |
+| -U |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                      CUST-3456 |                     John Smith |         john.smith@example.com | 2025-01-15 09:30:00.000 |                         ACTIVE |
+| +I |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| -D |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1003 |                      CUST-3456 | 2025-05-09 16:15:00.000 |        75.25 |                      COMPLETED |                      CUST-3456 |                  Yelena Belova |      yelena.belova@example.com | 2025-01-15 09:30:00.000 |                         ACTIVE |
+| -U |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                      CUST-9012 |                 Robert Johnson |           robert.j@example.com | 2025-03-10 11:15:00.000 |                         ACTIVE |
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| -D |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                         <NULL> |                         <NULL> |                         <NULL> |                  <NULL> |                         <NULL> |
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                      CUST-9012 |  Valentina Allegra de Fontaine |       val.fontaine@example.com | 2025-03-10 11:15:00.000 |                         ACTIVE |
+^CQuery terminated, received a total of 19 rows (22.49 seconds)
+
+
+Flink SQL> SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.customer_id where o.customer_id='CUST-9012';
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+----------
+---------------+--------------------------------+
+| op |                       order_id |                    customer_id |              order_date | total_amount |                         status |                   customer_id0 |                           name |                          email |
+   signup_date |                        status0 |
++----+--------------------------------+--------------------------------+-------------------------+--------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+----------
+---------------+--------------------------------+
+| +I |                           1002 |                      CUST-9012 | 2025-05-09 15:45:00.000 |       349.50 |                     PROCESSING |                      CUST-9012 |  Valentina Allegra de Fontaine |       val.fontaine@example.com | 2025-03-10 11:15:00.000 |                         ACTIVE |
