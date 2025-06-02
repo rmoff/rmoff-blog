@@ -1,0 +1,262 @@
+---
+draft: false
+title: 'Digging into Ducklake'
+date: "2025-06-02T14:26:15Z"
+image: "/images/2025/06/h_IMG_0273.webp"
+thumbnail: "/images/2025/06/t_IMG_0251.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- DuckDB
+- Ducklake
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: monokai
+
+
+After a week's holiday ("vacation", for y'all in the US) without a glance at anything work-related, what joy to return and find that the DuckDB folk have been busy, not only with https://duckdb.org/2025/05/21/announcing-duckdb-130.html[the recent 1.3.0 DuckDB release], but also a brand new project called https://github.com/duckdb/ducklake[DuckLake].
+
+Here are my brief notes on DuckLake.
+
+<!--more-->
+
+== Getting our ducks in a row
+
+Let's be clear: Naming things is hard.
+Even so, the DuckLake name is confusing because it implies a tight-coupling to DuckDB where there is none (other than the ownership of the project).
+
+**DuckLake in its most abstract form is a https://ducklake.select/docs/stable/specification/introduction.html[_specification_] for a way to store and catalog data.**
+
+An implementation of that specification is available in https://ducklake.select/docs/stable/duckdb/introduction[a DuckDB extension], but in theory any engine could support it.
+
+In this blog post, unless I say otherwise I'm going to be talking about DuckLake the specification.
+
+== OK, so what _is_ DuckLake?
+
+.Where does this fit in my data engineering toolbox?
+[TIP]
+====
+Conceptually, *DuckLake is an open table format (OTF) _plus_ a catalog*.
+
+So it's (*Iceberg + Polaris*), it's (*Delta Lake + Unity*), etc.
+====
+
+Physically, DuckLake is data stored as parquet files on object storage, and metadata about those files held in a SQL database.
+Storing the metadata in a SQL database is a core design decision.
+It means that you don't need a catalog (because the metadata store _becomes_ the catalog), as well as resulting in various performance improvements and the removal of metadata file compaction requirements.
+
+👉 https://ducklake.select/manifesto/[The DuckLake manifesto] does a good job of outlining the current state of OTFs and challenges, and positioning DuckLake within that.
+
+One bit that caught my eye was the nascent support for https://ducklake.select/docs/stable/duckdb/advanced_features/data_inlining.html[inlined data updates], in which the SQL database (currently only DuckDB itself) is also used to hold small bits of data (imagine that! in a database!) instead of directly writing individual changes to a parquet file.
+
+=== DLF vs OTF—WTF?
+
+The last few years in data engineering have been marked by numerous explainers on Open Table Formats (OTF), such that we're fairly comfortable with what they are now.
+
+DuckLake rips this back open, by introducing the "Data Lakehouse Format" (DLF) term.
+
+It makes sense because DuckLake isn't [just] a open table format, because it bundles the catalog too.
+
+== Sounds complicated. Isn't this just more moving parts?
+
+Yes, but no.
+
+If you're using an OTF (Iceberg/Delta Lake/Hudi) for any kind of task beyond a local sandbox and a single user, you'll need a catalog.
+DuckLake just wraps these two things together.
+
+Instead of managing object storage + catalog, you manage object storage + SQL database.
+
+Looking at it this way, it's actually a better option from an operations point of view; catalogs are relatively new technology, whilst DBAs have been feeding and watering SQL databases for decades.
+
+== Relationship to Motherduck
+
+Motherduck wrote https://motherduck.com/blog/ducklake-motherduck/[a blog post about DuckLake] with their own take on the manifesto and positioning of DuckLake.
+They're offering to provide the SQL catalog for DuckLake along with the data storage too, optionally.
+They'll also do the housekeeping on the data files—remember, even if the _metadata_ files are now in a SQL catalog, there could still be potentially the problem of small _data_ files that need compacting in order for optimal performance.
+
+== What about Iceberg?
+
+DuckDB's lack of comprehensive support for Iceberg has been notable for a while, and DuckLake doesn't do anything to fix that unfortunately.
+
+DuckLake and Iceberg are completely unrelated in terms of interaction.
+If you use Iceberg, you use Iceberg.
+DuckLake would replace Iceberg (plus its catalog).
+
+In the above blog post, Motherduck position DuckLake as https://motherduck.com/blog/ducklake-motherduck/#the-iceberg-hedge[a "hedge" against problems with Iceberg], saying that DuckLake has planned support for import and export to Iceberg.
+To me this is pretty ironic; why would you adopt a technology that's entirely unproven and states that it's not production ready, over one which is being widely adopted and successfully used in scale at production for several years?
+That's not to say Iceberg doesn't have its challenges and maybe one day will be a distant memory as DuckLake takes over the world—but the 'hedge' argument today is somewhat flawed.
+
+== Governance
+
+All the OTFs, and the "DLF" DuckLake are open source licenced.
+Licensing is just one element of "open" to consider though; the other is how the project is _governed_.
+This can impact how easy it is to submit bug fixes, add new features, or even make breaking changes.
+
+Apache Iceberg and Apache Hudi are governed by the Apache Software Foundation.
+Changes and developments are managed by the PMC, made up of contributors from different companies.
+
+Delta Lake is owned by the Linux Foundation, but in practice is a Databricks project.
+
+DuckLake is owned by the https://duckdb.org/foundation/[DuckDB Foundation].
+
+== Sounds fun, let's try it!
+
+WARNING: Be aware that DuckLake's https://ducklake.select/faq#ducklake-in-operation[not recommended for production use yet].
+
+At the moment the only implementation of DuckLake is in the form of an extension for DuckDB.
+There are some good examples at the end of https://duckdb.org/2025/05/27/ducklake.html[the DuckLake announcement blog] of its use.
+
+I put together https://github.com/rmoff/examples/blob/main/ducklake/docker-compose.yml[a Docker Compose] to run DuckDB (DuckLake engine) and Postgres (metadata catalog) together, using local file system for data.
+
+First off, install the DuckLake and Postgres extensions in DuckDB:
+
+[source,sql]
+----
+INSTALL ducklake;
+INSTALL postgres;
+----
+
+Then create a DuckLake database using Postgres for metadata and local filesystem (`/data`) for the data files.
+
+[source,sql]
+----
+ATTACH 'ducklake:postgres:dbname=postgres host=postgres user=postgres password=Welcome123' AS my_ducklake
+    (DATA_PATH '/data/');
+
+USE my_ducklake;
+----
+
+Now create a table and add some data:
+
+[source,sql]
+----
+🟡◗ CREATE TABLE test_data (
+      id INTEGER,
+      name VARCHAR,
+      email VARCHAR,
+      age INTEGER,
+      registration_date DATE,
+      score DOUBLE,
+      is_active BOOLEAN
+  );
+
+🟡◗ INSERT INTO test_data
+  WITH generated_data AS (
+      SELECT
+          row_number() OVER () AS id,
+          'User_' || (row_number() OVER ())::VARCHAR AS name,
+          'user' || (row_number() OVER ())::VARCHAR || '@example.com' AS email,
+          18 + (random() * 50)::INTEGER AS age,
+          DATE '2024-01-01' + (random() * 365)::INTEGER AS registration_date,
+          round(random() * 100, 2) AS score,
+          random() > 0.3 AS is_active
+      FROM range(1000)
+  )
+  SELECT * FROM generated_data;
+----
+
+Check the data:
+
+[source,]
+----
+🟡◗ SELECT COUNT(*) FROM test_data;
+┌──────────────┐
+│ count_star() │
+│    int64     │
+├──────────────┤
+│     1000     │
+└──────────────┘
+
+🟡◗ SELECT * FROM test_data LIMIT 1;
+┌───────┬─────────┬────────────────────┬───────┬───────────────────┬────────┬───────────┐
+│  id   │  name   │       email        │  age  │ registration_date │ score  │ is_active │
+│ int32 │ varchar │      varchar       │ int32 │       date        │ double │  boolean  │
+├───────┼─────────┼────────────────────┼───────┼───────────────────┼────────┼───────────┤
+│     1 │ User_1  │ user1@example.com  │    64 │ 2024-09-10        │   4.29 │ false     │
+├───────┴─────────┴────────────────────┴───────┴───────────────────┴────────┴───────────┤
+│ 1 row                                                                       7 columns │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+----
+
+Over in Postgres is the metadata:
+
+[source,sql]
+----
+postgres=# \dt
+                         List of relations
+ Schema |                 Name                  | Type  |  Owner
+--------+---------------------------------------+-------+----------
+ public | ducklake_column                       | table | postgres
+ public | ducklake_column_tag                   | table | postgres
+ public | ducklake_data_file                    | table | postgres
+ public | ducklake_delete_file                  | table | postgres
+ public | ducklake_file_column_statistics       | table | postgres
+ public | ducklake_file_partition_value         | table | postgres
+ public | ducklake_files_scheduled_for_deletion | table | postgres
+ public | ducklake_inlined_data_tables          | table | postgres
+ public | ducklake_metadata                     | table | postgres
+ public | ducklake_partition_column             | table | postgres
+ public | ducklake_partition_info               | table | postgres
+ public | ducklake_schema                       | table | postgres
+ public | ducklake_snapshot                     | table | postgres
+ public | ducklake_snapshot_changes             | table | postgres
+ public | ducklake_table                        | table | postgres
+ public | ducklake_table_column_stats           | table | postgres
+ public | ducklake_table_stats                  | table | postgres
+ public | ducklake_tag                          | table | postgres
+ public | ducklake_view                         | table | postgres
+(19 rows)
+----
+
+Including the table:
+
+[source,sql]
+----
+postgres=# select * from ducklake_table;
+ table_id |              table_uuid              | begin_snapshot | end_snapshot | schema_id | table_name
+----------+--------------------------------------+----------------+--------------+-----------+------------
+        1 | 0197314e-9389-7111-a705-3f8341df299c |              1 |              |         0 | test_data
+(1 row)
+----
+
+and information about the data file:
+
+[source,sql]
+----
+postgres=# select * from ducklake_data_file;
+ data_file_id | table_id | begin_snapshot | end_snapshot | file_order |                         path                          | path_is_relative | file_format | record_count | file_size_bytes | footer_size | row_id_start | partition_id | encryption_key | partial_file_info
+--------------+----------+----------------+--------------+------------+-------------------------------------------------------+------------------+-------------+--------------+-----------------+-------------+--------------+--------------+----------------+-------------------
+            0 |        1 |              2 |              |            | ducklake-0197314e-c237-7e2d-9aee-6a954d82401e.parquet | t                | parquet     |         1000 |           36279 |         809 |            0 |              |                |
+(1 row)
+----
+
+This corresponds to the data file on disk on the DuckDB container:
+
+[source,bash]
+----
+docker compose exec -it duckdb ls -l /data
+total 36
+-rw-r--r-- 1 root root 36279 Jun  2 15:42 ducklake-0197314e-c237-7e2d-9aee-6a954d82401e.parquet
+----
+
+== Watch this space
+
+I can see three posibilities for DuckLake:
+
+. It thrives, but only really in the DuckDB world.
+Having a way to store data with multi-user access is a pretty nice idea, and I can see folk building some good data platforms around DuckDB and DuckLake.
+
+. It finds limited adoption, perhaps amongst Motherduck customers who want a fully-hosted service.
+
+. It gains broader adoption outside of the DuckDB ecosystem.
+For this there'd need to be some serious implementations of it in popular engines so that it's not just the DuckDB fan club who use it.
+For example, with JDBC support in DuckDB there are some https://github.com/duckdb/ducklake/issues/78[workarounds to access DuckLake from Spark], but it needs to be first-class support in Spark, Trino, etc.
+
+== More reading
+
+* https://ducklake.select/faq[DuckLake FAQ]
+* https://www.theregister.com/2025/05/28/duckdb_flips_lakehouse_model_with/[ElReg - DuckDB flips lakehouse model with bring-your-own compute and metadata RDBMS]
+* Running https://tobilg.com/the-age-of-10-dollar-a-month-lakehouses[DuckLake on Cloudflare]
+* Join the `#ducklake` channel on the https://discord.duckdb.org/[DuckDB Discord server]
