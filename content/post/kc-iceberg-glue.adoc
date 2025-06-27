@@ -1,0 +1,385 @@
+---
+draft: false
+title: 'Kc Iceberg Glue'
+date: "2025-06-25T16:36:21Z"
+image: "/images/2025/06/"
+thumbnail: "/images/2025/06/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Uncategorized
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: monokai
+
+<!--more-->
+
+
+populate the kafka topic
+
+
+echo '{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
+{"order_id": "002", "customer_id": "cust_456", "product": "mouse", "quantity": 2, "price": 25.50}
+{"order_id": "003", "customer_id": "cust_789", "product": "keyboard", "quantity": 1, "price": 75.00}
+{"order_id": "004", "customer_id": "cust_321", "product": "monitor", "quantity": 1, "price": 299.99}
+{"order_id": "005", "customer_id": "cust_654", "product": "headphones", "quantity": 1, "price": 149.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
+
+
+
+confluent-hub install --no-prompt tabular/iceberg-kafka-connect:0.6.19
+
+or d/l from https://github.com/databricks/iceberg-kafka-connect/releases
+
+curl -s localhost:8083/connector-plugins|jq '.[].class'
+"io.tabular.iceberg.connect.IcebergSinkConnector"
+"org.apache.kafka.connect.mirror.MirrorCheckpointConnector"
+"org.apache.kafka.connect.mirror.MirrorHeartbeatConnector"
+"org.apache.kafka.connect.mirror.MirrorSourceConnector"
+
+
+
+brew install kcctl/tap/kcctl
+kcctl config set-context local --cluster http://localhost:8083
+
+wget https://raw.githubusercontent.com/kcctl/kcctl/v1.0.0.CR4/kcctl_completion
+source ./kcctl_completion
+
+
+❯ kcctl info
+URL:               http://localhost:8083
+Version:           8.0.0-ccs
+Commit:            42dc8a94fe8a158bfc3241b5a93a1adde9973507
+Kafka Cluster ID:  5L6g3nShT-eMCtK--X86sw
+
+❯ kcctl get plugins --types=sink
+
+ TYPE   CLASS                                             VERSION
+ sink   io.tabular.iceberg.connect.IcebergSinkConnector   1.5.2-kc-0.6.19
+
+
+kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-kc_orders",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "orders",
+    "iceberg.tables": "foo.kc.orders",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/00/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+  }
+}
+EOF
+
+
+❯ kcctl get connectors
+
+ NAME                     TYPE   STATE     TASKS
+ iceberg-sink-kc_orders   sink   RUNNING   0: FAILED
+
+
+❯ kcctl describe connector iceberg-sink-kc_orders
+Name:       iceberg-sink-kc_orders
+Type:       sink
+State:      RUNNING
+Worker ID:  kafka-connect:8083
+Config:
+  connector.class:               io.tabular.iceberg.connect.IcebergSinkConnector
+  iceberg.catalog.catalog-impl:  org.apache.iceberg.aws.glue.GlueCatalog
+  iceberg.catalog.io-impl:       org.apache.iceberg.aws.s3.S3FileIO
+  iceberg.catalog.warehouse:     s3://rmoff-lakehouse/00/
+  iceberg.tables:                foo.kc.orders
+  name:                          iceberg-sink-kc_orders
+  topics:                        orders
+Tasks:
+  0:
+    State:      FAILED
+    Worker ID:  kafka-connect:8083
+    Trace:      org.apache.kafka.connect.errors.ConnectException: Tolerance exceeded in error handler
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:260)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execute(RetryWithToleranceOperator.java:180)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.convertAndTransformRecord(WorkerSinkTask.java:541)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.convertMessages(WorkerSinkTask.java:518)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.poll(WorkerSinkTask.java:344)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.iteration(WorkerSinkTask.java:247)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.execute(WorkerSinkTask.java:216)
+        at org.apache.kafka.connect.runtime.WorkerTask.doRun(WorkerTask.java:226)
+        at org.apache.kafka.connect.runtime.WorkerTask.run(WorkerTask.java:281)
+        at org.apache.kafka.connect.runtime.isolation.Plugins.lambda$withClassLoader$1(Plugins.java:238)
+        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+      Caused by: org.apache.kafka.connect.errors.DataException: JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields. If you are trying to deserialize plain JSON data, set schemas.enable=false in your converter configuration.
+        at org.apache.kafka.connect.json.JsonConverter.toConnectData(JsonConverter.java:350)
+        at org.apache.kafka.connect.storage.Converter.toConnectData(Converter.java:91)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.lambda$convertAndTransformRecord$4(WorkerSinkTask.java:541)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndRetry(RetryWithToleranceOperator.java:208)
+        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:244)
+        ... 14 more
+
+Topics:
+
+
+kcctl patch connector iceberg-sink-kc_orders \
+    -s value.converter.schemas.enable=false \
+    -s key.converter.schemas.enable=false
+
+Still       Caused by: org.apache.kafka.connect.errors.DataException: JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields. If you are trying to deserialize plain JSON data, set schemas.enable=false in your converter configuration.
+
+
+
+ kcctl patch connector iceberg-sink-kc_orders \                                                                                                                      ✔  11:30:12 
+  -s key.converter=org.apache.kafka.connect.json.JsonConverter \
+  -s value.converter=org.apache.kafka.connect.json.JsonConverter \
+  -s key.converter.schemas.enable=false \
+  -s value.converter.schemas.enable=false
+
+
+ kcctl describe connector iceberg-sink-kc_orders
+Name:       iceberg-sink-kc_orders
+Type:       sink
+State:      RUNNING
+Worker ID:  kafka-connect:8083
+Config:
+  connector.class:                 io.tabular.iceberg.connect.IcebergSinkConnector
+  iceberg.catalog.catalog-impl:    org.apache.iceberg.aws.glue.GlueCatalog
+  iceberg.catalog.io-impl:         org.apache.iceberg.aws.s3.S3FileIO
+  iceberg.catalog.warehouse:       s3://rmoff-lakehouse/00/
+  iceberg.tables:                  foo.kc.orders
+  key.converter:                   org.apache.kafka.connect.json.JsonConverter
+  key.converter.schemas.enable:    false
+  name:                            iceberg-sink-kc_orders
+  topics:                          orders
+  value.converter:                 org.apache.kafka.connect.json.JsonConverter
+  value.converter.schemas.enable:  false
+Tasks:
+  0:
+    State:      FAILED
+    Worker ID:  kafka-connect:8083
+    Trace:      org.apache.kafka.connect.errors.ConnectException: Exiting WorkerSinkTask due to unrecoverable exception.
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:636)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.poll(WorkerSinkTask.java:345)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.iteration(WorkerSinkTask.java:247)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.execute(WorkerSinkTask.java:216)
+        at org.apache.kafka.connect.runtime.WorkerTask.doRun(WorkerTask.java:226)
+        at org.apache.kafka.connect.runtime.WorkerTask.run(WorkerTask.java:281)
+        at org.apache.kafka.connect.runtime.isolation.Plugins.lambda$withClassLoader$1(Plugins.java:238)
+        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+      Caused by: org.apache.iceberg.exceptions.NoSuchTableException: Invalid table identifier: foo.kc.orders
+        at org.apache.iceberg.BaseMetastoreCatalog.loadTable(BaseMetastoreCatalog.java:66)
+        at io.tabular.iceberg.connect.data.IcebergWriterFactory.createWriter(IcebergWriterFactory.java:54)
+        at io.tabular.iceberg.connect.channel.Worker.lambda$writerForTable$4(Worker.java:157)
+        at java.base/java.util.HashMap.computeIfAbsent(HashMap.java:1228)
+        at io.tabular.iceberg.connect.channel.Worker.writerForTable(Worker.java:156)
+        at io.tabular.iceberg.connect.channel.Worker.lambda$routeRecordStatically$1(Worker.java:112)
+        at java.base/java.util.Arrays$ArrayList.forEach(Arrays.java:4305)
+        at io.tabular.iceberg.connect.channel.Worker.routeRecordStatically(Worker.java:110)
+        at io.tabular.iceberg.connect.channel.Worker.save(Worker.java:99)
+        at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+        at io.tabular.iceberg.connect.channel.Worker.write(Worker.java:85)
+        at io.tabular.iceberg.connect.channel.TaskImpl.put(TaskImpl.java:42)
+        at io.tabular.iceberg.connect.IcebergSinkTask.put(IcebergSinkTask.java:76)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:606)
+        ... 11 more
+
+Topics:
+  orders
+
+
+
+      Caused by: org.apache.iceberg.exceptions.NoSuchTableException: Invalid table identifier: foo.kc.orders
+
+
+
+[2025-06-26 10:30:08,930] INFO [iceberg-sink-kc_orders|task-0] IcebergSinkConfig values:
+       iceberg.catalog = iceberg
+       iceberg.connect.group-id = null
+       iceberg.control.commit.interval-ms = 300000
+       iceberg.control.commit.threads = 28
+       iceberg.control.commit.timeout-ms = 30000
+       iceberg.control.group-id = null
+       iceberg.control.topic = control-iceberg
+       iceberg.hadoop-conf-dir = null
+       iceberg.tables = [foo.kc.orders]
+       iceberg.tables.auto-create-enabled = false
+       iceberg.tables.cdc-field = null
+       iceberg.tables.default-commit-branch = null
+       iceberg.tables.default-id-columns = null
+       iceberg.tables.default-partition-by = null
+       iceberg.tables.dynamic-enabled = false
+       iceberg.tables.evolve-schema-enabled = false
+       iceberg.tables.route-field = null
+       iceberg.tables.schema-case-insensitive = false
+       iceberg.tables.schema-force-optional = false
+       iceberg.tables.upsert-mode-enabled = false
+
+kcctl patch connector iceberg-sink-kc_orders \
+  -s iceberg.tables.auto-create-enabled=true
+
+❯ kcctl restart connector iceberg-sink-kc_orders
+Restarted connector iceberg-sink-kc_orders
+
+Caused by: java.lang.IllegalArgumentException: Invalid table identifier: foo.kc.orders
+
+❯ kcctl describe connector iceberg-sink-kc_orders | grep tables
+  iceberg.tables:                      foo.kc.orders
+  iceberg.tables.auto-create-enabled:  true
+
+❯ kcctl patch connector iceberg-sink-kc_orders \
+  -s iceberg.tables=kc.orders
+
+❯ kcctl restart connector iceberg-sink-kc_orders
+Restarted connector iceberg-sink-kc_orders
+
+      Caused by: software.amazon.awssdk.services.glue.model.EntityNotFoundException: Database kc not found. (Service: Glue, Status Code: 400, Request ID: 16a25fcf-01be-44e9-ba67-cc71431f3945)
+
+ $aws glue get-databases --region us-east-1 --query 'DatabaseList[].Name' --output table
+
++--------------------+
+|    GetDatabases    |
++--------------------+
+|  default_database  |
+|  my_glue_db        |
+|  new_glue_db       |
+|  rmoff_db          |
+|  tmp               |
+|  tmp2              |
++--------------------+
+
+$ kcctl patch connector iceberg-sink-kc_orders \                                                                                                                      ✔  13:37:58 
+  -s iceberg.tables=my_glue_db.orders2
+
+❯ kcctl describe connector iceberg-sink-kc_orders
+Name:       iceberg-sink-kc_orders
+Type:       sink
+State:      RUNNING
+Worker ID:  kafka-connect:8083
+Config:
+  connector.class:                     io.tabular.iceberg.connect.IcebergSinkConnector
+  iceberg.catalog.catalog-impl:        org.apache.iceberg.aws.glue.GlueCatalog
+  iceberg.catalog.io-impl:             org.apache.iceberg.aws.s3.S3FileIO
+  iceberg.catalog.warehouse:           s3://rmoff-lakehouse/00/
+  iceberg.tables:                      my_glue_db.orders2
+  iceberg.tables.auto-create-enabled:  true
+  key.converter:                       org.apache.kafka.connect.json.JsonConverter
+  key.converter.schemas.enable:        false
+  name:                                iceberg-sink-kc_orders
+  topics:                              orders
+  value.converter:                     org.apache.kafka.connect.json.JsonConverter
+  value.converter.schemas.enable:      false
+Tasks:
+  0:
+    State:      RUNNING
+    Worker ID:  kafka-connect:8083
+Topics:
+  orders
+
+❯ aws s3 --recursive ls s3://rmoff-lakehouse/|grep orders2
+2025-06-26 13:38:03       1323 00/my_glue_db.db/orders2/metadata/00000-acdbe4f9-89be-4d01-a24e-d752d8b3593f.metadata.json
+
+
+❯ aws glue get-tables --region us-east-1 --database-name my_glue_db --query 'TableList[].Name' --output table
+
++----------------+
+|    GetTables   |
++----------------+
+|  orders2       |
++----------------+
+
+
+❯ aws s3 --recursive ls s3://rmoff-lakehouse/|grep orders2
+2025-06-26 13:45:00       1635 00/my_glue_db.db/orders2/data/00001-1750941483621-81b1c767-1930-49af-b0aa-e9ad885443ff-00001.parquet
+2025-06-26 13:38:03       1323 00/my_glue_db.db/orders2/metadata/00000-acdbe4f9-89be-4d01-a24e-d752d8b3593f.metadata.json
+2025-06-26 13:48:34       2528 00/my_glue_db.db/orders2/metadata/00001-2991ecb4-c382-4afd-b618-f2073dbc9982.metadata.json
+2025-06-26 13:48:33       6958 00/my_glue_db.db/orders2/metadata/7e1f46eb-2944-492b-8846-a866139c6b68-m0.avro
+2025-06-26 13:48:33       4239 00/my_glue_db.db/orders2/metadata/snap-730275697083946313-1-7e1f46eb-2944-492b-8846-a866139c6b68.avro
+
+https://tobilg.com/using-amazon-sagemaker-lakehouse-with-duckdb
+
+CREATE SECRET iceberg_secret (
+    TYPE S3,
+    PROVIDER credential_chain
+    );
+
+ATTACH '052821163812' AS glue_catalog (
+        TYPE iceberg,
+    ENDPOINT_TYPE glue);
+
+🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
+┌────────────┬──────────┬────────┬─────────────┬──────────┐
+│  product   │ quantity │ price  │ customer_id │ order_id │
+│  varchar   │  int64   │ double │   varchar   │ varchar  │
+├────────────┼──────────┼────────┼─────────────┼──────────┤
+│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
+│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
+│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
+│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
+│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
+└────────────┴──────────┴────────┴─────────────┴──────────┘
+Run Time (s): real 3.327 user 0.186391 sys 0.067954
+
+
+❯ echo '{"order_id": "006", "customer_id": "cust_987", "product": "webcam", "quantity": 1, "price": 89.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
+
+🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
+┌────────────┬──────────┬────────┬─────────────┬──────────┐
+│  product   │ quantity │ price  │ customer_id │ order_id │
+│  varchar   │  int64   │ double │   varchar   │ varchar  │
+├────────────┼──────────┼────────┼─────────────┼──────────┤
+│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
+│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
+│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
+│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
+│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
+└────────────┴──────────┴────────┴─────────────┴──────────┘
+Run Time (s): real 1.441 user 0.100980 sys 0.016929
+🟡◗
+
+
+kcctl patch connector iceberg-sink-kc_orders \
+  -s offset.flush.interval.ms=1000 \
+  -s iceberg.control.commit.interval-ms=1000
+
+
+🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
+┌────────────┬──────────┬────────┬─────────────┬──────────┐
+│  product   │ quantity │ price  │ customer_id │ order_id │
+│  varchar   │  int64   │ double │   varchar   │ varchar  │
+├────────────┼──────────┼────────┼─────────────┼──────────┤
+│ webcam     │        1 │  89.99 │ cust_987    │ 006      │
+│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
+│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
+│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
+│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
+│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
+└────────────┴──────────┴────────┴─────────────┴──────────┘
+Run Time (s): real 2.468 user 0.117342 sys 0.025499
+
+
+
+
+----
+
+docs
+
+https://iceberg.apache.org/docs/nightly/kafka-connect/
+
+
+
+----
+
+
+
+Is the Kafka Connect connector effectively dormant since the Tabular acquisition?
+It looks like the last release was over a year ago https://github.com/databricks/iceberg-kafka-connect/releases
+
+> The core of this codebase was donated to the Apache Iceberg project and future work will happen there - https://github.com/apache/iceberg/tree/main/kafka-connect
+>Working with Confluent to get it removed from the Hub in favor of the Apache Iceberg one Jason just mentioned. We might be dependent on this though: https://github.com/apache/iceberg/issues/10745
