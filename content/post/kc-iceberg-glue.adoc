@@ -1,12 +1,14 @@
 ---
 draft: false
-title: 'Kc Iceberg Glue'
-date: "2025-06-25T16:36:21Z"
-image: "/images/2025/06/"
-thumbnail: "/images/2025/06/"
+title: 'Writing to Apache Iceberg on S3 using Kafka Connect with Glue catalog'
+date: "2025-06-30T15:36:21Z"
+image: "/images/2025/06/h_IMG_0592.webp"
+thumbnail: "/images/2025/06/t_IMG_0587.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
-- Uncategorized
+- Apache Iceberg
+- Apache Kafka
+- Kafka Connect
 ---
 
 :source-highlighter: rouge
@@ -14,52 +16,117 @@ categories:
 :rouge-css: style
 :rouge-style: monokai
 
+Without wanting to mix my temperature metaphors, Iceberg is the new hawtness, and getting data into it from other places is a common task.
+I link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/[wrote previously about using Flink SQL to do this], and today I'm going to look at doing the same using Kafka Connect.
+I'm going to use AWS's Glue Data Catalog, but the sink also works with other Iceberg catalogs.
+
 <!--more-->
 
+image::/images/2025/06/kc.excalidraw.png[]
 
-populate the kafka topic
+Kafka Connect is a framework for data integration, and is part of Apache Kafka.
+There is a rich ecosystem of connectors for getting data in and out of Kafka, and Kafka Connect itself provides a set of features that you'd expect for a resilient data integration platform, including scaling, schema handling, restarts, serialisation, and more.
 
+The Apache Iceberg connector for Kafka Connect was https://www.tabular.io/blog/intro-kafka-connect/[originally created by folk at Tabular] and has subsequently been https://github.com/apache/iceberg/pull/8701#issue-1922301136[contributed to] https://iceberg.apache.org/docs/nightly/kafka-connect/[the Apache Iceberg project] (via a brief stint on https://github.com/databricks/iceberg-kafka-connect[a Databricks repo] following the Tabular acquisition).
 
-echo '{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
+For the purposes of this blog I'm still using the Tabular version since it has a pre-built binary available on https://www.confluent.io/hub/tabular/iceberg-kafka-connect[Confluent Hub] which makes it easier to install.
+If you want to use the Apache Iceberg version you currently https://iceberg.apache.org/docs/nightly/kafka-connect/#installation[need to build the connector yourself].
+There is https://github.com/apache/iceberg/issues/10745[work underway] to make it available on Confluent Hub.
+
+== Setup
+
+TIP: You can find the Docker Compose for this article https://github.com/rmoff/examples/tree/main/iceberg/kafka-kafkaconnect-aws[here]
+
+We'll start by populating a Kafka topic with some dummy data.
+I'm using JSON to serialise it; bear in mind that an explicitly-declared schema stored in a Schema Registry and the data serialised with something like Avro is often a better approach.
+
+[source,bash]
+----
+$ echo '{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
 {"order_id": "002", "customer_id": "cust_456", "product": "mouse", "quantity": 2, "price": 25.50}
 {"order_id": "003", "customer_id": "cust_789", "product": "keyboard", "quantity": 1, "price": 75.00}
 {"order_id": "004", "customer_id": "cust_321", "product": "monitor", "quantity": 1, "price": 299.99}
 {"order_id": "005", "customer_id": "cust_654", "product": "headphones", "quantity": 1, "price": 149.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
+----
 
+Now we need to install the connector into our Kafka Connect worker.
+I'm running a https://hub.docker.com/r/confluentinc/cp-kafka-connect[Kafka Connect Docker image] provided by Confluent because it provides the https://docs.confluent.io/platform/7.5/connect/confluent-hub/client.html#install-components-with-c-hub-client[`confluent-hub` CLI tool] which is a handy way for installing pre-built connectors and saves me having to do it myself.
+It's worth noting that the `confluent-hub` CLI is being deprecated in favour of the broader `confluent` CLI tool and `confluent connect plugin install` to install connectors.
 
+[source,bash]
+----
+$ confluent-hub install --no-prompt tabular/iceberg-kafka-connect:0.6.19
+----
 
-confluent-hub install --no-prompt tabular/iceberg-kafka-connect:0.6.19
+[TIP]
+====
+If you're using Docker you can bake this in at runtime https://github.com/confluentinc/demo-scene/blob/master/connect-cluster/docker-compose-scenario02.yml#L97-L107[like this].
+====
 
-or d/l from https://github.com/databricks/iceberg-kafka-connect/releases
+Let's check that the connector is installed.
+We can use the Kafka Connect REST API for this and the `/connector-plugins` endpoint:
 
-curl -s localhost:8083/connector-plugins|jq '.[].class'
+[source,bash]
+----
+$ curl -s localhost:8083/connector-plugins|jq '.[].class'
 "io.tabular.iceberg.connect.IcebergSinkConnector"
 "org.apache.kafka.connect.mirror.MirrorCheckpointConnector"
 "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector"
 "org.apache.kafka.connect.mirror.MirrorSourceConnector"
+----
 
+(Note that it's `io.tabular` and not `org.apache`, since we're using the Tabular version of the connector for now).
 
+REST APIs are all very well, but a nicer way of managing Kafka Connect is https://github.com/kcctl/kcctl[**kcctl**].
+This is a CLI client built for Kafka Connect.
+On the Mac it's a simple install from Brew: `brew install kcctl/tap/kcctl`
 
-brew install kcctl/tap/kcctl
-kcctl config set-context local --cluster http://localhost:8083
+Once you've install kcctl, configure it to point to the Kafka Connect worker cluster:
 
-wget https://raw.githubusercontent.com/kcctl/kcctl/v1.0.0.CR4/kcctl_completion
-source ./kcctl_completion
+[source,bash]
+----
+$ kcctl config set-context local --cluster http://localhost:8083
+----
 
+Now we can easily inspect the cluster:
 
-❯ kcctl info
+[source,bash]
+----
+$ kcctl info
 URL:               http://localhost:8083
 Version:           8.0.0-ccs
 Commit:            42dc8a94fe8a158bfc3241b5a93a1adde9973507
 Kafka Cluster ID:  5L6g3nShT-eMCtK--X86sw
+----
 
-❯ kcctl get plugins --types=sink
+We can also look at the sink connectors installed (which is a subset of those shown above):
+
+[source,bash]
+----
+$ kcctl get plugins --types=sink
 
  TYPE   CLASS                                             VERSION
  sink   io.tabular.iceberg.connect.IcebergSinkConnector   1.5.2-kc-0.6.19
+----
 
+== Configuring the Apache Iceberg Kafka Connect sink
 
-kcctl apply -f - <<EOF
+Now let's instantiate our Iceberg sink.
+The https://iceberg.apache.org/docs/nightly/kafka-connect/#initial-setup[docs] are pretty good, and include details of how to use different catalogs.
+I'm going to configure the sink thus:
+
+* Read messages from the `orders` topic
+* Write them to the Iceberg table `foo.kc.orders`
+* Use the AWS Glue Data Catalog to store metadata
+** I've passed my local AWS credentials as environment variables to the Kafka Connect docker container.
+This is not a secure way of doing things, but suffices plenty for these sandbox testing purposes.
+* Store the Iceberg files on S3 in the `rmoff-lakehouse` bucket under the `/01` path
+
+Using kcctl it looks like this:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
 {
   "name": "iceberg-sink-kc_orders",
   "config": {
@@ -67,20 +134,23 @@ kcctl apply -f - <<EOF
     "topics": "orders",
     "iceberg.tables": "foo.kc.orders",
     "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
-    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/00/",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
     "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
   }
 }
 EOF
+----
 
+Check if it worked:
 
-❯ kcctl get connectors
+[source,bash]
+----
+$ kcctl get connectors
 
  NAME                     TYPE   STATE     TASKS
  iceberg-sink-kc_orders   sink   RUNNING   0: FAILED
 
-
-❯ kcctl describe connector iceberg-sink-kc_orders
+$ kcctl describe connector iceberg-sink-kc_orders
 Name:       iceberg-sink-kc_orders
 Type:       sink
 State:      RUNNING
@@ -98,48 +168,35 @@ Tasks:
     State:      FAILED
     Worker ID:  kafka-connect:8083
     Trace:      org.apache.kafka.connect.errors.ConnectException: Tolerance exceeded in error handler
-        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:260)
-        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execute(RetryWithToleranceOperator.java:180)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.convertAndTransformRecord(WorkerSinkTask.java:541)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.convertMessages(WorkerSinkTask.java:518)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.poll(WorkerSinkTask.java:344)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.iteration(WorkerSinkTask.java:247)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.execute(WorkerSinkTask.java:216)
-        at org.apache.kafka.connect.runtime.WorkerTask.doRun(WorkerTask.java:226)
-        at org.apache.kafka.connect.runtime.WorkerTask.run(WorkerTask.java:281)
-        at org.apache.kafka.connect.runtime.isolation.Plugins.lambda$withClassLoader$1(Plugins.java:238)
-        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
-        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
-        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-        at java.base/java.lang.Thread.run(Thread.java:1583)
+        at
+[…]
       Caused by: org.apache.kafka.connect.errors.DataException: JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields. If you are trying to deserialize plain JSON data, set schemas.enable=false in your converter configuration.
-        at org.apache.kafka.connect.json.JsonConverter.toConnectData(JsonConverter.java:350)
-        at org.apache.kafka.connect.storage.Converter.toConnectData(Converter.java:91)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.lambda$convertAndTransformRecord$4(WorkerSinkTask.java:541)
-        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndRetry(RetryWithToleranceOperator.java:208)
-        at org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(RetryWithToleranceOperator.java:244)
-        ... 14 more
+[…]
+----
 
-Topics:
+So, no dice on the first attempt.
+(Note also the confusing fact that the _connector_ has a state of `RUNNING` whilst the _task_ is `FAILED`).
 
+The error is to do with how Kafka Connect handles deserialising messages from Kafka topics.
+It's reading JSON, but expecting to find `schema` and `payload` elements within it—and these aren't there.
+https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-message-without-expected-schema-payload-structure[This blog post] explains the issue in more detail.
 
-kcctl patch connector iceberg-sink-kc_orders \
-    -s value.converter.schemas.enable=false \
-    -s key.converter.schemas.enable=false
+To fix it we'll change the connctor configuration which we can do easily with kcctl's `patch`:
 
-Still       Caused by: org.apache.kafka.connect.errors.DataException: JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields. If you are trying to deserialize plain JSON data, set schemas.enable=false in your converter configuration.
+[source,bash]
+----
+$ kcctl patch connector iceberg-sink-kc_orders \
+    -s key.converter=org.apache.kafka.connect.json.JsonConverter \
+    -s key.converter.schemas.enable=false \
+    -s value.converter=org.apache.kafka.connect.json.JsonConverter \
+    -s value.converter.schemas.enable=false
+----
 
+Check the connector state again:
 
-
- kcctl patch connector iceberg-sink-kc_orders \                                                                                                                      ✔  11:30:12 
-  -s key.converter=org.apache.kafka.connect.json.JsonConverter \
-  -s value.converter=org.apache.kafka.connect.json.JsonConverter \
-  -s key.converter.schemas.enable=false \
-  -s value.converter.schemas.enable=false
-
-
- kcctl describe connector iceberg-sink-kc_orders
+[source,bash]
+----
+$ kcctl describe connector iceberg-sink-kc_orders
 Name:       iceberg-sink-kc_orders
 Type:       sink
 State:      RUNNING
@@ -148,7 +205,7 @@ Config:
   connector.class:                 io.tabular.iceberg.connect.IcebergSinkConnector
   iceberg.catalog.catalog-impl:    org.apache.iceberg.aws.glue.GlueCatalog
   iceberg.catalog.io-impl:         org.apache.iceberg.aws.s3.S3FileIO
-  iceberg.catalog.warehouse:       s3://rmoff-lakehouse/00/
+  iceberg.catalog.warehouse:       s3://rmoff-lakehouse/01/
   iceberg.tables:                  foo.kc.orders
   key.converter:                   org.apache.kafka.connect.json.JsonConverter
   key.converter.schemas.enable:    false
@@ -159,89 +216,35 @@ Config:
 Tasks:
   0:
     State:      FAILED
-    Worker ID:  kafka-connect:8083
-    Trace:      org.apache.kafka.connect.errors.ConnectException: Exiting WorkerSinkTask due to unrecoverable exception.
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:636)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.poll(WorkerSinkTask.java:345)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.iteration(WorkerSinkTask.java:247)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.execute(WorkerSinkTask.java:216)
-        at org.apache.kafka.connect.runtime.WorkerTask.doRun(WorkerTask.java:226)
-        at org.apache.kafka.connect.runtime.WorkerTask.run(WorkerTask.java:281)
-        at org.apache.kafka.connect.runtime.isolation.Plugins.lambda$withClassLoader$1(Plugins.java:238)
-        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
-        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
-        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-        at java.base/java.lang.Thread.run(Thread.java:1583)
+[…]
       Caused by: org.apache.iceberg.exceptions.NoSuchTableException: Invalid table identifier: foo.kc.orders
-        at org.apache.iceberg.BaseMetastoreCatalog.loadTable(BaseMetastoreCatalog.java:66)
-        at io.tabular.iceberg.connect.data.IcebergWriterFactory.createWriter(IcebergWriterFactory.java:54)
-        at io.tabular.iceberg.connect.channel.Worker.lambda$writerForTable$4(Worker.java:157)
-        at java.base/java.util.HashMap.computeIfAbsent(HashMap.java:1228)
-        at io.tabular.iceberg.connect.channel.Worker.writerForTable(Worker.java:156)
-        at io.tabular.iceberg.connect.channel.Worker.lambda$routeRecordStatically$1(Worker.java:112)
-        at java.base/java.util.Arrays$ArrayList.forEach(Arrays.java:4305)
-        at io.tabular.iceberg.connect.channel.Worker.routeRecordStatically(Worker.java:110)
-        at io.tabular.iceberg.connect.channel.Worker.save(Worker.java:99)
-        at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-        at io.tabular.iceberg.connect.channel.Worker.write(Worker.java:85)
-        at io.tabular.iceberg.connect.channel.TaskImpl.put(TaskImpl.java:42)
-        at io.tabular.iceberg.connect.IcebergSinkTask.put(IcebergSinkTask.java:76)
-        at org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:606)
-        ... 11 more
+----
 
-Topics:
-  orders
+This time the error is entirely self-inflicted.
+Hot off my blog post about https://rmoff.net/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/[doing this in Flink SQL] I had in my mind that the table needed a three part qualification; `catalog.database.table`.
+In fact, we only need to specify `database.table`.
+In addition I've realised that the table doesn't exist already, and by default the connector won't automagically create it—so let's fix that too.
 
+[source,bash]
+----
+$ kcctl patch connector iceberg-sink-kc_orders \
+    -s iceberg.tables=kc.orders \
+    -s iceberg.tables.auto-create-enabled=true
+----
 
+We're getting closer, but not quite there yet:
 
-      Caused by: org.apache.iceberg.exceptions.NoSuchTableException: Invalid table identifier: foo.kc.orders
+[source,bash]
+----
+[…]
+    Caused by: software.amazon.awssdk.services.glue.model.EntityNotFoundException: Database kc not found. (Service: Glue, Status Code: 400, Request ID: 16a25fcf-01be-44e9-ba67-cc71431f3945)
+----
 
+Let's see what databases we _do_ have:
 
-
-[2025-06-26 10:30:08,930] INFO [iceberg-sink-kc_orders|task-0] IcebergSinkConfig values:
-       iceberg.catalog = iceberg
-       iceberg.connect.group-id = null
-       iceberg.control.commit.interval-ms = 300000
-       iceberg.control.commit.threads = 28
-       iceberg.control.commit.timeout-ms = 30000
-       iceberg.control.group-id = null
-       iceberg.control.topic = control-iceberg
-       iceberg.hadoop-conf-dir = null
-       iceberg.tables = [foo.kc.orders]
-       iceberg.tables.auto-create-enabled = false
-       iceberg.tables.cdc-field = null
-       iceberg.tables.default-commit-branch = null
-       iceberg.tables.default-id-columns = null
-       iceberg.tables.default-partition-by = null
-       iceberg.tables.dynamic-enabled = false
-       iceberg.tables.evolve-schema-enabled = false
-       iceberg.tables.route-field = null
-       iceberg.tables.schema-case-insensitive = false
-       iceberg.tables.schema-force-optional = false
-       iceberg.tables.upsert-mode-enabled = false
-
-kcctl patch connector iceberg-sink-kc_orders \
-  -s iceberg.tables.auto-create-enabled=true
-
-❯ kcctl restart connector iceberg-sink-kc_orders
-Restarted connector iceberg-sink-kc_orders
-
-Caused by: java.lang.IllegalArgumentException: Invalid table identifier: foo.kc.orders
-
-❯ kcctl describe connector iceberg-sink-kc_orders | grep tables
-  iceberg.tables:                      foo.kc.orders
-  iceberg.tables.auto-create-enabled:  true
-
-❯ kcctl patch connector iceberg-sink-kc_orders \
-  -s iceberg.tables=kc.orders
-
-❯ kcctl restart connector iceberg-sink-kc_orders
-Restarted connector iceberg-sink-kc_orders
-
-      Caused by: software.amazon.awssdk.services.glue.model.EntityNotFoundException: Database kc not found. (Service: Glue, Status Code: 400, Request ID: 16a25fcf-01be-44e9-ba67-cc71431f3945)
-
- $aws glue get-databases --region us-east-1 --query 'DatabaseList[].Name' --output table
+[source,bash]
+----
+$ aws glue get-databases --region us-east-1 --query 'DatabaseList[].Name' --output table
 
 +--------------------+
 |    GetDatabases    |
@@ -250,14 +253,22 @@ Restarted connector iceberg-sink-kc_orders
 |  my_glue_db        |
 |  new_glue_db       |
 |  rmoff_db          |
-|  tmp               |
-|  tmp2              |
 +--------------------+
+----
 
-$ kcctl patch connector iceberg-sink-kc_orders \                                                                                                                      ✔  13:37:58 
-  -s iceberg.tables=my_glue_db.orders2
+OK, so let's use a database that does exist (`rmoff_db`):
 
-❯ kcctl describe connector iceberg-sink-kc_orders
+[source,bash]
+----
+$ kcctl patch connector iceberg-sink-kc_orders \
+    -s iceberg.tables=rmoff_db.orders
+----
+
+Now we're up and running :)
+
+[source,bash]
+----
+$ kcctl describe connector iceberg-sink-kc_orders
 Name:       iceberg-sink-kc_orders
 Type:       sink
 State:      RUNNING
@@ -266,8 +277,8 @@ Config:
   connector.class:                     io.tabular.iceberg.connect.IcebergSinkConnector
   iceberg.catalog.catalog-impl:        org.apache.iceberg.aws.glue.GlueCatalog
   iceberg.catalog.io-impl:             org.apache.iceberg.aws.s3.S3FileIO
-  iceberg.catalog.warehouse:           s3://rmoff-lakehouse/00/
-  iceberg.tables:                      my_glue_db.orders2
+  iceberg.catalog.warehouse:           s3://rmoff-lakehouse/01/
+  iceberg.tables:                      rmoff_db.orders
   iceberg.tables.auto-create-enabled:  true
   key.converter:                       org.apache.kafka.connect.json.JsonConverter
   key.converter.schemas.enable:        false
@@ -281,105 +292,183 @@ Tasks:
     Worker ID:  kafka-connect:8083
 Topics:
   orders
+----
 
-❯ aws s3 --recursive ls s3://rmoff-lakehouse/|grep orders2
-2025-06-26 13:38:03       1323 00/my_glue_db.db/orders2/metadata/00000-acdbe4f9-89be-4d01-a24e-d752d8b3593f.metadata.json
+== Examining the Iceberg table
 
+Now we'll have a look at the Iceberg table.
 
-❯ aws glue get-tables --region us-east-1 --database-name my_glue_db --query 'TableList[].Name' --output table
+The table has been registered in the Glue Data Catalog:
+
+[source,bash]
+----
+$ aws glue get-tables \
+    --region us-east-1 --database-name rmoff_db \
+    --query 'TableList[].Name' --output table
 
 +----------------+
 |    GetTables   |
 +----------------+
-|  orders2       |
+|  orders        |
 +----------------+
+----
 
+And there's something in the S3 bucket:
+[source,bash]
+----
+$ aws s3 --recursive ls s3://rmoff-lakehouse/01
+2025-06-30 16:44:39       1320 01/rmoff_db.db/orders/metadata/00000-bcbeeafa-4556-4a52-92ee-5dbc34d35d6b.metadata.json
+----
 
-❯ aws s3 --recursive ls s3://rmoff-lakehouse/|grep orders2
-2025-06-26 13:45:00       1635 00/my_glue_db.db/orders2/data/00001-1750941483621-81b1c767-1930-49af-b0aa-e9ad885443ff-00001.parquet
-2025-06-26 13:38:03       1323 00/my_glue_db.db/orders2/metadata/00000-acdbe4f9-89be-4d01-a24e-d752d8b3593f.metadata.json
-2025-06-26 13:48:34       2528 00/my_glue_db.db/orders2/metadata/00001-2991ecb4-c382-4afd-b618-f2073dbc9982.metadata.json
-2025-06-26 13:48:33       6958 00/my_glue_db.db/orders2/metadata/7e1f46eb-2944-492b-8846-a866139c6b68-m0.avro
-2025-06-26 13:48:33       4239 00/my_glue_db.db/orders2/metadata/snap-730275697083946313-1-7e1f46eb-2944-492b-8846-a866139c6b68.avro
+However, this is just the table's Iceberg metadata is there—but nothing else.
+That's because Kafka Connect won't flush the data to storage straight away; by default it's every 5 minutes.
+The configuration that controls this is `iceberg.control.commit.interval-ms`.
 
-https://tobilg.com/using-amazon-sagemaker-lakehouse-with-duckdb
+So, if we wait long enough, we'll see some data:
 
-CREATE SECRET iceberg_secret (
-    TYPE S3,
-    PROVIDER credential_chain
+[source,bash]
+----
+$ aws s3 --recursive ls s3://rmoff-lakehouse/01
+2025-06-30 16:51:35       1635 01/rmoff_db.db/orders/data/00001-1751298279338-409ff5c8-244f-4104-8b81-dfe47fcbb2b3-00001.parquet
+2025-06-30 16:44:39       1320 01/rmoff_db.db/orders/metadata/00000-bcbeeafa-4556-4a52-92ee-5dbc34d35d6b.metadata.json
+2025-06-30 16:55:09       2524 01/rmoff_db.db/orders/metadata/00001-e8341cee-cf17-4255-bcf1-6e87cf41bbf3.metadata.json
+2025-06-30 16:55:08       6950 01/rmoff_db.db/orders/metadata/cbe2651d-7c83-4465-a2e1-d92bb3e0b61d-m0.avro
+2025-06-30 16:55:09       4233 01/rmoff_db.db/orders/metadata/snap-6069858821353147927-1-cbe2651d-7c83-4465-a2e1-d92bb3e0b61d.avro
+----
+
+Alternatively we can be impatient (and inefficient, if we were to use this for real as you'd get a ton of small files as a result) and override it:
+
+[source,bash]
+----
+# Commit files to Iceberg every 30 seconds
+$ kcctl patch connector iceberg-sink-kc_orders \
+    -s iceberg.control.commit.interval-ms=30000
+----
+
+Now let's have a look at this data that we've written.
+The absolute joy of Iceberg is the freedom that it gives you by decoupling storage from engine.
+This means that we can write the data with one engine (here, Kafka Connect), and read it from another.
+Let's use DuckDB.
+Because, quack.
+
+DuckDB https://duckdb.org/docs/stable/core_extensions/iceberg/amazon_sagemaker_lakehouse.html#connecting-to-amazon-sagemaker-lakehouse[supports] AWS Glue Data Catalog for Iceberg metadata.
+I had https://github.com/duckdb/duckdb-iceberg/issues/265#issuecomment-3009061597[some trouble] with it, but found a https://github.com/duckdb/duckdb-iceberg/issues/265#issuecomment-2959813611[useful workaround] (yay open source).
+There's also a comprehensive https://tobilg.com/using-amazon-sagemaker-lakehouse-with-duckdb[blog post] from Tobias Müller
+on how to get it to work with a ton of IAM, ARN, and WTF (I think I made the last one up)—probably useful if you need to get this to work with any semblance of security.
+
+So, first we create an `S3` secret in DuckDB to provide our AWS credentials, which I'm doing via https://duckdb.org/docs/stable/core_extensions/httpfs/s3api.html#credential_chain-provider[`credential_chain`] which will read them from my local environment variables.
+
+[source,sql]
+----
+🟡◗ CREATE SECRET iceberg_secret (
+        TYPE S3,
+        PROVIDER credential_chain
     );
+----
 
-ATTACH '052821163812' AS glue_catalog (
+Then we attach the Glue data catalog as a new database to the DuckDB session.
+Here, `1234` is my AWS account id (which you can get with `aws sts get-caller-identity --query Account`).
+
+[source,sql]
+----
+🟡◗ ATTACH '1234' AS glue_catalog (
         TYPE iceberg,
-    ENDPOINT_TYPE glue);
-
-🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
-┌────────────┬──────────┬────────┬─────────────┬──────────┐
-│  product   │ quantity │ price  │ customer_id │ order_id │
-│  varchar   │  int64   │ double │   varchar   │ varchar  │
-├────────────┼──────────┼────────┼─────────────┼──────────┤
-│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
-│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
-│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
-│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
-│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
-└────────────┴──────────┴────────┴─────────────┴──────────┘
-Run Time (s): real 3.327 user 0.186391 sys 0.067954
-
-
-❯ echo '{"order_id": "006", "customer_id": "cust_987", "product": "webcam", "quantity": 1, "price": 89.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
-
-🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
-┌────────────┬──────────┬────────┬─────────────┬──────────┐
-│  product   │ quantity │ price  │ customer_id │ order_id │
-│  varchar   │  int64   │ double │   varchar   │ varchar  │
-├────────────┼──────────┼────────┼─────────────┼──────────┤
-│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
-│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
-│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
-│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
-│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
-└────────────┴──────────┴────────┴─────────────┴──────────┘
-Run Time (s): real 1.441 user 0.100980 sys 0.016929
-🟡◗
-
-
-kcctl patch connector iceberg-sink-kc_orders \
-  -s offset.flush.interval.ms=1000 \
-  -s iceberg.control.commit.interval-ms=1000
-
-
-🟡◗ SELECT * FROM glue_catalog.my_glue_db.orders2;
-┌────────────┬──────────┬────────┬─────────────┬──────────┐
-│  product   │ quantity │ price  │ customer_id │ order_id │
-│  varchar   │  int64   │ double │   varchar   │ varchar  │
-├────────────┼──────────┼────────┼─────────────┼──────────┤
-│ webcam     │        1 │  89.99 │ cust_987    │ 006      │
-│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
-│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
-│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
-│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
-│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
-└────────────┴──────────┴────────┴─────────────┴──────────┘
-Run Time (s): real 2.468 user 0.117342 sys 0.025499
-
-
-
-
+        ENDPOINT_TYPE glue
+    );
 ----
 
-docs
+Once you've done this you should be able to list the table(s) in your Glue Data Catalog:
 
-https://iceberg.apache.org/docs/nightly/kafka-connect/
+[source,sql]
+----
+🟡◗ SHOW DATABASES;
+┌───────────────┐
+│ database_name │
+│    varchar    │
+├───────────────┤
+│ glue_catalog  │
+│ memory        │
+└───────────────┘
 
-
-
+🟡◗ SELECT * FROM information_schema.tables
+    WHERE table_catalog = 'glue_catalog'
+      AND table_schema='rmoff_db';
+100% ▕████████████████████████████████████████████████████████████▏
+┌───────────────┬──────────────┬──────────────────┬────────────┬
+│ table_catalog │ table_schema │    table_name    │ table_type │
+│    varchar    │   varchar    │     varchar      │  varchar   │
+├───────────────┼──────────────┼──────────────────┼────────────┼
+│ glue_catalog  │ rmoff_db     │ orders           │ BASE TABLE │
+└───────────────┴──────────────┴──────────────────┴────────────┴
 ----
 
+Terminology-wise, a _catalog_ in AWS Glue Data Catalog is a _database_ in DuckDB (`SHOW DATABASES`), and also a _catalog_ (`table_catalog`).
+A Glue _database_ is a DuckDB _schema_.
+And a table is a table in both :)
 
+Let's finish this section by checking that the data we wrote to Kafka is indeed in Iceberg.
 
-Is the Kafka Connect connector effectively dormant since the Tabular acquisition?
-It looks like the last release was over a year ago https://github.com/databricks/iceberg-kafka-connect/releases
+Here's the source data read from the Kafka topic:
 
-> The core of this codebase was donated to the Apache Iceberg project and future work will happen there - https://github.com/apache/iceberg/tree/main/kafka-connect
->Working with Confluent to get it removed from the Hub in favor of the Apache Iceberg one Jason just mentioned. We might be dependent on this though: https://github.com/apache/iceberg/issues/10745
+[source,bash]
+----
+$ docker compose exec -it kcat kcat -b broker:9092 -C -t orders
+{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
+{"order_id": "002", "customer_id": "cust_456", "product": "mouse", "quantity": 2, "price": 25.50}
+{"order_id": "003", "customer_id": "cust_789", "product": "keyboard", "quantity": 1, "price": 75.00}
+{"order_id": "004", "customer_id": "cust_321", "product": "monitor", "quantity": 1, "price": 299.99}
+{"order_id": "005", "customer_id": "cust_654", "product": "headphones", "quantity": 1, "price": 149.99}
+----
+
+and now the Iceberg table:
+
+[source,sql]
+----
+🟡◗ USE glue_catalog.rmoff_db;
+Run Time (s): real 0.539 user 0.036459 sys 0.006006
+🟡◗ SELECT * FROM orders;
+┌────────────┬──────────┬────────┬─────────────┬──────────┐
+│  product   │ quantity │ price  │ customer_id │ order_id │
+│  varchar   │  int64   │ double │   varchar   │ varchar  │
+├────────────┼──────────┼────────┼─────────────┼──────────┤
+│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
+│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
+│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
+│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
+│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
+└────────────┴──────────┴────────┴─────────────┴──────────┘
+Run Time (s): real 2.752 user 0.209454 sys 0.082746
+----
+
+Write another row of data to the Kafka topic (`order_id`: `006`):
+
+[source,bash]
+----
+$ echo '{"order_id": "006", "customer_id": "cust_987", "product": "webcam", "quantity": 1, "price": 89.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
+----
+
+Now wait 30 seconds (or whatever `iceberg.control.commit.interval-ms` is set to), and check the Iceberg table:
+
+[source,sql]
+----
+🟡◗ SELECT * FROM orders;
+┌────────────┬──────────┬────────┬─────────────┬──────────┐
+│  product   │ quantity │ price  │ customer_id │ order_id │
+│  varchar   │  int64   │ double │   varchar   │ varchar  │
+├────────────┼──────────┼────────┼─────────────┼──────────┤
+│ webcam     │        1 │  89.99 │ cust_987    │ 006      │ <1>
+│ laptop     │        1 │ 999.99 │ cust_123    │ 001      │
+│ mouse      │        2 │   25.5 │ cust_456    │ 002      │
+│ keyboard   │        1 │   75.0 │ cust_789    │ 003      │
+│ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
+│ headphones │        1 │ 149.99 │ cust_654    │ 005      │
+└────────────┴──────────┴────────┴─────────────┴──────────┘
+Run Time (s): real 2.567 user 0.125818 sys 0.031565
+----
+<1> The new row of data 🎉
+
+== Appendix: Documentation and Links
+
+* https://github.com/apache/iceberg/tree/main/kafka-connect[Apache Iceberg - Kafka Connect sink]
+* https://iceberg.apache.org/docs/nightly/kafka-connect/[Apache Iceberg - Kafka Connect sink docs]
+* https://www.confluent.io/hub/tabular/iceberg-kafka-connect[Apache Iceberg sink on Confluent Hub]
