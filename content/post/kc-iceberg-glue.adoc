@@ -467,8 +467,461 @@ Run Time (s): real 2.567 user 0.125818 sys 0.031565
 ----
 <1> The new row of data 🎉
 
+== Schemas
+
+Now that we've got the basic connection between Kafka and Iceberg using Kafka Connect working, let's look at it in a bit more detail.
+The first thing that warrants a bit of attention is the schema of the data.
+
+Here's the first record of data from our Kafka topic:
+
+[source,javascript]
+----
+{
+    "order_id": "001",
+    "customer_id": "cust_123",
+    "product": "laptop",
+    "quantity": 1,
+    "price": 999.99
+}
+----
+
+Eyeballing it, you and I can probably guess at the data types of the schema.
+Quantity is an integer, probably.
+Price, a decimal (unless you don't realise it's a currency and guess that it's a float or double).
+Product is obviously a character field.
+What about the order ID though?
+It looks numeric, but has leading zeros; so a character field also?
+
+My point is, there is no *declared schema*, only an inferred one.
+What does it look like written to Iceberg?
+
+[source,bash]
+----
+$ aws glue get-table --region us-east-1 --database-name rmoff_db --name orders \
+    --query 'Table.StorageDescriptor.Columns[].{Name:Name,Type:Type}' --output table
+
+---------------------------
+|        GetTable         |
++--------------+----------+
+|     Name     |  Type    |
++--------------+----------+
+|  product     |  string  |
+|  quantity    |  bigint  |
+|  price       |  double  |
+|  customer_id |  string  |
+|  order_id    |  string  |
++--------------+----------+
+----
+
+Not bad—only the `price` being stored as a `DOUBLE` is wrong.
+
+What about if we were to use a timestamp in the source data?
+And a boolean?
+
+Here's a new dataset in a Kafka topic.
+It's roughly based on click behaviour.
+
+[source,javascript]
+----
+{
+    "click_ts": "2023-02-01T14:30:25Z",
+    "ad_cost": "1.50",
+    "is_conversion": "true",
+    "user_id": "001234567890"
+}
+----
+
+Using the same Kafka Connect approach as above:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-kc_clicks",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "clicks",
+    "iceberg.tables": "rmoff_db.clicks",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "iceberg.control.commit.interval-ms": "30000"
+  }
+}
+EOF
+----
+
+it ends up like this in Iceberg:
+
+[source,bash]
+----
+$ ❯ aws glue get-table --region us-east-1 --database-name rmoff_db --name clicks\
+    --query 'Table.StorageDescriptor.Columns[].{Name:Name,Type:Type}' --output table
+
+-----------------------------
+|         GetTable          |
++----------------+----------+
+|      Name      |  Type    |
++----------------+----------+
+|  click_ts      |  string  |
+|  ad_cost       |  string  |
+|  user_id       |  string  |
+|  is_conversion |  string  |
++----------------+----------+
+----
+
+Here we start to see the real flaw if we just rely on inferred schemas.
+Holding a currency as a string?
+Wat.
+Storing a timestamp as a string?
+Gross.
+Using a string to hold a boolean?
+Fine, until someone decides to put a value other than `true` or `false` in it. Or `True`. Or `TRuE`. And so on.
+
+Data types exist for a reason, and part of good data pipeline hygiene is making use of them.
+
+=== Enough of the lecturing…How do I use an explicit schema with Kafka Connect?
+
+==== JSON with embedded schema
+
+On option is https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-schemas[embedding the schema directly in the message].
+This is actually what the `JsonConverter` was defaulting to in the first example above and through an error because we'd not done it.
+Here's what the above `clicks` record looks like with embedded schema:
+
+[source,javascript]
+----
+{
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "field": "click_ts",
+        "type": "int64",
+        "name": "org.apache.kafka.connect.data.Timestamp",
+        "version": 1,
+        "optional": false
+      },
+      {
+        "field": "ad_cost",
+        "type": "bytes",
+        "name": "org.apache.kafka.connect.data.Decimal",
+        "version": 1,
+        "parameters": {
+          "scale": "2"
+        },
+        "optional": false
+      },
+      {
+        "field": "is_conversion",
+        "type": "boolean",
+        "optional": false
+      },
+      {
+        "field": "user_id",
+        "type": "string",
+        "optional": false
+      }
+    ]
+  },
+  "payload": {
+    "click_ts": 1675258225000,
+    "ad_cost": "1.50",
+    "is_conversion": true,
+    "user_id": "001234567890"
+  }
+}
+----
+
+Even though our Kafka Connect worker is defaulting to using it, I'm going to explicitly configure `schemas.enable` just for clarity:
+
+[source,bash]
+----
+kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-kc_clicks_schema",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "clicks_with_schema",
+    "iceberg.tables": "rmoff_db.clicks_embedded_schema",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "true",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "iceberg.control.commit.interval-ms": "30000"
+  }
+}
+EOF
+----
+
+The first time I try it, it fails:
+
+[source,bash]
+----
+org.apache.kafka.connect.errors.DataException: Invalid bytes for Decimal field
+com.fasterxml.jackson.databind.exc.InvalidFormatException: Cannot access contents of TextNode as binary due to broken Base64 encoding: Illegal character '.' (code 0x2e) in base64 content
+----
+
+That's because the `ad_cost` field is defined as a logical `Decimal` type, but physical stored as `bytes`, so I need to write it as that in the topic:
+
+[source,javascript]
+----
+[…]
+  },
+  "payload": {
+    "click_ts": 1675258225000,
+    "ad_cost": "AJY=", <1>
+    "is_conversion": true,
+    "user_id": "001234567890"
+  }
+}
+----
+[NOTE]
+====
+Where on earth do I get `AJY=` from?
+I'll let https://claude.ai/[Claude] explain:
+
+For decimal 1.50 with scale 2, we need to ensure proper signed integer encoding:
+
+. *Unscale*: 1.50 × 10² = 150
+. *Convert to signed bytes*: 150 as a positive integer needs to be encoded as `[0, 150]` (2 bytes) or use proper big-endian encoding
+. *Base64 encode*: The bytes `[0, 150]` encode to `"AJY="`
+====
+
+With the connector restarted reading from a fresh topic with this newly-encoded decimal value in it, things look good in Iceberg:
+
+[source,sql]
+----
+🟡◗ SELECT * FROM clicks_embedded_schema;
+┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
+│         click_ts         │    ad_cost    │ is_conversion │   user_id    │
+│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │
+├──────────────────────────┼───────────────┼───────────────┼──────────────┤
+│ 2023-02-01 13:30:25+00   │          1.50 │ true          │ 001234567890 │ <1>
+----
+<1> Proper data types, yay!
+
+*BUT*…this is a pretty heavy way of doing things.
+Bytes might be cheap, but do we really want to spend over 80% of the message on sending the full schema definition with _every single record_?
+
+This is where a Schema Registry comes in.
+
+==== Schema Registry
+
+A schema registry is basically what it says on the tin.
+A registry, of schemas.
+
+Instead of passing the full schema each time (like above), a client will have a _reference_ to the schema in the message, and then retrieve the actual schema from the registry.
+
+The most well known of the schema registries in the Kafka ecosystem is Confluent's https://github.com/confluentinc/schema-registry[Schema Registry].
+I'll show you shortly how it is used automatically within a pipeline, but first I'm going to demonstrate it's "manual" use.
+
+The schema from the `clicks` above looks like this:
+
+[source,javascript]
+----
+{
+  "type": "record",
+  "name": "ClickEvent",
+  "fields": [
+    {
+      "name": "click_ts",
+      "type": { "type": "long", "logicalType": "timestamp-millis" }
+    },
+    {
+      "name": "ad_cost",
+      "type": { "type": "bytes", "logicalType": "decimal", "precision": 10, "scale": 2 }
+    },
+    {
+      "name": "is_conversion",
+      "type": "boolean"
+    },
+    {
+      "name": "user_id",
+      "type": "string"
+    }
+  ]
+}"
+----
+
+Send this to Schema Registry using the REST API:
+
+[source,bash]
+----
+$ http POST localhost:8081/subjects/clicks-value/versions \
+  Content-Type:application/vnd.schemaregistry.v1+json \
+  schema='{"type":"record","name":"ClickEvent","fields":[{"name":"click_ts","type":{"type":"long","logicalType":"timestamp-millis"}},{"name":"ad_cost","type":{"type":"bytes","logicalType":"decimal","precision":10,"scale":2}},{"name":"is_conversion","type":"boolean"},{"name":"user_id","type":"string"}]}'
+----
+
+This will return the ID that the schema has been assigned.
+
+Now send the message to Kafka, specifying `value.schema.id` as the schema ID returned in the step above:
+
+[source,bash]
+----
+$ printf '{"click_ts": 1675258225000, "ad_cost": "1.50", "is_conversion": true, "user_id": "001234567890"}\n' | \
+    docker compose exec -T kafka-connect kafka-avro-console-producer \
+                        --bootstrap-server broker:9092 \
+                        --topic clicks_registry \
+                        --property schema.registry.url=http://schema-registry:8081 \
+                        --property value.schema.id=1
+----
+
+What we now have is a Kafka topic with a message that holds _just_ the payload plus a _pointer_ to the schema.
+It's the best of both worlds; a small message footprint, but a fully-defined schema available for any consumer to use.
+
+[NOTE]
+====
+An Avro-serialised message is smaller than a JSON one holding the same data:
+
+[source,bash]
+----
+$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks_registry
+Ѕ1.50001234567890
+
+$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks_registry -c1 | wc -c
+31
+
+$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks
+{"click_ts": "2023-02-01T14:30:25Z", "ad_cost": "1.50", "is_conversion": "true", "user_id": "001234567890"}
+
+$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks -c1 | wc -c
+108
+----
+====
+
+Let's finish off by sending this Avro data over to Iceberg:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-clicks-registry",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "clicks_registry",
+    "iceberg.tables": "rmoff_db.clicks_schema_registry",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "iceberg.control.commit.interval-ms": "30000"
+  }
+}
+EOF
+----
+
+The data lands in Iceberg with its data types looking good:
+
+[source,sql]
+----
+🟡◗ SELECT * FROM clicks_schema_registry;
+┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
+│         click_ts         │    ad_cost    │ is_conversion │   user_id    │
+│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │
+├──────────────────────────┼───────────────┼───────────────┼──────────────┤
+│ 2023-02-01 13:30:25+00   │    8251118.56 │ true          │ 001234567890 │
+----
+
+But…what's this?
+For some reason `ad_cost` is `8251118.56` even though the source data was `1.50`.
+
+[NOTE]
+====
+Similar to the `Decimal` issue above when I embedded the schema in a JSON message, providing a decimal value in Avro also requires special attention.
+In this case it's the Kafka producer that I'm using that needs to be persuaded to serialise it correctly.
+This time I'll let Gemini explain:
+
+To represent the decimal `1.50` for a `bytes` field with a `Decimal` logical type and a scale of 2, you must provide the value as `{"ad_cost": "\\u0000\\u0096"}`. Here's why:
+
+* **Unscaled Integer**: The `Decimal` logical type is stored as a raw `bytes` array representing an unscaled integer. For a value of `1.50` and a `scale` of `2`, the unscaled integer is `1.50 * 10^2 = 150`.
+* **Signed Bytes**: Avro's decimal representation uses signed, big-endian bytes. The integer `150` is `0x96` in hexadecimal. However, a single byte `0x96` has its most significant bit set, causing it to be interpreted as a negative number in two's complement.
+* **Positive Number Padding**: To ensure the number is treated as positive `150`, a `0x00` padding byte must be prepended, resulting in the two-byte sequence `[0x00, 0x96]`.
+* **JSON String Encoding**: The `kafka-avro-console-producer` requires this byte sequence to be provided as a JSON string using unicode escapes, which is `"\u0000\u0096"`.
+* **Shell Escaping**: Your shell will interpret and consume the single backslashes. To pass the literal escape sequences to the producer's JSON parser, you must escape the backslashes themselves, resulting in `{"ad_cost": "\\u0000\\u0096"}`.
+====
+
+With the serialisation of the decimal value corrected thus:
+
+[source,bash]
+----
+printf '{"click_ts": 1675258225000, "ad_cost": "\\u0000\\u0096" ,"is_conversion": true, "user_id": "001234567890"}\n' | \
+    docker compose exec -T kafka-connect kafka-avro-console-producer \
+                        --bootstrap-server broker:9092 \
+                        --topic clicks_registry \
+                        --property schema.registry.url=http://schema-registry:8081 \
+                        --property value.schema.id=1
+----
+
+I finally got the expected value showing in Iceberg:
+
+[source,sql]
+----
+🟡◗ SELECT * FROM clicks_schema_registry;
+┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
+│         click_ts         │    ad_cost    │ is_conversion │   user_id    │
+│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │
+├──────────────────────────┼───────────────┼───────────────┼──────────────┤
+│ 2023-02-01 13:30:25+00   │          1.50 │ true          │ 001234567890 │
+----
+
+== Postgres to Iceberg via Kafka Connect
+
+Let's put this into practice now.
+I'm going to use Kafka Connect with the Debezium connector to get data from Postgres and then write it to Iceberg with the same sink connector we've used above.
+
+
+
+show use of real schema, via postgres cdc
+schema evolution
+n:1 flow
+
+== Appendix: Debugging
+
+You can increase the log level of the Kafka Connect worker for specific components:
+
+[source,bash]
+----
+http PUT localhost:8083/admin/loggers/org.apache.iceberg.metrics Content-Type:application/json level=TRACE
+http PUT localhost:8083/admin/loggers/org.apache.iceberg.aws Content-Type:application/json level=TRACE
+----
+
+See link:/2020/01/16/changing-the-logging-level-for-kafka-connect-dynamically/[Changing the Logging Level for Kafka Connect Dynamically] for more detail.
+
 == Appendix: Documentation and Links
 
 * https://github.com/apache/iceberg/tree/main/kafka-connect[Apache Iceberg - Kafka Connect sink]
 * https://iceberg.apache.org/docs/nightly/kafka-connect/[Apache Iceberg - Kafka Connect sink docs]
 * https://www.confluent.io/hub/tabular/iceberg-kafka-connect[Apache Iceberg sink on Confluent Hub]
+
+== Appendix: Version problems
+
+I saw this error from the connector:
+
+[source,]
+----
+java.lang.NoSuchMethodError: 'org.apache.kafka.clients.admin.ListConsumerGroupOffsetsOptions org.apache.kafka.clients.admin.ListConsumerGroupOffsetsOptions.requireStable(boolean)'
+        at io.tabular.iceberg.connect.channel.CommitterImpl.fetchStableConsumerOffsets(CommitterImpl.java:116)
+        at io.tabular.iceberg.connect.channel.CommitterImpl.<init>(CommitterImpl.java:97)
+        at io.tabular.iceberg.connect.channel.CommitterImpl.<init>(CommitterImpl.java:70)
+        at io.tabular.iceberg.connect.channel.CommitterImpl.<init>(CommitterImpl.java:62)
+        at io.tabular.iceberg.connect.channel.TaskImpl.<init>(TaskImpl.java:37)
+        at io.tabular.iceberg.connect.IcebergSinkTask.open(IcebergSinkTask.java:56)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.openPartitions(WorkerSinkTask.java:637)
+        at org.apache.kafka.connect.runtime.WorkerSinkTask.access$1200(WorkerSinkTask.java:72)
+----
+
+This happened with cp-kafka-connect `7.2.15`.
+Switching to 8.0.0 resolved the problem.
