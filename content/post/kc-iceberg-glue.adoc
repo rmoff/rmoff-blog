@@ -838,6 +838,7 @@ The data lands in Iceberg with its data types looking good:
 But…what's this?
 For some reason `ad_cost` is `8251118.56` even though the source data was `1.50`.
 
+.Decimals…again
 [NOTE]
 ====
 Similar to the `Decimal` issue above when I embedded the schema in a JSON message, providing a decimal value in Avro also requires special attention.
@@ -882,9 +883,369 @@ I finally got the expected value showing in Iceberg:
 Let's put this into practice now.
 I'm going to use Kafka Connect with the Debezium connector to get data from Postgres and then write it to Iceberg with the same sink connector we've used above.
 
+First, create and populate Postgres table:
+
+[source,sql]
+----
+CREATE TABLE clicks (
+    click_ts TIMESTAMP WITH TIME ZONE,
+    ad_cost DECIMAL(38,2),
+    is_conversion BOOLEAN,
+    user_id VARCHAR
+);
+
+INSERT INTO clicks (click_ts, ad_cost, is_conversion, user_id)
+    VALUES ('2023-02-01 13:30:25+00', 1.50, true, '001234567890');
+----
+
+Then check we've got the Debezium connector installed on our Kafka Connect worker:
+
+[source,bash]
+----
+$ kcctl get plugins --types=source
+
+ TYPE     CLASS                                                       VERSION
+ source   io.debezium.connector.postgresql.PostgresConnector          3.1.2.Final
+----
+
+and create a Debezium source connector:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "postgres-clicks-source",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "Welcome123",
+    "database.dbname": "postgres",
+    "table.include.list": "public.clicks",
+    "topic.prefix": "dbz"
+  }
+}
+EOF
+----
+
+Using kcctl we can see that the connector is running, and writing data to a topic:
+
+[source,bash]
+----
+$ kcctl describe connector postgres-clicks-source
+Name:       postgres-clicks-source
+Type:       source
+State:      RUNNING
+[…]
+Topics:
+  dbz.public.clicks
+----
+
+If we take a look at the topic we can quickly see a mistake I've made in the configuration of the connector:
+
+[source,bash]
+----
+$  docker compose exec -T kcat kcat -b broker:9092 -C -t dbz.public.clicks -c1
+
+{"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"string","optional":true,"name":"io.debezium.time.ZonedTimestamp","version":1,"field":"click_ts"},{"type":"bytes","optional":true,"name":"org.apache.kafka.connect.data.Decimal","version":1,"parameters":{"scale":"2","connect.decimal.precision":"38"},"field":"ad_cost"},{"type":"boolean","optional":true,"field":"is_conversion"},{"type":"string","optional":true,"field":"user_id"}],"optional":true,"name":"dbz.public.clicks.Value","field":"before"},{"type":"struct","fields":[{"type":"string","optional":true,"name":"io.debezium.time.ZonedTimestamp","version":1,"field":"click_ts"},{"type":"bytes","optional":true,"name
+[…]
+----
+
+It's using the `JsonConverter` with an embeded schema.
+That's not what we want, so let's create a new version of the connector.
+It's important to create a new version, because the existing one won't re-read messages from the topic just because we change its configuration because logically it has processed that data already.
+We also need to make sure we write to a different topic; writing JSON and Avro to the same Kafka topic is a recipe for distaster (or at least, wailing and gnashing of teeth when a sink connector spectacularly fails to read the messages).
+
+[source,bash]
+----
+$ kcctl delete connector postgres-clicks-source
+
+$ kcctl apply -f - <<EOF
+{
+  "name": "postgres-clicks-source-avro",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "Welcome123",
+    "database.dbname": "postgres",
+    "table.include.list": "public.clicks",
+    "topic.prefix": "dbz-avro",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}
+EOF
+----
+
+Now we can see the Avro data in the topic:
+
+[source,bash]
+----
+$ docker compose exec -T kcat kcat -b broker:9092 -C -t dbz-avro.public.clicks -c1
+
+62023-02-01T13:30:25.000000Z0012345678903.1.2.Finalpostgresqldbz-avroe
+firstpostgres"[null,"34511440"]Ђӻ0
+                                  public
+                                        clicks
+                                               reʷӻ0
+----
+
+To deserialise it correctly we use `-s avro` as above, and we see that https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#_change_event_structure[the payload from Debezium] is more complex than a simple message:
+
+[source,bash]
+----
+$ docker compose exec -T kcat kcat -C -b broker:9092 -t dbz-avro.public.clicks \
+                        -s avro -r http://schema-registry:8081 -c1 | jq '.'
+----
+
+[source,javascript]
+----
+{
+  "before": null,
+  "after": {
+    "Value": {
+      "click_ts": {
+        "string": "2023-02-01T13:30:25.000000Z"
+      },
+      "ad_cost": {
+        "bytes": ""
+      },
+      "is_conversion": {
+        "boolean": true
+      },
+      "user_id": {
+        "string": "001234567890"
+      }
+    }
+  },
+  "source": {
+    "version": "3.1.2.Final",
+    "connector": "postgresql",
+    "name": "dbz-avro",
+    "ts_ms": 1751447315595,
+    "snapshot": {
+      "string": "first"
+    },
+    "db": "postgres",
+    […]
+----
+
+Debezium, and any good CDC tool in general, doesn't just capture the current state of a row; it captures _changes_.
+Since this is the initial snapshot, we have a blank `before` section, the payload in `after` (i.e. current state), and then some metadata (`source`).
+
+You _might_ want all of this raw change data sent to Iceberg, but more likely is that you just want the current state of the record.
+To do this you can use a Kafka Connect Single Message Transformation (SMT).
+Both Iceberg and Debezium ship with their own SMTs to do this.
+Iceberg has https://iceberg.apache.org/docs/nightly/kafka-connect/#debeziumtransform[`DebeziumTransform`] and Debezium  https://debezium.io/documentation/reference/stable/transformations/event-flattening.html[`ExtractNewRecordState`].
+The differences between them that I can tell are:
+
+* The Iceberg one is marked experimental, whilst the Debezium one has been used in production for years
+* The Iceberg one adds CDC metadata fields (operation type, offset, etc) along with the record state, whilst to do this with the Debezium one you'd need to chain several other SMTs for the same effect.
+
+Let's try the Iceberg one, which we'll configure as part of the new sink connector itself:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-postgres-clicks",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "dbz-avro.public.clicks",
+    "iceberg.tables": "rmoff_db.postgres_clicks",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "iceberg.control.commit.interval-ms": "30000",
+    "transforms": "dbz",
+    "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform"
+  }
+}
+EOF
+----
+
+Here's the resulting Iceberg table:
+
+[source,sql]
+----
+🟡◗ describe postgres_clicks;
+┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬
+│  column_name  │                                           column_type                                            │
+│    varchar    │                                             varchar                                              │
+├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼
+│ click_ts      │ VARCHAR                                                                                          │
+│ ad_cost       │ DECIMAL(38,2)                                                                                    │
+│ is_conversion │ BOOLEAN                                                                                          │
+│ user_id       │ VARCHAR                                                                                          │
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │
+└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴
+----
+
+and data:
+
+[source,sql]
+----
+🟡◗ SELECT * FROM postgres_clicks;
+┌─────────────────────────────┬───────────────┬───────────────┬──────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│          click_ts           │    ad_cost    │ is_conversion │   user_id    │                                                     _cdc                                                     │
+│           varchar           │ decimal(38,2) │    boolean    │   varchar    │       struct(op varchar, ts timestamp with time zone, "offset" bigint, source varchar, target varchar)       │
+├─────────────────────────────┼───────────────┼───────────────┼──────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2023-02-01T13:30:25.000000Z │          1.50 │ true          │ 001234567890 │ {'op': I, 'ts': '2025-07-02 10:08:35.608+01', 'offset': 0, 'source': public.clicks, 'target': public.clicks} │
+----
+
+=== Data Type Fun: Timestamps
+
+One data type issue this time—pun intended.
+The `click_ts` should be a timestamp, but is showing up as a string in Iceberg.
+To understand where this is occurring, I'll start by checking the schema that Debezium wrote to the Schema Registry when it wrote the data to Kafka:
+
+[source,bash]
+----
+$ http http://localhost:8081/subjects/dbz-avro.public.clicks-value/versions/latest | \
+    jq '.schema | fromjson'
+----
+
+[source,javascript]
+----
+[…]
+    {
+        "name": "click_ts",
+        "type": [
+        "null",
+        {
+            "type": "string",
+            "connect.version": 1,
+            "connect.name": "io.debezium.time.ZonedTimestamp"
+        }
+        ],
+        "default": null
+    },
+[…]
+----
+
+Per https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-basic-types[the docs], it's stored as a `string`, but using the Kafka Connect logical type `io.debezium.time.ZonedTimestamp`.
+
+Let's have a look at the link:/2020/12/17/twelve-days-of-smt-day-8-timestampconverter/[TimestampConverter SMT].
+This will hopefully let us convert the `string` type (which holds the timestamp) into a logical `Timestamp` type as part of the sink connector.
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-postgres-clicks-new",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "dbz-avro.public.clicks",
+    "iceberg.tables": "rmoff_db.postgres_clicks",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/01/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "iceberg.control.commit.interval-ms": "30000",
+    "transforms": "dbz,convert_ts",
+    "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform",
+    "transforms.convert_ts.type" : "org.apache.kafka.connect.transforms.TimestampConverter\$Value",
+    "transforms.convert_ts.field" : "click_ts",
+    "transforms.convert_ts.format": "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+    "transforms.convert_ts.target.type": "Timestamp"
+  }
+}
+EOF
+----
+
+NOTE: The order of the transformations is important; for the `convert_ts` transform to work the `click_ts` field needs to have been unnested, which is what the `dbz` transform does first.
+
+With the initial `postgres_clicks` Iceberg table deleted, and the new version of the connector running (so as to make sure that the table gets recreated with-hopefully—the correct schema), we see this in Iceberg:
+
+[source,sql]
+----
+🟡◗ describe postgres_clicks;
+┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┐
+│  column_name  │                                           column_type                                            │  null   │   key   │ default │  extra  │
+│    varchar    │                                             varchar                                              │ varchar │ varchar │ varchar │ varchar │
+├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┤
+│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                                         │ YES     │ NULL    │ NULL    │ NULL    │
+│ ad_cost       │ DECIMAL(38,2)                                                                                    │ YES     │ NULL    │ NULL    │ NULL    │
+│ is_conversion │ BOOLEAN                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
+│ user_id       │ VARCHAR                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │ YES     │ NULL    │ NULL    │ NULL    │
+└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┘
+
+🟡◗ select click_ts, ad_cost, is_conversion, user_id from postgres_clicks2;
+┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
+│         click_ts         │    ad_cost    │ is_conversion │   user_id    │
+│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │
+├──────────────────────────┼───────────────┼───────────────┼──────────────┤
+│ 2023-02-01 13:30:25+00   │          1.50 │ true          │ 001234567890 │
+└──────────────────────────┴───────────────┴───────────────┴──────────────┘
+----
+
+Compare this to the Postgres source:
+
+[source,sql]
+----
+postgres=# \d clicks
+                           Table "public.clicks"
+    Column     |           Type           | Collation | Nullable | Default
+---------------+--------------------------+-----------+----------+---------
+ click_ts      | timestamp with time zone |           |          |
+ ad_cost       | numeric(38,2)            |           |          |
+ is_conversion | boolean                  |           |          |
+ user_id       | character varying        |           |          |
+
+postgres=# select * from clicks;
+        click_ts        | ad_cost | is_conversion |   user_id
+------------------------+---------+---------------+--------------
+ 2023-02-01 13:30:25+00 |    1.50 | t             | 001234567890
+----
+
+Perfect!
+
+[TIP]
+====
+If you're using `TIMESTAMP` instead of `TIMESTAMP WITH TIME ZONE` in Postgres then Debezium will store this as
+
+[source,javascript]
+----
+{
+    "type": "long",
+    "connect.version": 1,
+    "connect.name": "io.debezium.time.MicroTimestamp"
+}
+----
+
+and the Iceberg Kafka Connect sink write it, by default, as a `BIGINT` to Iceberg (matching the `long` logical type in the schema).
+
+You can use the same `TimestampConverter` trick as above, instead specifying `unix.precision` so that the transform treats the source value as an epoch value, converting it into a timestamp:
+
+[source,javascript]
+----
+
+----
+"transforms.convert_ts.type"          : "org.apache.kafka.connect.transforms.TimestampConverter\$Value",
+"transforms.convert_ts.field"         : "click_ts",
+"transforms.convert_ts.unix.precision": "microseconds",
+"transforms.convert_ts.target.type"   : "Timestamp"
+----
+
+The only problem is that this ends up in Iceberg as a `TIMESTAMP WITH TIME ZONE`—i.e. _includes_ time zone, even though the source doesn't.
+====
 
 
-show use of real schema, via postgres cdc
 schema evolution
 n:1 flow
 
@@ -899,6 +1260,32 @@ http PUT localhost:8083/admin/loggers/org.apache.iceberg.aws Content-Type:applic
 ----
 
 See link:/2020/01/16/changing-the-logging-level-for-kafka-connect-dynamically/[Changing the Logging Level for Kafka Connect Dynamically] for more detail.
+
+It can be useful for inspection of SMTs:
+
+[source,bash]
+----
+curl -s -X PUT http://localhost:8083/admin/loggers/org.apache.kafka.connect.runtime.TransformationChain -H "Content-Type:application/json" -d '{"level": "TRACE"}'
+----
+
+You'll then see in the logs something like this:
+
+[source,]
+----
+Applying transformation io.tabular.iceberg.connect.transforms.DebeziumTransform to
+    SinkRecord{kafkaOffset=2, timestampType=CreateTime, originalTopic=dbz-avro.public.clicks_no_tz, originalKafkaPartition=1, originalKafkaOffset=2}
+    ConnectRecord{topic='dbz-avro.public.clicks_no_tz', kafkaPartition=1, key=null, keySchema=null,
+        value=Struct{after=Struct{click_ts=1675258225000000,ad_cost=1.50,is_conversion=true,user_id=001234567890},source=Struct{version=3.1.2.Final,connector=postgresql,name=dbz-avro,ts_ms=1751471423083,snapshot=false,db=postgres,sequence=["34643256","34643544"],ts_us=1751471423083360,ts_ns=1751471423083360000,schema=public,table=clicks_no_tz,txId=780,lsn=34643544},op=c,ts_ms=1751471423553,ts_us=1751471423553059,ts_ns=1751471423553059129},
+        valueSchema=Schema{dbz-avro.public.clicks_no_tz.Envelope:STRUCT}, timestamp=1751471423743, headers=ConnectHeaders(headers=)}
+
+
+Applying transformation org.apache.kafka.connect.transforms.TimestampConverter$Value to
+    SinkRecord{kafkaOffset=2, timestampType=CreateTime, originalTopic=dbz-avro.public.clicks_no_tz, originalKafkaPartition=1, originalKafkaOffset=2}
+    ConnectRecord{topic='dbz-avro.public.clicks_no_tz', kafkaPartition=1, key=null, keySchema=null,
+        value=Struct{click_ts=1675258225000000,ad_cost=1.50,is_conversion=true,user_id=001234567890,_cdc=Struct{op=I,ts=Wed Jul 02 15:50:23 GMT 2025,offset=2,source=public.clicks_no_tz,target=public.clicks_no_tz}},
+        valueSchema=Schema{dbz-avro.public.clicks_no_tz.Value:STRUCT}, timestamp=1751471423743, headers=ConnectHeaders(headers=)}
+----
+
 
 == Appendix: Documentation and Links
 
