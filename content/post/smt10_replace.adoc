@@ -18,13 +18,13 @@ categories:
 
 The https://docs.confluent.io/platform/current/connect/transforms/replacefield.html[`ReplaceField`] Single Message Transform has three modes of operation on fields of data passing through Kafka Connect:
 
-* Include *only* the fields specified in the list (`whitelist`)
-* Include all fields *except* the ones specified (`blacklist`)
+* Include *only* the fields specified in the list (`include`)
+* Include all fields *except* the ones specified (`exclude`)
 * Rename field(s) (`renames`)
 
 <!--more-->
 
-It can be used in both a source and sink connector depending on requirements. 
+It can be used in both a source and sink connector depending on requirements.
 
 {{< youtube I0nd3GH_VzY >}}
 
@@ -34,7 +34,7 @@ https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-mess
 
 == Dropping fields in a sink connector
 
-Imagine we have a source topic with multiple fields in: 
+Imagine we have a source topic with multiple fields in:
 
 [source,bash]
 ----
@@ -57,7 +57,7 @@ docker exec kafkacat kafkacat -b broker:29092 -r http://schema-registry:8081 -s 
 }
 ----
 
-This data is in Kafka, but the system to which we're going to stream it with a sink connector mustn't hold sensitive information, such as credit card data. One option is to link:/2020/12/14/twelve-days-of-smt-day-5-maskfield/[`Mask`] it, but this retains the fields in the payload which is wasteful if we simply don't want them in the target system. We can use `ReplaceField` to exclude a set of fields from passing through Kafka Connect: 
+This data is in Kafka, but the system to which we're going to stream it with a sink connector mustn't hold sensitive information, such as credit card data. One option is to link:/2020/12/14/twelve-days-of-smt-day-5-maskfield/[`Mask`] it, but this retains the fields in the payload which is wasteful if we simply don't want them in the target system. We can use `ReplaceField` to exclude a set of fields from passing through Kafka Connect:
 
 [source,bash]
 ----
@@ -74,11 +74,11 @@ curl -i -X PUT -H "Accept:application/json" \
       "auto.evolve"                : "true",
       "transforms"                 : "dropCC",
       "transforms.dropCC.type"     : "org.apache.kafka.connect.transforms.ReplaceField$Value",
-      "transforms.dropCC.blacklist": "cc_num,cc_exp,card_type"
+      "transforms.dropCC.exclude"  : "cc_num,cc_exp,card_type"
       }'
 ----
 
-In the target system (a database, in this case) the credit card fields are not present, exactly as intended: 
+In the target system (a database, in this case) the credit card fields are not present, exactly as intended:
 
 [source,sql]
 ----
@@ -97,9 +97,9 @@ mysql> describe `day10-transactions`;
 
 == Including only certain fields in a source connector
 
-This time we have a source connector that's ingesting data from a system that includes numerous fields that we don't want to ingest into Kafka. Because a Single Message Transform applies to the pipeline *before* a message is written to Kafka, not after, we can deliberately ensure that certain data is never stored in Kafka if it's not intended to be. 
+This time we have a source connector that's ingesting data from a system that includes numerous fields that we don't want to ingest into Kafka. Because a Single Message Transform applies to the pipeline *before* a message is written to Kafka, not after, we can deliberately ensure that certain data is never stored in Kafka if it's not intended to be.
 
-The source connector in this example is reading data from a database with a schema that looks like this: 
+The source connector in this example is reading data from a database with a schema that looks like this:
 
 [source,sql]
 ----
@@ -119,7 +119,7 @@ mysql> describe production_data;
 8 rows in set (0.00 sec)
 ----
 
-Unlike the scenario in the first section this time we want to extract data from the source system but only certain fields that we need for our particular analytics pipeline. It may be that it's inefficient to ingest a large number of redundant fields, or that the data is sensitive and we're not allowed to store it in our topic. In this case we specify just a list of fields to include: 
+Unlike the scenario in the first section this time we want to extract data from the source system but only certain fields that we need for our particular analytics pipeline. It may be that it's inefficient to ingest a large number of redundant fields, or that the data is sensitive and we're not allowed to store it in our topic. In this case we specify just a list of fields to include:
 
 [source,bash]
 ----
@@ -136,11 +136,11 @@ curl -X PUT http://localhost:8083/connectors/source-jdbc-mysql-day10-00/config \
     "mode"                             : "bulk",
     "transforms"                       : "selectFields",
     "transforms.selectFields.type"     : "org.apache.kafka.connect.transforms.ReplaceField$Value",
-    "transforms.selectFields.whitelist": "item,cost,units,txn_date"
+    "transforms.selectFields.include": "item,cost,units,txn_date"
   }'
 ----
 
-The resulting Kafka topic is populated with only the fields of interest: 
+The resulting Kafka topic is populated with only the fields of interest:
 
 [source,bash]
 ----
@@ -159,12 +159,12 @@ docker exec kafkacat kafkacat -b broker:29092 -r http://schema-registry:8081 -s 
 
 == Renaming fields
 
-Perhaps you want to keep all the fields in the payload - but you want to change the name of them. This could be for various reasons, including: 
+Perhaps you want to keep all the fields in the payload - but you want to change the name of them. This could be for various reasons, including:
 
 * Standardise common naming for the same business measures as data is ingested into Kafka
 * Change a field to fit an existing name in a target object in a sink connector
 
-Here's an example renaming a field in a sink connector: 
+Here's an example renaming a field in a sink connector:
 
 [source,bash]
 ----
@@ -185,7 +185,7 @@ curl -i -X PUT -H "Accept:application/json" \
       }'
 ----
 
-The resulting table in the database has the amended field name (`transaction_timestamp`): 
+The resulting table in the database has the amended field name (`transaction_timestamp`):
 
 [source,sql]
 ----
