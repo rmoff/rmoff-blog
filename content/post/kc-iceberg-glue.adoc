@@ -1,9 +1,9 @@
 ---
 draft: false
 title: 'Writing to Apache Iceberg on S3 using Kafka Connect with Glue catalog'
-date: "2025-06-30T15:36:21Z"
-image: "/images/2025/06/h_IMG_0592.webp"
-thumbnail: "/images/2025/06/t_IMG_0587.webp"
+date: "2025-07-04T15:36:21Z"
+image: "/│images/2025/07/h_IMG_0592.webp"
+thumbnail: "/│images/2025/07/t_IMG_0587.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Iceberg
@@ -24,7 +24,7 @@ The source Kafka topic(s) can be populated by a Kafka Connect source connector (
 
 <!--more-->
 
-image::/images/2025/06/kc.excalidraw.png[]
+image::/│images/2025/07/kc.excalidraw.png[]
 
 
 I'm going to use AWS's Glue Data Catalog, but the sink also works with other Iceberg catalogs.
@@ -75,7 +75,7 @@ REST APIs are all very well, but a nicer way of managing Kafka Connect is https:
 This is a CLI client built for Kafka Connect.
 On the Mac it's a simple install from Brew: `brew install kcctl/tap/kcctl`
 
-Once you've install kcctl, configure it to point to the Kafka Connect worker cluster:
+Once you've installed kcctl, configure it to point to the Kafka Connect worker cluster:
 
 [source,bash]
 ----
@@ -105,9 +105,9 @@ $ kcctl get plugins --types=sink
 
 == 1:1 (Sending data from one Kafka topic to an Iceberg table)
 
-image::/images/2025/06/kc11.excalidraw.png[]
+image::/│images/2025/07/kc11.excalidraw.png[]
 
-We'll start by the most simple example, sending data from a Kafka topic to a table in Iceberg.
+We'll start by looking at the most simple example, sending data from a Kafka topic to a table in Iceberg.
 
 I'm going to populate a Kafka topic with some dummy data.
 I'm using JSON to serialise it; bear in mind that an explicitly-declared schema stored in a Schema Registry and the data serialised with something like Avro is often a better approach.
@@ -233,7 +233,7 @@ Tasks:
 ----
 
 This time the error is entirely self-inflicted.
-Hot off my blog post about https://rmoff.net/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/[doing this in Flink SQL] I had in my mind that the table needed a three part qualification; `catalog.database.table`.
+Hot off my blog post about https://rmoff.net/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/[doing this in Flink SQL], I had in my mind that the table needed a three-part qualification; `catalog.database.table`.
 In fact, we only need to specify `database.table`.
 In addition I've realised that the table doesn't exist already, and by default the connector won't automagically create it—so let's fix that too.
 
@@ -332,7 +332,7 @@ $ aws s3 --recursive ls s3://rmoff-lakehouse/01
 2025-06-30 16:44:39       1320 01/rmoff_db.db/orders/metadata/00000-bcbeeafa-4556-4a52-92ee-5dbc34d35d6b.metadata.json
 ----
 
-However, this is just the table's Iceberg metadata is there—but nothing else.
+However, this is just the table's Iceberg metadata—but nothing else.
 That's because Kafka Connect won't flush the data to storage straight away; by default it's every 5 minutes.
 The configuration that controls this is `iceberg.control.commit.interval-ms`.
 
@@ -676,7 +676,7 @@ org.apache.kafka.connect.errors.DataException: Invalid bytes for Decimal field
 com.fasterxml.jackson.databind.exc.InvalidFormatException: Cannot access contents of TextNode as binary due to broken Base64 encoding: Illegal character '.' (code 0x2e) in base64 content
 ----
 
-That's because the `ad_cost` field is defined as a logical `Decimal` type, but physical stored as `bytes`, so I need to write it as that in the topic:
+That's because the `ad_cost` field is defined as a logical `Decimal` type, but physically stored as `bytes`, so I need to write it as that in the topic:
 
 [source,javascript]
 ----
@@ -727,7 +727,7 @@ A registry, of schemas.
 
 Instead of passing the full schema each time (like above), a client will have a _reference_ to the schema in the message, and then retrieve the actual schema from the registry.
 
-image::/images/2025/06/sr.excalidraw.png[]
+image::/│images/2025/07/sr.excalidraw.png[]
 
 The most well known of the schema registries in the Kafka ecosystem is Confluent's https://github.com/confluentinc/schema-registry[Schema Registry].
 I'll show you shortly how it is used automatically within a pipeline, but first I'm going to demonstrate its "manual" use.
@@ -894,7 +894,7 @@ I finally got the expected value showing in Iceberg:
 Let's put this into practice now.
 I'm going to use Kafka Connect with the Debezium connector to get data from Postgres and then write it to Iceberg with the same sink connector we've used above.
 
-image::/images/2025/06/pg00.excalidraw.png[]
+image::/│images/2025/07/pg00.excalidraw.png[]
 
 First, create and populate Postgres table:
 
@@ -965,10 +965,10 @@ $  docker compose exec -T kcat kcat -b broker:9092 -C -t dbz.public.clicks -c1
 […]
 ----
 
-It's using the `JsonConverter` with an embeded schema.
+It's using the `JsonConverter` with an embedded schema.
 That's not what we want, so let's create a new version of the connector.
 It's important to create a new version, because the existing one won't re-read messages from the topic just because we change its configuration because logically it has processed that data already.
-We also need to make sure we write to a different topic; writing JSON and Avro to the same Kafka topic is a recipe for distaster (or at least, wailing and gnashing of teeth when a sink connector spectacularly fails to read the messages).
+We also need to make sure we write to a different topic; writing JSON and Avro to the same Kafka topic is a recipe for disaster (or at least, wailing and gnashing of teeth when a sink connector spectacularly fails to read the messages).
 
 [source,bash]
 ----
@@ -1054,7 +1054,7 @@ Since this is the initial snapshot, we have a blank `before` section, the payloa
 You _might_ want all of this raw change data sent to Iceberg, but more likely is that you just want the current state of the record.
 To do this you can use a Kafka Connect Single Message Transformation (SMT).
 Both Iceberg and Debezium ship with their own SMTs to do this.
-Iceberg has https://iceberg.apache.org/docs/nightly/kafka-connect/#debeziumtransform[`DebeziumTransform`] and Debezium  https://debezium.io/documentation/reference/stable/transformations/event-flattening.html[`ExtractNewRecordState`].
+Iceberg has https://iceberg.apache.org/docs/nightly/kafka-connect/#debeziumtransform[`DebeziumTransform`] and Debezium https://debezium.io/documentation/reference/stable/transformations/event-flattening.html[`ExtractNewRecordState`].
 The differences between them that I can tell are:
 
 * The Iceberg one is marked experimental, whilst the Debezium one has been used in production for years
@@ -1199,7 +1199,7 @@ With the initial `postgres_clicks` Iceberg table deleted, and the new version of
 │ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT,[…]
 └───────────────┴─────────────────────────────────────────────────────────────────[…]
 
-🟡◗ select click_ts, ad_cost, is_conversion, user_id from postgres_clicks2;
+🟡◗ select click_ts, ad_cost, is_conversion, user_id from postgres_clicks;
 ┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
 │         click_ts         │    ad_cost    │ is_conversion │   user_id    │
 │ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │
@@ -1337,7 +1337,7 @@ As a side note, whilst the docs are good, you can also get a quick look at the c
 ----
 
 So, let's create a new version of this connector and test it out.
-I'm going to follow the same pattern as above; create the initial table and add a row, make sure it syncs to the a new Iceberg table, then alter the table and add another row and see if that propogates as expected.
+I'm going to follow the same pattern as above; create the initial table and add a row, make sure it syncs to a new Iceberg table, then alter the table and add another row and see if that propagates as expected.
 
 [source,bash]
 ----
@@ -1417,9 +1417,9 @@ With Kafka Connect you can specify a list of topics with https://kafka.apache.or
 
 Let's try it.
 
-I'm going to stick with Postgres here for my example to populate the multiple topics thate we'll then read from and send to multiple Postgres tables.
+I'm going to stick with Postgres here for my example to populate the multiple topics that we'll then read from and send to multiple Postgres tables.
 
-image::/images/2025/06/kcpgnn.excalidraw.png[]
+image::/│images/2025/07/kcpgnn.excalidraw.png[]
 
 There are four tables in my schema:
 
@@ -1787,7 +1787,7 @@ Caused by: java.lang.IllegalArgumentException: Invalid table identifier: rmoff_d
 Wuuuuh… eh?!
 Where has `-zsh` come from??
 
-In short, I hadn't escaped the `$` of the `$0` in my config, meaning that `$0` was interpretted as a https://www.gnu.org/software/bash/manual/bash.html#Special-Parameters[special shell parameter] and replaced with `-zsh` _when it was passed to kcctl_.
+In short, I hadn't escaped the `$` of the `$0` in my config, meaning that `$0` was interpreted as a https://www.gnu.org/software/bash/manual/bash.html#Special-Parameters[special shell parameter] and replaced with `-zsh` _when it was passed to kcctl_.
 
 We can validate this by looking closely at the `kcctl describe connector` output:
 
@@ -1874,7 +1874,7 @@ Dynamic routing *does* work—as I showed above—if you're using `route-field` 
 Let's now look at a variation on the above.
 Instead of many topics written each to their own table, what about multiple topics writing to the same table?
 
-image::/images/2025/06/n1.excalidraw.png[]
+image::/│images/2025/07/n1.excalidraw.png[]
 
 This is a common requirement when data is sharded across geographies or business units, for example.
 I'm using Postgres again as my source example, but this could equally just be any Kafka topic populated by any application.
@@ -2042,7 +2042,7 @@ Another option is to perform this concatenation in-flight with a custom SMT, or 
 The inverse of the above process is taking one topic and writing it out to multiple Iceberg tables.
 This is what the built-in Iceberg `route-field` is designed for, and works simply enough.
 
-image::/images/2025/06/1n.excalidraw.png[]
+image::/│images/2025/07/1n.excalidraw.png[]
 
 Imagine you've got a Kafka topic `wifi-logs` that holds wifi data:
 
@@ -2090,7 +2090,7 @@ Unfortunately this hits the same problem as above; the `route-field` value must 
 Caused by: java.lang.IllegalArgumentException: Invalid table identifier: homenetwork
 ----
 
-Whereas above we had data from Debezium and we could fudge the `route-field` value to include a database by making use of the `DebeziumTranform` configuration, here we don't have that option.
+Whereas above we had data from Debezium and we could fudge the `route-field` value to include a database by making use of the `DebeziumTransform` configuration, here we don't have that option.
 
 We need an SMT similar to that mentioned just before in the context of unique field values for a Fan-In scenario: an SMT that will concatenate a field's value with another (or a static value, in this case).
 That, or the option to specify a default database as part of the Iceberg sink configuration.
@@ -2278,7 +2278,9 @@ When you run this sink you get an Iceberg table with only the HomeNetwork wifi d
 
 
 
-== Appendix: Debugging
+== Appendices
+
+=== Debugging
 
 You can increase the log level of the Kafka Connect worker for specific components:
 
@@ -2351,7 +2353,7 @@ When you create this you'll see in the Kafka Connect worker logs the actual reco
 ----
 
 
-== Appendix: Version problems
+=== Kafka Connect version problems
 
 I saw this error from the connector:
 
@@ -2371,7 +2373,7 @@ java.lang.NoSuchMethodError: 'org.apache.kafka.clients.admin.ListConsumerGroupOf
 This happened with cp-kafka-connect `7.2.15`.
 Switching to 8.0.0 resolved the problem.
 
-== Appendix: Documentation and Links
+=== Documentation and Links
 
 * GitHub: https://github.com/apache/iceberg/tree/main/kafka-connect[Apache Iceberg - Kafka Connect sink]
 * Docs: https://iceberg.apache.org/docs/nightly/kafka-connect/[Apache Iceberg - Kafka Connect sink]
