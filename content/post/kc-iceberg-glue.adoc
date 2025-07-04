@@ -18,11 +18,20 @@ categories:
 
 Without wanting to mix my temperature metaphors, Iceberg is the new hawtness, and getting data into it from other places is a common task.
 I link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/[wrote previously about using Flink SQL to do this], and today I'm going to look at doing the same using Kafka Connect.
-I'm going to use AWS's Glue Data Catalog, but the sink also works with other Iceberg catalogs.
+
+Kafka Connect can send data to Iceberg from any Kafka topic.
+The source Kafka topic(s) can be populated by a Kafka Connect source connector (such as Debezium), or a regular application producing directly to it.
 
 <!--more-->
 
 image::/images/2025/06/kc.excalidraw.png[]
+
+
+I'm going to use AWS's Glue Data Catalog, but the sink also works with other Iceberg catalogs.
+
+TIP: You can find the Docker Compose for this article https://github.com/rmoff/examples/tree/main/iceberg/kafka-kafkaconnect-aws[here]
+
+== Kafka Connect and the Iceberg Sink Connector
 
 Kafka Connect is a framework for data integration, and is part of Apache Kafka.
 There is a rich ecosystem of connectors for getting data in and out of Kafka, and Kafka Connect itself provides a set of features that you'd expect for a resilient data integration platform, including scaling, schema handling, restarts, serialisation, and more.
@@ -33,23 +42,6 @@ For the purposes of this blog I'm still using the Tabular version since it has a
 If you want to use the Apache Iceberg version you currently https://iceberg.apache.org/docs/nightly/kafka-connect/#installation[need to build the connector yourself].
 There is https://github.com/apache/iceberg/issues/10745[work underway] to make it available on Confluent Hub.
 
-== Setup
-
-TIP: You can find the Docker Compose for this article https://github.com/rmoff/examples/tree/main/iceberg/kafka-kafkaconnect-aws[here]
-
-We'll start by populating a Kafka topic with some dummy data.
-I'm using JSON to serialise it; bear in mind that an explicitly-declared schema stored in a Schema Registry and the data serialised with something like Avro is often a better approach.
-
-[source,bash]
-----
-$ echo '{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
-{"order_id": "002", "customer_id": "cust_456", "product": "mouse", "quantity": 2, "price": 25.50}
-{"order_id": "003", "customer_id": "cust_789", "product": "keyboard", "quantity": 1, "price": 75.00}
-{"order_id": "004", "customer_id": "cust_321", "product": "monitor", "quantity": 1, "price": 299.99}
-{"order_id": "005", "customer_id": "cust_654", "product": "headphones", "quantity": 1, "price": 149.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
-----
-
-Now we need to install the connector into our Kafka Connect worker.
 I'm running a https://hub.docker.com/r/confluentinc/cp-kafka-connect[Kafka Connect Docker image] provided by Confluent because it provides the https://docs.confluent.io/platform/7.5/connect/confluent-hub/client.html#install-components-with-c-hub-client[`confluent-hub` CLI tool] which is a handy way for installing pre-built connectors and saves me having to do it myself.
 It's worth noting that the `confluent-hub` CLI is being deprecated in favour of the broader `confluent` CLI tool and `confluent connect plugin install` to install connectors.
 
@@ -76,6 +68,8 @@ $ curl -s localhost:8083/connector-plugins|jq '.[].class'
 ----
 
 (Note that it's `io.tabular` and not `org.apache`, since we're using the Tabular version of the connector for now).
+
+=== kcctl 🧸
 
 REST APIs are all very well, but a nicer way of managing Kafka Connect is https://github.com/kcctl/kcctl[**kcctl**].
 This is a CLI client built for Kafka Connect.
@@ -109,7 +103,25 @@ $ kcctl get plugins --types=sink
  sink   io.tabular.iceberg.connect.IcebergSinkConnector   1.5.2-kc-0.6.19
 ----
 
-== Configuring the Apache Iceberg Kafka Connect sink
+== 1:1 (Sending data from one Kafka topic to an Iceberg table)
+
+image::/images/2025/06/kc11.excalidraw.png[]
+
+We'll start by the most simple example, sending data from a Kafka topic to a table in Iceberg.
+
+I'm going to populate a Kafka topic with some dummy data.
+I'm using JSON to serialise it; bear in mind that an explicitly-declared schema stored in a Schema Registry and the data serialised with something like Avro is often a better approach.
+
+[source,bash]
+----
+$ echo '{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
+{"order_id": "002", "customer_id": "cust_456", "product": "mouse", "quantity": 2, "price": 25.50}
+{"order_id": "003", "customer_id": "cust_789", "product": "keyboard", "quantity": 1, "price": 75.00}
+{"order_id": "004", "customer_id": "cust_321", "product": "monitor", "quantity": 1, "price": 299.99}
+{"order_id": "005", "customer_id": "cust_654", "product": "headphones", "quantity": 1, "price": 149.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
+----
+
+=== Configuring the Apache Iceberg Kafka Connect sink
 
 Now let's instantiate our Iceberg sink.
 The https://iceberg.apache.org/docs/nightly/kafka-connect/#initial-setup[docs] are pretty good, and include details of how to use different catalogs.
@@ -175,13 +187,13 @@ Tasks:
 ----
 
 So, no dice on the first attempt.
-(Note also the confusing fact that the _connector_ has a state of `RUNNING` whilst the _task_ is `FAILED`).
+(Note also the confusing fact that the _connector_ has a state of `RUNNING` whilst the _task_ is `FAILED`—this is just _one of those things_ about how Kafka Connect works 🙃).
 
 The error is to do with how Kafka Connect handles deserialising messages from Kafka topics.
 It's reading JSON, but expecting to find `schema` and `payload` elements within it—and these aren't there.
 https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-message-without-expected-schema-payload-structure[This blog post] explains the issue in more detail.
 
-To fix it we'll change the connector configuration which we can do easily with kcctl's `patch`:
+To fix it we'll change the connector configuration, which we can do easily with kcctl's `patch`:
 
 [source,bash]
 ----
@@ -256,7 +268,7 @@ $ aws glue get-databases --region us-east-1 --query 'DatabaseList[].Name' --outp
 +--------------------+
 ----
 
-OK, so let's use a database that does exist (`rmoff_db`):
+So, let's use a database that does exist (`rmoff_db`):
 
 [source,bash]
 ----
@@ -294,7 +306,7 @@ Topics:
   orders
 ----
 
-== Examining the Iceberg table
+=== Examining the Iceberg table
 
 Now we'll have a look at the Iceberg table.
 
@@ -336,13 +348,12 @@ $ aws s3 --recursive ls s3://rmoff-lakehouse/01
 2025-06-30 16:55:09       4233 01/rmoff_db.db/orders/metadata/snap-6069858821353147927-1-cbe2651d-7c83-4465-a2e1-d92bb3e0b61d.avro
 ----
 
-Alternatively we can be impatient (and inefficient, if we were to use this for real as you'd get a ton of small files as a result) and override it:
+Alternatively we can be impatient (_and inefficient, if we were to use this for real as you'd get a ton of small files as a result_) and override it to commit every second:
 
 [source,bash]
 ----
-# Commit files to Iceberg every 30 seconds
 $ kcctl patch connector iceberg-sink-kc_orders \
-    -s iceberg.control.commit.interval-ms=30000
+    -s iceberg.control.commit.interval-ms=1000
 ----
 
 Now let's have a look at this data that we've written.
@@ -379,8 +390,9 @@ Here, `1234` is my AWS account id (which you can get with `aws sts get-caller-id
 
 Once you've done this you should be able to list the table(s) in your Glue Data Catalog:
 
-[source,sql]
+[source,]
 ----
+-- These are DuckDB databases
 🟡◗ SHOW DATABASES;
 ┌───────────────┐
 │ database_name │
@@ -393,7 +405,6 @@ Once you've done this you should be able to list the table(s) in your Glue Data 
 🟡◗ SELECT * FROM information_schema.tables
     WHERE table_catalog = 'glue_catalog'
       AND table_schema='rmoff_db';
-100% ▕████████████████████████████████████████████████████████████▏
 ┌───────────────┬──────────────┬──────────────────┬────────────┬
 │ table_catalog │ table_schema │    table_name    │ table_type │
 │    varchar    │   varchar    │     varchar      │  varchar   │
@@ -422,10 +433,9 @@ $ docker compose exec -it kcat kcat -b broker:9092 -C -t orders
 
 and now the Iceberg table:
 
-[source,sql]
+[source,]
 ----
 🟡◗ USE glue_catalog.rmoff_db;
-Run Time (s): real 0.539 user 0.036459 sys 0.006006
 🟡◗ SELECT * FROM orders;
 ┌────────────┬──────────┬────────┬─────────────┬──────────┐
 │  product   │ quantity │ price  │ customer_id │ order_id │
@@ -437,7 +447,6 @@ Run Time (s): real 0.539 user 0.036459 sys 0.006006
 │ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
 │ headphones │        1 │ 149.99 │ cust_654    │ 005      │
 └────────────┴──────────┴────────┴─────────────┴──────────┘
-Run Time (s): real 2.752 user 0.209454 sys 0.082746
 ----
 
 Write another row of data to the Kafka topic (`order_id`: `006`):
@@ -447,9 +456,9 @@ Write another row of data to the Kafka topic (`order_id`: `006`):
 $ echo '{"order_id": "006", "customer_id": "cust_987", "product": "webcam", "quantity": 1, "price": 89.99}' | docker compose exec -T kcat kcat -P -b broker:9092 -t orders
 ----
 
-Now wait 30 seconds (or whatever `iceberg.control.commit.interval-ms` is set to), and check the Iceberg table:
+Now wait a second (or whatever `iceberg.control.commit.interval-ms` is set to), and check the Iceberg table:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SELECT * FROM orders;
 ┌────────────┬──────────┬────────┬─────────────┬──────────┐
@@ -463,7 +472,6 @@ Now wait 30 seconds (or whatever `iceberg.control.commit.interval-ms` is set to)
 │ monitor    │        1 │ 299.99 │ cust_321    │ 004      │
 │ headphones │        1 │ 149.99 │ cust_654    │ 005      │
 └────────────┴──────────┴────────┴─────────────┴──────────┘
-Run Time (s): real 2.567 user 0.125818 sys 0.031565
 ----
 <1> The new row of data 🎉
 
@@ -500,7 +508,7 @@ What does it look like written to Iceberg?
 $ aws glue get-table --region us-east-1 --database-name rmoff_db --name orders \
     --query 'Table.StorageDescriptor.Columns[].{Name:Name,Type:Type}' --output table
 
----------------------------
++--------------+----------+
 |        GetTable         |
 +--------------+----------+
 |     Name     |  Type    |
@@ -550,7 +558,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schemas.enable": "false",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
-    "iceberg.control.commit.interval-ms": "30000"
+    "iceberg.control.commit.interval-ms": "1000"
   }
 }
 EOF
@@ -563,7 +571,7 @@ it ends up like this in Iceberg:
 $ ❯ aws glue get-table --region us-east-1 --database-name rmoff_db --name clicks\
     --query 'Table.StorageDescriptor.Columns[].{Name:Name,Type:Type}' --output table
 
------------------------------
++----------------+----------+
 |         GetTable          |
 +----------------+----------+
 |      Name      |  Type    |
@@ -577,7 +585,7 @@ $ ❯ aws glue get-table --region us-east-1 --database-name rmoff_db --name clic
 
 Here we start to see the real flaw if we just rely on inferred schemas.
 Holding a currency as a string?
-Wat.
+https://www.destroyallsoftware.com/talks/wat[Wat].
 Storing a timestamp as a string?
 Gross.
 Using a string to hold a boolean?
@@ -587,9 +595,7 @@ Data types exist for a reason, and part of good data pipeline hygiene is making 
 
 === Enough of the lecturing…How do I use an explicit schema with Kafka Connect?
 
-==== JSON with embedded schema
-
-On option is https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-schemas[embedding the schema directly in the message].
+One option (but not one I'd recommend) is https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/#json-schemas[embedding the schema directly in the message].
 This is actually what the `JsonConverter` was defaulting to in the first example above and through an error because we'd not done it.
 Here's what the above `clicks` record looks like with embedded schema:
 
@@ -656,7 +662,7 @@ kcctl apply -f - <<EOF
     "key.converter.schemas.enable": "true",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "true",
-    "iceberg.control.commit.interval-ms": "30000"
+    "iceberg.control.commit.interval-ms": "1000"
   }
 }
 EOF
@@ -698,7 +704,7 @@ For decimal 1.50 with scale 2, we need to ensure proper signed integer encoding:
 
 With the connector restarted reading from a fresh topic with this newly-encoded decimal value in it, things look good in Iceberg:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SELECT * FROM clicks_embedded_schema;
 ┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
@@ -714,17 +720,26 @@ Bytes might be cheap, but do we really want to spend over 80% of the message on 
 
 This is where a Schema Registry comes in.
 
-==== Schema Registry
+=== Schema Registry
 
 A schema registry is basically what it says on the tin.
 A registry, of schemas.
 
 Instead of passing the full schema each time (like above), a client will have a _reference_ to the schema in the message, and then retrieve the actual schema from the registry.
 
-The most well known of the schema registries in the Kafka ecosystem is Confluent's https://github.com/confluentinc/schema-registry[Schema Registry].
-I'll show you shortly how it is used automatically within a pipeline, but first I'm going to demonstrate it's "manual" use.
+image::/images/2025/06/sr.excalidraw.png[]
 
-The schema from the `clicks` above looks like this:
+The most well known of the schema registries in the Kafka ecosystem is Confluent's https://github.com/confluentinc/schema-registry[Schema Registry].
+I'll show you shortly how it is used automatically within a pipeline, but first I'm going to demonstrate its "manual" use.
+
+There are multiple serialisation options available, including:
+
+* Avro
+* Protobuf
+* JSONSchema
+
+I'm going to demonstrate Avro here.
+A schema for the `clicks` data above looks something like this:
 
 [source,javascript]
 ----
@@ -784,15 +799,11 @@ An Avro-serialised message is smaller than a JSON one holding the same data:
 
 [source,bash]
 ----
-$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks_registry
-Ѕ1.50001234567890
-
+# Count the bytes in Avro message
 $ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks_registry -c1 | wc -c
 31
 
-$ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks
-{"click_ts": "2023-02-01T14:30:25Z", "ad_cost": "1.50", "is_conversion": "true", "user_id": "001234567890"}
-
+# Count the bytes in JSON message
 $ docker compose exec -T kcat kcat -C -b broker:9092 -t clicks -c1 | wc -c
 108
 ----
@@ -817,7 +828,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000"
+    "iceberg.control.commit.interval-ms": "1000"
   }
 }
 EOF
@@ -825,7 +836,7 @@ EOF
 
 The data lands in Iceberg with its data types looking good:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SELECT * FROM clicks_schema_registry;
 ┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
@@ -868,7 +879,7 @@ printf '{"click_ts": 1675258225000, "ad_cost": "\\u0000\\u0096" ,"is_conversion"
 
 I finally got the expected value showing in Iceberg:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SELECT * FROM clicks_schema_registry;
 ┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
@@ -882,6 +893,8 @@ I finally got the expected value showing in Iceberg:
 
 Let's put this into practice now.
 I'm going to use Kafka Connect with the Debezium connector to get data from Postgres and then write it to Iceberg with the same sink connector we've used above.
+
+image::/images/2025/06/pg00.excalidraw.png[]
 
 First, create and populate Postgres table:
 
@@ -1045,7 +1058,7 @@ Iceberg has https://iceberg.apache.org/docs/nightly/kafka-connect/#debeziumtrans
 The differences between them that I can tell are:
 
 * The Iceberg one is marked experimental, whilst the Debezium one has been used in production for years
-* The Iceberg one adds CDC metadata fields (operation type, offset, etc) along with the record state, whilst to do this with the Debezium one you'd need to chain several other SMTs for the same effect.
+* The Iceberg one adds CDC metadata fields (operation type, offset, etc) along with the record state, whilst to do this with the Debezium one you'd need to include the https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-add-fields[`add.fields`] option.
 
 Let's try the Iceberg one, which we'll configure as part of the new sink connector itself:
 
@@ -1066,7 +1079,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms": "dbz",
     "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform"
   }
@@ -1076,31 +1089,32 @@ EOF
 
 Here's the resulting Iceberg table:
 
-[source,sql]
+[source,]
 ----
 🟡◗ describe postgres_clicks;
-┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬
-│  column_name  │                                           column_type                                            │
-│    varchar    │                                             varchar                                              │
-├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼
-│ click_ts      │ VARCHAR                                                                                          │
-│ ad_cost       │ DECIMAL(38,2)                                                                                    │
-│ is_conversion │ BOOLEAN                                                                                          │
-│ user_id       │ VARCHAR                                                                                          │
-│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │
-└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴
+┌───────────────┬──────────────────────────────────────────────────────────────┬
+│  column_name  │                                           column_type        │
+│    varchar    │                                             varchar          │
+├───────────────┼──────────────────────────────────────────────────────────────┼
+│ click_ts      │ VARCHAR                                                      │
+│ ad_cost       │ DECIMAL(38,2)                                                │
+│ is_conversion │ BOOLEAN                                                      │
+│ user_id       │ VARCHAR                                                      │
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE,              │
+│               │        "offset" BIGINT, source VARCHAR, target VARCHAR)      │
+└───────────────┴──────────────────────────────────────────────────────────────┴
 ----
 
 and data:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SELECT * FROM postgres_clicks;
-┌─────────────────────────────┬───────────────┬───────────────┬──────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│          click_ts           │    ad_cost    │ is_conversion │   user_id    │                                                     _cdc                                                     │
-│           varchar           │ decimal(38,2) │    boolean    │   varchar    │       struct(op varchar, ts timestamp with time zone, "offset" bigint, source varchar, target varchar)       │
-├─────────────────────────────┼───────────────┼───────────────┼──────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 2023-02-01T13:30:25.000000Z │          1.50 │ true          │ 001234567890 │ {'op': I, 'ts': '2025-07-02 10:08:35.608+01', 'offset': 0, 'source': public.clicks, 'target': public.clicks} │
+┌─────────────────────────────┬───────────────┬───────────────┬──────────────┬[…]
+│          click_ts           │    ad_cost    │ is_conversion │   user_id    │[…]
+│           varchar           │ decimal(38,2) │    boolean    │   varchar    │[…]
+├─────────────────────────────┼───────────────┼───────────────┼──────────────┼[…]
+│ 2023-02-01T13:30:25.000000Z │          1.50 │ true          │ 001234567890 │[…]
 ----
 
 === Data Type Fun: Timestamps
@@ -1155,8 +1169,8 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000",
-    "transforms": "dbz,convert_ts",
+    "iceberg.control.commit.interval-ms": "1000",
+    "transforms": "dbz,convert_ts", <1>
     "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform",
     "transforms.convert_ts.type" : "org.apache.kafka.connect.transforms.TimestampConverter\$Value",
     "transforms.convert_ts.field" : "click_ts",
@@ -1167,23 +1181,23 @@ $ kcctl apply -f - <<EOF
 EOF
 ----
 
-NOTE: The order of the transformations is important; for the `convert_ts` transform to work the `click_ts` field needs to have been unnested, which is what the `dbz` transform does first.
+<1> The order of the transformations is important; for the `convert_ts` transform to work the `click_ts` field needs to have been unnested, which is what the `dbz` transform does first.
 
 With the initial `postgres_clicks` Iceberg table deleted, and the new version of the connector running (so as to make sure that the table gets recreated with-hopefully—the correct schema), we see this in Iceberg:
 
-[source,sql]
+[source,]
 ----
 🟡◗ describe postgres_clicks;
-┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┐
-│  column_name  │                                           column_type                                            │  null   │   key   │ default │  extra  │
-│    varchar    │                                             varchar                                              │ varchar │ varchar │ varchar │ varchar │
-├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┤
-│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                                         │ YES     │ NULL    │ NULL    │ NULL    │
-│ ad_cost       │ DECIMAL(38,2)                                                                                    │ YES     │ NULL    │ NULL    │ NULL    │
-│ is_conversion │ BOOLEAN                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ user_id       │ VARCHAR                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │ YES     │ NULL    │ NULL    │ NULL    │
-└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┘
+┌───────────────┬─────────────────────────────────────────────────────────────────[…]
+│  column_name  │                                           column_type           […]
+│    varchar    │                                             varchar             […]
+├───────────────┼─────────────────────────────────────────────────────────────────[…]
+│ click_ts      │ TIMESTAMP WITH TIME ZONE                                        […]
+│ ad_cost       │ DECIMAL(38,2)                                                   […]
+│ is_conversion │ BOOLEAN                                                         […]
+│ user_id       │ VARCHAR                                                         […]
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT,[…]
+└───────────────┴─────────────────────────────────────────────────────────────────[…]
 
 🟡◗ select click_ts, ad_cost, is_conversion, user_id from postgres_clicks2;
 ┌──────────────────────────┬───────────────┬───────────────┬──────────────┐
@@ -1194,9 +1208,9 @@ With the initial `postgres_clicks` Iceberg table deleted, and the new version of
 └──────────────────────────┴───────────────┴───────────────┴──────────────┘
 ----
 
-Compare this to the Postgres source:
+Compare the data types and data to the Postgres source:
 
-[source,sql]
+[source,]
 ----
 postgres=# \d clicks
                            Table "public.clicks"
@@ -1234,9 +1248,7 @@ You can use the same `TimestampConverter` trick as above, instead specifying `un
 
 [source,javascript]
 ----
-
-----
-"transforms.convert_ts.type"          : "org.apache.kafka.connect.transforms.TimestampConverter\$Value",
+"transforms.convert_ts.type"          : "org.apache.kafka.connect.transforms.TimestampConverter$Value",
 "transforms.convert_ts.field"         : "click_ts",
 "transforms.convert_ts.unix.precision": "microseconds",
 "transforms.convert_ts.target.type"   : "Timestamp"
@@ -1260,7 +1272,7 @@ INSERT INTO clicks (click_ts, ad_cost, is_conversion, user_id, campaign_id)
 
 The table now looks like this:
 
-[source,sql]
+[source,]
 ----
 postgres=# SELECT * FROM clicks;
         click_ts        | ad_cost | is_conversion |   user_id    |     campaign_id
@@ -1272,31 +1284,31 @@ postgres=# SELECT * FROM clicks;
 
 Over in Iceberg, we can see the new row—but no new column:
 
-[source,sql]
+[source,]
 ----
 🟡◗ select * from postgres_clicks;
-┌──────────────────────┬───────────────┬───────────────┬──────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│       click_ts       │    ad_cost    │ is_conversion │   user_id    │                                                _cdc                                                │
-│ timestamp with tim…  │ decimal(38,2) │    boolean    │   varchar    │  struct(op varchar, ts timestamp with time zone, "offset" bigint, source varchar, target varchar)  │
-├──────────────────────┼───────────────┼───────────────┼──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 2025-07-03 15:30:0…  │          2.50 │ true          │ user_12345   │ {'op': I, 'ts': '2025-07-03 10:32:05.717+01', 'offset': 1, 'source': public.clicks, 'target': pu…  │
-│ 2023-02-01 13:30:2…  │          1.50 │ true          │ 001234567890 │ {'op': I, 'ts': '2025-07-03 10:29:29.777+01', 'offset': 0, 'source': public.clicks, 'target': pu…  │
-└──────────────────────┴───────────────┴───────────────┴──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────┬───────────────┬───────────────┬──────────────┬─────────────────────[…]
+│       click_ts       │    ad_cost    │ is_conversion │   user_id    │                     […]
+│ timestamp with tim…  │ decimal(38,2) │    boolean    │   varchar    │  struct(op varchar, […]
+├──────────────────────┼───────────────┼───────────────┼──────────────┼─────────────────────[…]
+│ 2025-07-03 15:30:0…  │          2.50 │ true          │ user_12345   │ {'op': I, 'ts': '202[…]
+│ 2023-02-01 13:30:2…  │          1.50 │ true          │ 001234567890 │ {'op': I, 'ts': '202[…]
+└──────────────────────┴───────────────┴───────────────┴──────────────┴─────────────────────[…]
 
 🟡◗ DESCRIBE postgres_clicks;
-┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┐
-│  column_name  │                                           column_type                                            │  null   │   key   │ default │  extra  │
-│    varchar    │                                             varchar                                              │ varchar │ varchar │ varchar │ varchar │
-├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┤
-│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                                         │ YES     │ NULL    │ NULL    │ NULL    │
-│ ad_cost       │ DECIMAL(38,2)                                                                                    │ YES     │ NULL    │ NULL    │ NULL    │
-│ is_conversion │ BOOLEAN                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ user_id       │ VARCHAR                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │ YES     │ NULL    │ NULL    │ NULL    │
-└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┘
+┌───────────────┬───────────────────────────────────────────────────────────────────────────[…]
+│  column_name  │                                           column_type                     […]
+│    varchar    │                                             varchar                       […]
+├───────────────┼───────────────────────────────────────────────────────────────────────────[…]
+│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                  […]
+│ ad_cost       │ DECIMAL(38,2)                                                             […]
+│ is_conversion │ BOOLEAN                                                                   […]
+│ user_id       │ VARCHAR                                                                   […]
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VA[…]
+└───────────────┴───────────────────────────────────────────────────────────────────────────[…]
 ----
 
-A quick peruse of https://iceberg.apache.org/docs/nightly/kafka-connect/#configuration[the docs] points us at `iceberg.tables.evolve-schema-enabled`, which is `false` by default.
+A quick perusal of https://iceberg.apache.org/docs/nightly/kafka-connect/#configuration[the docs] points us at `iceberg.tables.evolve-schema-enabled`, which is `false` by default.
 As a side note, whilst the docs are good, you can also get a quick look at the configuration options a connector has by looking at the Kafka Connect worker log file for `IcebergSinkConfig values`:
 
 [source,]
@@ -1304,9 +1316,9 @@ As a side note, whilst the docs are good, you can also get a quick look at the c
 [2025-07-03 09:28:58,309] INFO [iceberg-sink-postgres-clicks-new|task-0] IcebergSinkConfig values:
   iceberg.catalog = iceberg
   iceberg.connect.group-id = null
-  iceberg.control.commit.interval-ms = 30000
+  iceberg.control.commit.interval-ms = 1000
   iceberg.control.commit.threads = 28
-  iceberg.control.commit.timeout-ms = 30000
+  iceberg.control.commit.timeout-ms = 1000
   iceberg.control.group-id = null
   iceberg.control.topic = control-iceberg
   iceberg.hadoop-conf-dir = null
@@ -1345,7 +1357,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms": "dbz,convert_ts",
     "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform",
     "transforms.convert_ts.type" : "org.apache.kafka.connect.transforms.TimestampConverter\$Value",
@@ -1360,37 +1372,37 @@ EOF
 This works exactly as I'd hoped.
 The Iceberg table has the new field (`campaign_id`, after the `_cdc` metadata):
 
-[source,sql]
+[source,]
 ----
 🟡◗ DESCRIBE postgres_clicks01;
-┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┐
-│  column_name  │                                           column_type                                            │  null   │   key   │ default │  extra  │
-│    varchar    │                                             varchar                                              │ varchar │ varchar │ varchar │ varchar │
-├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┤
-│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                                         │ YES     │ NULL    │ NULL    │ NULL    │
-│ ad_cost       │ DECIMAL(38,2)                                                                                    │ YES     │ NULL    │ NULL    │ NULL    │
-│ is_conversion │ BOOLEAN                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ user_id       │ VARCHAR                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VARCHAR, target VARCHAR) │ YES     │ NULL    │ NULL    │ NULL    │
-│ campaign_id   │ VARCHAR                                                                                          │ YES     │ NULL    │ NULL    │ NULL    │
-└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┘
+┌───────────────┬───────────────────────────────────────────────────────────────────────────[…]
+│  column_name  │                                           column_type                     […]
+│    varchar    │                                             varchar                       […]
+├───────────────┼───────────────────────────────────────────────────────────────────────────[…]
+│ click_ts      │ TIMESTAMP WITH TIME ZONE                                                  […]
+│ ad_cost       │ DECIMAL(38,2)                                                             […]
+│ is_conversion │ BOOLEAN                                                                   […]
+│ user_id       │ VARCHAR                                                                   […]
+│ _cdc          │ STRUCT(op VARCHAR, ts TIMESTAMP WITH TIME ZONE, "offset" BIGINT, source VA[…]
+│ campaign_id   │ VARCHAR                                                                   […]
+└───────────────┴───────────────────────────────────────────────────────────────────────────[…]
 ----
 
 and the new data is present too:
 
-[source,sql]
+[source,]
 ----
 🟡◗ select click_ts, ad_cost, is_conversion, user_id, campaign_id from postgres_clicks01;
-┌──────────────────────────┬───────────────┬───────────────┬──────────────┬──────────────────────┐
-│         click_ts         │    ad_cost    │ is_conversion │   user_id    │     campaign_id      │
-│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │       varchar        │
-├──────────────────────────┼───────────────┼───────────────┼──────────────┼──────────────────────┤
-│ 2023-02-01 13:30:25+00   │          1.50 │ true          │ 001234567890 │ NULL                 │
-│ 2025-07-03 15:30:00+01   │          2.50 │ true          │ user_12345   │ campaign_summer_2025 │
-└──────────────────────────┴───────────────┴───────────────┴──────────────┴──────────────────────┘
+┌──────────────────────────┬───────────────┬───────────────┬──────────────┬──────────────────[…]
+│         click_ts         │    ad_cost    │ is_conversion │   user_id    │     campaign_id  […]
+│ timestamp with time zone │ decimal(38,2) │    boolean    │   varchar    │       varchar    […]
+├──────────────────────────┼───────────────┼───────────────┼──────────────┼──────────────────[…]
+│ 2023-02-01 13:30:25+00   │          1.50 │ true          │ 001234567890 │ NULL             […]
+│ 2025-07-03 15:30:00+01   │          2.50 │ true          │ user_12345   │ campaign_summer_2[…]
+└──────────────────────────┴───────────────┴───────────────┴──────────────┴──────────────────[…]
 ----
 
-== Sending data from multiple topics to many Iceberg tables
+== N:N (Many-to-Many / Sending data from multiple topics to many Iceberg tables)
 
 So far I've shown you how to get one Postgres table to one Iceberg table.
 Or to be more precise: one Kafka topic to one Iceberg table.
@@ -1401,9 +1413,14 @@ Does that mean multiple Kafka Connect Iceberg sink instances?
 No!
 
 With Kafka Connect you can specify a list of topics with https://kafka.apache.org/documentation/#sinkconnectorconfigs_topics[`topics`], or a regex with https://kafka.apache.org/documentation/#sinkconnectorconfigs_topics.regex[`topics.regex`].
+
+
 Let's try it.
 
 I'm going to stick with Postgres here for my example to populate the multiple topics thate we'll then read from and send to multiple Postgres tables.
+
+image::/images/2025/06/kcpgnn.excalidraw.png[]
+
 There are four tables in my schema:
 
 [source,sql]
@@ -1418,7 +1435,7 @@ postgres=# \dt
  europe | shipments | table | postgres
 ----
 
-I'll create a Debezium connector that's going to pick up all of them, writing each to its own Kafka topic:
+I'll create a Debezium connector that's going to pick up all of them (`"schema.include.list": "europe",`), writing each to its own Kafka topic:
 
 [source,bash]
 ----
@@ -1482,13 +1499,13 @@ For our purpose here though we need to be a bit more imaginative.
 The source data itself doesn't hold any values that we can use for the table name.
 For example, in `products`, which field name can we use as the target table name?
 
-[source,sql]
+[source,]
 ----
 postgres=# \d products
                                         Table "europe.products"
      Column     |          Type          | Collation | Nullable |               Default
-----------------+------------------------+-----------+----------+--------------------------------------
- id             | integer                |           | not null | nextval('products_id_seq'::regclass)
+----------------+------------------------+-----------+----------+--------------------------[…]
+ id             | integer                |           | not null | nextval('products_id_seq'[…]
  product_name   | character varying(255) |           | not null |
  category       | character varying(100) |           |          |
  price          | numeric(10,2)          |           | not null |
@@ -1536,7 +1553,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms": "dbz",
     "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform"
   }
@@ -1552,17 +1569,7 @@ org.apache.kafka.connect.errors.DataException: source is not a valid field name
 ----
 
 After a bit of Googling around I realised that perhaps the `route-field` is applied _after_ the `DebeziumTransform` in the sink, and so need to be thinking about the final record schema.
-Fortunately we still have a table as part of that data, as we can see from a snippet from earlier this article
-
-[source,sql]
-----
-🟡◗ SELECT * FROM postgres_clicks;
-[…]]┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-[…]]│                                                     _cdc                                                     │
-[…]]│       struct(op varchar, ts timestamp with time zone, "offset" bigint, source varchar, target varchar)       │
-[…]]┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-[…]]│ {'op': I, 'ts': '2025-07-02 10:08:35.608+01', 'offset': 0, 'source': public.clicks, 'target': public.clicks} │
-----
+Fortunately we still have a table as part of that data as part of the `_cdc` field that the `DebeziumTransform` adds.
 
 So let's try it with `"iceberg.tables.route-field":"_cdc.target"`.
 Now we get a different error, and one that looks a bit more hopeful:
@@ -1574,7 +1581,7 @@ software.amazon.awssdk.services.glue.model.EntityNotFoundException: Database eur
 
 You might wonder why I say that this is more hopeful :)
 That's because it's _found_ the field!
-It's just not happy with it, because it's taken the schema from Postgres (`public` in the query output above, and `europe` in our example here) as the Iceberg _database_.
+It's just not happy with it, because it's taken the schema from Postgres (`europe` in our example here) as the Iceberg _database_.
 
 Fortunately in https://iceberg.apache.org/docs/nightly/kafka-connect/#debeziumtransform[the docs] for the `DebeziumTransform` we find the configuration option `cdc.target.pattern` which we're told defaults to `{db}.{table}`.
 
@@ -1599,7 +1606,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms": "dbz",
     "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform",
     "transforms.dbz.cdc.target.pattern": "rmoff_db.{db}_{table}"
@@ -1611,7 +1618,7 @@ EOF
 It works!
 Over in Iceberg we have the four tables in the `rmoff_db` database and a `europe_` prefix:
 
-[source,sql]
+[source,]
 ----
 🟡◗ SHOW TABLES;
 ┌───────────────────────────┐
@@ -1625,32 +1632,39 @@ Over in Iceberg we have the four tables in the `rmoff_db` database and a `europe
 │ europe_shipments          │
 ----
 
-But what if we are sending data from Kafka topics that _haven't_ been populated by Debezium?
+
+=== Dynamic routing from topics without a routing field
+
+The above is neat, but what if we are sending data from Kafka topics that _haven't_ been populated by Debezium?
 In that case we won't be able to rely on having the name of a source table to assume as the name for the target Iceberg table.
 Consider this Kafka topic, based on the one at the opening of this article:
 
-[source,bash]
-----
-$ docker compose exec -it kcat kcat -b broker:9092 -C -t orders_json -c1
-----
-
+.orders_json
 [source,javascript]
 ----
-{"order_id": "001", "customer_id": "cust_123", "product": "laptop", "quantity": 1, "price": 999.99}
+{
+  "order_id": "001",
+  "customer_id": "cust_123",
+  "product": "laptop",
+  "quantity": 1,
+  "price": 999.99
+}
 ----
 
 No target topic name anywhere in the schema.
 If it's just one topic, we can hardcode the `iceberg.tables` value.
-But what about if we've gone more topics like this, perhaps `products_json` too?
+But what about if we've got more topics like this, perhaps `products_json` too?
 
-[source,bash]
-----
-$ docker compose exec -it kcat kcat -b broker:9092 -C -t products_json -c1
-----
-
+.products_json
 [source,javascript]
 ----
-{"product_id": "prod_001", "name": "Gaming Laptop", "category": "Electronics", "price": 1299.99, "stock": 15}
+{
+  "product_id": "prod_001",
+  "name": "Gaming Laptop",
+  "category": "Electronics",
+  "price": 1299.99,
+  "stock": 15
+}
 ----
 
 We could run two Kafka Connect Iceberg sinks, but that'd be missing the point of the ability of Kafka Connect to work with multiple sources and targets.
@@ -1665,7 +1679,7 @@ Ideally we want to do something like this, and pick up _all_ topics matching a p
 "topics.regex": ".*\_json",
 ----
 
-But how to route them sensibly to an Iceberg table based on their _topic name, rather than a field within the payload itself which is what the Iceberg sink's dynamic routing is based on.
+But how to route them sensibly to an Iceberg table based on their _topic_ name, rather than a field within the payload itself (which is what the Iceberg sink's dynamic routing is based on).
 
 SMTs to the rescue again!
 This time one that's built into Kafka Connect: https://rmoff.net/2020/12/15/twelve-days-of-smt-day-6-insertfield-ii/[`InsertField`]
@@ -1698,7 +1712,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schemas.enable":"false",
     "value.converter":"org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable":"false",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms" : "insertTopic",
     "transforms.insertTopic.type" : "org.apache.kafka.connect.transforms.InsertField\$Value",
     "transforms.insertTopic.topic.field" : "srcTopic"
@@ -1750,7 +1764,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schemas.enable":"false",
     "value.converter":"org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable":"false",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms" : "addDbPrefix, insertTopic",
     "transforms.addDbPrefix.type" : "org.apache.kafka.connect.transforms.RegexRouter",
     "transforms.addDbPrefix.regex" : ".*",
@@ -1773,7 +1787,7 @@ Caused by: java.lang.IllegalArgumentException: Invalid table identifier: rmoff_d
 Wuuuuh… eh?!
 Where has `-zsh` come from??
 
-tl;dr I hadn't escaped the `$` of the `$0` in my config, meaning that `$0` was interpretted as a https://www.gnu.org/software/bash/manual/bash.html#Special-Parameters[special shell parameter] and replaced with `-zsh` _when it was passed to kcctl_.
+In short, I hadn't escaped the `$` of the `$0` in my config, meaning that `$0` was interpretted as a https://www.gnu.org/software/bash/manual/bash.html#Special-Parameters[special shell parameter] and replaced with `-zsh` _when it was passed to kcctl_.
 
 We can validate this by looking closely at the `kcctl describe connector` output:
 
@@ -1810,7 +1824,7 @@ $ kcctl apply -f - <<EOF
     "key.converter.schemas.enable":"false",
     "value.converter":"org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable":"false",
-    "iceberg.control.commit.interval-ms": "30000",
+    "iceberg.control.commit.interval-ms": "1000",
     "transforms" : "addDbPrefix, insertTopic",
     "transforms.addDbPrefix.type" : "org.apache.kafka.connect.transforms.RegexRouter",
     "transforms.addDbPrefix.regex" : ".*",
@@ -1850,15 +1864,419 @@ $ aws s3 --recursive ls s3://rmoff-lakehouse/02
 2025-07-03 17:01:20       1424 02/rmoff_db.db/products_json/metadata/00000-ad7c28f3-4ce6-4370-a6a2-8b434b4e5348.metadata.json
 ----
 
-I've https://github.com/apache/iceberg/issues/13457[logged this as a bug] that seems to be related to the use of SMTs to populate the field used by `iceberg.tables.dynamic-enabled` / `iceberg.tables.route-field`.
+I've https://github.com/apache/iceberg/issues/13457[logged this as a bug (#13457)] that seems to be related to the use of SMTs to populate the field used by `iceberg.tables.dynamic-enabled` / `iceberg.tables.route-field`.
 
-Dynamic routing *does* work—as I showed above—if you're using `route-field` with a regular field that already exists in the message.
+Dynamic routing *does* work—as I showed above—if you're using `route-field` with *a regular field that already exists in the message*.
 ====
 
-== Fan In
+== N:1 (Fan In / Writing many topics to one table)
+
+Let's now look at a variation on the above.
+Instead of many topics written each to their own table, what about multiple topics writing to the same table?
+
+image::/images/2025/06/n1.excalidraw.png[]
+
+This is a common requirement when data is sharded across geographies or business units, for example.
+I'm using Postgres again as my source example, but this could equally just be any Kafka topic populated by any application.
+
+In this example there is an instance of the `orders` table across multiple schemas:
+
+[source,sql]
+----
+ table_schema | table_name
+--------------+------------
+ asia         | orders
+ europe       | orders
+ us_east      | orders
+ us_west      | orders
+(4 rows)
+----
+
+With Debezium we capture these into four Kafka topics (by specifying a regex `"table.include.list": ".*orders"`):
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "postgres-orders",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "Welcome123",
+    "database.dbname": "postgres",
+    "table.include.list": ".*orders",
+    "topic.prefix": "dbz-avro",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}
+EOF
+----
+
+[source,bash]
+----
+$ kcctl describe connector postgres-orders
+Name:       postgres-orders
+Type:       source
+State:      RUNNING
+Worker ID:  kafka-connect:8083
+Config:
+  connector.class:                      io.debezium.connector.postgresql.PostgresConnector
+[…]
+Topics:
+  dbz-avro.asia.orders
+  dbz-avro.europe.orders
+  dbz-avro.us_east.orders
+  dbz-avro.us_west.orders
+----
+
+Now we can create a single Iceberg sink which will read from any orders topic (based on our regex), and write to a single `orders` Iceberg table.
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-postgres-orders",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics.regex": "dbz-avro..*orders",
+    "iceberg.tables": "rmoff_db.orders",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.tables.evolve-schema-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/02/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "iceberg.control.commit.interval-ms": "1000",
+    "transforms": "dbz",
+    "transforms.dbz.type": "io.tabular.iceberg.connect.transforms.DebeziumTransform"
+  }
+}
+EOF
+----
+
+This works as it should, and we have an `orders` table on it with the expected data.
+Because we have the `_cdc` field we can also get the source table easily:
+
+[source,]
+----
+🟡◗ SELECT _cdc.source AS src_table, id, customer_name, quantity, price
+    FROM orders;
+┌────────────────┬───────┬──────────────────┬──────────┬───────────────┐
+│   src_table    │  id   │  customer_name   │ quantity │     price     │
+│    varchar     │ int32 │     varchar      │  int32   │ decimal(38,2) │
+├────────────────┼───────┼──────────────────┼──────────┼───────────────┤
+│ us_east.orders │     2 │ Bruce Wayne      │        1 │        299.99 │
+│ us_west.orders │     1 │ Scott Lang       │        1 │        179.99 │
+│ us_west.orders │     3 │ Steve Rogers     │        1 │        249.99 │
+│ us_west.orders │     4 │ Wanda Maximoff   │        1 │        199.99 │
+│ us_west.orders │     2 │ Natasha Romanoff │        2 │        129.99 │
+│ us_west.orders │     5 │ Carol Danvers    │        1 │        399.99 │
+│ asia.orders    │     4 │ Luke Cage        │        1 │         69.99 │
+│ europe.orders  │     2 │ Barry Allen      │        1 │         79.99 │
+│ europe.orders  │     1 │ Arthur Curry     │        1 │        189.99 │
+[…]
+----
+
+Let's check the row counts match too.
+Here's the source, in Postgres:
+
+[source,sql]
+----
+WITH all_tables AS (SELECT COUNT(*) AS ct FROM asia.orders   UNION ALL
+                    SELECT COUNT(*) AS ct FROM europe.orders UNION ALL
+                    SELECT COUNT(*) AS ct FROM us_east.orders UNION ALL
+                    SELECT COUNT(*) AS ct FROM us_west.orders)
+SELECT SUM(ct) FROM all_tables;
+
+ sum
+-----
+  20
+(1 row)
+----
+
+and the target Iceberg table:
+
+[source,]
+----
+🟡◗ SELECT COUNT(*) from orders;
+┌──────────────┐
+│ count_star() │
+│    int64     │
+├──────────────┤
+│      20      │
+└──────────────┘
+----
+
+[NOTE]
+====
+You may notice that in the above example the `id` field is no longer unique.
+To make it unique you'd need to perhaps use a composite key that included the source table too:
+
+[source,sql]
+----
+🟡◗ SELECT _cdc.source AS src_table, id, _cdc.source || '-' || id AS "unique_id", customer_name FROM orders_newer ORDER BY price;
+┌────────────────┬───────┬──────────────────┬─────────────────┐
+│   src_table    │  id   │    unique_id     │  customer_name  │
+│    varchar     │ int32 │     varchar      │     varchar     │
+├────────────────┼───────┼──────────────────┼─────────────────┤
+│ asia.orders    │     5 │ asia.orders-5    │ Jessica Jones   │
+│ asia.orders    │     2 │ asia.orders-2    │ Kamala Khan     │
+│ us_east.orders │     4 │ us_east.orders-4 │ Clark Kent      │
+│ europe.orders  │     5 │ europe.orders-5  │ Kara Zor-El     │
+[…]
+----
+
+Another option is to perform this concatenation in-flight with a custom SMT, or to pre-process the topic using Flink SQL.
+====
+
+== 1:N (Fan Out / Writing one topic to many tables)
+
+The inverse of the above process is taking one topic and writing it out to multiple Iceberg tables.
+This is what the built-in Iceberg `route-field` is designed for, and works simply enough.
+
+image::/images/2025/06/1n.excalidraw.png[]
+
+Imagine you've got a Kafka topic `wifi-logs` that holds wifi data:
+
+[source,javascript]
+----
+{"target":"wifi-logs","timestamp":"2025-07-04T10:30:15Z","device_mac":"aa:bb:cc:dd:ee:01","ssid":"HomeNetwork","category":"web_browsing","bytes":1024}
+{"target":"wifi-logs","timestamp":"2025-07-04T10:30:45Z","device_mac":"aa:bb:cc:dd:ee:02","ssid":"HomeNetwork","category":"video_streaming","bytes":5120}
+{"target":"wifi-logs","timestamp":"2025-07-04T10:31:12Z","device_mac":"aa:bb:cc:dd:ee:03","ssid":"GuestNetwork","category":"social_media","bytes":512}
+{"target":"wifi-logs","timestamp":"2025-07-04T10:31:33Z","device_mac":"aa:bb:cc:dd:ee:04","ssid":"HomeNetwork","category":"gaming","bytes":2048}
+{"target":"wifi-logs","timestamp":"2025-07-04T10:32:01Z","device_mac":"aa:bb:cc:dd:ee:05","ssid":"HomeNetwork","category":"file_download","bytes":8192}'
+----
+
+Now we want to send this data to Iceberg, but split it out by network.
+To do this we specify the `ssid` as the `route-field` in the Iceberg sink:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-wifi-logs",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics.regex": "wifi-logs",
+    "iceberg.tables.dynamic-enabled": "true",
+    "iceberg.tables.route-field":"ssid",
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.tables.evolve-schema-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/02/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "iceberg.control.commit.interval-ms": "1000",
+    "key.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable":"false",
+    "value.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":"false"
+  }
+}
+EOF
+----
+
+Unfortunately this hits the same problem as above; the `route-field` value must be a _fully qualified table name_.
+
+[source,]
+----
+Caused by: java.lang.IllegalArgumentException: Invalid table identifier: homenetwork
+----
+
+Whereas above we had data from Debezium and we could fudge the `route-field` value to include a database by making use of the `DebeziumTranform` configuration, here we don't have that option.
+
+We need an SMT similar to that mentioned just before in the context of unique field values for a Fan-In scenario: an SMT that will concatenate a field's value with another (or a static value, in this case).
+That, or the option to specify a default database as part of the Iceberg sink configuration.
+
+But, we've still got a job to do—so let's work around the problem.
+
+Turning to Flink SQL, we can map a Flink table to the original Kafka topic:
+
+[source,sql]
+----
+CREATE TABLE wifi_logs (
+    target VARCHAR(50) NOT NULL, `timestamp` VARCHAR(50) NOT NULL,
+    device_mac VARCHAR(17) NOT NULL, ssid VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL, `bytes` INTEGER NOT NULL
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'wifi-logs',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'format' = 'json', 'scan.startup.mode' = 'earliest-offset'
+);
+----
+
+and then populate a new Flink table (writing to a Kafka topic) with the required field:
+
+[source,sql]
+----
+CREATE TABLE wifi_logs_with_db_tb
+WITH (
+    'connector' = 'kafka',
+    'topic' = 'wifi_logs_with_db_tb',
+    'properties.bootstrap.servers' = 'broker:9092',
+    'format' = 'json', 'scan.startup.mode' = 'earliest-offset'
+) AS
+SELECT *,
+        'rmoff_db.' || ssid AS target_table
+FROM `wifi_logs`;
+----
+
+Here's a sample message from the resulting topic:
+
+[source,javascript]
+----
+{
+  "target": "wifi-logs",
+  "timestamp": "2025-07-04T10:30:15Z",
+  "device_mac": "aa:bb:cc:dd:ee:01",
+  "ssid": "HomeNetwork",
+  "category": "web_browsing",
+  "bytes": 1024,
+  "target_table": "rmoff_db.HomeNetwork" <1>
+}
+----
+<1> Here's our new field created for the purpose of the `route-field` configuration
+
+Now let's try it with the Iceberg sink:
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-wifi-logs",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "wifi_logs_with_db_tb",
+    "iceberg.tables.dynamic-enabled": "true", <1>
+    "iceberg.tables.route-field":"target_table", <2>
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.tables.evolve-schema-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/02/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "iceberg.control.commit.interval-ms": "1000",
+    "key.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable":"false",
+    "value.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":"false"
+  }
+}
+EOF
+----
+<1> Use dynamic routing
+<2> Use the new `target_table` to define the target table to which to write the data
+
+The tables have been created…
+
+[source,bash]
+----
+$ aws glue get-tables --database-name rmoff_db --region us-east-1 \
+    --query 'TableList[].Name' --output table
+
++--------------------+
+|      GetTables     |
++--------------------+
+|  guestnetwork      |
+|  homenetwork       |
+----
+
+…and populated 🎉
+
+[source,]
+----
+🟡◗ SELECT * FROM homenetwork;
+┌───────────────────┬───────┬──────────────────────┬─────────────────┬─────────────┬────────[…]
+│    device_mac     │ bytes │     target_table     │    category     │    ssid     │  target[…]
+│      varchar      │ int64 │       varchar        │     varchar     │   varchar   │  varcha[…]
+├───────────────────┼───────┼──────────────────────┼─────────────────┼─────────────┼────────[…]
+│ aa:bb:cc:dd:ee:01 │  1024 │ rmoff_db.HomeNetwork │ web_browsing    │ HomeNetwork │ wifi-lo[…]
+│ aa:bb:cc:dd:ee:02 │  5120 │ rmoff_db.HomeNetwork │ video_streaming │ HomeNetwork │ wifi-lo[…]
+│ aa:bb:cc:dd:ee:04 │  2048 │ rmoff_db.HomeNetwork │ gaming          │ HomeNetwork │ wifi-lo[…]
+│ aa:bb:cc:dd:ee:05 │  8192 │ rmoff_db.HomeNetwork │ file_download   │ HomeNetwork │ wifi-lo[…]
+└───────────────────┴───────┴──────────────────────┴─────────────────┴─────────────┴────────[…]
+Run Time (s): real 2.671 user 0.181888 sys 0.060846
+
+🟡◗ SELECT * FROM guestnetwork;
+┌───────────────────┬───────┬───────────────────────┬──────────────┬──────────────┬─────────[…]
+│    device_mac     │ bytes │     target_table      │   category   │     ssid     │  target […]
+│      varchar      │ int64 │        varchar        │   varchar    │   varchar    │  varchar[…]
+├───────────────────┼───────┼───────────────────────┼──────────────┼──────────────┼─────────[…]
+│ aa:bb:cc:dd:ee:03 │  512  │ rmoff_db.GuestNetwork │ social_media │ GuestNetwork │ wifi-log[…]
+└───────────────────┴───────┴───────────────────────┴──────────────┴──────────────┴─────────[…]
+Run Time (s): real 2.544 user 0.108161 sys 0.020404
+🟡◗
+----
+
+== Selective syncing of Kafka records to Iceberg
+
+The last thing I want to show you is using SMT to conditionally send data to the Iceberg sink.
+
+Looking at the same example of `wifi-log` data, here's how you'd create a sink connector to only send records where the `ssid` is `HomeNetwork`.
+
+This uses the https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.Filter[`Filter`] SMT, combined with an optional https://kafka.apache.org/documentation/#connect_predicates[Predicate] so that `Filter` will _conditionally_ drop records.
+The predicate is built using a community plugin called https://github.com/denisw/kafka-connect-jmespath[`MatchesJMESPath`], and provides a way to specify conditional matches against field values.
+
+[source,bash]
+----
+$ kcctl apply -f - <<EOF
+{
+  "name": "iceberg-sink-wifi-logs-HomeNetwork",
+  "config": {
+    "connector.class": "io.tabular.iceberg.connect.IcebergSinkConnector",
+    "topics": "wifi-logs",
+    "iceberg.tables.dynamic-enabled": "false",
+    "iceberg.tables":"tmp.wifi_logs_home_network_only", <.>
+    "iceberg.tables.auto-create-enabled": "true",
+    "iceberg.tables.evolve-schema-enabled": "true",
+    "iceberg.catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog",
+    "iceberg.catalog.warehouse": "s3://rmoff-lakehouse/05/",
+    "iceberg.catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    "iceberg.control.commit.interval-ms": "1000",
+    "key.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable":"false",
+    "value.converter":"org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":"false",
+    "transforms": "filterHomeNetwork", <.>
+    "transforms.filterHomeNetwork.type": "org.apache.kafka.connect.transforms.Filter", <.>
+    "transforms.filterHomeNetwork.predicate": "notHomeNetwork", <.>
+    "predicates": "notHomeNetwork", <.>
+    "predicates.notHomeNetwork.type": "de.denisw.kafka.connect.jmespath.MatchesJMESPath\$Value", <.>
+    "predicates.notHomeNetwork.query": "ssid != 'HomeNetwork'" <.>
+  }
+}
+EOF
+----
+<.> Write the resulting records to the `tmp.wifi_logs_home_network_only` table
+<.> List of transformation names
+<.> Use a https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.Filter[Filter transform]
+<.> Only apply the transform to the current record _if_ the predicate `notHomeNetwork` is true
+<.> List of predicate names
+<.> Use the https://github.com/denisw/kafka-connect-jmespath[`MatchesJMESPath`] predicate on the Value part of the record (i.e. not the key or header)
+<.> The predicate is true if the `ssid` field does not equal `HomeNetwork`
+
+When you run this sink you get an Iceberg table with only the HomeNetwork wifi data in it:
+
+[source,]
+----
+🟡◗ SELECT * FROM wifi_logs_home_network_only;
+┌───────────────────┬───────┬─────────────────┬─────────────┬───────────┬──────────────────────┐
+│    device_mac     │ bytes │    category     │    ssid     │  target   │      timestamp       │
+│      varchar      │ int64 │     varchar     │   varchar   │  varchar  │       varchar        │
+├───────────────────┼───────┼─────────────────┼─────────────┼───────────┼──────────────────────┤
+│ aa:bb:cc:dd:ee:01 │  1024 │ web_browsing    │ HomeNetwork │ wifi-logs │ 2025-07-04T10:30:15Z │
+│ aa:bb:cc:dd:ee:02 │  5120 │ video_streaming │ HomeNetwork │ wifi-logs │ 2025-07-04T10:30:45Z │
+│ aa:bb:cc:dd:ee:04 │  2048 │ gaming          │ HomeNetwork │ wifi-logs │ 2025-07-04T10:31:33Z │
+----
 
 
-n:1 flow
 
 == Appendix: Debugging
 
@@ -1897,12 +2315,41 @@ Applying transformation org.apache.kafka.connect.transforms.TimestampConverter$V
         valueSchema=Schema{dbz-avro.public.clicks_no_tz.Value:STRUCT}, timestamp=1751471423743, headers=ConnectHeaders(headers=)}
 ----
 
+You can also use the https://github.com/jcustenborder/kafka-connect-simulator/[kafka-connect-simulator] sink connector to test your SMTs:
 
-== Appendix: Documentation and Links
+[source,bash]
+----
+kcctl apply -f - <<EOF
+{
+  "name": "smt-test",
+  "config": {
+    "connector.class": "com.github.jcustenborder.kafka.connect.simulator.SimulatorSinkConnector",
+    "topics": "wifi-logs",
+    "log.entries": "true",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "transforms": "addDbPrefix, insertTopic",
+    "transforms.addDbPrefix.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.addDbPrefix.regex": ".*",
+    "transforms.addDbPrefix.replacement": "rmoff_db.\$0",
+    "transforms.insertTopic.type": "org.apache.kafka.connect.transforms.InsertField\$Value",
+    "transforms.insertTopic.topic.field": "srcTopic"
+  }
+}
+EOF
+----
 
-* https://github.com/apache/iceberg/tree/main/kafka-connect[Apache Iceberg - Kafka Connect sink]
-* https://iceberg.apache.org/docs/nightly/kafka-connect/[Apache Iceberg - Kafka Connect sink docs]
-* https://www.confluent.io/hub/tabular/iceberg-kafka-connect[Apache Iceberg sink on Confluent Hub]
+When you create this you'll see in the Kafka Connect worker logs the actual records that a sink will be working with after the SMTs have been applied:
+
+[source,bash]
+----
+[2025-07-04 09:49:41,542] INFO [test2|task-0] record.value={device_mac=aa:bb:cc:dd:ee:01, bytes=1024, srcTopic=rmoff_db.wifi-logs, category=web_browsing, ssid=HomeNetwork, target=wifi-logs, timestamp=2025-07-04T10:30:15Z} (com.github.jcustenborder.kafka.connect.simulator.SimulatorSinkTask:50)                                                        │
+[2025-07-04 09:49:41,542] INFO [test2|task-0] record.value={device_mac=aa:bb:cc:dd:ee:02, bytes=5120, srcTopic=rmoff_db.wifi-logs, category=video_streaming, ssid=HomeNetwork, target=wifi-logs, timestamp=2025-07-04T10:30:45Z} (com.github.jcustenborder.kafka.connect.simulator.SimulatorSinkTask:50)                                                     │
+[2025-07-04 09:49:41,542] INFO [test2|task-0] record.value={device_mac=aa:bb:cc:dd:ee:03, bytes=512, srcTopic=rmoff_db.wifi-logs, category=social_media, ssid=GuestNetwork, target=wifi-logs, timestamp=2025-07-04T10:31:12Z} (com.github.jcustenborder.kafka.connect.simulator.SimulatorSinkTask:50)                                                        │
+----
+
 
 == Appendix: Version problems
 
@@ -1923,3 +2370,10 @@ java.lang.NoSuchMethodError: 'org.apache.kafka.clients.admin.ListConsumerGroupOf
 
 This happened with cp-kafka-connect `7.2.15`.
 Switching to 8.0.0 resolved the problem.
+
+== Appendix: Documentation and Links
+
+* GitHub: https://github.com/apache/iceberg/tree/main/kafka-connect[Apache Iceberg - Kafka Connect sink]
+* Docs: https://iceberg.apache.org/docs/nightly/kafka-connect/[Apache Iceberg - Kafka Connect sink docs]
+* Confluent Hub: https://www.confluent.io/hub/tabular/iceberg-kafka-connect[Apache Iceberg sink]
+* link:/categories/single-message-transform/[SMT articles on this blog]
