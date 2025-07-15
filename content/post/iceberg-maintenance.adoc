@@ -17,7 +17,6 @@ categories:
 :rouge-css: style
 :rouge-style: monokai
 
-<!--more-->
 
 Iceberg nicely decouples storage from ingest and query (yay!).
 When we say "decouples" it's a fancy way of saying "doesn't do".
@@ -28,6 +27,7 @@ This is amazing!
 
 But, what Iceberg doesn't do is any housekeeping on its data and metadata.
 This means that getting data in and out of Apache Iceberg isn't where the story stops.
+<!--more-->
 You can provision your object storage, choose a metadata catalog, and chuck an engine on it all (like Flink, Trino, or Spark).
 But you still need to think about the files that Iceberg is writing.
 Because under the covers of your Iceberg table is this:
@@ -37,9 +37,18 @@ image::/images/2025/07/iceberg-metadata.webp[,width=500]
 
 Let's take a step back and look at what happens when you write some data to Iceberg.
 
+== Do try this at home!
+
+If you want to try this at home and follow along as you read the blog post, you can use https://github.com/rmoff/examples/tree/main/iceberg/trino-polaris-minio[this Docker Compose] to bring up a local stack of:
+
+* https://polaris.apache.org/[Polaris] (catalog)
+* https://min.io/[MinIO] (object store)
+* https://trino.io[Trino] (engine) & https://spark.apache.org[Spark] (engine) and https://jupyter.org/[Jupyter] (notebook)
+* https://github.com/nimtable/nimtable[Nimtable] (catalog UI & maintenance)
+
 == What happens when you write data to Iceberg?
 
-TIP: Alex Merced has a https://www.dremio.com/blog/the-life-of-a-write-query-for-apache-iceberg-tables/[good article about this].
+ℹ️ _For more in-depth notes on this subject, check out Alex Merced's https://www.dremio.com/blog/the-life-of-a-write-query-for-apache-iceberg-tables/[article]_.
 
 When you first create a table:
 
@@ -712,10 +721,15 @@ SELECT * FROM customers;
 Well, yes.
 Particularly if you think that typically for every commit to Iceberg, a new data file is written.
 That data file could be thousands of records; it could also be one.
-If the source of your data coming into Iceberg is a streaming platform then it's more likely you could end up with smaller files if the volume of ingest is much lower than the rate.
-That is to say, if you want to be able to read the data sooner, you'll set the commit period shorter; but unless you have large volumes of data coming in during that period then the size of the data file may well be smaller than you'd ideally want.
 
-We can look at the files metadata and compare the number of data files to the `record_count` across them all:
+[TIP]
+====
+If the source of your data coming into Iceberg is a streaming platform (such as Kafka Connect) then it's more likely you could end up with smaller files if the volume of ingest is much lower than the rate.
+That is to say, if you want to be able to read the data sooner, you'll set the commit period shorter.
+But the tradeoff of a shorter commit time is that you're going to end up with lots of smaller data files, unless you have large volumes of data coming in during that period.
+====
+
+We can look at the metadata about the files and compare the number of data files to the `record_count` across them all:
 
 [source,sql]
 ----
@@ -806,10 +820,10 @@ SELECT COUNT(*) AS data_file_ct, SUM(record_count) AS record_ct FROM polaris.rmo
 
 === Expiring snapshots
 
-Being able to rollback a table's state, or query it at a particular point in time, is rather useful—but do you need _all_ of those snapshots?
+Being able to roll back a table's state, or query it at a particular point in time, is rather useful—but do you need _all_ of those snapshots?
 A snapshot is created for each change to the table meaning that you can end up with rather a lot of them.
 
-To clean snapshots up you can use https://iceberg.apache.org/docs/nightly/spark-procedures/#expire_snapshots[`expire_snapshots`] (Spark) or https://trino.io/docs/current/connector/iceberg.html#expire-snapshots[`ALTER TABLE … EXECUTE expire_snapshots`] (Trino):
+To clean up snapshots you can use https://iceberg.apache.org/docs/nightly/spark-procedures/#expire_snapshots[`expire_snapshots`] (Spark) or https://trino.io/docs/current/connector/iceberg.html#expire-snapshots[`ALTER TABLE … EXECUTE expire_snapshots`] (Trino):
 
 [source,sql]
 ----
@@ -844,6 +858,47 @@ trino:rmoff> SELECT * FROM "customers$snapshots";
  2025-07-14 14:44:42.232 UTC | 4056286565502898119 | 2039216781855207414 | replace
 ----
 
+== Other table maintenance options
+
+=== Apache Amoro
+
+https://amoro.apache.org/[Apache Amoro] (incubating) is a new project that offers an Iceberg catalog with https://amoro.apache.org//quick-start/#check-self-optimizing[built-in optimisation].
+
+=== AWS
+
+* https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables.html[S3 Tables] supports https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-maintenance.html[built-in table maintenance].
+* https://docs.aws.amazon.com/glue/latest/dg/populate-otf.html[AWS Glue Data Catalog] provides https://docs.aws.amazon.com/glue/latest/dg/enable-compaction.html[compaction].
+
+=== Nimtable
+
+https://github.com/nimtable/nimtable[Nimtable] is an Apache 2.0 licensed project that was released around June this year.
+It offers table compaction as part of its offering as a "Control Plane for Apache Iceberg".
+
+Once you've connected it to an existing catalog (such as Polaris) it shows you the contents of the catalog:
+
+image::/images/2025/07/2025-07-15T14-13-38-360Z.png[]
+
+It analyses the tables (presumably using similar heuristics as described above) to identify if they need optimising, and provides details of its analysis too:
+
+image::/images/2025/07/2025-07-15T14-15-56-975Z.png[]
+
+There's also the obligatory +++<del>+++magic fairy dust+++</del>+++ AI sprinkled onto it which puts the analysis into words.
+
+As well as the textual analysis there's a nice visualisation showing the rate of growth over time, broken down by type of change (insert/update/delete)
+
+image::/images/2025/07/2025-07-15T14-18-23-597Z.png[]
+
+For tables that do need optimising you can run a one-off job, or set it to run on a schedule
+
+image::/images/2025/07/2025-07-15T14-18-47-488Z.png[]
+
+Finally, it also includes a SQL editor which is a nice touch.
+
+image::/images/2025/07/2025-07-15T14-24-19-915Z.png[]
+
+I've only had a quick poke around, but the UI is nice and the analysis definitely useful to have.
+And whilst I've not tried it, if it behaves as claimed, the automatic optimisation could be a really nice tool if you're self-managing your Iceberg files.
+
 == Further reading
 
 * https://www.tabular.io/apache-iceberg-cookbook/data-operations-compaction/[File compaction - Tabular]
@@ -852,19 +907,3 @@ trino:rmoff> SELECT * FROM "customers$snapshots";
 * https://medium.com/ancestry-product-and-technology/solving-the-small-file-problem-in-iceberg-tables-6c31a295f724[Solving the Small File Problem in Iceberg Tables - Thomas Cardenas]
 * https://www.oreilly.com/library/view/apache-iceberg-the/9781098148614/ch04.html[Apache Iceberg: The Definitive Guide - Chapter 4. Optimizing the Performance of Iceberg Tables]
 * https://www.starburst.io/blog/apache-iceberg-files/[The file explosion problem in Apache Iceberg and what to do when it happens to you - Daniel Abadi]
-
-== Other table maintenance options
-
-* https://amoro.apache.org/[Apache Amoro] is a new project that offers an Iceberg catalog with https://amoro.apache.org//quick-start/#check-self-optimizing[built-in optimisation].
-* https://github.com/nimtable/[Nimtable] is also a new project, providing table compaction.
-* https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables.html[S3 Tables] supports https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-maintenance.html[built-in table maintenance].
-* https://docs.aws.amazon.com/glue/latest/dg/populate-otf.html[AWS Glue Data Catalog] provides https://docs.aws.amazon.com/glue/latest/dg/enable-compaction.html[compaction].
-
-== Try it out yourself
-
-Use https://github.com/rmoff/examples/tree/main/iceberg/trino-polaris-minio[this Docker Compose] to bring up a local stack of:
-
-* Polaris (catalog)
-* MinIO (object store)
-* Trino (engine)
-* Spark (engine) and Jupyter (notebook)
