@@ -712,10 +712,15 @@ SELECT * FROM customers;
 Well, yes.
 Particularly if you think that typically for every commit to Iceberg, a new data file is written.
 That data file could be thousands of records; it could also be one.
-If the source of your data coming into Iceberg is a streaming platform then it's more likely you could end up with smaller files if the volume of ingest is much lower than the rate.
-That is to say, if you want to be able to read the data sooner, you'll set the commit period shorter; but unless you have large volumes of data coming in during that period then the size of the data file may well be smaller than you'd ideally want.
 
-We can look at the files metadata and compare the number of data files to the `record_count` across them all:
+[TIP]
+====
+If the source of your data coming into Iceberg is a streaming platform (such as Kafka Connect) then it's more likely you could end up with smaller files if the volume of ingest is much lower than the rate.
+That is to say, if you want to be able to read the data sooner, you'll set the commit period shorter.
+But the tradeoff of a shorter commit time is that you're going to end up with lots of smaller data files, unless you have large volumes of data coming in during that period.
+====
+
+We can look at the metadata about the files and compare the number of data files to the `record_count` across them all:
 
 [source,sql]
 ----
@@ -806,10 +811,10 @@ SELECT COUNT(*) AS data_file_ct, SUM(record_count) AS record_ct FROM polaris.rmo
 
 === Expiring snapshots
 
-Being able to rollback a table's state, or query it at a particular point in time, is rather useful—but do you need _all_ of those snapshots?
+Being able to roll back a table's state, or query it at a particular point in time, is rather useful—but do you need _all_ of those snapshots?
 A snapshot is created for each change to the table meaning that you can end up with rather a lot of them.
 
-To clean snapshots up you can use https://iceberg.apache.org/docs/nightly/spark-procedures/#expire_snapshots[`expire_snapshots`] (Spark) or https://trino.io/docs/current/connector/iceberg.html#expire-snapshots[`ALTER TABLE … EXECUTE expire_snapshots`] (Trino):
+To clean up snapshots you can use https://iceberg.apache.org/docs/nightly/spark-procedures/#expire_snapshots[`expire_snapshots`] (Spark) or https://trino.io/docs/current/connector/iceberg.html#expire-snapshots[`ALTER TABLE … EXECUTE expire_snapshots`] (Trino):
 
 [source,sql]
 ----
