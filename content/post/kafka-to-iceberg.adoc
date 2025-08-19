@@ -53,9 +53,9 @@ Some of these will be show-stoppers and rule a particular option out, whilst oth
 
 I'm going to break the areas of consideration down into two (and a bit) areas:
 
-* Your data: including where it's from, what you're doing with it, how it's structured, and how many topics
-* Living with it: important factors such as what's your existing deployment (if any), preference for self-managed vs SaaS, and table maintenance
-* Other: licensing, support for other formats, other bits and pieces
+* **Your data**: including where it's from, what you're doing with it, how it's structured, and how many topics
+* **Living with it**: important factors such as what's your existing deployment (if any), preference for self-managed vs SaaS, and table maintenance
+* **Other**: licensing, support for other formats, other bits and pieces
 
 == Tool overview
 
@@ -71,7 +71,7 @@ They do not require Kafka (unless you are specifically reading or writing to it�
 Source and targets are defined as tables using DDL, with the intgration (such as Kafka or Iceberg) specified as a connector type.
 Target tables are loaded as a stream using either `CREATE TABLE … AS SELECT` or a standalone `INSERT INTO` after defining the target table first.
 
-There are some https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/overview/#supported-connectors[connectors available within Flink], along with notable standalone connectors including https://nightlies.apache.org/flink/flink-cdc-docs-master/docs/connectors/flink-sources/overview/[Flink CDC] and https://iceberg.apache.org/docs/latest/flink/[Apache Iceberg].
+There are some https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/overview/#supported-connectors[connectors available within Flink], along with notable standalone connectors including https://nightlies.apache.org/flink/flink-cdc-docs-master/docs/connectors/flink-sources/overview/[Flink CDC].
 
 
 === Kafka Connect
@@ -112,17 +112,19 @@ This might simplify your pipeline, but it also means the same source data isn't 
 === How many topics do you have?
 
 There are two variants of this.
-The first is where you have multiple topics for different entities.
-You've got `orders`, `customers`, `products`, `inventory`…they're all different.
+The first is where you have multiple topics for _different entities_.
+For example, you've got `orders`, `customers`, `products`, `inventory`…they're all different, and they're all going to their own respective Iceberg table.
 
 image::/images/2025/08/different-topics.excalidraw.png[]
 
 The second is where it's multiple instances of _the same entity_.
 This is very common in multi-tenant architectures.
-Maybe each customer has their own `orders` topic, and you're wanting to populate a single consolidated Iceberg table from them.
-Another example of this would be where topics are geographical isolated (perhaps across different clusters, and then replicated into a central one, from where they're all to be written to a single Iceberg table).
+Maybe each customer has their own `transactions` topic, and you're wanting to populate a single consolidated Iceberg table from them.
+Another example of this would be where topics are geographically isolated (perhaps across Kafka different clusters, and then replicated into a central one), from where they're all to be written to a single Iceberg table.
 
 image::/images/2025/08/same-topics.excalidraw.png[]
+
+So, if either of these scenarios apply to your data, how does it impact your tool choice?
 
 In Flink SQL every unique source schema must be explicitly defined.
 There's no automagic population from a schema registry.
@@ -131,28 +133,37 @@ Bear in mind with Flink SQL it's not only the table name but its schema too that
 
 [source,sql]
 ----
-CREATE TABLE orders ( orderID INT, customerID INT, product STRING, quantity INT, orderTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='orders'[…]);
-CREATE TABLE customers ( customerID INT, firstName STRING, lastName STRING, email STRING, createdTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='customers'[…]);
-CREATE TABLE products ( productID INT, sku STRING, name STRING, unitPrice DECIMAL(10,2), updatedTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='products'[…]);
-CREATE TABLE inventory ( productID INT, locationID STRING, onHand INT, reserved INT, invTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='inventory'[…]);
+CREATE TABLE src.orders ( orderID INT, customerID INT, product STRING, quantity INT, orderTS TIMESTAMP(3) )
+    WITH ('connector'='kafka', 'topic'='orders', […]);
+
+CREATE TABLE src.customers ( customerID INT, firstName STRING, lastName STRING, email STRING, createdTS TIMESTAMP(3) )
+    WITH ('connector'='kafka', 'topic'='customers', […]);
+
+CREATE TABLE src.products ( productID INT, sku STRING, name STRING, unitPrice DECIMAL(10,2), updatedTS TIMESTAMP(3) )
+    WITH ('connector'='kafka', 'topic'='products', […]);
+
+CREATE TABLE src.inventory ( productID INT, locationID STRING, onHand INT, reserved INT, invTS TIMESTAMP(3) )
+    WITH ('connector'='kafka', 'topic'='inventory', […]);
 ----
 
 Now if you want to write these to Iceberg tables, you need to declare an Iceberg table for each:
 
 [source,sql]
 ----
-CREATE orders WITH ('connector'='iceberg', […]) AS SELECT * FROM orders […]
-CREATE customers WITH ('connector'='iceberg', […]) AS SELECT * FROM customers […]
-CREATE products WITH ('connector'='iceberg', […]) AS SELECT * FROM products […]
-CREATE inventory WITH ('connector'='iceberg', […]) AS SELECT * FROM inventory […]
+CREATE dest.orders WITH ('connector'='iceberg', […]) AS SELECT * FROM src.orders;
+CREATE dest.customers WITH ('connector'='iceberg', […]) AS SELECT * FROM src.customers;
+CREATE dest.products WITH ('connector'='iceberg', […]) AS SELECT * FROM src.products;
+CREATE dest.inventory WITH ('connector'='iceberg', […]) AS SELECT * FROM src.inventory;
 ----
 
-If you've got multiple topics _with the same schema_ then things are a bit easier since https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#connector-options[the Kafka connector in Flink SQL] does support wildcards (`topic-pattern`) or a list of topics (`topic` with semi-colon separated topics).
-You can also add `topic` as a _metadata_ column to your source table so that it is exposed for writing to Iceberg—important if you want to retain the lineage information of your data:
+However, if you've got multiple topics _with the same schema_ then things are a bit easier since https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#connector-options[the Kafka connector in Flink SQL] does support wildcards (`topic-pattern`) or a list of topics (`topic` with semi-colon separated topics).
+You can also add `topic` as a _metadata_ column to your source table so that it is exposed for writing to Iceberg—important if you want to retain the lineage information of your data.
+Here's an example of fan-in (N:1) in Flink SQL.
+First, create the source table reading from multiple topics:
 
 [source,sql]
 ----
-CREATE TABLE src.kafka.kafka_transactions_all (
+CREATE TABLE src.kafka_transactions_all (
     transaction_id STRING, user_id STRING, amount DECIMAL(10, 2), currency STRING, merchant STRING, transaction_time TIMESTAMP(3),
     src_topic STRING METADATA FROM 'topic' <1>
 ) WITH (
@@ -163,12 +174,12 @@ CREATE TABLE src.kafka.kafka_transactions_all (
 <1> Topic metadata column included in the table definition
 <2> Wildcard pattern for source Kafka topics
 
-Now let's write that to Iceberg:
+Now let's write that to a single Iceberg table:
 
 [source,sql]
 ----
 CREATE TABLE my_iceberg_catalog.my_glue_db.transactions_all AS
-    SELECT * FROM src.kafka.kafka_transactions_all;
+    SELECT * FROM src.kafka_transactions_all;
 ----
 
 You can also do fan-in (N:1) in Flink SQL using the `UNION ALL` operator.
@@ -177,22 +188,25 @@ For example, if the above Kafka topics were defined as individual Flink SQL tabl
 [source,sql]
 ----
 CREATE TABLE my_iceberg_catalog.my_glue_db.transactions_all AS
-    SELECT  'uk' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka.kafka_transactions_uk
+    SELECT  'uk' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka_transactions_uk
     UNION ALL
-    SELECT  'eu' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka.kafka_transactions_eu
+    SELECT  'eu' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka_transactions_eu
     […]
 ----
 
 Further more to Flink SQL's flexibility is the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/insert/#insert-into-multiple-tables[_statement sets_] feature, which you can use for fan-out (1:N)—routing data from the same source table to different target tables.
 
-Kafka Connect supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] and link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_1n_fan_out_writing_one_topic_to_many_tables[fan-out (1:N)].
+Moving onto Kafka Connect, it supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] using the `topics.regex` parameter:
 
 [source,javascript]
 ----
 "topics.regex": "src.*",
 ----
 
-Tableflow can be enabled for multiple topics easily either through the UI, or from the CLI:
+It can also do fan-out (1:N) using the `iceberg.tables.route-field` parameter for the Iceberg sink connector, described link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_1n_fan_out_writing_one_topic_to_many_tables[here].
+
+Tableflow has a 1:1 relationship between Kafka topics and Iceberg tables.
+It can be enabled for multiple topics easily either through the UI, or from the CLI:
 
 [source,bash]
 ----
@@ -203,6 +217,18 @@ $ confluent tableflow topic create my_topic3
 $ confluent tableflow topic create my_topic4
 $ confluent tableflow topic create my_topic5
 ----
+
+You can achieve fan-in either by using Kafka Connect on Confluent Cloud to ingest to a single topic from multiple sources
+
+image::/images/2025/08/kc-tf-flink-fan-in.excalidraw.png[]
+
+or using Confluent Cloud for Apache Flink to `UNION` multiple topics into one.
+
+image::/images/2025/08/tf-flink-fan-in.excalidraw.png[]
+
+Similarly, fan-out can be done using Flink to route the source topics into multiple destination ones, each of which is then enabled for Tableflow.
+
+image::/images/2025/08/tf-flink-fan-out.excalidraw.png[]
 
 === Wither Schema?
 
@@ -226,7 +252,7 @@ What should the target Iceberg table look like?
 One option is that you manually created it first.
 Doing this you can at least make sure that the data types are set correctly.
 
-If you're link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_define_the_kafka_source[using Flink SQL to write to Iceberg] you have to declare the datatypes as part of the Flink table DDL.
+If you're link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_define_the_kafka_source[using Flink SQL to write to Iceberg] you have to declare the datatypes as part of the source Flink table DDL.
 For **every. single. table**.
 But at least they'll be correct (so long as you didn't make a mistake in typing out all that DDL!).
 
@@ -286,7 +312,7 @@ Perhaps you're just wanting a big 'ole dumb pipe through which to dump your data
 Perhaps, however, you've decided that it would be useful to mask a few columns or filter some rows.
 Maybe, even, you've decided to https://www.youtube.com/watch?v=FiZmyl1Npg0[shift left] and move a bunch of your batch workload out of the datalake and closer to the point at which the data's created (per https://ssbipolar.com/2021/05/31/roches-maxim/[Roche's maxim])
 
-This can contribute a significant amount to your tool choice.
+This can contribute a significant amount of weighting to your tool choice.
 
 [TIP]
 ====
@@ -325,7 +351,7 @@ For example, to drop named fields from the source table so that they aren't incl
 There are lots of other transformations available, many part of Apache Kafka itself, other provided by the community.
 I wrote a blog series about these previously: link:/categories/twelvedaysofsmt/[Twelve Days of SMT]
 
-Tableflow is part of Confluent Cloud which means you already have access to Flink SQL for your processing—the best of both worlds!
+Tableflow is part of Confluent Cloud which means you already have access to Confluent Cloud for Apache Flink for your processing—the best of both worlds!
 
 image::/images/2025/08/tf-flink.excalidraw.png[]
 
@@ -456,7 +482,7 @@ If you just need a "dumb pipe" it's less easy to justify.
 * Kafka Connect excels as a "dumb pipe", and also has support for stateless transformations.
 If you want to do stateful processing you'll want to pair it with a stream processor (hey, such as Flink SQL!).
 * Tableflow is a fully-managed tool for getting data from Kafka into Iceberg.
-It's part of Confluent Cloud so you also have access to Flink SQL if you want to pre-process any of the data before sending it to Iceberg.
+It's part of Confluent Cloud so you also have access to Flink SQL through Confluent Cloud for Apache Flink if you want to pre-process any of the data before sending it to Iceberg.
 Tableflow includes table maintenance, which you'd have to do yourself if using Flink SQL or Kafka Connect to send the data it Iceberg.
 
 == References
