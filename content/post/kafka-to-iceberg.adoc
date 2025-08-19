@@ -35,8 +35,8 @@ But fear not: here is a guide to help you navigate your way to choosing the best
 
 I'm considering three technologies in this blog post:
 
-* https://kafka.apache.org/documentation.html#connect[Kafka Connect] (open source)
 * https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/gettingstarted/#hello-world[Apache Flink SQL] (open source)
+* https://kafka.apache.org/documentation.html#connect[Kafka Connect] (open source)
 * https://www.confluent.io/product/tableflow/[Confluent Tableflow] ($)
 
 There are others, and I'll mention those link:#_but_what_about_this_other_tool[at the end].
@@ -73,7 +73,6 @@ Target tables are loaded as a stream using either `CREATE TABLE … AS SELECT` o
 
 There are some https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/overview/#supported-connectors[connectors available within Flink], along with notable standalone connectors including https://nightlies.apache.org/flink/flink-cdc-docs-master/docs/connectors/flink-sources/overview/[Flink CDC].
 
-
 === Kafka Connect
 
 TIP: Read more: link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/[Writing to Apache Iceberg using Kafka Connect]
@@ -102,7 +101,7 @@ _Let's start off the comparison by thinking about the data that we've got in Kaf
 
 This article is focussed on data *in* Kafka, but that data came from somewhere.
 Perhaps it's applications writing directly to it, in which case it has no bearing on your technology of choice.
-However, if your data is coming into Kafka from other systems, you'll find that Kafka Connect and Confluent Cloud (for Tableflow) have a richer set of connectors than Flink.
+However, if your data is coming into Kafka from other systems, you'll find that **Kafka Connect** and Confluent Cloud (for **Tableflow**) have a richer set of connectors than **Flink**.
 Flink does have several, including Flink CDC (which is built on Debezium).
 
 Under this consideration also think about whether you want the data in Kafka for other purposes.
@@ -126,7 +125,7 @@ image::/images/2025/08/same-topics.excalidraw.png[]
 
 So, if either of these scenarios apply to your data, how does it impact your tool choice?
 
-In Flink SQL every unique source schema must be explicitly defined.
+In **Flink SQL** every unique source schema must be explicitly defined.
 There's no automagic population from a schema registry.
 This means that if you have four different topics you need to declare ten Flink SQL tables.
 Bear in mind with Flink SQL it's not only the table name but its schema too that needs specifying.
@@ -196,7 +195,7 @@ CREATE TABLE my_iceberg_catalog.my_glue_db.transactions_all AS
 
 Further more to Flink SQL's flexibility is the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/insert/#insert-into-multiple-tables[_statement sets_] feature, which you can use for fan-out (1:N)—routing data from the same source table to different target tables.
 
-Moving onto Kafka Connect, it supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] using the `topics.regex` parameter:
+Moving onto **Kafka Connect**, it supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] using the `topics.regex` parameter:
 
 [source,javascript]
 ----
@@ -205,7 +204,7 @@ Moving onto Kafka Connect, it supports wildcards and can do link:/2025/07/04/wri
 
 It can also do fan-out (1:N) using the `iceberg.tables.route-field` parameter for the Iceberg sink connector, described link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_1n_fan_out_writing_one_topic_to_many_tables[here].
 
-Tableflow has a 1:1 relationship between Kafka topics and Iceberg tables.
+**Tableflow** has a 1:1 relationship between Kafka topics and Iceberg tables.
 It can be enabled for multiple topics easily either through the UI, or from the CLI:
 
 [source,bash]
@@ -252,11 +251,11 @@ What should the target Iceberg table look like?
 One option is that you manually created it first.
 Doing this you can at least make sure that the data types are set correctly.
 
-If you're link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_define_the_kafka_source[using Flink SQL to write to Iceberg] you have to declare the datatypes as part of the source Flink table DDL.
+If you're link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_define_the_kafka_source[using **Flink SQL** to write to Iceberg] you have to declare the datatypes as part of the source Flink table DDL.
 For **every. single. table**.
 But at least they'll be correct (so long as you didn't make a mistake in typing out all that DDL!).
 
-link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_schemas[Kafka Connect] will give you the option to play fast-and-loose with your schema if you want, and YOLO it by guessing.
+link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_schemas[**Kafka Connect**] will give you the option to play fast-and-loose with your schema if you want, and YOLO it by guessing.
 It might work, but you might also get this:
 
 [source,]
@@ -275,7 +274,7 @@ It might work, but you might also get this:
 <2> Storing a currency as a string? not good.
 <3> Storing a timestamp as a string? gross.
 
-A better way all round to do this if you're using Kafka Connect or Tableflow is to have your topics' schemas in the https://docs.confluent.io/platform/current/schema-registry/index.html[Schema Registry].
+A better way all round to do this if you're using **Kafka Connect** or **Tableflow** is to have your topics' schemas in the https://docs.confluent.io/platform/current/schema-registry/index.html[Schema Registry].
 This way the target Iceberg table can be defined correctly based on the actual schema of the data—not a guess at it:
 
 [source,]
@@ -298,13 +297,13 @@ Another consideration to bear in mind is what happens when your schema changes.
 And at some point, your schema *will* change.
 So how do you make sure that the target Iceberg reflects those changes?
 
-In Flink SQL there is no way to do this without duplicating records.
+In **Flink SQL** there is no way to do this without duplicating records.
 You'd need to make sure that you're using `scan.startup.mode=group-offsets` and have set `properties.group.id` in your original DDL, then cancel the job, amend the table DDL to reflect the new schema, and then restart the job (with an `INSERT INTO` if you were using a `CREATE TABLE…AS SELECT` originally).
 Even then, you're going to duplicate the records that were written before Flink checkpointed and saved the Kafka topic offset that it had got to.
 
-The Kafka Connect Iceberg sink supports link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_schema_evolution[schema evolution], just make sure you've set `iceberg.tables.evolve-schema-enabled=true`.
+The **Kafka Connect** Iceberg sink supports link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_schema_evolution[schema evolution], just make sure you've set `iceberg.tables.evolve-schema-enabled=true`.
 
-https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#schematization-and-schema-evolution[Tableflow supports schema evolution] out of the box.
+https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#schematization-and-schema-evolution[**Tableflow** supports schema evolution] out of the box.
 
 === Do you want some processing to go with that?
 
@@ -326,14 +325,14 @@ Common examples would be an aggregation (`COUNT`, `SUM`, etc), a join to enrich 
 ====
 
 If integration is Kafka Connect's _raison d'être_, processing is Flink's.
-It's where Flink SQL really comes into its own, particularly for +++state<em>ful</em>+++ transformations.
+It's where **Flink SQL** really comes into its own, particularly for +++state<em>ful</em>+++ transformations.
 
 If you can express it in SQL, you can probably do it in Flink.
 Joining to other data (whether in Kafka, or other systems), time-based aggregations (orders per hour, for example), sessionising and pattern matching—all of this is Flink's bread and butter.
 Flink SQL can also do stateless processing (filtering, schema projection, etc) too, and compared to Kafka Connect's Single Message Transforms (see below) definitely easier to configure (it's just SQL) and also richer in functionality.
 You'll sometimes find with Single Message Transforms that there's a particular transformation that you need and it just doesn't exist yet.
 
-Kafka Connect can do _stateless_ processing using Single Message Transforms.
+**Kafka Connect** can do _stateless_ processing using Single Message Transforms.
 These are configured through bits of JSON configuration, and whilst not the most intuitive way to express a transformation, they are remarkably powerful.
 For example, to drop named fields from the source table so that they aren't included in the Iceberg table schema, you'd add this to your connector configuration:
 
@@ -351,7 +350,7 @@ For example, to drop named fields from the source table so that they aren't incl
 There are lots of other transformations available, many part of Apache Kafka itself, others provided by the community.
 I wrote a blog series about these previously: link:/categories/twelvedaysofsmt/[Twelve Days of SMT]
 
-Tableflow is part of Confluent Cloud which means you already have access to Confluent Cloud for Apache Flink for your processing—the best of both worlds!
+**Tableflow** is part of Confluent Cloud which means you already have access to Confluent Cloud for Apache Flink for your processing—the best of both worlds!
 
 image::/images/2025/08/tf-flink.excalidraw.png[]
 
@@ -370,22 +369,22 @@ This is a common pattern used in data engineering when loading data.
 * `INSERT OVERWRITE` takes a more extreme approach, and does what it says on the tin: insert values, and overwrite what's there currently.
 This would more likely be used for data housekeeping (e.g. replacing the contents of a day's partition with a restatement of the data once late data has arrived), or dimension table repopulation (replace the entire contents of the table with the latest version of the dimension).
 
-Flink SQL supports both link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_upsert[`UPSERT`] and link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_insert_overwrite[`INSERT OVERWRITE`] (the latter in batch mode only, understandably).
+**Flink SQL** supports both link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_upsert[`UPSERT`] and link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_insert_overwrite[`INSERT OVERWRITE`] (the latter in batch mode only, understandably).
 
-Kafka Connect does not support either of these operations.
+**Kafka Connect** does not support either of these operations.
 
-Tableflow will support `UPSERT` soon.
+**Tableflow** will support `UPSERT` soon.
 
 === Delivery Semantics
 
-Flink SQL reading from Kafka and writing to Iceberg will have exactly-once semantics so long as you enable checkpointing:
+**Flink SQL** reading from Kafka and writing to Iceberg will have exactly-once semantics so long as you enable checkpointing:
 
 [source,sql]
 ----
 SET 'execution.checkpointing.interval' = '30s';
 ----
 
-https://iceberg.apache.org/docs/nightly/kafka-connect/#requirements[Kafka Connect] and Tableflow both have out-of-the-box support for exactly-once semantics for writing to Iceberg.
+https://iceberg.apache.org/docs/nightly/kafka-connect/#requirements[**Kafka Connect**] and **Tableflow** both have out-of-the-box support for exactly-once semantics for writing to Iceberg.
 
 == Living with it
 
@@ -396,7 +395,7 @@ Let's look at some more factors to include in our weighing up of options.
 
 === Existing Ecosystem
 
-If you already run Apache Flink or Kafka Connect (or are already a Confluent Cloud user) then that should be your assumed default.
+If you already run **Apache Flink** or **Kafka Connect** (or are already a **Confluent Cloud** user) then that should be your assumed default.
 From that default position you can then weigh in the other factors described in this article and decide if any warrant deploying new technology.
 
 === Iceberg Housekeeping
@@ -406,10 +405,10 @@ One of the things that it doesn't do out of the box is its own housekeeping.
 Particularly with streaming ingest into Iceberg, you can very quickly end up with lots of small data and metadata files, which will become a problem over time for performance.
 I wrote more about this link:/2025/07/14/keeping-your-data-lakehouse-in-order-table-maintenance-in-apache-iceberg/#_combining_data_files_into_fewer_data_files[here].
 
-If you're using Apache Flink or Kafka Connect to get your data into Iceberg, you'll need to do the housekeeping yourself.
+If you're using **Apache Flink** or **Kafka Connect** to get your data into Iceberg, you'll need to do the housekeeping yourself.
 This could be a custom job using something like Trino or Apache Spark, or a tool such as https://amoro.apache.org/quick-start/#check-self-optimizing[Apache Amoro] or https://github.com/nimtable/nimtable[Nimtable].
 
-Tableflow includes https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#table-maintenance-and-optimizations[built-in table maintenance].
+**Tableflow** includes https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#table-maintenance-and-optimizations[built-in table maintenance].
 
 === Ease of Use
 
@@ -417,16 +416,16 @@ There's a reason I gave a conference talk called https://talks.rmoff.net/9GpIYA/
 
 image::/images/2025/08/my-god-it-is-full-of-java.webp[My God, It's full of Java]
 
-Flink SQL is SQL on the surface, but link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_random_jiggling_hadoop_jars[a morass of Java underneath], which matters for users and operators alike.
+**Flink SQL** is SQL on the surface, but link:/2025/06/24/writing-to-apache-iceberg-on-s3-using-flink-sql-with-glue-catalog/#_random_jiggling_hadoop_jars[a morass of Java underneath], which matters for users and operators alike.
 If you're already using Flink SQL then you'll know what I'm talking about.
 If you're not and you're looking for a warm fuzzy SQL-embrace, forget it.
 
-Kafka Connect is built on Java too, but generally isolates the user from it.
-You can use Confluent Hub to install the Iceberg connector (or build it yourself, if that's what you like doing).
+**Kafka Connect** is built on Java too, but generally isolates the user from it.
+You can use https://hub.confluent.io[Confluent Hub] to install the Iceberg connector (or build it yourself, if that's what you like doing).
 Configuration isn't _pretty_, but it is "just" JSON.
 Use https://github.com/kcctl/kcctl[kcctl] to make your life easier.
 
-Tableflow is ridiculously simple to use.
+**Tableflow** is ridiculously simple to use.
 Click "Enable Tableflow", and that's it.
 
 image::/images/2025/08/tableflow.webp[]
@@ -439,29 +438,29 @@ $ confluent tableflow topic create my_topic1
 
 === Self-Managed vs Fully-Managed
 
-Tableflow is available on Confluent Cloud, which is a fully-managed option and includes Kafka brokers and Flink SQL (plus Kafka Connect if you want it for ingest).
+**Tableflow** is available on Confluent Cloud, which is a fully-managed option and includes Kafka brokers and Flink SQL (plus Kafka Connect if you want it for ingest).
 
-If you want to self-manage then both Flink SQL and Kafka Connect (plus the necessary Apache Kafka) can be hosted yourself either on-premises or on a cloud provider.
+If you want to self-manage then both **Flink SQL** and **Kafka Connect** (plus the necessary Apache Kafka) can be hosted yourself either on-premises or on a cloud provider.
 Plenty of people do this so you'll not have a shortage of content online to help you set this up and keep it running.
 
 == Cost
 
-Apache Flink, Apache Kafka (of which Kafka Connect is part), and the Apache Iceberg connector for Kafka Connect are all Apache 2.0 open source, owned by the Apache Software Foundation.
+**Apache Flink**, Apache Kafka (of which **Kafka Connect** is part), and the Apache Iceberg connector for Kafka Connect are all Apache 2.0 open source, owned by the Apache Software Foundation.
 You're free to run them and modify them as you want (and you're also then reliant on the community for any support requirements).
 
-Tableflow is a proprietary component of Confluent Cloud and usage of it is https://docs.confluent.io/cloud/current/topics/tableflow/concepts/tableflow-billing.html[billed].
+**Tableflow** is a proprietary component of Confluent Cloud and usage of it is https://docs.confluent.io/cloud/current/topics/tableflow/concepts/tableflow-billing.html[billed].
 
 == I used to be indecisive…now I'm not so sure…
 
 Can't decide between Apache Iceberg and https://delta.io/[Delta Lake] as your open table format of choice?
 Want to leave options open for the future, or other teams in your organisation?
 
-Flink SQL has a https://github.com/delta-io/delta/tree/master/connectors/flink/[Delta Lake connector] (open source).
+**Flink SQL** has a https://github.com/delta-io/delta/tree/master/connectors/flink/[Delta Lake connector] (open source).
 
-There is a https://docs.confluent.io/kafka-connectors/databricks-delta-lake-sink/current/overview.html[Delta Lake connector for Kafka Connect] but it is not open source and requires a paid Confluent subscription.
+There is a https://docs.confluent.io/kafka-connectors/databricks-delta-lake-sink/current/overview.html[Delta Lake connector for **Kafka Connect**] but it is not open source and requires a paid Confluent subscription.
 The https://github.com/delta-io/kafka-delta-ingest[`kafka-delta-ingest`] project is part of the Delta project and open source, but does not use the Kafka Connect framework.
 
-Tableflow https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#tableflow-and-delta-lake-tables[has support] for both Apache Iceberg and Delta Lake.
+**Tableflow** https://docs.confluent.io/cloud/current/topics/tableflow/overview.html#tableflow-and-delta-lake-tables[has support] for both Apache Iceberg and Delta Lake.
 
 == bUt wHaT aBoUt tHiS oThEr tOoL?
 
@@ -480,11 +479,11 @@ It'll be interesting to see how the project develops and the traction that it'll
 
 == tl;dr
 
-* Flink SQL is fantastic if you want to process data before sending it to Iceberg, typically as part of an analytics pipeline.
+* **Flink SQL** is fantastic if you want to process data before sending it to Iceberg, typically as part of an analytics pipeline.
 If you just need a "dumb pipe" it's less easy to justify.
-* Kafka Connect excels as a "dumb pipe", and also has support for stateless transformations.
+* **Kafka Connect** excels as a "dumb pipe", and also has support for stateless transformations.
 If you want to do stateful processing you'll want to pair it with a stream processor (hey, such as Flink SQL!).
-* Tableflow is a fully-managed tool for getting data from Kafka into Iceberg.
+* **Tableflow** is a fully-managed tool for getting data from Kafka into Iceberg.
 It's part of Confluent Cloud so you also have access to Flink SQL through Confluent Cloud for Apache Flink if you want to pre-process any of the data before sending it to Iceberg.
 Tableflow includes table maintenance, which you'd have to do yourself if using Flink SQL or Kafka Connect to send the data to Iceberg.
 
