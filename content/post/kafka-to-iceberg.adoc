@@ -111,28 +111,81 @@ This might simplify your pipeline, but it also means the same source data isn't 
 
 === How many topics do you have?
 
-This one is a significant concern if you're planning to use Flink for your integration.
-In Flink SQL *every source and target must be explicity defined*.
-If you want to read from ten topics you need to declare ten Flink SQL tables.
+There are two variants of this.
+The first is where you have multiple topics for different entities.
+You've got `orders`, `customers`, `products`, `inventory`…they're all different.
+
+image::/images/2025/08/different-topics.excalidraw.png[]
+
+The second is where it's multiple instances of _the same entity_.
+This is very common in multi-tenant architectures.
+Maybe each customer has their own `orders` topic, and you're wanting to populate a single consolidated Iceberg table from them.
+Another example of this would be where topics are geographical isolated (perhaps across different clusters, and then replicated into a central one, from where they're all to be written to a single Iceberg table).
+
+image::/images/2025/08/same-topics.excalidraw.png[]
+
+In Flink SQL every unique source schema must be explicitly defined.
+There's no automagic population from a schema registry.
+This means that if you have four different topics you need to declare ten Flink SQL tables.
 Bear in mind with Flink SQL it's not only the table name but its schema too that needs specifying.
 
 [source,sql]
 ----
-CREATE srcTable01 (col1 INT, col2 INT) WITH ('connector'='kafka' […]
-[…]
-CREATE srcTable10 (colA INT, colB INT) WITH ('connector'='kafka' […]
+CREATE TABLE orders ( orderID INT, customerID INT, product STRING, quantity INT, orderTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='orders'[…]);
+CREATE TABLE customers ( customerID INT, firstName STRING, lastName STRING, email STRING, createdTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='customers'[…]);
+CREATE TABLE products ( productID INT, sku STRING, name STRING, unitPrice DECIMAL(10,2), updatedTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='products'[…]);
+CREATE TABLE inventory ( productID INT, locationID STRING, onHand INT, reserved INT, invTS TIMESTAMP(3) ) WITH ('connector'='kafka', 'topic'='inventory'[…]);
 ----
 
-If you want to write to ten Iceberg tables, you need to declare ten Iceberg tables.
+Now if you want to write these to Iceberg tables, you need to declare an Iceberg table for each:
 
 [source,sql]
 ----
-CREATE IcebergTable01 WITH ('connector'='iceberg') AS SELECT * FROM srcTable01[…]
-[…]
-CREATE IcebergTable10 WITH ('connector'='iceberg') AS SELECT * FROM srcTable10[…]
+CREATE orders WITH ('connector'='iceberg', […]) AS SELECT * FROM orders […]
+CREATE customers WITH ('connector'='iceberg', […]) AS SELECT * FROM customers […]
+CREATE products WITH ('connector'='iceberg', […]) AS SELECT * FROM products […]
+CREATE inventory WITH ('connector'='iceberg', […]) AS SELECT * FROM inventory […]
 ----
 
-Contrast this to Kafka Connect which supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] and link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_1n_fan_out_writing_one_topic_to_many_tables[fan-out (1:N)].
+If you've got multiple topics _with the same schema_ then things are a bit easier since https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#connector-options[the Kafka connector in Flink SQL] does support wildcards (`topic-pattern`) or a list of topics (`topic` with semi-colon separated topics).
+You can also add `topic` as a _metadata_ column to your source table so that it is exposed for writing to Iceberg—important if you want to retain the lineage information of your data:
+
+[source,sql]
+----
+CREATE TABLE src.kafka.kafka_transactions_all (
+    transaction_id STRING, user_id STRING, amount DECIMAL(10, 2), currency STRING, merchant STRING, transaction_time TIMESTAMP(3),
+    src_topic STRING METADATA FROM 'topic' <1>
+) WITH (
+    'connector' = 'kafka', 'properties.bootstrap.servers' = 'broker:9092', 'format' = 'json', 'scan.startup.mode' = 'earliest-offset',
+    'topic-pattern' = 'transactions\..*' <2>
+);
+----
+<1> Topic metadata column included in the table definition
+<2> Wildcard pattern for source Kafka topics
+
+Now let's write that to Iceberg:
+
+[source,sql]
+----
+CREATE TABLE my_iceberg_catalog.my_glue_db.transactions_all AS
+    SELECT * FROM src.kafka.kafka_transactions_all;
+----
+
+You can also do fan-in (N:1) in Flink SQL using the `UNION ALL` operator.
+For example, if the above Kafka topics were defined as individual Flink SQL tables (perhaps with slightly different schemas that need unifying), you could do something like this to write them all to a single Iceberg table:
+
+[source,sql]
+----
+CREATE TABLE my_iceberg_catalog.my_glue_db.transactions_all AS
+    SELECT  'uk' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka.kafka_transactions_uk
+    UNION ALL
+    SELECT  'eu' as src_topic, transaction_id, user_id, amount, currency, merchant, transaction_time FROM src.kafka.kafka_transactions_eu
+    […]
+----
+
+Further more to Flink SQL's flexibility is the https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/insert/#insert-into-multiple-tables[_statement sets_] feature, which you can use for fan-out (1:N)—routing data from the same source table to different target tables.
+
+Kafka Connect supports wildcards and can do link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_n1_fan_in_writing_many_topics_to_one_table[fan-in (N:1)] and link:/2025/07/04/writing-to-apache-iceberg-on-s3-using-kafka-connect-with-glue-catalog/#_1n_fan_out_writing_one_topic_to_many_tables[fan-out (1:N)].
 
 [source,javascript]
 ----
