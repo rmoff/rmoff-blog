@@ -1,7 +1,7 @@
 ---
 draft: false
 title: 'Stumbling into AI: Part 1—MCP'
-date: "2025-09-02T15:10:34Z"
+date: "2025-09-04T09:10:34Z"
 image: "/images/2025/09/h_IMG_2283.webp"
 thumbnail: "/images/2025/09/2025-09-03T10-32-54-772Z.webp"
 credit: "https://bsky.app/profile/rmoff.net"
@@ -38,11 +38,13 @@ So, what is MCP?
 
 _Model Context Protocol_ sounds fancy and intimidating, but on first pass after a couple of hours poking around here's my rough take:
 
-**MCP exists as an open standard defining a way for LLMs to interact with APIs. This makes a ton of sense, because the alternative is something awful like vibe coding some piece of boilerplate code to call the API to feedback to the LLM.**
+**MCP exists as an open standard defining a way for LLMs to interact with APIs.**
+
+This makes a ton of sense, because the alternative is something awful like vibe coding some piece of boilerplate code to call the API to feedback to the LLM.
 
 image:/images/2025/09/mcp-01.excalidraw.webp[]
 
-The https://modelcontextprotocol.io/docs/learn/server-concepts#core-building-blocks[MCP core concepts] are tools (the API calls I'm talking about above), resources, and prompts.
+The https://modelcontextprotocol.io/docs/learn/server-concepts#core-building-blocks[MCP core concepts] are *tools* (the API calls I'm talking about above), *resources*, and *prompts*.
 
 The MCP website has a useful guide to https://modelcontextprotocol.io/docs/learn/architecture#data-layer-2[how MCP clients and servers interact].
 
@@ -54,13 +56,13 @@ However, if you'd like to watch a clearly organised and crystal-clear explanatio
 
 == Local or Remote
 
-These APIs could be local (e.g. your filesystem, a database, etc), or remote (e.g. a SaaS platform like AWS or simply a website like AirBnb or Strava).
+The APIs that the MCP server interacts with could be local (e.g. your filesystem, a database, etc), or remote (e.g. a SaaS platform like AWS or simply a website like AirBnb or Strava).
 
 MCP servers can be run locally, which you'd do if you're accessing local resources, or if you are developing the MCP server yourself (or want to run one that someone else has written and isn't provided as a hosted service).
-You'll also find remote MCP servers (there are a bunch https://github.com/jaw9c/awesome-remote-mcp-servers[listed here]).
+You can also host MCP servers remotely (there are a bunch https://github.com/jaw9c/awesome-remote-mcp-servers[listed here]).
 
-Where you want your MCP server also depends on where your LLM is running.
-There's no point running your MCP locally if your LLM is in the cloud somewhere.
+Where you want your MCP server also depends on where your LLM client is running.
+There's no point running your MCP locally if your LLM client is in the cloud somewhere.
 
 === stdio, sse, wtf?
 
@@ -76,16 +78,17 @@ To use an MCP you'll usually configure your AI tool with it, as an MCP client.
 https://platform.openai.com/docs/mcp[ChatGPT] and https://docs.anthropic.com/en/docs/claude-code/mcp[Claude] are the biggies here.
 I like using Raycast as it gives me access to a bunch of different LLMs, and also https://manual.raycast.com/model-context-protocol[supports MCPs].
 
-TIP: this is where Flink Agents enter the room, as they use MCPs too
+TIP: This is where Flink Agents enter the room, as they use MCPs too
 
 Here's a Raycast conversation using a https://github.com/r-huijts/strava-mcp?tab=readme-ov-file[Strava MCP] running locally:
 
 image:/images/2025/09/2025-09-02T15-11-39-940Z.webp[,width=600]
 
-Looking at it, it's quite clearly just a wrapper around the https://developers.strava.com/docs/reference/#api-Activities-getActivityById[Strava API]—and that's all it claims to be too.
-It's just giving the LLM clear parameters and on how to invoke (and authenticate to) the API.
+Looking at it, it's quite clearly just a wrapper around the https://developers.strava.com/docs/reference/#api-Activities-getActivityById[Strava API] (which is totally cool, it's all it claims to be too).
+It's just giving the LLM clear parameters and on how to use the API—as well as, crucially, a description of what the API does.
+For example, rather than just "`get-recent-activities`", it tells the LLM "`Fetches the most recent activities for the authenticated athlete.`".
 
-When I ask my question, the LLM draws on the fact that it has Strava MCP available with an explanation of what each "tool" (API call) provides.
+When I ask my question, the LLM draws on the fact that it has Strava MCP available with the explanations of what each "tool" (API call) provides.
 It uses this to work out what to tell the client (Raycast) to request from the MCP server:
 
 image:/images/2025/09/mcp-02.excalidraw.webp[]
@@ -95,7 +98,6 @@ The response—a lump of JSON—is passed back to the LLM, which then does its L
 image:/images/2025/09/mcp-03.excalidraw.webp[]
 
 TIP: The text in red is the actual "_Thinking_" that the LLM does; you can usually access this in your client, such as Raycast here:
-
 image:/images/2025/09/strava-mcp-local.webp[]
 
 == Poking around
