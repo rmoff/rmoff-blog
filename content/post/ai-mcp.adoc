@@ -1,0 +1,185 @@
+---
+draft: false
+title: 'Stumbling into AI: Part 1—MCP'
+date: "2025-09-04T09:10:34Z"
+image: "/images/2025/09/h_IMG_2283.webp"
+thumbnail: "/images/2025/09/2025-09-03T10-32-54-772Z.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- AI
+- MCP
+- Raycast
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: monokai
+
+_A short series of notes for myself as I learn more about the AI ecosystem as of September 2025._
+_The driver for all this is understanding more about Apache Flink's https://github.com/apache/flink-agents[*Flink Agents*] project, and Confluent's https://www.confluent.io/product/streaming-agents/[**Streaming Agents**]._
+
+The first thing I want to understand better is MCP.
+
+<!--more-->
+
+image:/images/2025/09/2025-09-03T10-32-54-772Z.webp[]
+
+
+For context, so far I've been a keen end-user of LLMs, for https://rmoff.net/2023/12/07/productivity-tools-ai-image-generators/[generating images], proof-reading my blog posts, and general lazyweb stuff like getting it to spit out the right syntax for a bash one-liner.
+I use https://rmoff.net/categories/raycast/[Raycast] with its https://manual.raycast.com/ai[Raycast AI] capabilities to interact with different models, and I've used Cursor to _vibe-code_ some https://github.com/rmoff/rmoff-blog/pull/153[useful] (and https://github.com/rmoff/rmoff-blog/pull/154/commits/30f43034ddd1217df8ad7db0d57b3153bb745f9c[less useful], fortunately never deployed) functionality for this blog.
+
+But what I've not done so far is dig any further into the ecosystem beyond.
+Let's fix that!
+
+== MCP
+
+So, what is MCP?
+
+_Model Context Protocol_ sounds fancy and intimidating, but on first pass after a couple of hours poking around here's my rough take:
+
+**MCP exists as an open standard defining a way for LLMs to interact with APIs.**
+
+This makes a ton of sense, because the alternative is something awful like vibe coding some piece of boilerplate code to call the API to feedback to the LLM.
+
+image:/images/2025/09/mcp-01.excalidraw.webp[]
+
+The https://modelcontextprotocol.io/docs/learn/server-concepts#core-building-blocks[MCP core concepts] are *tools* (the API calls I'm talking about above), *resources*, and *prompts*.
+
+The MCP website has a useful guide to https://modelcontextprotocol.io/docs/learn/architecture#data-layer-2[how MCP clients and servers interact].
+
+You'll find plenty of https://mcpservers.org/[lists] https://mseep.ai/[of] https://github.com/modelcontextprotocol/servers[MCP] https://github.com/jaw9c/awesome-remote-mcp-servers[servers] https://glama.ai/mcp/servers[online].
+
+TIP: This article is basically a journal of my journey figuring out MCP in my head, taking somewhat rambling twists and turns.
+However, if you'd like to watch a clearly organised and crystal-clear explanation of MCP from one of the industry's best, check out this video from Tim Berglund:
+{{< youtube FLpS7OfD5-s >}}
+
+== Local or Remote
+
+The APIs that the MCP server interacts with could be local (e.g. your filesystem, a database, etc), or remote (e.g. a SaaS platform like AWS or simply a website like AirBnb or Strava).
+
+MCP servers can be run locally, which you'd do if you're accessing local resources, or if you are developing the MCP server yourself (or want to run one that someone else has written and isn't provided as a hosted service).
+You can also host MCP servers remotely (there are a bunch https://github.com/jaw9c/awesome-remote-mcp-servers[listed here]).
+
+Where you want your MCP server also depends on where your LLM client is running.
+There's no point running your MCP locally if your LLM client is in the cloud somewhere.
+
+=== stdio, sse, wtf?
+
+If your MCP server is running local to the client, it can communicate using `stdio` (good ole' https://tldp.org/LDP/lpg/node10.html[Linux pipes]).
+
+MCP servers can also use `HTTP` or `HTTP SSE`, enabling clients to work with them over a network.
+
+See https://docs.anthropic.com/en/docs/claude-code/mcp#installing-mcp-servers[Anthropic's guide].
+
+== Using MCP
+
+To use an MCP you'll usually configure your AI tool with it, as an MCP client.
+https://platform.openai.com/docs/mcp[ChatGPT] and https://docs.anthropic.com/en/docs/claude-code/mcp[Claude] are the biggies here.
+I like using Raycast as it gives me access to a bunch of different LLMs, and also https://manual.raycast.com/model-context-protocol[supports MCPs].
+
+TIP: This is where Flink Agents enter the room, as they use MCPs too
+
+Here's a Raycast conversation using a https://github.com/r-huijts/strava-mcp?tab=readme-ov-file[Strava MCP] running locally:
+
+image:/images/2025/09/2025-09-02T15-11-39-940Z.webp[,width=600]
+
+Looking at it, it's quite clearly just a wrapper around the https://developers.strava.com/docs/reference/#api-Activities-getActivityById[Strava API] (which is totally cool, it's all it claims to be too).
+It's just giving the LLM clear parameters and on how to use the API—as well as, crucially, a description of what the API does.
+For example, rather than just "`get-recent-activities`", it tells the LLM "`Fetches the most recent activities for the authenticated athlete.`".
+
+When I ask my question, the LLM draws on the fact that it has Strava MCP available with the explanations of what each "tool" (API call) provides.
+It uses this to work out what to tell the client (Raycast) to request from the MCP server:
+
+image:/images/2025/09/mcp-02.excalidraw.webp[]
+
+The response—a lump of JSON—is passed back to the LLM, which then does its LLM magic and uses the information to answer my question:
+
+image:/images/2025/09/mcp-03.excalidraw.webp[]
+
+TIP: The text in red is the actual "_Thinking_" that the LLM does; you can usually access this in your client, such as Raycast here:
+image:/images/2025/09/strava-mcp-local.webp[]
+
+== Poking around
+
+You can use the https://modelcontextprotocol.io/legacy/tools/inspector#feature-overview[Inspector tool] to look at MCP servers and understand more about how they interact with clients.
+
+[source,bash]
+----
+npx @modelcontextprotocol/inspector node
+----
+
+(there's also a https://github.com/wong2/mcp-cli?tab=readme-ov-file[CLI MCP inspector], if you prefer)
+
+You can specify both local or remote MCP servers.
+Here's the above local Strava MCP server.
+It's a `stdio` server and so I just specify the command to launch it—`node` plus the code file of the server:
+
+image:/images/2025/09/fa29490d2144779ec1176a9e1c36b136a80808501590524648faec44011cb56a.webp[,width=600]
+
+Once connected, `List Tools` will show me the available tools (in this case, the API calls that the MCP server is a wrapper for), and you can invoke a tool to see the output:
+
+image:/images/2025/09/strava1.webp[,width=900]
+
+The list of tools describes to the LLM what each does, the output it'll get—and what input it can give to the command.
+
+image:/images/2025/09/strava2.webp[,width=800]
+
+For example, I might use natural language to ask for some running recommendations, and the LLM will understand that it can use this particular tool (API call) to look up some routes:
+
+image:/images/2025/09/2025-09-03T11-34-53-950Z.webp[,width=600]
+
+By using the MCP Inspector you can look at the actual output from the tool (API call); the above image shows how the LLM then weaves this output into the conversation:
+
+image:/images/2025/09/2025-09-03T11-37-04-569Z.webp[,width=400]
+
+== The sum is greater than the parts
+
+In the example above I showed the LLM getting running routes from the Strava MCP.
+If you look closer though, the LLM is using another MCP server (the "Location" one that Raycast provides) to find out the latitude and longitude of Ilkley.
+That's because the LLM itself doesn't know where Ilkley actually _is_.
+
+This is a nice example of where the natural language side of LLMs can benefit from all the data enrichment that MCP servers can provide.
+
+image:/images/2025/09/strava-mcp-local1.webp[,width=400]
+
+== It's not all just API calls
+
+So API calls == MCP Server https://modelcontextprotocol.io/docs/learn/server-concepts#tools-ai-actions[Tools].
+There are also https://modelcontextprotocol.io/docs/learn/server-concepts#resources-context-data[Resources], and https://modelcontextprotocol.io/docs/learn/server-concepts#prompts-interaction-templates[Prompts].
+
+Here's an example of a Prompt from an MCP server provided by Cloudflare:
+
+image:/images/2025/09/2025-09-03T13-37-18-832Z.webp[,width=900]
+
+Bringing all three together is the https://github.com/github/github-mcp-server[GitHub MCP Server].
+First up are the **tools**, which are similar to what we saw above - nice wrappers around an existing API:
+
+image:/images/2025/09/2025-09-03T14-22-35-415Z.webp[,width=900]
+
+Paired with an LLM they make it easy to "talk" to your repos:
+
+image:/images/2025/09/2025-09-03T14-21-38-119Z.webp[,width=600]
+
+Next are the **prompts**.
+
+image:/images/2025/09/2025-09-03T14-29-41-547Z.webp[,width=500]
+
+And then finally **resources**.
+These are accessed either directly (if provided by the MCP, which they're not here) or via **resource templates**.
+
+image:/images/2025/09/2025-09-03T14-31-31-468Z.webp[]
+
+A resource template explains to the LLM the fields to provide to identify a particular resource.
+For example, if you wanted your LLM to access a particular file in the repository it would be able to find it.
+Here's an example of accessing https://github.com/rmoff/rmoff-blog/blob/main/README.adoc[my blog repository's README]:
+
+image:/images/2025/09/2025-09-03T14-35-32-057Z.webp[]
+
+This means that an LLM can then (with the appropriate permissions) access files in GitHub, which is pretty handy.
+
+== Resources
+
+* https://modelcontextprotocol.io/[The MCP specification]
+* 🎥 https://www.youtube.com/watch?v=FLpS7OfD5-s[Model Context Protocol with Tim Berglund]
+* https://www.reddit.com/r/mcp/[r/mcp]: https://www.reddit.com/r/mcp/comments/1mj0fxs/i_spent_3_weeks_building_my_dream_mcp_setup_and/["I spent 3 weeks building my "dream MCP setup" and honestly, most of it was useless"]
