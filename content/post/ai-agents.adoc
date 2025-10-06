@@ -1,0 +1,242 @@
+---
+draft: false
+title: 'Stumbling into AI: Part 5—Agents'
+date: "2025-10-06T12:47:17Z"
+image: "/images/2025/10/h_IMG_2743.webp"
+thumbnail: "/images/2025/10/t_IMG_2745.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- AI
+- Agents
+- Stumbling into AI
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: monokai
+
+_A link:/categories/stumbling-into-ai[short series] of notes for myself as I learn more about the AI ecosystem as of September 2025._
+_The driver for all this is understanding more about Apache Flink's https://github.com/apache/flink-agents[*Flink Agents*] project, and Confluent's https://www.confluent.io/product/streaming-agents/[**Streaming Agents**]._
+
+I started off link:/categories/stumbling-into-ai/[this series]—somewhat randomly, with hindsight—looking at link:/2025/09/04/stumbling-into-ai-part-1mcp/[Model Context Protocol (*MCP*)].
+It's a helper technology to make things easier to use and provide a richer experience.
+Next I tried to wrap my head around link:/2025/09/08/stumbling-into-ai-part-2models/[*Models*]—mostly LLMs, but also with an link:/2025/09/08/stumbling-into-ai-part-2models/#_addendum_there_are_models_and_then_there_are_models_a_k_a_not_all_models_are_llms[addendum] discussing other types of model too.
+Along the lines of MCP, link:/2025/09/12/stumbling-into-ai-part-3rag/[Retrieval Augmented Generation (*RAG*)] is another helper technology that on its own doesn't do anything but combined with an LLM gives it added smarts.
+I took a brief moment in part 4 to try and build a clearer understanding of link:/2025/09/16/stumbling-into-ai-part-4terminology-tidy-up-and-a-little-rant/[*the difference between ML and AI*].
+
+So whilst RAG and MCP combined make for a bunch of nice capabilities beyond models such as LLMs alone, what I'm really circling around here is what we can do when we combine all these things: *Agents*!
+But…what _is_ an Agent, both conceptually and in practice?
+Let's try and figure it out.
+
+<!--more-->
+
+== Start with the obvious: What _is_ an Agent?
+
+TIP: Turns out this isn't so straightforward a question to answer.
+Below are various definitions and discussions, around which some form of concept starts to coagulate.
+
+Let's begin with https://en.wikipedia.org/wiki/Software_agent[Wikipedia's definition]:
+
+> In computer science, a software agent is a computer program that **acts for a user or another program in a relationship of agency**.
+
+We can get more specialised if we look at Wikipedia's entry for an https://en.wikipedia.org/wiki/Intelligent_agent[Intelligent Agent]:
+
+> In artificial intelligence, an intelligent agent is an entity that perceives its environment, **takes actions autonomously to achieve goals**, and may improve its performance through machine learning or by **acquiring knowledge**.
+
+[NOTE]
+====
+Citing Wikipedia is perhaps the laziest ever blog author's trick, but I offer no apologies 😜.
+Behind all the noise and fuss, this is what we're talking about: a bit of software that's going to go and do something for you (or your company) _autonomously_.
+====
+
+---
+
+LangChain have https://blog.langchain.com/what-is-an-agent/[their own definition] of an Agent, explicitly identifying the use of an LLM:
+
+> An AI agent is a system that uses an LLM to decide the control flow of an application.
+
+https://blog.langchain.com/what-is-an-agent/[The blog post from LangChain] as a whole gives more useful grounding in this area and is worth a read.
+In fact, if you want to really get into it, the https://academy.langchain.com/courses/intro-to-langgraph[LangChain Academy] is free and the Introduction to LangGraph course gives a really good primer on Agents and more.
+
+Meanwhile, the Anthropic team have a chat about https://www.youtube.com/watch?v=XuvKFsktX0Q&t=150s[_their_ definition of an Agent].
+In https://www.anthropic.com/engineering/building-effective-agents[a blog post] Anthropic differentiates between _Workflows_ (that use LLMs) and Agents:
+
+> Workflows are systems where LLMs and tools are orchestrated through predefined code paths.
+> Agents, on the other hand, are systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks.
+
+---
+
+Independent researcher Simon Willison also uses the LLM word in his definition:
+
+> An LLM agent runs tools in a loop to achieve a goal.
+
+He explores the definition in a recent blog post: https://simonwillison.net/2025/Sep/18/agents/[_I think “agent” may finally have a widely enough agreed upon definition to be useful jargon now_], in which https://x.com/josh_bickett/status/1725556267014595032[Josh Bickett's meme] demonstrates how much of a journey this definition has been on:
+
+image::/images/2025/10/josh_bickett_agent.webp[,width=800]
+
+That there's still discussion and ambiguity nearly two years after this meme was created is telling.
+
+---
+
+My colleague https://www.linkedin.com/in/seanf/[Sean Falconer] knows a _lot_ more this than I do.
+He was a guest on https://roundup.getdbt.com/p/the-pragmatic-guide-to-ai-agents[a recent podcast episode] in which he spells things out:
+
+> [Agentic AI] involves AI systems that can reason, dynamically choose tasks, gather information, and perform actions as a more complete software system.
+footnote:[https://roundup.getdbt.com/i/169885043/youve-written-about-three-waves-of-ai-can-you-describe-these]
+
+> [Agents] are software that can dynamically decide its own control flow: choosing tasks, workflows, and gathering context as needed. Realistically, **current enterprise agents have limited agency[…]. They're mostly workflow automations rather than fully autonomous systems**.
+footnote:[https://roundup.getdbt.com/i/169885043/lets-clarify-agents-what-makes-software-truly-agentic]
+
+> In many ways […] **an agent [is] just a microservice**.
+footnote:[https://roundup.getdbt.com/i/169885043/is-an-agent-just-a-microservice]
+
+== Okay okay…but what is an [AI] Agent?
+
+A straightforward software Agent might do something like:
+
+> Order more biscuits when there are only two left
+
+The pseudo-code looks like this:
+
+[source,vb]
+----
+10      BISCUITS == FN_CHECK_BISCUIT_LEVEL()
+20      IF BISCUITS < 2 THEN CALL ORDER_MORE_BISCUITS
+30      GOTO 10
+----
+
+We take this code, stick it on a server and leave it to run.
+One happy Agent, done.
+
+An _AI_ Agent could look more like this:
+
+[source,vb]
+----
+10      BISCUITS == FN_CHECK_BISCUIT_LEVEL()
+20      IF BISCUITS < 2 THEN
+        REM (Here's the clever AI stuff 👇)
+            Look at what biscuits are in stock at the supplier
+            Work out who is in the office next week
+            Based on what you know about staff biscuit preferences, choose the best ones that are in stock
+            Place a biscuit order
+30      GOTO 10
+----
+
+Other examples of AI Agents include:
+
+* *Coding Agents*.
+Everyone's favourite tool (when used right).
+It can reason about code, it can write code, it can review PRs.
++
+One of the trends that I've noticed recently (October 2025) is the use of Agents to help with some of the up-front jobs in software engineering (such as https://www.bigdataldn.com/en-gb/conference/session-details.4500.251751.mcp-at-the-helm-of-autonomous-event-architecture.html[data modelling] and https://roundup.getdbt.com/i/172909726/the-early-days-of-using-redshift-were-such-a-visceral-experience-relative-to-what-came-before-if-i-hadnt-interacted-with-it-directly-i-wouldnt-have-understood-how-big-a-state-change-cloud-data-was-this-feels-like-another-one-of-those-moments-if-you-dont-have-hands-on-experience-youre-not-going-to-really-get-it-fair[writing tests]), rather than full-blown code that's going to ship to production.
+That's not to say that coding Agents aren't being used for that, but by using AI to accelerate certain tasks whilst retaining human oversight (a.k.a. link:#_human_in_the_loop_hitl[HITL]) it makes it easier to review the output rather than just trusting to luck that reams and reams of code are correct.
++
+There's https://dpe.org/wp-content/uploads/2024/06/Adam-Huda-and-Ty-Smith-Uber-AI.pptx.pdf[a good talk from Uber] on how they're using AI in the development process, including code conversion, and testing.
+
+* *Travel booking*.
+Perhaps you tell it when you want to go, the kind of vacation you like, and what your budget is; it then goes and finds where it's nice at that time of year, figures out travel plans within your budget, and either proposes an itinerary or even books it for you.
+Another variation could be you tell it *where*, and then it integrates with your calendar to figure out the _when_.
++
+_This is a canonical example that is oft-cited; I'd be interested if anyone can point me to an actual implementation of it, even if just a toy one_.
++
+[TIP]
+====
+I saw this in https://simonwillison.net/2025/Sep/18/agents/[a blog post] from Simon Willison that made me wince, but am leaving the above in anyway just to serve as an example of the confusion/hype that exists in this space:
+
+image::/images/2025/10/travel_agents.png[There remains an almost unlimited set of alternative definitions: if you talk to people outside of the technical field of building with LLMs you’re still likely to encounter travel agent analogies or employee replacements or excitable use of the word “autonomous”]
+====
+
+=== _Agentic_ AI?
+
+`Agentic` comes from `Agent` plus `ic`, the latter meaning _of, relating to, or characterised by_.
+
+So `Agentic AI` is simply AI that is _characterised by_ an Agent, or Agency.
+Contrast that to AI that's you sat at the ChatGPT prompt asking it to draw pictures of https://chatgpt.com/s/m_68de54147ff88191aba256f96cce54ea[a duck dressed as a clown].
+Nothing Agentic about that—just a human-led and human-driven interaction.
+
+"AI Agents" becomes a bit of a mouthful with the qualifier, so much of the current industry noise is simply around "Agents".
+That said, "Agentic AI" sounds cool, so gets used as the marketing term in place of "AI" alone.
+
+
+== Building an Agent
+
+So we've muddled our way through to some kind of understanding of what an Agent is, and what we mean by Agentic AI.
+
+But how do we actually build one?
+
+All we need is an LLM (such as access to the API for https://platform.openai.com/docs/overview[OpenAI] or https://claude.com/platform/api[Claude]), something to call that API (there are worse choices than `curl`!), and a way to call external services (e.g. MCP servers) if the LLM determines that it needs to use them.
+
+So _in theory_ we could build an Agent with some lines of bash, some API calls, and a bunch of https://en.wiktionary.org/wiki/sticky-backed_plastic[sticky-backed plastic].
+
+image:/images/2025/10/simple-agent.excalidraw.png[A flowchart showing an AI agent workflow. User input flows to a central process that loops between calling an LLM (like GPT-5) and invoking tools (like servers, files, command prompt) until the task is complete. The system is labeled "my-agent.sh".]
+
+This is a grossly oversimplified example (and is missing elements such as memory)—but it hopefully illustrates what we're building at the core of an Agent.
+On top of this goes all the general software engineering requirements of any system that gets built (suitable programming language and framework, error handling, LLM output validation, guard rails, observability, tests, etc etc).
+
+The other nuance that I've noticed is that whilst the above simplistic diagram is 100% driven by an LLM (it decides what tools to call, it decides when to iterate) there are plenty of cases where an Agent is to some degree rules-driven.
+So perhaps the LLM does _some_ of the autonomous work, but then there's a bunch of good ol' `IF…ELSE…` statements in there too.
+This is also borne out by the notion of "Workflows" when people talk about Agents.
+An Agent doesn't wake up in the morning and set out on its day serving only to fulfill its own goals and enrichment.
+More often than not an Agent is going to be tightly bound into a pre-defined path with a _limited_ range of autonomy.
+
+---
+
+What if you want to _actually_ build this kind of thing for real?
+That's where tools like https://www.langchain.com/langgraph[LangGraph] and https://www.langchain.com/langchain[LangChain] come in.
+https://colab.research.google.com/github/langchain-ai/langchain-academy/blob/main/module-1/agent.ipynb[Here's a notebook] with an example of an actual Agent built with these tools.
+https://www.llamaindex.ai/llamaindex[LlamaIndex] is another framework, with details of https://developers.llamaindex.ai/python/framework/understanding/agent[building an Agent] in their docs.
+
+== Other components of an Agent
+
+As we build up from the so-simple-it-is-laughable strawman example of an Agent above, one of the features we'll soon encounter is the concept of memory.
+
+The difference between a crappy response and a holy-shit-that's-magic response from an LLM is often down to _context_.
+The richer the context, the better a chance it has at generating a more accurate output.
+
+So if an Agent can look back on what it did previously, determining what worked well and what didn't, perhaps even taking into account human feedback, it can then generate a more successful response the next time.
+
+You can read a lot more about memory in https://docs.google.com/document/d/1asVTObtzIye0I9ypAztaeeI_sr_Hx2TORE02uUuqH_c/edit?tab=t.0#heading=h.v6u4ntwfeghw[this chapter] of https://docs.google.com/document/d/1rsaK53T3Lg5KoGwvf8ukOUvbELRtH-V0LnOIFDxBryE/preview?tab=t.0#heading=h.pxcur8v2qagu[Agentic Design Patterns] by https://www.linkedin.com/in/searchguy/[Antonio Gulli].
+This blog post from "The BIG DATA guy" is also useful: https://thebigdataguy.substack.com/p/agentic-ai-agent-memory-and-context[Agentic AI, Agent Memory, & Context Engineering]
+
+This diagram from https://arxiv.org/pdf/2304.03442[Generative Agents: Interactive Simulacra of Human Behavior] (J.S. Park, J.C. O’Brien, C.J. Cai, M.R. Morris, P. Liang, M.S. Bernstein) gives a good overview of a much richer definition of an Agent's implementation.
+The additional concepts include memory (discussed briefly above), planning, and reflection:
+
+image:/images/2025/09/2025-09-16T16-12-50-980Z.png[]
+
+Also check out Paul Iusztin's talk from QCon London 2025 on https://www.infoq.com/presentations/llm-data-code-model-prompt/[The Data Backbone of LLM Systems].
+Around the 35-minute mark he goes into some depth around Agent architectures.
+
+
+== Other Agent terminology
+
+=== Multi-Agent System (MAS)
+
+Just as you can build computer systems as monoliths (everything done in one place) or microservices (multiple programs, each responsible for a discrete operation or domain), you can also have one big Agent trying to do everything (probably not such a good idea) or individual Agents each good at their particular thing that are then hooked together into what's known as a Multi-Agent System (MAS).
+
+Sean Falconer's https://seanfalconer.medium.com/building-a-meal-planning-agent-with-apache-kafka-and-apache-flink-254bc5a8d7c5[family meal planning demo] is a good example of a MAS.
+One Agent plans the kids' meals, one the adults' meals, another combines the two into a single plan, and so on.
+
+=== Human in the Loop (HITL)
+
+This is a term you'll come across referring to the fact that Agents might be pretty good, but they're not infallible.
+In the travel booking example above, do we _really_ trust the Agent to book the best holiday for us?
+Almost certainly we'd want—at a minimum—the option to sign off on the booking before it goes ahead and sinks £10k on an all-inclusive trip to Bognor Regis.
+
+Then again, we're probably happy enough for an Agent to access our calendars without asking permission, and as to whether they need permission or not to create a meeting is up to us and how much we trust them.
+
+When it comes to coding, having an Agent write code, test it, fix the broken tests, compare it to a spec, and iterate is really neat.
+On the other hand, letting it decide to run `rm -rf /`…less so 😅.
+
+Every time an Agent requires HITL, it reduces its autonomy and/or responsiveness to situations.
+As well as simply using smarter models that make fewer mistakes, there are other things that an Agent can do to reduce the need for HITL such as using guardrails to define acceptable parameters.
+For example, an Agent is allowed to book travel but only up to a defined threshold.
+That way the user gets to trade off convenience (no HITL) with risk (unintended first-class flight to Hawaii).
+
+
+== Further reading
+
+* 📃 https://arxiv.org/pdf/2304.03442[Generative Agents: Interactive Simulacra of Human Behavior]
+* 🎥 Paul Iusztin - https://www.infoq.com/presentations/llm-data-code-model-prompt/[The Data Backbone of LLM Systems] - QCon London 2025
+* 📖 Antonio Gulli - https://docs.google.com/document/d/1rsaK53T3Lg5KoGwvf8ukOUvbELRtH-V0LnOIFDxBryE/preview?tab=t.0#[Agentic Design Patterns]
+* 📖 Sean Falconer - https://seanfalconer.medium.com/
