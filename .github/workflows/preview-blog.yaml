@@ -9,32 +9,38 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Ruby Dev                     
+    - name: Install Ruby Dev
       run: sudo apt-get install ruby-dev
 
     - name: Install AsciiDoctor
       run: sudo gem install asciidoctor
-      
+
+    - name: Install AsciiDoctor Reveal.js
+      run: sudo gem install asciidoctor-revealjs
+
     - name: Install Rouge
       run: sudo gem install rouge -v 3.30.0
 
-    - name: Setup Hugo                           
+    - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: '0.105.0'
 
     - name: Setup base URL env var
       run: |
-        export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH") 
+        export PRNUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
         echo BASEURL="https://rmoff-rmoff-blog-build_preview-pr-"$PRNUMBER".surge.sh/" >> $GITHUB_ENV
 
     - name: Report base URL env var
-      run: echo "${{ env.BASEURL }}" 
+      run: echo "${{ env.BASEURL }}"
 
-    - name: Build                                
+    - name: Build reveal.js presentations
+      run: ./build-slides.sh
+
+    - name: Build
       run: hugo --baseURL "${{ env.BASEURL }}"
 
-    - name: Deploy to surge                            
+    - name: Deploy to surge
       uses: afc163/surge-preview@v1
       id: preview_step
       with:
