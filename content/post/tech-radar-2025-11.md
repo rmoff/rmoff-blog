@@ -10,9 +10,12 @@ categories:
 ---
 
 The latest [Thoughtworks TechRadar](https://www.thoughtworks.com/radar) is out.
-Here are some of the more data-related 'blips' (as they're called on the radar) that I noticed. Each entry links to the blip's entry where you can read more information about Thoughtwork's usage and opinions on it.
+Here are some of the more data-related 'blips' (as they're called on the radar) that I noticed.
 
 <!--more-->
+
+_Each item links to the blip's entry where you can read more information about Thoughtwork's usage and opinions on it._
+
 
 🟢 **Adopt**
 - [ClickHouse](https://www.thoughtworks.com/radar/tools/clickhouse)
