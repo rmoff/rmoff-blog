@@ -509,7 +509,7 @@ Tim cracks open water, discusses Kafka's magic
 Tim cracking open water while discussing Kafka
 ```
 
-All very positive (ignoring the `Kafka sucks!` message)—and nothing else being 'let slip', either.
+All very positive (ignoring the `Kafka sucks!` message)—and nothing else being ‘let slip’, either.
 
 As well as the prompt you can configure things like the LLM's _temperature_ (how creative/random it will be).
 Let's create another version of the model with the same prompt but different temperature:
