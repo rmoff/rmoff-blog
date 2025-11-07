@@ -2,8 +2,8 @@
 draft: false
 title: 'How we built the demo for the Current NOLA Day 2 keynote using Flink and AI'
 date: "2025-11-06T14:20:08Z"
-image: "/images/2025/11/nola25/keynote-screengrab.png"
-thumbnail: "/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.png"
+image: "/images/2025/11/nola25/keynote-screengrab.jpg"
+thumbnail: "/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Stumbling into AI
@@ -24,7 +24,7 @@ The idea for this came from the theme of the conference—"Be Ready"—, some pl
 My colleague Vik Gamov built a very cool web front end that people in the audience could connect to with their phones to submit their observations.
 From that, we built a pipeline using Kafka, Flink, and LLMs to summarise what the room was seeing and then display it using another nice web app from Vik.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.webp)
 
 In this blog post I'm going to show you how we built it—and how we didn't fall victim to what will invariably happen when you put an open prompt in front of a technical crowd:
 
@@ -55,7 +55,7 @@ That said…there's no accounting for comedians like this:
 
 The user input app is written in Spring Boot, and sends each message that a user writes to a central `user_messages` Kafka topic, hosted on Confluent Cloud.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input.webp)
 
 For the dashboard we are going to use Flink, so let's look at the topic as a Flink table and have a peek at some records:
 ```sql
@@ -65,12 +65,12 @@ SELECT FROM_UNIXTIME(CAST(`timestamp` AS INT)) AS msg_ts,
 	   userAgent
   FROM `current-2025-demo`.`maestro_gcp`.`user_messages`;
 ```
-![](/images/2025/11/nola25/Pasted%20image%2020251104144807.png)
+![](/images/2025/11/nola25/Pasted%20image%2020251104144807.webp)
 
 The overall requirement is to have a summary of the current 'vibe' (as the kids say) of what's being observed, so we need to summarise all the messages that have been sent in a particular time frame.
 Consider a set of messages arriving over time like this:
 
-![](/images/2025/11/nola25/Pasted%20image%2020251105120645.png)
+![](/images/2025/11/nola25/Pasted%20image%2020251105120645.webp)
 
 If we use a tumbling time window (which is a fixed size and does not overlap with the previous) we either get too focussed a set of messages if it's too short, or too broad a set to be relevant to the particular moment if it's too long:
 
@@ -102,7 +102,7 @@ GROUP BY window_start, window_end)
 
 This uses the `ARRAY_AGG` function to return an array of all the user messages within the time window:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.33.35@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.33.35@2x.webp)
 
 ### Watermarks on the input table
 
@@ -125,7 +125,7 @@ By automatically sending these 'heartbeat' events to the topic on a regular basi
 Heartbeat messages are  just regular Kafka messages serving a special purpose.
 Here's what they look like:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.17.55@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.17.55@2x.webp)
 We set them to be every minute; as it happened during the keynote enough people were adding messages that the heartbeat was not needed.
 
 ### Filtering the input data
@@ -157,7 +157,7 @@ GROUP BY window_start, window_end
 ```
 
 This gives us a nice clean output, ready for our AI part of the pipeline:
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.36.23@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.36.23@2x.webp)
 
 ## Let's AI-ify this thing!
 
@@ -179,12 +179,12 @@ Bills, Go bills
 We want to summarise this into a nice pithy summary.
 This is where AI comes in! Done manually with something like ChatGPT it would look like this:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2015.16.34@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2015.16.34@2x.webp)
 
 Introducing some [terminology](https://rmoff.net/2025/09/16/stumbling-into-ai-part-4terminology-tidy-up-and-a-little-rant/) around this, what we're doing is using _generative AI_ (oooooh buzzword!)—which is what it says on the tin, i.e. _generates_ content (as opposed to things like sentiment analysis, which is also AI but a different kind).
 Specifically, we're using _[model](https://rmoff.net/2025/09/08/stumbling-into-ai-part-2models/) inference_ (i.e. invoking a model) for _completion_ (crudely put: given a prompt, guess the next words—just like when you're typing on your phone).
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input%20to%20AI.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input%20to%20AI.webp)
 
 To do this in Confluent Cloud for Apache Flink we use the [`AI_COMPLETE`](https://docs.confluent.io/cloud/current/flink/reference/functions/model-inference-functions.html#flink-sql-ai-complete-function) function.
 This uses an LLM [hosted](https://rmoff.net/2025/09/08/stumbling-into-ai-part-2models/#_where_the_model_runs) by one of a set of [supported providers](https://docs.confluent.io/cloud/current/flink/reference/statements/create-connection.html#connection-types) including AWS Bedrock and OpenAI.
@@ -237,7 +237,7 @@ FROM my_input
 
 This uses the input `messages` field (also included in the output schema) and passes it to Claude Sonnet 4.5, using it as input for the LLM to complete given its system prompt—which it does, and gives us back the `output_json`:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2016.04.28@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2016.04.28@2x.webp)
 So now all that remains is to hook up the windowed output from `user_messages` above with the `AI_COMPLETE` here.
 I'm sticking with CTE because I think they make the logic of the query much easier to follow
 
@@ -333,7 +333,7 @@ Tim and Adi on stage, in costume [[MSG]] Confetti falls [[MSG]] I'm bored, will 
 ```
 
 LLMs can work much more easily with this, as this chat with Claude (on [Raycast](https://rmoff.net/categories/raycast/)) shows:
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.43.04@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.43.04@2x.webp)
 
 So, with the now-`STRING`-ified array, let's try again with the LLM call:
 
@@ -375,7 +375,7 @@ FROM windowed_messages
 
 And it works!
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.51.30@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.51.30@2x.webp)
 
 ## Prompt Engineering and Model versions
 
@@ -399,7 +399,7 @@ The system prompt that we give the LLM it is less a set of instructions for a co
 The art of fscking about with a prompt until the LLM seems to do what you want is somewhat grandly known as **Prompt Engineering**
 Cue meme:
 
-![](/images/2025/11/nola25/Pasted%20image%2020251106100745.png)
+![](/images/2025/11/nola25/Pasted%20image%2020251106100745.webp)
 
 The best thing to do when initially developing the prompt is to make sure the input stays the same - otherwise you have multiple changing factors
 Let's use a query similar to the one above, but with an artificial set of test messages:
@@ -479,7 +479,7 @@ To see what versions of a model you have and what their configuration is use:
 ```sql
 DESCRIBE MODEL rmoff_claude45_completion_01$all;
 ```
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2010.27.27@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2010.27.27@2x.webp)
 
 By default new versions of a model won't be used unless you invoke them explicitly, which I'm doing here by referencing the `$2` version of the model in the `AI_COMPLETE` call:
 
@@ -608,7 +608,7 @@ I tried prompting harder ("`DO NOT use <thinking> tags. DO NOT include reasoning
 Taking a Linux pipes approach to things, I wondered if having different models, each with its own specific and tightly constrained task, would be more effective than one model trying to do everything.
 So, I wrapped a `CREATE TABLE…AS SELECT` around the above query above that reads a window of messages from `user_messages` and calls `AI_COMPLETE()`, giving us a new Flink table to use as the source for a second model:
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20write%20to%20topic.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20write%20to%20topic.webp)
 
 If the first model is focussed on being a "copywriter", extracting the intent and vibe from the set of audience messages, the second is the "editor" preparing the copy for display:
 
@@ -670,12 +670,11 @@ The messages are passed through two LLM calls; one to summarise, the other to sa
 An intermediary Kafka topic holds the output from the first LLM call.
 The second LLM call writes its output to a Kafka topic which another web app uses a Kafka consumer to read from and display on a big screen.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20diagram.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20diagram.webp)
 
 If you want to see it in action check out the recording of the [Current 2025 day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI).
 
 ![](/images/2025/11/nola25/IMG_0623.JPG)
-
 
 ## Use evals (who watches the watcher?)
 
@@ -705,17 +704,17 @@ Rules:
 Here the `summary` is the output from the two LLM models I showed above; the `eval` is the output from passing `summary` to the above model definition.
 It correctly spots that one of the `summary` messages includes the LLM's internal commentary and thinking process:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.03.52@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.03.52@2x.webp)
 
 However, the eval process still relyies on an LLM and isn't infallible—here, the above prompt isn't catching markdown:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.08.33@2x%201.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.08.33@2x%201.webp)
 
 Time for one more, *just one more*, round of prompt engineering…
 
 ## Bonus: What _did_ people actually type into the app?
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.39.00@2x%201.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.39.00@2x%201.webp)
 *Hey, 2005 called and wants its word cloud back!*
 
 I've already called out the wanna-be `133t h4x0rs` with their attempts at SQL injection and prompt injection, but I thought it'd be fun to take a closer look at all the messages.
@@ -725,7 +724,7 @@ If I wanted a more proper solution I'd probably enable Tableflow on the topic in
 But anyway, this is just throwaway so hacky is just fine.
 
 To get the data to DuckDB I'll just dump it to JSON (the conference has passed, the data is no longer changing, a static data set is all I need).
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2011.44.07@2x.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2011.44.07@2x.webp)
 
 DuckDB is so low-friction, and makes it quick to get in and amongst the data.
 Let's dump it into its own DuckDB table and flatten the structure:
@@ -873,7 +872,7 @@ Leaderboard drama
 
 And then pasting this into the nifty wordart.com site produced this:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.45.58@2x%201.png)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.45.58@2x%201.webp)
 
 We can also give the raw set of messages to an LLM and have it pick out the funniest raw messages:
 
