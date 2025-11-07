@@ -72,7 +72,7 @@ Consider a set of messages arriving over time like this:
 
 ![](/images/2025/11/nola25/Pasted%20image%2020251105120645.webp)
 
-If we use a tumbling time window (which is a fixed size and does not overlap with the previous) we either get too focussed a set of messages if it's too short, or too broad a set to be relevant to the particular moment if it's too long:
+If we use a tumbling time window (which is a fixed size and does not overlap with the previous) we either get too focused a set of messages if it's too short, or too broad a set to be relevant to the particular moment if it's too long:
 
 ![](/images/2025/11/nola25/tumbling-window.gif)
 
@@ -239,7 +239,7 @@ This uses the input `messages` field (also included in the output schema) and pa
 
 ![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2016.04.28@2x.webp)
 So now all that remains is to hook up the windowed output from `user_messages` above with the `AI_COMPLETE` here.
-I'm sticking with CTE because I think they make the logic of the query much easier to follow
+I'm sticking with CTEs because I think they make the logic of the query much easier to follow
 
 ```sql
 WITH
@@ -293,8 +293,8 @@ Caused by: Invalid argument type at position 1. Data type STRING expected but AR
 
 In a nutshell: I passed in an array of messages, but the model expects a string—hence `Data type STRING expected but ARRAY<STRING> passed`.
 
-Let's make the array a string then
-We can use `ARRAY_JOIN()` to do this, but let's think about _how_ we do that join
+Let's make the array a string then.
+We can use `ARRAY_JOIN()` to do this, but let's think about _how_ we do that join.
 Using an obvious delimiter like a comma might seem the sensible thing to do, but what if people use that in their messages? If our raw input is three messages:
 
 ```
@@ -303,7 +303,7 @@ Confetti falls
 I'm bored, will we see my message on screen?
 ```
 
-joined into a single comma-delimited string becomes
+When this is joined into a single comma-delimited string it becomes
 
 ```
 Tim and Adi on stage, in costume, Confetti falls, I'm bored, will we see my message on screen?
@@ -326,7 +326,7 @@ So, let's use a delimiter, and one that is unambiguous:
 ARRAY_JOIN(ARRAY_AGG(text),' [[MSG]] ') AS messages
 ```
 
-With this the above set of messages would become
+With this, the above set of messages would become
 
 ```
 Tim and Adi on stage, in costume [[MSG]] Confetti falls [[MSG]] I'm bored, will we see my message on screen?
@@ -379,8 +379,8 @@ And it works!
 
 ## Prompt Engineering and Model versions
 
-When we created the `MODEL` above we gave it a system prompt that instructed it what to do with each set of messages that we passed it
-I kept it deliberately brief and simple, but in practice we need to try and build in some guardrails to get the LLM to _only_ generate the kind of summary that we want—and definitely _not_ what we don't want
+When we created the `MODEL` above we gave it a system prompt that instructed it what to do with each set of messages that we passed it.
+I kept it deliberately brief and simple, but in practice we need to try and build in some guardrails to get the LLM to _only_ generate the kind of summary that we want—and definitely _not_ what we don't want.
 Because as I mentioned at the beginning of this article, what else would a bunch of nerds at a conference do when presented with a gateway to a public display?
 
 ```
@@ -392,16 +392,16 @@ i farted
 
 SQL injection, _prompt_ injection—plus a dose of Ralph Wiggum from The Simpsons.
 
-Obviously we don't want the system broken, nor flatulence references on the big screen—so we need to build our system defensively
-Some of it can be handled deterministically (such as sanitising inputs to avoid SQL injection), but the bigger challenge comes from the *non-deterministic* nature of LLMs
-The system prompt that we give the LLM it is less a set of instructions for a computer that get executed the same way each time, and more a request of a fairly well-behaved six-year old child at a family get-together who nine times out of ten will do exactly as they're told, whilst keeping you on your toes as _you're never quite sure if they will choose that moment to mimic the more choice elements of your vocabulary that you didn't realise they'd been listening to_ 🙊.
+Obviously we don't want the system broken, nor flatulence references on the big screen—so we need to build our system defensively.
+Some of it can be handled deterministically (such as sanitising inputs to avoid SQL injection), but the bigger challenge comes from the *non-deterministic* nature of LLMs.
+The system prompt that we give the LLM is less a set of instructions for a computer that get executed the same way each time, and more a request of a fairly well-behaved six-year old child at a family get-together who nine times out of ten will do exactly as they're told, whilst keeping you on your toes as _you're never quite sure if they will choose that moment to mimic the more choice elements of your vocabulary that you didn't realise they'd been listening to_ 🙊.
 
-The art of fscking about with a prompt until the LLM seems to do what you want is somewhat grandly known as **Prompt Engineering**
+The art of fscking-about (and finding out) with a prompt until the LLM seems to do what you want is somewhat grandly known as **Prompt Engineering**
 Cue meme:
 
 ![](/images/2025/11/nola25/Pasted%20image%2020251106100745.webp)
 
-The best thing to do when initially developing the prompt is to make sure the input stays the same - otherwise you have multiple changing factors
+The best thing to do when initially developing the prompt is to make sure the input stays the same—otherwise you have multiple changing factors.
 Let's use a query similar to the one above, but with an artificial set of test messages:
 
 ```sql
@@ -431,18 +431,18 @@ The first result is this:
 (_we'll get back to the_ `**`_—which is Markdown—later, because that's also a problem.)_
 
 But, without changing anything, let's run **the same** query again
-Guess what…the output changes:
+Guess what… the output changes:
 
 ```
 **Tim vs Kafka: The Bottled Water Resistance Movement**
 ```
 
-Therein lies the problem with non-determinism and LLMs
-You can have the same input, the same prompt, and still get different output
+Therein lies the problem with non-determinism and LLMs.
+You can have the same input, the same prompt, and still get different output.
 What we need to do is try and build the prompt as well as we can to guide it to the best output.
 
 Let's add some guardrails to the prompt.
-To change the system prompt we need to update the `MODEL`
+To change the system prompt we need to update the `MODEL`.
 In Confluent Cloud for Apache Flink `MODEL` objects can have multiple versions, exactly because you'll often want to iterate on the configuration and have the option of using different versions (rather than dropping and recreating it each time):
 
 ```sql
@@ -473,7 +473,7 @@ DO NOT use <thinking> tags. DO NOT include reasoning, explanation, or preamble. 
 );
 ```
 
-Now we have two versions of the model, which we can reference using the syntax `<model>$<version>` and `<model>$latest`
+Now we have two versions of the model, which we can reference using the syntax `<model>$<version>` and `<model>$latest`.
 To see what versions of a model you have and what their configuration is use:
 
 ```sql
@@ -511,7 +511,7 @@ Tim cracking open water while discussing Kafka
 
 All very positive (ignoring the `Kafka sucks!` message)—and nothing else being 'let slip', either.
 
-As well as the prompt you can configure things like the LLM's _temperature_ (how creative/random it will be)
+As well as the prompt you can configure things like the LLM's _temperature_ (how creative/random it will be).
 Let's create another version of the model with the same prompt but different temperature:
 
 ```sql
@@ -539,7 +539,7 @@ RULES:
 
 DO NOT use <thinking> tags. DO NOT include reasoning, explanation, or preamble. Output ONLY the final summary.',
   'bedrock.params.max_tokens' = '1024',
-  'BEDROCK.params.temperature' = '0.9'
+  'bedrock.params.temperature' = '0.9'
 );
 ```
 
@@ -581,7 +581,7 @@ Run three times, it gives these nine permutations (3 results, 3 model versions) 
 |#2 | `**Tim's Kafka talk interrupted by water breaks and hecklers**`                                                                                          | `Tim discusses Kafka while hydrating on stage` | `Tim opens water bottle while discussing Kafka`       |
 |#3 | `**Kafka debate intensifies: Tim hydrates, audience... vents feelings strongly.**`                                                                       | `Tim discusses Kafka while hydrating on stage` | `Tim discusses Kafka while staying hydrated on stage` |
 
-So we can see side-by-side, the V1 model includes markdown content and fart allusions, whilst the V2 model succeeds in damping this down.
+So we can see side-by-side, the V1 model includes Markdown content and fart allusions, whilst the V2 model succeeds in damping this down.
 Changing the temperature for V2 doesn't have any apparent impact.
 
 But…if only it were this straightforward.
@@ -610,7 +610,7 @@ So, I wrapped a `CREATE TABLE…AS SELECT` around the above query above that rea
 
 ![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20write%20to%20topic.webp)
 
-If the first model is focussed on being a "copywriter", extracting the intent and vibe from the set of audience messages, the second is the "editor" preparing the copy for display:
+If the first model is focused on being a "copywriter", extracting the intent and vibe from the set of audience messages, the second is the "editor" preparing the copy for display:
 
 ```sql
 CREATE MODEL prepare_summary_for_display
@@ -620,8 +620,8 @@ CREATE MODEL prepare_summary_for_display
         'task' = 'text_generation',
         'provider' = 'bedrock',
         'bedrock.connection' = 'rmoff-aws-bedrock-claude-sonnet-4-5',
-        'BEDROCK.params.max_tokens' = '1024',
-        'BEDROCK.params.temperature' = '0.2',
+        'bedrock.params.max_tokens' = '1024',
+        'bedrock.params.temperature' = '0.2',
         'bedrock.system_prompt' = '
 * Role: Clean up LLM summary for public LED display.
 * Input: One short summary (may contain formatting or meta-text).
@@ -633,7 +633,7 @@ CREATE MODEL prepare_summary_for_display
 Note that the temperature is set much lower; the first model was the 'creative' one, whilst this one is tasked with cleaning up and sanitising the output for display.
 
 Having routed the output from the test messages above to a table called `summarised_data`, let's try out the new model.
-We're hoping to see the markdown stripped from the v1 messages, as well as any less-appropriate content.
+We're hoping to see the Markdown stripped from the v1 messages, as well as any less-appropriate content.
 
 ```sql
 SELECT v1,ai_result.output_json AS v1_prepared
@@ -648,14 +648,16 @@ FROM summarised_data
 | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `**Tim's Kafka talk: hydration breaks and controversial opinions fly**` | `Tim shares Kafka insights during hydration breaks today.` |
 
-Note the removal of the markdown formatting, along with the "controversial opinions" (which is an example of taking the sanitising _too_ far, and suggests the need for another iteration of prompt tuning).
+Note the removal of the Markdown formatting, along with the "controversial opinions" (which is an example of taking the sanitising _too_ far, and suggests the need for another iteration of prompt tuning).
 
 The original v2 and v3 outputs were fine as they were, and the new model leaves them pretty much untouched:
 
 | v2                                               | v2_prepared                                    |
 | ------------------------------------------------ | ---------------------------------------------- |
 | `Tim discusses Kafka and stays hydrated onstage` | `Tim talks Kafka while drinking water onstage` |
+
 ### Some tips for prompt engineering
+
 1. LLMs are pretty good at writing prompts for LLMs.
 Certainly for an AI-n00b like me, I was successful in improving the prompts by explaining to ChatGPT my existing prompts and the problems I was seeing.
 2. LLMs are not like SQL queries that either work, or don't.
@@ -667,12 +669,12 @@ It's a good idea to timebox your prompt work, or to step back from it and consid
 After all this, we have successfully built the end-to-end Flink pipeline.
 It ingests windowed messages from the `user_messages` topic that's populated by audience members using a web app.
 The messages are passed through two LLM calls; one to summarise, the other to sanitise and make ready for display.
-An intermediary Kafka topic holds the output from the first LLM call.
+An intermediate Kafka topic holds the output from the first LLM call.
 The second LLM call writes its output to a Kafka topic which another web app uses a Kafka consumer to read from and display on a big screen.
 
 ![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20diagram.webp)
 
-If you want to see it in action check out the recording of the [Current 2025 day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI).
+If you want to see it in action check out the recording of the [Current NOLA 2025 day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI).
 
 ![](/images/2025/11/nola25/IMG_0623.JPG)
 
@@ -706,7 +708,7 @@ It correctly spots that one of the `summary` messages includes the LLM's interna
 
 ![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.03.52@2x.webp)
 
-However, the eval process still relyies on an LLM and isn't infallible—here, the above prompt isn't catching markdown:
+However, the eval process still relies on an LLM and isn't infallible—here, the above prompt isn't catching Markdown:
 
 ![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.08.33@2x%201.webp)
 
@@ -717,7 +719,7 @@ Time for one more, *just one more*, round of prompt engineering…
 ![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.39.00@2x%201.webp)
 *Hey, 2005 called and wants its word cloud back!*
 
-I've already called out the wanna-be `133t h4x0rs` with their attempts at SQL injection and prompt injection, but I thought it'd be fun to take a closer look at all the messages.
+I've already called out the wannabe `133t h4x0rs` with their attempts at SQL injection and prompt injection, but I thought it'd be fun to take a closer look at all the messages.
 
 For this I'm going to turn to my faithful DuckDB since it's unrivalled for extremely rapid quick 'n dirty analytics
 If I wanted a more proper solution I'd probably enable Tableflow on the topic in Confluent Cloud and analyse the data as an Iceberg table
@@ -846,9 +848,9 @@ There are still nearly 4k messages, although almost half have the same text:
 	└────────────────────────────────────┴──────────────┴─────────────────────────────┘
 	```
 
-What if we want to improve the word cloud that I showed above?
+What if we want to improve the word cloud that I showed earlier?
 It's very literally just a _word_ cloud, but more meaningful than individual words is a concise summary or sentiment of the data.
-What's good at understanding the intent behind words rather than their literal number of occurences?
+What's good at understanding the intent behind words rather than their literal number of occurrences?
 An LLM!
 
 > I want to build a word cloud. Traditional tools are just breaking it into words. Can you create a list of summarised points expressed in two words, with repetition to boost the sentiments most seen?
@@ -881,7 +883,7 @@ We can also give the raw set of messages to an LLM and have it pick out the funn
 > * “I heat my house with Scala builds”
 > * “Tim’s balls are flying around the room”
 
-And finally - let's ask the LLM to summarise all of the audience input, in a nutshell:
+And finally—let's ask the LLM to summarise all of the audience input, in a nutshell:
 
 > > _in a nutshell, did people like the keynote?_
 > * Yes.
@@ -890,7 +892,7 @@ And finally - let's ask the LLM to summarise all of the audience input, in a nut
 
 ## References
 
-* 🎥 [Current 2025 Day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI)
+* 🎥 [Current NOLA 2025 Day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI)
 * Docs: [AI Model Inference and Machine Learning Functions in Confluent Cloud for Apache Flink](https://docs.confluent.io/cloud/current/flink/reference/functions/model-inference-functions.html#ai-model-inference-and-machine-learning-functions-in-af-long "Permalink to this headline")
 * My [Stumbling Into AI](https://rmoff.net/categories/stumbling-into-ai) blog series:
 	* [Agents](https://rmoff.net/2025/10/06/stumbling-into-ai-part-5agents/)
