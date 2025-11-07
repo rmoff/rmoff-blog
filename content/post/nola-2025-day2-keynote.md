@@ -3,7 +3,7 @@ draft: false
 title: 'How we built the demo for the Current NOLA Day 2 keynote using Flink and AI'
 date: "2025-11-06T14:20:08Z"
 image: "/images/2025/11/nola25/keynote-screengrab.png"
-thumbnail: "/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.excalidraw.png"
+thumbnail: "/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.png"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Stumbling into AI
@@ -24,7 +24,7 @@ The idea for this came from the theme of the conference—"Be Ready"—, some pl
 My colleague Vik Gamov built a very cool web front end that people in the audience could connect to with their phones to submit their observations.
 From that, we built a pipeline using Kafka, Flink, and LLMs to summarise what the room was seeing and then display it using another nice web app from Vik.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.excalidraw.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20overview.png)
 
 In this blog post I'm going to show you how we built it—and how we didn't fall victim to what will invariably happen when you put an open prompt in front of a technical crowd:
 
@@ -55,7 +55,7 @@ That said…there's no accounting for comedians like this:
 
 The user input app is written in Spring Boot, and sends each message that a user writes to a central `user_messages` Kafka topic, hosted on Confluent Cloud.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input.excalidraw.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input.png)
 
 For the dashboard we are going to use Flink, so let's look at the topic as a Flink table and have a peek at some records:
 ```sql
@@ -184,9 +184,7 @@ This is where AI comes in! Done manually with something like ChatGPT it would lo
 Introducing some [terminology](https://rmoff.net/2025/09/16/stumbling-into-ai-part-4terminology-tidy-up-and-a-little-rant/) around this, what we're doing is using _generative AI_ (oooooh buzzword!)—which is what it says on the tin, i.e. _generates_ content (as opposed to things like sentiment analysis, which is also AI but a different kind).
 Specifically, we're using _[model](https://rmoff.net/2025/09/08/stumbling-into-ai-part-2models/) inference_ (i.e. invoking a model) for _completion_ (crudely put: given a prompt, guess the next words—just like when you're typing on your phone).
 
-# [NOTE] TODO: add  Confluent Cloud overlay
-
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input%20to%20AI.excalidraw.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20input%20to%20AI.png)
 
 To do this in Confluent Cloud for Apache Flink we use the [`AI_COMPLETE`](https://docs.confluent.io/cloud/current/flink/reference/functions/model-inference-functions.html#flink-sql-ai-complete-function) function.
 This uses an LLM [hosted](https://rmoff.net/2025/09/08/stumbling-into-ai-part-2models/#_where_the_model_runs) by one of a set of [supported providers](https://docs.confluent.io/cloud/current/flink/reference/statements/create-connection.html#connection-types) including AWS Bedrock and OpenAI.
@@ -610,7 +608,7 @@ I tried prompting harder ("`DO NOT use <thinking> tags. DO NOT include reasoning
 Taking a Linux pipes approach to things, I wondered if having different models, each with its own specific and tightly constrained task, would be more effective than one model trying to do everything.
 So, I wrapped a `CREATE TABLE…AS SELECT` around the above query above that reads a window of messages from `user_messages` and calls `AI_COMPLETE()`, giving us a new Flink table to use as the source for a second model:
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20write%20to%20topic.excalidraw.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20write%20to%20topic.png)
 
 If the first model is focussed on being a "copywriter", extracting the intent and vibe from the set of audience messages, the second is the "editor" preparing the copy for display:
 
@@ -672,7 +670,7 @@ The messages are passed through two LLM calls; one to summarise, the other to sa
 An intermediary Kafka topic holds the output from the first LLM call.
 The second LLM call writes its output to a Kafka topic which another web app uses a Kafka consumer to read from and display on a big screen.
 
-![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20diagram.excalidraw.png)
+![](/images/2025/11/nola25/Current%20Day%202%20Keynote%20diagram.png)
 
 If you want to see it in action check out the recording of the [Current 2025 day 2 keynote](https://www.youtube.com/watch?v=q05yqzDcSCI).
 
