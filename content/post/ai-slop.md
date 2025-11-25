@@ -18,13 +18,13 @@ In amongst the detritus and sewage of LLMs left to ramble unchecked are the occa
 
 I thought it might be interesting—and a useful vent to preserve my sanity—to note down some of the "smells" I've noticed.
 <!--more-->
-Far be it from my place to police how people write articles, but this is a common pattern I've noticed in online discussion of blog writing recently.
-If you're writing on any platform then you might consider the signals you're sending if you do any of these.
+_Far be it from my place to police how people write articles, but this is a common pattern I've noticed in online discussion of blog writing recently._
+_If you're writing on any platform then you might consider the signals you're sending if you do any of these._
 
 Some of these are specifically LLM smells (you are so right! I know!!), whilst others are the pre-LLM lazy copy-paste meanderings that get caught up in my general frustration with the state of the online content ecosystem.
 The latter would probably have been nothing more than a slight annoyance in the past, but the AI slop has increased to such volume that finding _any_ good content becomes much more difficult.
 
-Side note: If you are genuinely interested in writing blog posts for developers, I've [written](/2023/07/19/blog-writing-for-developers/) and [spoken](/talk/blog-writing-for-developers/ ) about it and would be delighted if you want to get in touch with any questions.
+_Side note: If you are genuinely interested in writing blog posts for developers, I've [written](/2023/07/19/blog-writing-for-developers/) and [spoken](/talk/blog-writing-for-developers/ ) about it and would be delighted if you want to get in touch with any questions._
 
 ## Step 1: The Title
 
