@@ -28,7 +28,7 @@ Side note: If you are genuinely interested in writing blog posts for developers,
 
 ## Step 1: The Title
 
-I use [Inoreader](inoreader.com) to organise and consume my RSS feeds.
+I use [Inoreader](https://inoreader.com) to organise and consume my RSS feeds.
 This is the view I get:
 
 ![](/images/2025/11/rss.webp)
@@ -42,7 +42,7 @@ Smells here:
   Humans can use them too, but LLMs love them. Add +2 to the smell-o-meter.
 - 𝓤𝓷𝓲𝓬𝓸𝓭𝓮 𝒇𝒐𝒓𝒎𝒂𝒕𝒕𝒊𝒏𝒈 𝐭𝐞𝐱𝐭 𝓮𝒻𝒻𝓮𝒸𝓉𝓈
 
-  Perhaps not an AI-smell per-se, but invariably some kind of "HoT TakE!!11111" that is about as hot as cold cat sick, and just as appealing
+  Perhaps not an AI-smell per se, but invariably some kind of "HoT TakE!!11111" that is about as hot as cold cat sick, and just as appealing
 - "How to use $OLD_TECHNOLOGY"
 
   Less LLM and more likely regurgitated content found elsewhere
@@ -99,7 +99,7 @@ Consider this as the _very opening_ of an article:
 > Our event-streaming cluster was sputtering during partition reshuffles. Every time a subscriber crashed or another replica spun up, the whole consumer cohort stalled for roughly ten to twenty seconds. Tasks stacked, retries swamped the failure queue, and the duty engineer was alerted several times weekly. We replaced the broker with a wire-compatible alternative, kept the identical protocol and client SDKs, and saw p95 latency slide from 360ms to 180ms while retry volume fell to none.
 
 OK, that's nice. But *who* are you? This is a random blog by a random person on Medium. This is not a company engineering blog. A little bit weird not to set _some_ kind of context, right?
-I mean, every man and his dog loves to open any conference abstract with some BSD stats about what is is they've built (even if no-one actually cares).
+I mean, every man and his dog loves to open any conference abstract with some BSD stats about what it is they've built (even if no-one actually cares).
 But here, no, straight into the detail. But, weirdly specific yet _unspecific_ detail.
 
 Spidey senses tingling.
@@ -167,11 +167,17 @@ Good content takes time to write. Especially if you're doing it around the press
 * […]
 * _(the list goes on; this was not some writer's block that was suddenly relieved)_
 
-The other thing whether can you find them on LinkedIn.
-Have they been working in a line of work that justifies what they're claiming in their writing? I don't mean this in a gatekeeping way; what I mean is a junior engineer with six months experience out of collage claiming to have re-implemented a production system overnight is possibly stretching the truth.
+The other thing is whether can you find them on LinkedIn.
+Not everyone is on LinkedIn and that's totally fine.
+But if you can find them, have they been working in a line of work that justifies what they're claiming in their writing? I don't mean this in a gatekeeping way; what I mean is a junior engineer with six months experience out of college claiming to have re-implemented a production system overnight is possibly stretching the truth.
 
 ## The Enshittification is here and AI is making it much, much, worse.
 
 **[Enshittification](https://en.wikipedia.org/wiki/Enshittification) /ɛnˌʃɪtɪfɪˈkeɪʃən/, noun**
 
-As I mentioned at the top; crap content on the internet has always been around. And some of that is fine; we all cut out teeth somewhere. The beauty of an open internet is that anyone can write anything and that's totally fine. I can write this article, and be rude and objectionable. People might not like it, and that's also fine. But what's not fine is the deafening roar of shit that is now being generated at orders of magnitude greater than ever before. At least there was a cost to writing poor quality content before. Even the laziest plagiariser had to manually find the content to nick and copy-paste it into their own blog that they'd taken the time to set up. Now, all it needs is a muppet with a Medium account and an LLM. God forbid they hook it up to an agent and automate the process. Except, they probably do, given the scale of the shit that's being pumped out.
+As I mentioned at the top: crap content on the internet has always been around. And some of that is fine; we all cut our teeth somewhere.
+The beauty of an open internet is that anyone can write anything and that's totally fine. I can write this article, and be rude and objectionable. People might not like it, and that's also fine.
+
+But what's not fine is the deafening roar of shit that is now being generated at orders of magnitude greater than ever before.
+
+At least there was a cost to writing poor quality content before. Even the laziest plagiariser had to manually find the content to nick and copy-paste it into their own blog that they'd taken the time to set up. Now, all it needs is a muppet with a Medium account and an LLM. God forbid they hook it up to an agent and automate the process. Except, they probably do, given the scale of the shit that's being pumped out.
