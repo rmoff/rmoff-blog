@@ -14,7 +14,7 @@ As part of compiling the monthly [interesting links](/categories/interesting-lin
 These aggregators include quality sources like InfoQ, and certain tags on lobste.rs.
 Here I'll often find some good articles that I missed in my general travels around the social media feeds in the previous month.
 I also, so you don't have to, dive into the AI slop-pit that is Medium and various categories feeds.
-In amongst the detritus and sewage of LLMs left to ramble unchecked are the occasional proverbial diamonds in the rough.
+In amongst the detritus and sewage of LLMs left to ramble unchecked are the occasional proverbial diamonds in the rough, which make the sifting worth the effort.
 
 I thought it might be interesting—and a useful vent to preserve my sanity—to note down some of the "smells" I've noticed.
 <!--more-->
