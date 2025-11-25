@@ -2,8 +2,8 @@
 draft: false
 title: '(AI) Smells on Medium'
 date: "2025-11-25T12:46:34Z"
-image: "/images/2025/11/"
-thumbnail: "/images/2025/11/"
+image: "/images/2025/11/h_IMG_3224.webp"
+thumbnail: "/images/2025/11/t_IMG_3232.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Blogging
