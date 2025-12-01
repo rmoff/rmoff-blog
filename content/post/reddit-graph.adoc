@@ -1,9 +1,8 @@
 ---
 draft: false
-title: 'Analysing Reddit user behaviours with Neo4j and DuckDB'
-date: "2025-11-28T11:55:22Z"
-image: "/images/2025/11/"
-thumbnail: "/images/2025/11/"
+title: 'Analysing Reddit user behaviour with Neo4j'
+date: "2025-12-01T11:55:22Z"
+image: "/images/2025/12/2025-12-01T172627.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Property Graph
@@ -18,9 +17,129 @@ categories:
 Reddit is one of the longer-standing platforms on the internet, bringing together folk to discuss, rant, grumble, and troll others on all sorts of topics, from https://old.reddit.com/r/apachekafka/[Kafka] to https://old.reddit.com/r/dataengineering/[data engineering] to https://old.reddit.com/r/flashlight/[nerding out over really bright torches] to https://old.reddit.com/r/britishproblems/[grumbling about the state of the country]—and a whole lot more.
 
 As a social network it's a prime candidate for using graph analysis to examine how people interact.
-I'm interested in some of the general patterns that we can spot, but also one particular angle; astroturfing.
 
 <!--more-->
+
+I've loaded data for several subs into Neo4j, a graph database.
+Whilst RDBMS is great for digging into specific users or posts, aggregate queries, and so on, graph excels at complex pattern matching and recursive relationships.
+
+It's a case of best tool for the job; you _can_ do recursive SQL instead of graph, it's just a lot more complicated.
+Plus the graphical tools I'll show below are designed to be used with Neo4j or other property graph databases.
+
+== The Data
+
+In Neo4j the _nodes_ (or _vertices_) are user, subreddit, comment, and post.
+The _edges_ (or _relationships_) are how these interact.
+
+For example:
+
+* a _user_ [node] *authored* [edge] a _post_ [node]
++
+image::/images/2025/12/2025-11-28T17-35-44-401Z.webp[]
+* a _user_ [node] *posted in* [edge] a _subreddit_ [node]
++
+image::/images/2025/12/2025-11-28T17-41-23-510Z.webp[]
+
+These relationships can be analysed independently, or combined:
+
+image::/images/2025/12/2025-11-28T17-42-28-090Z.webp[]
+
+TIP: You'll see here another relationship that's exposed: A _post_ [node] *in subreddit* [edge] _subreddit_ [node]
+
+
+// The full property graph data model looks like this:
+
+// image::/images/2025/12/2025-11-28T16-31-52-664Z.webp[]
+
+
+
+== Poking around the Graph
+
+Let's familiarise ourselves with graph visualisations and queries.
+In RDBMS we use SQL to describe the data that we want to return in a query.
+Neo4j uses _Cypher_, which looks a bit like SQL but describes graph relationships.
+Here's a query to show the user _nodes_:
+
+[source,cypher]
+----
+MATCH (n:User)
+RETURN n
+----
+
+Neo4j includes a visualisation tool, which shows the returned nodes:
+
+image::/images/2025/12/2025-12-01T10-29-38-358Z.webp[]
+
+We can add predicates, such as matching on a particular node _property_ (`username`, in this example):
+
+[source,cypher]
+----
+MATCH (n:User {username: 'rmoff'})
+RETURN n
+----
+
+image::/images/2025/12/2025-12-01T10-17-30-867Z.webp[]
+
+You can also look at the raw data:
+
+[source,javascript]
+----
+{
+  "identity": 1447,
+  "labels": [
+    "User"
+  ],
+  "properties": {
+    "is_gold": false,
+    "is_mod": true,
+    "first_seen": "2025-11-28T17:02:07.371980000Z",
+    "last_seen": "2025-11-28T17:02:07.371980000Z",
+    "verified": true,
+    "total_karma": 4795,
+    "comment_karma": 455,
+    "id": "bvkm0",
+    "created_utc": 1370008515.0,
+    "link_karma": 4340,
+    "username": "rmoff"
+  },
+  "elementId": "1447"
+}
+----
+
+If we zoom in a bit to the previous query results we'll see that it's also showing the _edges_ that have been defined indicating a relationship (`REPLIED_TO`) between some of the nodes:
+
+image::/images/2025/12/2025-12-01T10-33-01-076Z.webp[]
+
+Let's build on the above predicate query to find my username (`rmoff`) and any users that I've interacted with:
+
+[source,cypher]
+----
+MATCH (target:User {username: 'rmoff'}) <1>
+MATCH (n:User)
+WHERE n = target                        <2>
+   OR (n)<-[:REPLIED_TO]-(target)       <3>
+   OR (n)-[:REPLIED_TO]->(target)       <3>
+RETURN n
+----
+<1> Predicate in the `MATCH` clauds, using curly-braces
+<2> Predicates in the `WHERE` clause
+<3> Match nodes based on either direction of the `REPLIED_TO` relationship
+
+image::/images/2025/12/2025-12-01T10-38-57-949Z.webp[]
+
+I'm going to head over to a different tool for visualising the data since the built-in capabilities in the free version of Neo4j are too limited for where we're going with it.
+https://www.yworks.com/products/data-explorer-for-neo4j[Data Explorer for Neo4j] is a really nice tool from https://www.yworks.com/[yWorks].
+It connects directly to Neo4j and can either use Cypher queries to pull in data, or directly search nodes.
+
+The first reason I like using it is the flexibility it gives for laying out the data.
+Here is the same set of data as above, but shown in different ways:
+
+image::/images/2025/12/2025-12-01T113937.webp[]
+
+== Astroturfing
+
+One of the cool things that graph analysis does for us is visualise patterns that are not obvious through regular relational analysis.
+One of these is a form of astroturfing.
 
 Since the LLMs (GPT, Claude, etc) are trained on data that includes Reddit, it's not uncommon now to see companies trying to play the game (just like they did with keyword-stuffing with white text on white background for Google in the old days) and 'seed' Reddit with positive content about their product.
 
@@ -37,38 +156,26 @@ One of the cornerstones of Reddit is the account handle—whilst you can choose 
 This means that what one might do on LinkedIn (click on the person's name, figure out their company affiliation) often isn't an option.
 This is where graph analysis comes in, because it's great at both identifying and visualising patterns in behaviour that are not so easy to spot otherwise.
 
-== The Data
+Poking around one of the subreddits using https://docs.yworks.com/yfiles-html/dguide/analysis/analysis-centrality.html#_node_edge_betweenness_centrality[betweenness analysis] I spotted this set of three users highlighted:
 
-I've got the data stored in both Neo4j (a graph database), and DuckDB (because, hey - DuckDB!).
-* RDBMS is great for digging into specific users or posts, aggregate queries, and so on.
-* Graph excels at complex pattern matching and recursive relationships.
-It's a case of best tool for the job; you _can_ do recursive SQL instead of graph, it's just a lot more complicated.
-Plus the graphical tools I'll show below are designed to be used with Neo4j or other property graph databases.
+image::/images/2025/12/2025-12-01T172627.webp[]
 
-The relational model looks like this:
+The accounts picked up here are key to the particular activity on the sub; but that in itself isn't suprising.
+You often get key members of a community who post the bulk of the content.
 
-image::2025-11-28T16-24-18-851Z.png[]
+But, digging into these particular accounts I saw this significant pattern.
+The three users are shown as orange boxes; posts are blue and comments are green:
 
-In property graph data model looks like this:
+image::/images/2025/12/2025-12-01T163952.webp[]
 
-image:2025-11-28T16-31-52-664Z.png[]
+It's a nice little network of one user posting with another commenting—how helpful!
+To share the work they each take turns writing new posts and replying to others.
+Each post generally has one and only one comment, usually from one of the others in the group.
 
-The _nodes_ are user, subreddit, comment, and post.
-The _vertices_ (or _relationships_, or _edges_) are how these interact.
+You can compare this to a sub in which there is much more organic interaction.
+`r/apacheflink` is a good example of this:
 
-For example:
+image::/images/2025/12/2025-12-01T164600.webp[]
 
-* a _user_ [node] *authored* [vertex] a _post_ [node]
-+
-image::2025-11-28T17-35-44-401Z.png[]
-* a _user_ [node] *posted in* [vertex] a _subreddit_ [node]
-+
-image::2025-11-28T17-41-23-510Z.png[]
-
-These relationships can be analysed independently, or combined:
-
-image::2025-11-28T17-42-28-090Z.png[]
-
-You'll see here another relationship that's exposed: A _post_ [node] *in subreddit* [vertex] _subreddit_ [node]
-
-== Poking around the Graph
+Most users tend to just post replies, some only contribute new posts, and so on.
+Definitely not the nicely-balanced to-and-fro on the unnamed sub above ;)
