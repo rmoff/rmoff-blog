@@ -1,0 +1,1075 @@
+---
+title: 'Decodable vs. Amazon MSF: Getting Started with Flink SQL'
+date: "2024-07-02T00:00:00+00:00"
+draft: false
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+image: "https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c5795ff_6702c4a8ac27223c85ab1f72_667df1ac45e3e28f505d0273_AD_4nXcvPGYm5Jb7-jrYXpSSpbmfYjd5CFkRLHkf0PrGwFkibIO_HjUsXsj_apzvOEMRQW7b5zAF3ZY36x-DxFMLxOHHYg76FmikKEDGRi28FXNch-H8nFWzAOb2WcAk_i2Z_Vc9Kwb-1kIJJwzw18PWmXgDPAFJvk_cmxMaX6Kq9kivlpQjhrr8HBk.webp"
+---
+
+NOTE: This post originally appeared on the link:https://www.decodable.co/blog/decodable-vs-msf-getting-started-with-flink-sql[Decodable blog].
+
+One of the things that I love about SQL is the power that it gives you to work with data in a declarative manner.
+I want this thing…go do it.
+How should it do it?
+Well that’s the problem for the particular engine, not me.
+As a language with a pedigree of multiple decades and no sign of waning (despite a wobbly patch for some whilst NoSQL figured out they actually wanted to be NewSQL 😉), it’s the _lingua franca_ of data systems.
+
+<!--more-->
+Which is a long way of saying: if you work with data, SQL is mandatory.
+There, I said it.
+And if you’re transforming data as part of an ETL or ELT pipeline, it’s one of the simplest and most powerful ways to do it.
+So let’s see how we can use it with two different platforms in the market that are both built on Apache Flink but expose their support for SQL (specifically, Flink SQL) in very different ways.
+The first of these is Amazon’s MSF (Managed Service for Apache Flink), and the second is Decodable.
+
+_At this point a disclaimer is perhaps warranted, if not entirely obvious: I work for Decodable, and you’re reading this on a Decodable blog._
+_So I’m going to throw MSF under the bus, obviously?_
+_Well, no._
+_I’m not interested in that kind of FUD._
+_Hopefully this blog will simply serve to illustrate the similarities and differences between the two._
+
+
+=== Let’s build something!
+I’m going to take a look at what it takes to build an example of a common pipeline—getting data from a Kafka topic and using SQL to create some aggregate calculations against the data and send it to an S3 bucket in Iceberg format.
+
+I’ll start by exploring Amazon MSF and what it takes to build out the pipeline from the point of view of a data engineer who is deeply familiar with SQL—but not  link:https://www.decodable.co/blog/your-first-apache-flink-job[Java or Python]  (hence this blog - Flink SQL!).
+After that I’ll look at doing the same thing on Decodable and what the differences are.
+
+
+=== Running SQL on Amazon MSF
+After logging into the AWS Console and going to the MSF page, I have two options for getting started, `Streaming applications` or `Studio notebooks`.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c5795ff_6702c4a8ac27223c85ab1f72_667df1ac45e3e28f505d0273_AD_4nXcvPGYm5Jb7-jrYXpSSpbmfYjd5CFkRLHkf0PrGwFkibIO_HjUsXsj_apzvOEMRQW7b5zAF3ZY36x-DxFMLxOHHYg76FmikKEDGRi28FXNch-H8nFWzAOb2WcAk_i2Z_Vc9Kwb-1kIJJwzw18PWmXgDPAFJvk_cmxMaX6Kq9kivlpQjhrr8HBk.webp[CleanShot 2024-06-17 at 11.13.20]
+Having not used MSF before and following the logic that since I’m building a pipeline rather than just exploring data, I initially went down the route of creating a `Streaming application`.
+This turned out to be a dead-end, since it’s only if you’re writing Java or Python.
+Whilst you can wrap Flink SQL within these, it’s hardly the pleasant developer experience I was hoping for.
+I subsequently made my way over to `Studio notebooks`.
+This gives you what it says on the tin—a notebook.
+Beloved of data scientists and analysts, notebooks are brilliant for noodling around with bits of data, creating reproducible examples to share with colleagues, etc.
+
+link:https://jupyter.org/[Jupyter]  and  link:https://zeppelin.apache.org/[Apache Zeppelin]  are the two primary notebook implementations used, and here Amazon has gone with a pretty vanilla deployment of Zeppelin.
+This is what you get after creating the notebook and starting it up:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793ed_6702c4a3ac27223c85ab1e0f_667df1adea54447ab793a4d0_AD_4nXdSZIiuX8CgYH9Ag2Kty3S6O8OpXzMwksN3yDOSE4FprxZ7QrWcJ-RYjmOQHUafopxakVki-VciolhdPJFL8FzeNI1D5Sjs9E429se94VswYV0HcKlHW-1LpE70pgq4_CMi00vEdHMNdaIWfVgFAp107PE36y0_nS9MmuCCIvzoqzJAOZBatA.webp[CleanShot 2024-06-17 at 12.04.25]
+This is almost too vanilla for my liking; as someone coming to MSF with the hope of doing some Flink SQL, I’m pretty much left to my own devices to figure out what to do next.
+I clicked on  `Create new note` and ended up with this:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793f1_6702c4a3ac27223c85ab1e12_667df1ac81ac0efe1a0bd903_AD_4nXdHR9-5epouzau3uC58P-9-aXmXQ_NWB3jlQeoyVrxdO4DKOjSyKh6wZj6WfaLH8NBg2iw4lDL8R4Ne0zwM6nrvyhm9vN1vnp8AseHZUe7YJzLGWfp6SXwyn8bxzRzSnGBPaRvymoR49u2AjPHWi_z0h63kHDWtOLb5iZMb27i4ua9JJPBHGxo.webp[CleanShot 2024-06-18 at 11.21.58@2x]
+’k cool.
+Now what?
+
+
+image::/images/2024/07/667df1ace7ed2e74e32b626b_AD_4nXcjsoVyxWojkPIwuQegRqWndZJTSNcFl0Qr3tKMFnN9wOvAEQcSIlXxlvFG-ZZFP_aPURL-jRkkp5sea_DZHVAOPTJ5VInQksXHRITHz2hQbxzc2mRCD9Kmoy_wNyK1FuSEmHBxXWoN9YzwYVUVSvGKk2K7sItVBOZMbp5lZXAxz5eUIcmwe4g.gif[kermit-the-frog-looking-for-directions-gif]
+_(Ironically, if you were to run the latest version of Zeppelin yourself you’d find that it ships with_ link:https://github.com/apache/zeppelin/tree/ded5b29daf1ca3bf8cabb24e151791e116dd8b89/notebook/Flink%20Tutorial[a whole folder of Flink examples] _—which would have been rather useful here.)_
+
+Anyway, back on Amazon MSF I went back a screen and opened the  `Examples` notebook.
+This at least made more sense than a blank page.
+🙂
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57950a_6702c4a5ac27223c85ab1e63_667df1ad4eb971f1f4fe092d_AD_4nXcBbs2b2KEJC8gOZsl3cKMPAQhUp85R6JKXIXZ9R3-wIXejBbWn2LwCfzFR5gbTz0Ruh79ckxhXOAbYtqyGpW8NUFWFURjzIllyDvClih8a7k1xG-7PP8ELvDf3Em0nQTQOJdyWWsPjZTBTOITDwykc-w07yxRacbUEu0m69bKZorjt4UwRnig.webp[CleanShot 2024-06-17 at 12.07.57]
+The  `%flink.ssql` in each cell denotes the interpreter that’s used to execute the code in that cell—there are  link:https://zeppelin.apache.org/docs/0.11.1/interpreter/flink.html[several Flink interpreters available for Apache Zeppelin] .
+
+So let’s actually give it a go.
+As mentioned above, the pipeline we’re building is to stream data from a Kafka topic into Apache Iceberg on S3, calculating some aggregations on the way.
+
+
+==== Reading data from Kafka with Amazon MSF
+Having explored Flink SQL for myself  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[over]   link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[the]   link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[past]   link:https://www.decodable.co/blog/exploring-the-flink-sql-gateway-rest-api[few]   link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[months]  I knew to go and look up the  link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/[Kafka connector for Flink] .
+Connectors in Flink SQL are defined as tables, from which one can read and write data to the associated system.
+The  `Examples` notebook also gives, well, _examples_ to follow too.
+To start with I wanted to just check connectivity, so I deleted out what was there in the cell and created a single-column table connecting to my cluster:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793f4_6702c4a3ac27223c85ab1e17_667df1ac1f0881ecf512bf7f_AD_4nXdTzIC011PDUMmspBmTdsHEJ5ASp6VkiVL4VFkyap1UH1l22FXDf_9tP9i5N7VIDbyeAWkrKqaCniYhSzELeUI3h9lhtdfPKY5gyP2Tf3X2CUyXHMP-E4VG__2cmek0ggrIA_rsjo3CF6RO25pQxNVKc9KZqGONqP11XO1xnUFcj_go85iifHo.webp[CleanShot 2024-06-18 at 11.47.27 2]
+Hmmm, no good.
+
+
+[source,shell]
+----
+:5: error: unclosed character literal (or use " for string literal "connector")
+          'connector' = 'kafka',
+                    ^
+:5: error: unclosed character literal (or use " for string literal "kafka")
+          'connector' = 'kafka',
+----
+I mean, it _looks_ OK to me.
+After some circling around, I realised that I’d not only deleted the existing example code, but the interpreter string too.
+With the magic `%flink.ssql` restored, my table was successfully created:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793f7_6702c4a3ac27223c85ab1e1a_667df1ab1f0881ecf512bf16_AD_4nXcQAMxHw5q_6ZYEivMvGcIpTQdSN8YRrcqjTo-TBtPRhhR1R6mwGDrk2sr6G9OaoM-E3moBiyrMYkGxe9qOnoNKFSFH_KSdiWXCjd-HzdLuncH23vVk5uLrEGyKx28P6ZNh1aBPQ8Z8sztuEzKK74VAJYeRPRR-zviZaTsUZ2tx4702yEdznQ.webp[CleanShot 2024-06-18 at 11.47.58]
+This is where the nice bit of notebooks comes in—I can build up this example step by step, and actually share the notebook at the end with you, dear reader, and you’ll be able to run it too.
+I can also add comments and narration, within the notebook itself.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793fa_6702c4a3ac27223c85ab1e1d_667df1adfe820ede47a9e75f_AD_4nXeSZCEfiIq9mpUSkfjJciUA09B9vL628V6NL0d1Q-g_RC1BzHtZHJHECuheGb4NAxwRWTUq50sc164_paLSSxzfBqEg9hOt8sva6TOyyu0sMqTdp5LJZ6ikUPfWnxqh_BO_KU2nCnoPZuNYRDSzSBjKTeI0vt93sleZshg2y30kqCh5RGxqW9U.webp[CleanShot 2024-06-18 at 12.32.17]
+
+[source,sql]
+----
+INSERT INTO msf_kafka_test_01 VALUES ('hello world') 
+----
+Now let’s run the `INSERT` shown here, which if all has gone well should result in a message in JSON format (as specified by `format` in the table definition) in my `test_from_msf` topic:
+
+
+[source,shell]
+----
+# Here's the topic
+kcat -b broker:29092 -L
+Metadata for all topics (from broker 1: broker:29092/1):
+ 1 brokers:
+  broker 1 at broker:29092 (controller)
+ 1 topics:
+  topic "test_from_msf" with 1 partitions:
+    partition 0, leader 1, replicas: 1, isrs: 1
+
+# Here's the message
+kcat -b broker:29092 -C -t test_from_msf
+{"column1":"hello world"}
+% Reached end of topic test_from_msf [0] at offset 1
+----
+Looks good!
+Let’s bring in the actual Kafka topic that we want to read from.
+The data is  link:https://shadowtraffic.io/[simulated]  transactions from a chain of supermarkets and looks like this:
+
+
+[source,json]
+----
+{
+    "customerId": "dc91f8a7-c310-8656-f3ef-f6f0a7af7e58",
+    "customerName": "Laure Treutel",
+    "customerAddress": "Suite 547 635 Brice Radial, New Jantown, NH 34355",
+    "storeId": "401fdb6d-ecc2-75a5-8d0d-efdc64e8637b",
+    "storeName": "Swaniawski Group",
+    "storeLocation": "Taylorton",
+    "products": [
+        {
+            "productName": "Mediocre Bronze Shoes",
+            "quantity": 4.90896716771463,
+            "unitPrice": 2.21,
+            "category": "Garden, Industrial & Shoes"
+        },
+        {
+            "productName": "Aerodynamic Iron Table",
+            "quantity": 2.5936751424049076,
+            "unitPrice": 15.79,
+            "category": "Music"
+        },
+        […]
+    ],
+    "timestamp": "2024-06-16T16:11:21.695+0000"
+}
+----
+Our first task is to come up with the DDL to declare this table’s schema.
+You can do this by hand, or trust to the LLM gods—I found  link:https://www.anthropic.com/news/claude-3-family[Claude 3 Opus]  gave me what seemed like a pretty accurate answer:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c5793fd_6702c4a5ac27223c85ab1e66_667df1ace89262c498c0b0cf_AD_4nXc3HdJmIyJfzZemoqEfr6bJhE4jd4tZBKfZf6iegNW8Uh_UgyDuCRTa-VNOX8hnn7Dkmp2xaG8x38MYG299tH02oQQ4LH3rWwBEjtq4VCioj4Nnj6bwNmDlhMi94uqf_ejPkfG8pBXEUe5Kigv7cEDISHMFLNCJCiFMP4UHzGl6ThOXSghyTZo.webp[CleanShot 2024-06-18 at 12.52.00]
+The only thing I needed to change was quoting the reserved word `timestamp`  being used as a field name.
+Using this I started a new notebook that would be for my actual pipeline, and began with creating the Kafka source:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57951c_6702c4a3ac27223c85ab1e20_667df1ac69707367721fbe9b_AD_4nXcCAfZKuuS6wOVN0LpvfNa8mucrG9N2tzK8vyK4PmW5x92ATAUj5GcPemKLEFuKY3YkivK6DLxB5Pi0Lv3R-enrQCh1un0QR3NpGDSppiEGgajxNmTEG1bC9f_cawEQAHvzkt8J-9qbBuGZT-sbk9A642ZnndVuX_GXr_0xLKvW5kdy-0OEj80.webp[CleanShot 2024-06-18 at 12.56.07]
+With the table created, let’s run a `SELECT` to sample the data to make sure things are working:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579400_6702c4a3ac27223c85ab1e23_667df1acd207fc3451fe153b_AD_4nXd_N1I2kppWk8VDXaV0Zn9MkAGwcUkoGS4JQQjph4XNWRqjSNN5VHsWhR0wH-8fZLD7g4th3S7bZzVrZ_KDidCpNBaD68NR8bAxmgZKN3uIchNUyIIaeeTPShUqx97HJxDfRV1lcJ5fRFsOyPS5s0murawhmSKAQAx-FEotS_OpzG0m85tis24.webp[CleanShot 2024-06-18 at 14.19.18]
+Instead of fighting with type conversions at this stage (that fun can wait!) I’m just going to make this a `STRING` field and worry about it later.
+Unfortunately, MSF has other ideas:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579403_6702c4a3ac27223c85ab1e26_667df1acaf7341355d32efa2_AD_4nXeRT7uTBLX6AVFSL5g7Vd6fd6rXNdrqNzEiZZG5xPTp1u1tyYIoe6iuMIuK1dnhGGPU86DAXK8ZBXY9laPAEtmdR80vfx-4jjW85GW0-Zo-_LSuh145HDOsdssfq2Ovj85XVHGmKqMhUfeG9IMqm2kStitaiRPS6lZAScqyYz67hvXnuWk-yA.webp[CleanShot 2024-06-18 at 14.40.17]
+After some digging it turns out that `ALTER TABLE…MODIFY` was  link:https://flink.apache.org/2023/03/23/announcing-the-release-of-apache-flink-1.17/#towards-streaming-warehouses[added in Flink 1.17]  and MSF is running Flink 1.15.
+
+Since we’re not using the table anywhere yet, let’s just drop it and recreate it.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579406_6702c4a3ac27223c85ab1e29_667df1ad8b68c579e1076c03_AD_4nXc8EpqZPypqntnMu_mFeeUffjbgBRfNlNnkpH7W3DqCgfXqhUshfdvWgEpwPFjP7xHRFdx1qvtLiSsT2qtbqF6SZ7uUQjEopXUzC3eotRYYqgvXw_tts-oSL1jprGVAhpyT2lE8CbhZCfj93KwLbhDU0LewqDd0PdnmPdJROyLluvawRC_McQ.webp[CleanShot 2024-06-18 at 14.53.22]
+This is good, and bad.
+Mostly bad.
+The good bit is that it reminds me that when I created the notebook I selected an existing Glue catalog, and it looks like MSF is seamlessly using it.
+The bad?
+I need to go IAM-diving to figure out what the permission problem is here.
+
+Or…sidestep the issue and just create the table with a different name 😁
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57950d_6702c4a5ac27223c85ab1e69_667df1ac0a06f501314b2db5_AD_4nXeCeMN616lVGfBu5Kx5KfZsODmqtp53PbbgNi6gGKpNMftL22CrL0_NQwjbZesCpmF20muOytztzb_lTCbvXLS2nBWHFltfBhXsEimjXpYS4zzy_7Dh8if66tYZF90g9N0-657a80vg3SDW5tosiTbp7JJorGR5rNVniGafHqu2VrA8_Lp8Nkk.webp[CleanShot 2024-06-18 at 15.01.24]
+OK!
+Now we are getting somewhere.
+With data flowing in from our Kafka topic let’s build the second half of our pipeline, in which we’re going to compute aggregates on the data before sending it to Apache Iceberg.
+
+
+==== Running Flink SQL to transform data on Amazon MSF
+Whilst configuring the connection to Kafka might have been a bit more fiddly than we’d have liked, building actual transformational SQL in the Zeppelin notebook is precisely its sweet spot.
+You can iterate to your heart’s content to get the syntax right and dataset exactly as you want it.
+You can also take advantage of Zeppelin’s built-in visualisation capabilities to explore the data further:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579409_6702c4a3ac27223c85ab1e2c_667df1ac69707367721fbe9f_AD_4nXdqI1xw8egbhoBrhqYBkcoVSPTMSQM--DU_Hn4pZNrcgJewpA54-TqLitBmrlf-j3TEhhuCgs3k6Viwo8rliK_sdr3sgIWiMkB3ofhqdDkwFyiAk4VCXPm-33e1LozIiUzXrL818r6LahIEktOrt5_YcC-fqsvR83hueOFlU3wTEvTOVjuN8A.webp[CleanShot 2024-06-18 at 16.44.41]
+With the data exploration and noodling done, we’ll wrap our aggregate query as a `VIEW` to use later when we send it to Iceberg.
+
+
+[source,sql]
+----
+CREATE VIEW basket_agg AS 
+SELECT customerName,
+    COUNT(*) AS unique_items,
+    SUM(quantity) AS unit_ct
+FROM basket01
+    CROSS JOIN UNNEST(products) AS t(productName, quantity, unitPrice, category)
+GROUP BY customerName;
+----
+Here I’m using `UNNEST` to get at the individual records in the `products` array, and create a result set of the number of basket items (`COUNT(*)`) and total units (`SUM(quantity)`) broken down by customer (`customerName`).
+
+
+==== Attempting to write to Apache Iceberg from Amazon MSF…
+Just as we used a table to read data from Kafka above, we’ll use a table to write to Iceberg on S3.
+
+If I were running this on my own Apache Flink cluster, I’d do this:
+
+
+[source,sql]
+----
+Flink SQL> CREATE TABLE basket_iceberg
+           WITH (
+           'connector' = 'iceberg',
+           'catalog-type'='hive',
+           'catalog-name'='dev',
+           'warehouse' = 's3a://warehouse',
+           'hive-conf-dir' = './conf') AS
+           SELECT * FROM basket_agg; 
+----
+This is based on using Hive as a catalog metastore, whilst here I’m using Glue.
+I figured I’d slightly guess at the syntax of the command, assuming that I can randomly jiggle things from the resulting error to get them to work.
+
+But I didn’t even get that far.
+MSF doesn’t seem to be happy with my`CREATE TABLE…AS SELECT`.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c57940c_6702c4a3ac27223c85ab1e2f_667df1ac3ad2370ea1947500_AD_4nXdocjpUpoCRHNS58BAubLggT2rboYdCtu70KWqUM81NydV81k0VZkqfRqoxA-zR7fzgG76adFi9KVBgdOKj2tcbHbz6hZdoPgRyhHXhn9bGIiNGkcekJ8BuMDCpKZagDmkesqtBtl-Cg3Z7SuTsjIC0_JJ3gAf0aB3dyYtjWMCJuUnQh-MUh3w.webp[CleanShot 2024-06-19 at 16.00.55]
+As with `ALTER TABLE…MODIFY` above,  link:https://flink.apache.org/2022/10/28/announcing-the-release-of-apache-flink-1.16/#new-sql-syntax[CREATE TABLE…AS SELECT (CTAS) wasn’t added to Flink until 1.16] , and MSF is on 1.15.
+Instead, we’re going to have to split it into two stages - create the table, and then populate it.
+
+Unlike CTAS in which the schema is inherited from the`SELECT` , here we’re going to have to define the schema manually.
+We can get the schema from a `DESCRIBE` against the view:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c57940f_6702c4a3ac27223c85ab1e32_667df1adb91df341c5d0947d_AD_4nXfEzu5bQ1KMnzb6kxxEfHQ6--iZDKJfCklcg181ao3Ei0zMJ3W4ZWFRkor9TNurVUEwmX1YHRmp-IFPg-RyFqhDW-QIDcwlnHsnhOM6vQCllBFYhd1gW8g6rxQNMeWdeqI9FbB08sd2OTSDbbaU26rt2n0Ic_vkxNuIh99wA7nu7F-a8E1agDc.webp[CleanShot 2024-06-19 at 16.03.06]
+Copying this schema into our `CREATE TABLE` gives us this:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579412_6702c4a3ac27223c85ab1e35_667df1ae7fc05a8219e9ffea_AD_4nXf9yRCZ3ykWLxkNGpB06gFMydk5nkfPCOx2VdsioUK4zUdRhHlabVen3vC2iwVCEyI1aKq91H5YUEGgJFzRfu0Fm388knzRtvn_Wmf-lvpGZ7uawje_iF95p3I-fwHgFH04TEqJ5mxb1S2NGxrehRCftTH0dIgWHt-xaJmnVfvd2cbDyWAiaZ8.webp[CleanShot 2024-06-19 at 16.04.18]
+So now to populate it…maybe.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579415_6702c4a3ac27223c85ab1e38_667df1ac429e00edeafc6a67_AD_4nXfmVT9ehahQ0Y9zDReQE1jT_U-CqL22vFB_wRz1u_I0TgL-hVhtegWlg9lz1McpocBSURWsYLDL2p5_2ziv8o7E7CrYBkq0_gi6RjQtKn_2gyKgXpiFM9XQ-U20lOcnNKPRExtTZKE4WBSPvSf_tl_wcmOcCx9kufVnA5arnFPlN4_PHXZVIEk.webp[CleanShot 2024-06-19 at 16.05.20]
+Ahhhh Java stack traces my old friend.
+How I’ve missed you.
+
+
+image::/images/2024/07/667df1acd2fa14518fbab433_AD_4nXcsF8jGuFfVHzYxuedbDY3PbUrgSNK5gUPSWWNO4Devm0WByIJUEtrDcAMiwSkREiOR3j-q1tLutjct5u5oJChk2PRmL7pmHZAGZ1hUjMeTPMdNxDjoMLX8oqghb37Rz_frVRAH1-ky2uzkTVlU2wA9MYNwYllf9Ie_LZa39QYjL25lkoRHXg.gif[not]
+The one we’ve got here boils down to this:
+
+
+[source,shell]
+----
+org.apache.flink.table.api.ValidationException: 
+Could not find any factory for identifier 'iceberg' that implements
+'org.apache.flink.table.factories.DynamicTableFactory' in the classpath. 
+----
+I’ve encountered  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[this error]   link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[previously] .
+It means that the Flink installation only has a certain set of connectors installed, and not the one we want.
+The error message actually tells us which ones are available:
+
+
+[source,shell]
+----
+Available factory identifiers are:
+
+blackhole
+datagen
+filesystem
+kafka
+kinesis
+print
+upsert-kafka
+----
+So how do we write to Iceberg?
+We need to install the Iceberg connector, obviously!
+The MSF docs  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-zeppelin-connectors.html[explain how to do this] .
+In essence, I need to put the Iceberg JAR in an S3 bucket, and restart the notebook with the dependency added.
+
+Let’s grab the  link:https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.15/1.4.3/iceberg-flink-runtime-1.15-1.4.3.jar[Iceberg JAR for Flink 1.15]  (wanna know more about navigating JAR-hell?
+You’ll enjoy  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[this blog]  that I wrote) and upload it to S3:
+
+
+[source,shell]
+----
+curl https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.15/1.4.3/iceberg-flink-runtime-1.15-1.4.3.jar -O
+aws s3 cp iceberg-flink-runtime-1.15-1.4.3.jar s3://rmoff/iceberg-flink-runtime-1.15-1.4.3.jar
+----
+Now to add it as a custom connector:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579418_6702c4a3ac27223c85ab1e3b_667df1ac606d3ee0ca23fd4f_AD_4nXfv9M9SD26m0HxonLpmHhHr5OlafeF2EOyXw8_weQirSbAo4wQrfJdscqgh8q-mDMUJ7HYwIPD8UdM5sS6Fq8QE-4klLooxgW9yBoHuGsbvEwQt9pltTjHrbrZ0QZz2wlph2PPnv6PhfWI4oHNUqU6qMr0V4INPCTlwhB1sqDFSN7SCDaJrUA.webp[CleanShot 2024-06-19 at 17.01.09]
+Unfortunately, MSF wasn’t happy with this.
+When I click on *Create Studio notebook* it fails after a minute or two with this:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c57941b_6702c4a3ac27223c85ab1e3e_667df1acdd3ca3adbd86786e_AD_4nXd1G6qPaALMGnylj_Cp2BtDvItW8yuufoo_ZNZFUkexWq9O2F-3SmSHdg8jQgXTcRDgg910ED49NtoANuPODs6l8RGbH138uGrkPZok8ypGAJaC6-w9y3Hbhsq7lQ5HSrsgzePpr6yz0kLP18K0yzqZ_iaUPxTC3HBGpmqWCyqNJ4d47H5V4JE.webp[CleanShot 2024-06-19 at 17.04.49]
+
+[source,shell]
+----
+Please check the role provided or validity of S3 location you provided. We are unable to get the specified fileKey: s3://rmoff/iceberg-flink-runtime-1.15-1.4.3.jar in the specified bucket: rmoff
+----
+Ho hum.
+Since it says “please check the role” I went back a couple of screens to review the notebook’s configuration for IAM, which shows this:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c57941e_6702c4a3ac27223c85ab1e41_667df1ac7c9d46475c8dbe0b_AD_4nXesh-jyMjD-2XKEK0zcczaeHN7OyLOpoQ_HO7NOoKqvkihT7NfKThf8ww28eUnxEgA1E0wKFUPz_zPfSnLUil9LF2b89KI9D2LwpikwJLgzBoV45IdSFpIQZDqvYwsXIej51I1LxASHqysjXmO0T3deYfbBqF2nCuoMNHCFvODU5qHhp_V1Zg.webp[CleanShot 2024-06-19 at 17.10.32]
+The IAM role is being created automagically, so things ought to Just Work?
+Right?
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579602_6702c4a8ac27223c85ab1f75_667df1ac7bc0dc1af0e78f48_AD_4nXcN_OclDo4JXPDadKAr0Ueg1yAVx6a0cRqnkKpBSuxQn90n2tZfT4ClZ89OGTLwd1stlADHRkx0_xytFJFdMBwUfHcsOgfxX5FJNOQfheUQyiOxTCK81OJc5B8eco-c0j-ojatrHoo3i947cuA7gyKZ86LdOMN3y0zUH6x9AQvwKuU7eVgUhA.webp[Getting started with Flink SQL on Amazon MSF vs Decodable1]
+So down the rabbit hole we go to the IAM policy editor.
+Looking up the permissions attached to the policy that MSF created shows, after a bit of scratching around, the problem:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579510_6702c4a5ac27223c85ab1e6c_667df1ac494872daff7b56a3_AD_4nXexsNMFj_lKCg-IageDnETvm9MEwPxwb-s6RE4Y1A3QMT46hhUwIghfMwTBXm0lZoOG4oPmyUBnFRTOZV9a1UISqZ7kbmzhFDBK_GWWZbKV7_HTfGvpQ7erE2bLnfLkVBBYh_DrBqqKLQ5X8D2o0wvGpEeZAbYeqGoNI_RMTj6QqGceSFq8I7A.webp[CleanShot 2024-06-19 at 17.17.56]
+The problem wasn’t actually the IAM that MSF provisioned, but the information with which it did so.
+
+When I specified the *Path to S3 Object* I gave the fully qualified S3 URL,`s3://rmoff/iceberg-flink-runtime-1.15-1.4.3.jar` .
+What MSF wanted was the path within the *S3 bucket* that I’d also specified (`s3://rmoff` ).
+What this ended up with was MSF concatenating the two and configuring IAM for a JAR file at`s3://rmoff/s3://rmoff/iceberg-flink-runtime-1.15-1.4.3.jar`.
+This is also confirmed if I go back to the connector configuration screen and look closely at the *S3 URI* shown as a result of my erroneous input:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579421_6702c4a3ac27223c85ab1e44_667df1ac277084d1f678903f_AD_4nXdyhNtRcJU0iaHGXf9XQx4YPP6LlZ9J00a1Y8cajmaD3Eq308NMlW3NvFTaWuxcCEXEyyCk0Qt3OSagxBSM2wM4JXGI7VYQo08JU5a7Ap7K3oktHIaILYLuwljAEOknF3TTx89ThlHSbPqDCmdU7rmfdnVkji-hO-ZAsc2pchstlJZMOOv42vE.webp[CleanShot 2024-06-19 at 17.23.17]
+So, let’s remove that connector and re-add it with the correct path this time:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1882a396e17c579424_6702c4a3ac27223c85ab1e48_667df1ac0dda40bdcf24a28e_AD_4nXe3WMmo-SPf3ZCag4NsbqaJYgbzsaO9NhZhKdLxAnqLaLiu0OtDjSyMBrca46vR5tRI4iOP6iLcXHcMFU7mYh_or8Uq7gk5l6Mh5G5qRLawMxRa3PK0xAhzX0tUyB7csyQjKiNrOd49huWmJPv2dfhDG_xMH_JHI8_b0enfl7HNIry8iuB5gA.webp[CleanShot 2024-06-19 at 17.24.13]
+I can also click on the hyperlink to confirm that the object is there:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794b6_6702c4a3ac27223c85ab1e4b_667df1acaf7341355d32ef9d_AD_4nXeCkbLY5ShwNpivJ6NZ9DTiMnfw_BPVijoMU_OPCFG5YaDjGemPUrdcheoT3laeoDobku5YE_OrNx27Ja-TkTu9nxXyhuUdUtKIZyaNLc1erErAc-qqHeRdIog7kqyyIvQgJHhaoG5lH475iewEHN4TzXK20NjOzzRuaN6sfYb2XdZjeQ4XYrU.webp[CleanShot 2024-06-19 at 17.24.34]
+Having some guard rails provided by input validation would have been a nice touch here, but it wasn’t to be.
+
+So.
+Back to starting the notebook up again.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1982a396e17c5794a4_6702c4a5ac27223c85ab1e5a_667df1acef62878c3d5a7374_AD_4nXceOSVPweWec5gADZPE9BW829ku_ahBnwfWjZ_i8kp9-MF_7PyAaVpomKf4RjcorWJmulyLb7L0L0hc74XdX7XudZWT_qXy6tU_9bANIqKLtGjMV0mZ1w4i-AYd2gG4sddwKxI4DgiUA4-NiXZcj9O-lkajPlU-LO2gO5JQLKvIbOdU0XKocts.webp[CleanShot 2024-06-19 at 17.25.34]
+Woohoo!
+Let’s go open that notebook and get back to where we were at before this irritating detour, and now hopefully with Iceberg superpowers 🦸.
+Because we’ve got the Glue catalog storing our table definitions, we should be able to pick up where we left off.
+This time we get a different error when we try to write to the Iceberg sink—progress!
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794ac_6702c4a5ac27223c85ab1e5d_667df1ac5d5fb53d989d7e77_AD_4nXfIlgQcP3TAT1mgjG_t4Fbbu1m38Xk3DtuvmSPaX2U3Sd8SEn6MrvLiwdsRGgtidgHQXgDz-BTb6D0lYWsp7D02Gbwuw0wFA5LsJNJbxep0IJaQCv8uUWo8CHtq-ghwvQc0kaGT785jPseCL2nCv7_xaXOofTnXuPSupYR0oVEZhyRDQ-aFcA.webp[CleanShot 2024-06-19 at 17.56.36]
+
+[source,shell]
+----
+Caused by: org.apache.flink.table.api.ValidationException: 
+Unable to create a sink for writing table 'hive.rmoff.basket_iceberg_00'.
+
+[…]
+Caused by: java.lang.NullPointerException: 
+Table property 'catalog-name' cannot be null
+----
+To be honest, I wasn’t expecting creating an Iceberg connection to be _quite_ as simple as what I tried:
+
+
+[source,sql]
+----
+CREATE TABLE […]
+    WITH ('connector' = 'iceberg') 
+----
+So now onto the fun and fame of working out the correct parameters.
+The complication here—and the reason I can’t just copy and paste like any good developer reading StackOverflow—is that on MSF the catalog is provided by Glue, not Hive.
+The MSF documentation on connectors outside Kinesis and Kafka is  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-zeppelin-connectors.html#zeppelin-custom-connectors[pretty sparse] , and there’s nothing for Iceberg that I could find.
+The  link:https://iceberg.apache.org/docs/1.4.3/flink-connector/[documentation for Apache Iceberg’s Flink connector]  lists the properties required, and after a bit of poking around there I found  link:https://iceberg.apache.org/docs/nightly/aws/#flink[this section about using it with a Glue catalog] .
+There’s also  link:https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-iceberg-use-flink-cluster.html[this section]  on using Iceberg from Amazon EMR—which is not the same as MSF, but perhaps has the same pattern of access for Glue and S3 when writing Iceberg data.
+One point to note here is that the EMR document talks about creating Flink `CATALOG` objects—I’d recommend you review my  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[primer on catalogs in Flink]  too if you haven’t already, since it’s an area full of ambiguity and overloaded terms.
+
+Distilling down the above resources, I tried this configuration for the table next:
+
+
+[source,sql]
+----
+CREATE TABLE basket_iceberg_01 (
+            customerName STRING,
+            unique_items BIGINT,
+            unit_ct DOUBLE)
+       WITH ('connector'   = 'iceberg',
+             'catalog-type'= 'glue',
+             'catalog-name'= 'rmoff',
+             'warehouse'   = 's3://rmoff/msf-test',
+             'io-impl'     = 'org.apache.iceberg.aws.s3.S3FileIO') 
+----
+Here `catalog-name` matches my Glue catalog name.
+When I try to insert into it, I get a different error: `java.lang.ClassNotFoundException: org.apache.hadoop.hdfs.HdfsConfiguration`.
+
+_I mean, we’re only this far in and haven’t had a ClassNotFoundException yet…I think we’re doing pretty well 🤷?_
+_My impression of MSF is feeling like the trials and tribulations of learning Apache Flink running locally, but with one arm tied behind my back as I try to debug a system running a version of Flink that’s two years old and with no filesystem access to check things like JARs._
+
+Back to our story.
+I spent a bunch of time learning about  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[JARs in Flink]  so was happy taking on this error.
+`ClassNotFoundException` means that Flink can’t find a Java class that it needs.
+It’s usually solved by providing a JAR that includes the class and/or sorting out things like classpaths so that the JAR can be found.
+Searching a local Hadoop installation (remember those?) turned up this:
+
+
+[source,shell]
+----
+Found in: /Users/rmoff/hadoop/hadoop-3.3.4/share/hadoop/hdfs/hadoop-hdfs-client-3.3.4.jar
+----
+But now I’m a bit puzzled.
+We’re hoping to write to S3, so why does it need an HDFS dependency?
+
+On a slight tangent, and taking a look at the table DDL I’m running, it’s using the Flink Iceberg connector  link:https://iceberg.apache.org/docs/1.4.3/flink-connector/#flink-connector[as described here]  to directly create a table, sidestepping the explicit Iceberg catalog creation usually seen in examples.
+Let’s try creating a catalog as  link:https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-iceberg-use-flink-cluster.html#create-iceberg-table[seen here] :
+
+
+[source,sql]
+----
+CREATE CATALOG c_iceberg WITH (
+   'type'='iceberg',
+   'warehouse'='s3://rmoff/msf-test',
+   'catalog-impl'='org.apache.iceberg.aws.glue.GlueCatalog',
+   'io-impl'='org.apache.iceberg.aws.s3.S3FileIO'
+ ); 
+----
+But, same error:`java.lang.ClassNotFoundException: org.apache.hadoop.hdfs.HdfsConfiguration` .
+
+Looking at the Iceberg docs again it seems I’ve perhaps missed a dependency, so back to creating a new notebook, this time with `hadoop-aws` and `iceberg-aws-bundle` added.
+I’d wanted to include `aws-java-sdk-bundle` since I’ve needed that when running things locally, but I guess that one wasn’t to be:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579612_6702c4a8ac27223c85ab1f78_667df1ae8e69d895215e563b_AD_4nXcZogyx8kcJCrOladl6eN4oAYflvAhsGcykc2CgVsC9o86xbHDg3ckdULoCjyW4m_9AM4xk3qhjhembjK25GCbahdbI_Or2b6wnseGe0_EKmRCyrR8ywtNc6dIN5cb9eTKIa6noCIKNfwweMbYQL685xdy5m1ij0LUADcXR0YPW7wF9gZYCBw.webp[CleanShot 2024-06-19 at 22.00.46@2x]
+
+[source,shell]
+----
+Total combined size for DEPENDENCY_JAR CustomArtifactConfiguration exceeded, 
+maximum: 314572800, given: 524262131
+----
+So this is what I’ve got for this notebook’s attempt:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794b0_6702c4a7ac27223c85ab1f14_667df1aca0a4528375ac9706_AD_4nXdnFeJwsshZJJUnF5y5y-X_HkQ3FtLKDufL3WfDlsR5P95Ehx7CiaZbTAjtpY4jMzykS0bMou_Undyfop51J3lEdSPivomboKuiCob8RfHxEbSisL7Hb1pXGcA5Ul4DDZ3VceeMrvGFJDgcj8MQuvZW2Yiw2u2XDy132rLjpI7oayqF04TFsw.webp[CleanShot 2024-06-19 at 22.06.05@2x]
+Still no dice—same error:`java.lang.ClassNotFoundException: org.apache.hadoop.hdfs.HdfsConfiguration`.
+Let’s take the bull by the horns and add the specific JAR file that contains this (`hadoop-hdfs-client`):
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794b3_6702c4a5ac27223c85ab1e60_667df1ac1beda8d046632d04_AD_4nXdodfBp6Z6HSHtl0KFzxsg6F3W2TzZYCLzIoC8NSuRigbdtQO1LwNk0e41jmTVrqC0a_2_hltsDcdFnggtGSm-GPNqeD1XMXJCNIEE_938GxgL1MvnE3oIPQ8DlhLX40LMDAjZ-dI7CKbxoHdcxKAxFjUrHu2CjCSkps7uD7vDYI_iQSeTH7jA.webp[CleanShot 2024-06-19 at 22.25.41@2x]
+After restarting the notebook I can see the JARs picked up in Zeppelin’s `flink.execution.jars` :
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579618_6702c4a8ac27223c85ab1f7e_667df1acb14e5f38145fac1c_AD_4nXc29cFKJpIKf9jwdUn5vloNyVw1wcz8gDi1-8eo0Wf6QrXLNhr4zHh2rnTauGyHwquz58xe2OVNJnGL2JXe1kLV3kALiUoP6dVRDIWfVn1RzRghYUM7_nrtr-NI6JmVeRRhLiEBHt6-vbh4TA4-Zl1yLwVp_CaBpOhExhI7Q9DU5r5O5gf54j8.webp[CleanShot 2024-06-19 at 22.30.01@2x]
+But… still… when I try to create an Iceberg catalog as above, the… same… error…`java.lang.ClassNotFoundException: org.apache.hadoop.hdfs.HdfsConfiguration`.
+
+
+image::/images/2024/07/667df1ac181fec445337f419_AD_4nXdpNcoPbduFkWeVZaA3hFX1-pGjkFmlTk23JQ3ig5YVzzyAz81HoyI7yxVONwK4GJPaZFryR0o4DgPul9xErkZAD9CsLRs2OUZMe96Lx0FwEpV_qlqGHmcqL9fWUXRNmpGIMbIEtNat_39GXlVt4jnnytv_bTotSbvTUq8EOSx9-gMmwN5RYvY.gif[ahhh]
+So what am I going to do?_What any sensible data engineer given half the chance would at this point…give up and try something different_.
+Instead of writing to Iceberg on S3, we’ll compromise and simply write parquet files to S3.
+This should hopefully be easier since the Flink filesystem connector is one of the connectors that _is_ included with MSF.
+
+
+==== Attempting to write Parquet files to S3 from Amazon MSF…
+This _should_ be much simpler:
+
+
+[source,sql]
+----
+CREATE TABLE s3_sink  (
+            customerName STRING,
+            unique_items BIGINT,
+            unit_ct DOUBLE) 
+            WITH ('connector'='filesystem', 
+                  'path' = 's3://rmoff/msf-test-parquet',
+                  'format' = 'parquet');
+
+INSERT INTO s3_sink 
+SELECT * FROM basket_agg; 
+----
+But simple is boring, right?
+
+
+[source,shell]
+----
+org.apache.flink.table.api.ValidationException: 
+Could not find any format factory for identifier 'parquet' in the classpath. 
+----
+Up and over to the dependencies again, since we need to add the necessary JAR for parquet format.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794b9_6702c4a7ac27223c85ab1f17_667df1ac6d5722171de7983f_AD_4nXexRywUZlt6Qj_lkDPbzR-VDTRe-nK3KD3XshOG-FSgrDw0hcA2RSaMLbu41msUSzVrWlC8bJwhqZfRmUmkit-wVWqz3s_8111Yh5UyTpdz13uvFOdK7KN3LLZ8_7nTTvqaetxqNDhGpE8DrgXFXKSwdyUz7MG6PrbqC7ok2MKlala4ecPRJ0s.webp[CleanShot 2024-06-19 at 22.54.43@2x]
+But can you spot what might be the problem?
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579615_6702c4a8ac27223c85ab2010_667df1ad7b484dd8d4b6f69d_AD_4nXe9jhbHyvm799-vHVGwrV1Y3x57beKa0-p54R5qQnMm9asoMDOgd86_AkoJne78O6nEB1GNjtNwjCL5VAcQyyao2SrMN9HUJ6sDY81fvJklKQ7TzjRXdRkO-TEi7R3vMQbvE6NA8iTZWnpMwoQ5nIOAR6r95lf9_SOYoYltP6Y7eybH4ZgdkHU.webp[CleanShot 2024-06-19 at 22.54.18@2x]
+I’d picked up the JAR for Flink 1.18.1—and MSF is running Flink 1.15.
+I don’t know for certain that the version difference is the problem, but from experience aligning versions is one of the first things to do when troubleshooting.
+
+So, stop the notebook, update the JAR (it’s called “Custom Connectors” in the UI, but it seems to encompass any dependencies), start the notebook… and progress (of sorts):
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c57961e_6702c4a8ac27223c85ab1f90_667df1addd7d84d021b369a7_AD_4nXcEpm7Lg-4vGwcCNtttWfQNaE00zezVnuEScoKvQOmM1htnrVm5jjBxDm5TBZvtwewcg9xK1NHfC1N1U0CjYPB2PJkTgiE2c23wA_RJG2I5LZRico8s6J-yL3p3gaZXLElB4tyCpccczi5QuX4Z-uUHRUkimcHEEbdzFLQynMrkdIXupWycBBc.webp[CleanShot 2024-06-19 at 23.05.28@2x]
+Of course…we’ve created an aggregate, and we’re trying to write it to a file type which doesn’t support updates.
+Parquet is append-only, so as the aggregate values change for a given key, how can we represent that in the file?
+
+So that we’ve not completely failed to build an end-to-end pipeline I’m going to shift the goalposts and change the aggregate to a filter, selecting all customers from the Kafka source whose names begin with the letter “b”:
+
+
+[source,sql]
+----
+CREATE VIEW customers_b AS 
+SELECT customerId, customerName, customerAddress
+FROM basket01
+WHERE LOWER(customerName) LIKE 'b%'; 
+----
+Now let’s write the filtered data to Parquet on S3:
+
+
+[source,sql]
+----
+CREATE TABLE s3_customers_b (
+     customerId STRING,
+     customerName STRING,
+     customerAddress STRING
+) WITH (
+     'connector' = 'filesystem',
+     'path'      = 's3://rmoff/msf-test-parquet',
+     'format'    = 'parquet'
+);
+
+INSERT INTO s3_customers_b SELECT * FROM customers_b; 
+----
+This works!
+For ten glorious seconds!
+And then…
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1d82a396e17c57966a_6702c4a8ac27223c85ab200a_667df1ac971367dcaf3543f0_AD_4nXfonZDSeyhV7DC2lOWAMWzB-R02UGsJ4DX-WD9CFW6hIfxMTMuuFlen8FUr3m8HsvBjI3LwnF5mWlJ7m0kPskkL0Ij-W-eQxTZExKb-fy0zZmTYmVug6q9lABeL82i4eLERsdL-W_5EPMS8QeKyTvHOspwbxCZj68ORZ2DaOjhcFGfuB5icUK4.webp[CleanShot 2024-06-19 at 23.14.01@2x]
+A  link:https://stackoverflow.com/questions/75962712/how-to-fix-flink-pipeline-noclassdeffounderror-org-apache-hadoop-conf-configu[couple]   link:https://stackoverflow.com/questions/75497819/reading-parquet-files-in-flinksql-without-hadoop[of]  StackOverflow answers suggest that even with the Parquet JAR I still need some Hadoop dependencies.
+So back to the familiar pattern:
+
+. Close the notebook
+. Force stop the notebook (it’s quicker, and I don’t care about data at this point)
+. Wait for the force stop to complete
+. Add hadoop-common-3.3.4.jar to the list of Custom connectors for the notebook
+. Wait for the notebook to update
+. ‘Run’ (start) the notebook
+. Wait for the start to complete
+. Open the notebook
+. Rerun the failing statement
+
+Unfortunately I’m now just off down the same whack-a-mole route as I was with Iceberg, this time with`java.lang.ClassNotFoundException: com.ctc.wstx.io.InputBootstrapper` :
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794bc_6702c4a7ac27223c85ab1ec1_667df1ac0bc186a048c29710_AD_4nXc3LNRnPmAHTXhoGBG-Pg2A4D9Ihc-qNbFIicFWDvs8JVgmZIfvX6BKuzfB57rXnXQM9rS9xKjdY2hFotYdQ7jpWK6HWonCeJGuQYk6LU6qQu-ggLLgdg9bUtyBMEDPYv5fXshnW45KNlAKHjVOqm2lyZjLDymfWDy5nDN2BLBz3w-R86kORx8.webp[CleanShot 2024-06-20 at 10.02.28]
+Even after adding `hadoop-client-runtime-3.3.4.jar`, I get the same error.
+So now I’m wondering about the versions.
+What version of Hadoop dependencies is Flink 1.15 going to want?
+I failed to find anything in the Flink docs about versions, so instead went to Maven Repository and picked a Hadoop version based on the date that was fairly close to the release of Flink 1.15 (May 2022)—3.2.2.
+
+This was the last roll of the dice…
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794bf_6702c4a7ac27223c85ab1f1a_667df1ac76f88f716786de6d_AD_4nXeA7HR-PJv_ZRYiGeKl15D4erSmeS0ZqInGfV4W2lx7F35HTdALJEOLdWziH2yBnnd-LtR7HIBwvCFa0pxgdfh-Up7EMTwq0vXUXNKBwhSzzhh51cquUcHwPp8lF3k8RWX4X4jrbaisKwz0OqPK7WB6LhIOeg58vkfrJ0t3ZcU_zgqvoiSnRWc.webp[CleanShot 2024-06-20 at 10.51.15]
+Still no dice.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794c2_6702c4a7ac27223c85ab1f1d_667df1ac8f9f8202e99edb0f_AD_4nXf6YD7IilFTAD8lduoeXL1_iCo3_6Hn-5rfuAHbz039naFsXvZaOnOzd58PP6GBIOhF1_RX5KpkwyQMAM4E7krRVxMGp5V6PGL3Sgwkt2S6rOHr-NfZ9bTpWHov17lo0nQinLTT5AOdYvyGztvbROCRICxzw3yyRnqW1pnYfE7cwKJspyiHpaY.webp[CleanShot 2024-06-20 at 11.06.12]
+
+==== Writing CSV or JSON files to S3 from Amazon MSF
+So now I’m going to fall back from Iceberg…to Parquet…to CSV…something…anything…
+
+Here’s the CSV table and`INSERT`:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794c5_6702c4a5ac27223c85ab1e72_667df1acde2d7d2d77d82592_AD_4nXfGvBc7WKV1ZG1mPWXsVJKddHDANiBIS1NPJsvlnT2n03x6jp3VQbiJuI2CvYuL95d2ZR4vHcFEtuldgefnAEd6YT1gfQOuY8y3z_XUKQr2Iq2sCgaGlG2huKQpq9jiNzmpU42yMB4P45NLFtKdg0pfUqzOVS5Raq_mXtvh134Ath_diDO4nA.webp[CleanShot 2024-06-20 at 11.12.23]
+But hey—a different error 😃 And this one looks less JAR-related and probably more IAM.
+
+
+[source,shell]
+----
+java.nio.file.AccessDeniedException: msf-test-csv/part-3b4dd54f-e4f5-452f-9884-9d131908302c-0-0: initiate MultiPartUpload on msf-test-csv/part-3b4dd54f-e4f5-452f-9884-9d131908302c-0-0: 
+com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 5209TZF3D521ZQJP; S3 Extended Request ID: QIQm89EsUXNYlHVKUHApjZjY1abc4RjK65rvLUW2BdtOC62AGgV99XjMwdlBNVJVVrOIHIGMoBaLqzh/038gyA==; Proxy: null) 
+----
+This actually seems fair enough; looking at the IAM details from the AWS console, the IAM role that MSF automagically configures only has access on S3 to the three JARs that I uploaded when I was trying to get parquet to work:
+
+
+[source,json]
+----
+{
+    "Sid": "ReadCustomArtifact",
+    "Effect": "Allow",
+    "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+    ],
+    "Resource": [
+        "arn:aws:s3:::rmoff/hadoop-common-3.2.2.jar",
+        "arn:aws:s3:::rmoff/hadoop-client-runtime-3.2.2.jar",
+        "arn:aws:s3:::rmoff/flink-sql-parquet-1.15.0.jar"
+    ]
+},
+----
+I added a second policy just to try to get things to work for now.
+It’s very permissive, and overlaps with the `ReadCustomArtifact` one (which arguably is redundant anyway if we don’t need any of the parquet and dependency JARs):
+
+
+[source,json]
+----
+{
+    "Sid": "ReadAndWriteData",
+    "Effect": "Allow",
+    "Action": [
+        "s3:*"
+    ],
+    "Resource": [
+        "arn:aws:s3:::rmoff/*"
+    ]
+}
+----
+Back to the notebook and things are finally looking hopeful:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794c8_6702c4a5ac27223c85ab1e8a_667df1ac9930d06a93656caf_AD_4nXfgH7zCY6SO8Lx55vQG3wMLdZnEhLCP_w1uT2kzQmEiuI7TAcQu_A7Bp8pButJhoQt5fCtdJGUN8mGc_zYNutZusGSyIr4-zywyCRBcs4coSJypijnu-vRfta2b6JtzMVoF_G4v-H6kh86jR5KUqnURgqZwyo_KRV10lLzLBjwBVAAh-ZZqZQ.webp[CleanShot 2024-06-20 at 11.29.58]
+Two minutes and no error yet!
+But also…no data yet:
+
+
+[source,shell]
+----
+$ aws s3 ls s3://rmoff/msf-test-csv
+
+$
+----
+Twiddling my thumbs and clicking around a bit I notice this little _FLINK JOB_ icon appeared a short while after running the statement:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579525_6702c4a5ac27223c85ab1e90_667df1ad2ea21eceef46c5d5_AD_4nXdOr8igRuhorGuIalhfBifagbDe5xEejFqkv1KzjhCQpPklbgcdRizvI_iIJwzW2O_eUpRpsUKEVHDhQuxuu2fM6CYHXAX-iA81FOUzmWuPXqFG6cjgg9cWGSFKhD5xEVS_oY04TU1-EblH5gVXGW89jkZva__oL1H3fhXGvEP8FjGQFYWAwNM.webp[CleanShot 2024-06-20 at 12.03.19]
+Clicking on it takes me to the vanilla Flink web dashboard:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795b2_6702c4a8ac27223c85ab1f7b_667df1aca020da32aa1dda88_AD_4nXfoZHR6Ne97hJSSvW2YgPl7acs4bRLLTJg-VnnGkPeVGsj-vzdwgDt8-9RfF25erbA6DW6J0pPqSZxpSiVk9GfhYX4lRi14746egR-s1dXTpRnVcOoHJ3d6_QMil7r4DwZXAjkQBYgSm9A8ljqz5j1KgIZB26hMEv_QwEv_Z7hsWpsye4p4cA.webp[CleanShot 2024-06-20 at 12.04.35]
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c57961b_6702c4a8ac27223c85ab1f93_667df1ac7bc0dc1af0e78f22_AD_4nXdrfdMHNPE_sehTRt7eImquAFhiO3wJ8EH_27AVuNPi-GrdrPtQAPgReda3WkJw8dvymVPjM6YF40E1lFRlh5g4Uyb4zXvxzgsoWv1YTKxULfb6iaVajk97EokulIT7FgP94qr-5EN44Rj8Mj31FMb035TijtssWebGsOG5mw3H08OoUxh_oA.webp[CleanShot 2024-06-20 at 12.16.56]
+This is nice, but doesn’t help me with where my CSV files are.
+A bit more digging around leads me to the  link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/filesystem/#rolling-policy[FileSystem documentation]  and specifically the section about when the part files are written.
+The `sink.rolling-policy.rollover-interval` defaults to 30 minutes.
+Sure enough, after 30 minutes (ish) something does happen:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794cb_6702c4a7ac27223c85ab1eca_667df1ac01a62a02fc4f9e2a_AD_4nXda6KKZXHjxAQU7wJczbuxcVrMALhRG7uBfF76DwP2Z9vkXTtQvbkhaSH7ndVxiwfY30pULoR19Z8X68_oabQZZ4BNhYYysrQfdD-yWQ-4ZZvI53JXCH_0Kz0NKHMxqhEj2jTFw5VUnxGN9ZK3unduwZR-jnJOaHk0SDZiO_aQMWAuBSFvq7A.webp[CleanShot 2024-06-20 at 12.21.28]
+
+[source,shell]
+----
+java.lang.UnsupportedOperationException: 
+S3RecoverableFsDataOutputStream cannot sync state to S3. 
+Use persist() to create a persistent recoverable intermediate point.
+----
+Funnily enough, I’ve hit a very similar error  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps#writing-to-s3-from-flink[previously] , which then leads me to  link:https://issues.apache.org/jira/browse/FLINK-28513[FLINK-28513] .
+Unfortunately this is a bug from Flink 1.15 which has been fixed in 1.17 and later…but MSF is on 1.15, so we’re stuck with it.
+
+Continuing our descent into oblivion of finding a file format—any file format!—to successfully write to S3, let’s try JSON:
+
+
+[source,sql]
+----
+CREATE TABLE s3_customers_b_json_01 (
+     customerId      STRING,
+     customerName    STRING,
+     customerAddress STRING
+) WITH (
+     'connector' = 'filesystem',
+     'path'      = 's3://rmoff/msf-test/customers_b-json',
+     'format'    = 'json',
+     'sink.rolling-policy.rollover-interval' = '30sec'
+); 
+----
+I’ve also overridden the default `sink.rolling-policy.rollover-interval` to 30 seconds.
+If I understand the documentation correctly, then every 30 seconds Flink should start a new file to write to on disk.
+
+Let’s try it!
+
+
+[source,sql]
+----
+INSERT INTO s3_customers_b_json_01
+    SELECT * FROM customers_b; 
+----
+After a break for tea, I came back to find the job still running (yay!)
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794ce_6702c4a5ac27223c85ab1e7b_667df1ac948fbae90426a9fd_AD_4nXed61r-Yjgj860nVlUOHio6due3sh_1dgr75FBp0TCF0uxUq065vJ1dqNiMfYyeobI6DdnN1dlChJJTjU1CBFEgvVoVoXORHhgBa2a9rxhMVh0Ie5-jHBYLJOSAUVoZGxfyAAMCS68Egb2ZWboPj2s3LX84cLkfc2TFm0zJ8poccMDXTdK9Veg.webp[CleanShot 2024-06-20 at 15.38.36]
+but no data on S3 (boo!)
+
+
+[source,shell]
+----
+$ aws s3 ls --recursive s3://rmoff/msf-test
+
+$
+----
+The final piece of the puzzle that I’ve been missing is  link:https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/fault-tolerance/checkpointing/[checkpointing] .
+By default this is disabled, which can be seen here:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794d1_6702c4a5ac27223c85ab1e93_667df1ac00828722cc67833e_AD_4nXcT_xLLMsveBvxgbHkX8nVsBhrODn7MHR58yBKj3kHpfzgodhEs7p5coYjNGPqUJCQ49-6piQDOfPaxoutPdoue_WMJE47iMA9K9ZA8YQYotSuhtdunm0hzofCdsBNRdM_6DFa0FN-Pi1A9p-APVPsa631BqleXrfks-cwWv0-ThIFIYo9ytkg.webp[CleanShot 2024-06-20 at 15.41.17]
+I can’t see a way to force a Flink SQL job to checkpoint, so canceled the `INSERT` and re-ran it with checkpointing enabled:
+
+
+[source,sql]
+----
+SET 'execution.checkpointing.interval' = '10sec';
+
+INSERT INTO s3_customers_b_json_01
+    SELECT * FROM customers_b; 
+----
+Ten seconds is pretty aggressive for checkpointing, but then I am pretty impatient when it comes to testing that something is working as I hope.
+And the good news is that eventually, mercifully, it has worked.
+
+
+[source,shell]
+----
+aws s3 ls --recursive s3://rmoff/msf-test
+2024-06-20 15:53:07      90187 msf-test/customers_b-json/part-09af660f-a216-4282-9d7c-fc0ad7225749-0-0
+2024-06-20 15:54:05      92170 msf-test/customers_b-json/part-09af660f-a216-4282-9d7c-fc0ad7225749-0-1
+----
+
+image::/images/2024/07/6702c4a9ac27223c85ab2051_667e7e8e23098ac0aaa3e47d_sigh-of-relief-chris-jewell_sm.gif[]
+_How frequently you set your checkpointing and file rolling policy depends on how many smaller files you want, and how soon you want to be able to read the data that’s being ingested._
+_Ten seconds is almost certainly what you_ do not _want—if you need the data that soon then you should be reading it from the Kafka topic directly._
+
+📓 You can find the source for the notebook  link:https://gist.github.com/rmoff/4700364b90e446adfca74ef22763a41b[here] .
+
+
+==== Wrapping things up on MSF
+Well, what a journey that was.
+We eventually got _something_ working to prove out an end-to-end SQL pipeline.
+We had to make a bunch of compromises—including ditching the original requirement to aggregate the data—which in real life would be a lot more difficult to stomach, or would have more complicated workarounds.
+But we’ve got a notebook that defines a streaming pipeline.
+Yay us!
+The final step with something like this would be to run it as an application.
+Notebooks are great for exploration and experimentation, but now we have something that works and we don’t want to have to launch Zeppelin each time to run it.
+
+
+==== Running an MSF notebook as an application
+MSF has an option to  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-notebook-durable.html[deploy a notebook as a streaming application] , although the list of caveats is somewhat daunting.
+The one which I’m stumbling on is this one:
+
+we only support submitting a single job to Flink.
+
+Looking at the Flink Dashboard I can see two jobs; the Kafka source, and the S3 sink:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794d4_6702c4a5ac27223c85ab1e6f_667df1ac8117a02ceb6d0c72_AD_4nXeB-k_7RFB6BT8sw2W6TbvFtkcqKyOnqZ_Sf4QJXyo-zuN00eXOiAE6RbD_iYMc6h1xiKBZ9hwO83aoC-BcW8ZLl2laz5ANC1XZzo3gQpCyX8XkBCHM4_DArgDa-zfJdnQrKTLEtOesxKQ1NZfs_9pZRWMwNoznvtqrQcbnOS28KOogPEevkK4.webp[CleanShot 2024-06-20 at 17.19.06 1]
+Let’s give it a try anyway.
+After stopping the notebook from the console, there’s the option under *Configuration* for *Deploy as application configuration* which after putting my bucket name in looks like this:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794d7_6702c4a5ac27223c85ab1e7e_667df1ac481212b1f3741bad_AD_4nXcAs1cbY_Q6qYCpKWkXNrXL40bfSuFcGoCxFm5xsNLtvZNi4I4YWeY4Jmmky2t171EBz5wqFDsJN0kkj2EDcP7Bh4jWzOrbcWm1CEKwQjiUik7OwJqRXX_LqJwH8V8-sGmMVMc099dFmVtZQB9-OLtENartbJ9e91xrq9-VENCdWv9lzkfV6Q.webp[CleanShot 2024-06-20 at 17.28.27]
+Now after clicking Run on the notebook it starts up again, and I figure it’s deployed it as an application?
+Maybe?
+But there’s nothing in the S3 bucket, and the notebook seems to just open as normal, so I’m a bit puzzled as to what’s going on.
+
+It turns out that what’s not mentioned on the docs page itself—but is in a  link:https://docs.aws.amazon.com/managed-flink/latest/java/example-notebook-deploy.html[related tutorial] —is that there are more steps to follow.
+First, build the application from the notebook:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794da_6702c4a5ac27223c85ab1e8d_667df1ac277084d1f678903c_AD_4nXfE77AQHrUSPt0ZF_9uskoYatcs7SfI5P8u2ckEF0N9HRH1ttaFSfzSz8I9nld7MbpmGj5WCigyAx4yKZ0nMSrvCrTCOZaUMoDXVhBnepOMpAnOY2q6O2BMNmeL80F3pCY4RGtOJS_vvvQQl2O2fYxmXdpPlTViXD0QLgpamNPMC5Rm6KcyHAA.webp[CleanShot 2024-06-24 at 10.07.13]
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579528_6702c4a5ac27223c85ab1e84_667df1ac9f921dd7985dc28e_AD_4nXdq_qmm8WN9fVEI40bch1uJR-Wo_eiL5oAc6tK0rFJ-IGcovcK-tT6MYXzIBzmPMH02KoYrAHuvou6o_qlcg24_YnCqgQG1HjQy9g3RR_HkmNtXU8trDs4m4Ep0SuRm1en5xY794ioGBQYzEmpOroTUv4K3KlZ5HVub2c2dHnyTvqTl0exjCkk.webp[CleanShot 2024-06-24 at 10.07.55]
+…but at this point it already has a problem.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794dd_6702c4a5ac27223c85ab1e81_667df1ace7faae16c43bcc4a_AD_4nXe9vaU122Ip-RMadB0OeR80Eo9UViMtn-8l7Wkya1j0STse3NDSAGMFy70myWEmd5Cljl_qGxuXMYIggAA_q6yYDkXad4peJtHel6fN1pZkV8GbUQ30dEmSFPKb2ATIsbc6zulBS3AM8sDkhChzBGuSEAu-O3ae5C4AQmlwbadyncwHtVfxMQc.webp[CleanShot 2024-06-24 at 10.08.44]
+
+[source,shell]
+----
+Kafka→⚙️→S3 (JSON) has failed to build and export to Amazon S3: 
+Statement is unsupported for deploying as part of a note. 
+Only statements starting with INSERT, UPDATE, MERGE, DELETE, 
+USE, CREATE, ALTER, DROP, SET or RESET are supported. 
+SELECT * FROM basket01 LIMIT 5
+----
+So, it looks like my notebook—in which I’ve done what one does in a notebook, namely to explore and iterate and evolve a data processing pipeline—is not ok as it is.
+I need to go back through it and trim it down to remove the interactive bits (the ones that made it useful as a notebook, really).
+
+The Kafka source and S3 sink tables and the view that I’m using to filter the data for the sink are held in the Glue catalog:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794e0_6702c4a5ac27223c85ab1e75_667df1abb34aef755e9aa972_AD_4nXfrolN6JvD_w2fT7z3i9-XBNXL7c52b4jZ2wUJi72eslJwIj0pvdiZxILs8ze-_OlHT25LlYudZ__6HX1TOA27SwxPvHVjTGlP2XykReA9e3bhng5iYeN-n94YTFurGV7JmWuZ0xM_Qpd1QbZxD9GdUaNrirrJFac0aHH4WsFiEOp09uPICUv0.webp[CleanShot 2024-06-24 at 10.18.25]
+So all I need in my notebook now is the actual ‘application’—the `INSERT INTO` streaming SQL that connects them all together.
+I’ve stripped it back and saved it as a new note:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794e3_6702c4a5ac27223c85ab1e87_667df1ac9930d06a93656c91_AD_4nXcV9D5NgDzWq9dabAQ8xw2U-XyCQcwAYmxRJ0ax0AdeT-yUjQsArZVsPDSNACLPzU0vN-LZ8lif1PqoltDg0lNF5sYDrakV5vHBHEJdUqUbHC-K5VKsMbar2GvKSVC_mZhGMlqNOQN-PryRYJ6NjViRu-guBGEJPzrrF4CL6QSdTMtyiaP6jls.webp[CleanShot 2024-06-24 at 10.19.44]
+Now when I build it MSF is happy:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795a0_6702c4a7ac27223c85ab1ec4_667df1ac6ec90a2647215164_AD_4nXd8Te2jsmfdSm51scHQJJp3E4prNZCL07QzCamy92cgmck85hrLUwcfAg4xK7GXle1hN4cpueYvc_4GRyJGUslmrM1xy62tAxftVTpQUVf8vY3eO1Z_s8dqg2_kBWOd9ryo2Sv7UhrFT2KyhNz5DS2-mzTqIrNJoflYWHnsxXIPyXbPv5dLAys.webp[CleanShot 2024-06-24 at 10.22.11]
+in my S3 bucket I can see code:
+
+
+[source,shell]
+----
+$ aws s3 ls s3://rmoff/rmoff-test-04/zeppelin-code/
+2024-06-24 10:22:02  447072452 rmoff-test-04-Kafka____S3__JSON_-2JZ3CVU11-2024-06-24T09:22:01.370764Z.zip
+----
+Being of a curious bent, I of course want to know how two SQL statements compile to an application of 400Mb, so download the ZIP file.
+Within a bunch of Python files is this one, `note.py`:
+
+
+[source,python]
+----
+# This file was synthesized from a Kinesis Analytics Zeppelin note.
+
+from flink_environment import s_env, st_env, gateway
+from pyflink.common import *
+from pyflink.datastream import *
+from pyflink.table import *
+from pyflink.table.catalog import *
+from pyflink.table.descriptors import *
+from pyflink.table.window import *
+from pyflink.table.udf import *
+from zeppelin_context import z, __zeppelin__
+
+import pyflink
+import errno
+import os
+import json
+import textwrap
+import sys
+
+
+print("Executing %flink.ssql paragraph #1")
+st_env.execute_sql(
+    textwrap.dedent(
+        """
+        SET 'execution.checkpointing.interval' = '60sec'
+        """
+    ).strip()
+)
+statement_set = st_env.create_statement_set()
+statement_set.add_insert_sql(
+    textwrap.dedent(
+        """
+        INSERT INTO s3_customers_b_json_01
+            SELECT * FROM customers_b
+        """
+    ).strip()
+)
+statement_set.execute()
+----
+So with the note built into an application ZIP on S3, we can now deploy it.
+_Somewhat confusingly for a product called Managed Service for Apache Flink, we’re now going to deploy the application as a “Kinesis Analytics” application—harking back to the previous name of the product._
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579516_6702c4a7ac27223c85ab1f20_667df1aced075cfe6250eb2a_AD_4nXclg_NkXbALnM346WEI6aTRc6BFAW0MqGSgM_tEpAXA9XkndUeLfDyLJKOOrYccbxz-w0GWdhErV4vMN9GK4kbZReR58iNPq2lElG4QSFU2w7GaLTKlvdNQp-Z9ERShGzV39jMN4lXQo1M15CpxrkrMmU6eJVlXM4OKpNDD0QZrpBU7_ZWfQA.webp[CleanShot 2024-06-24 at 10.38.59]
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795c7_6702c4a7ac27223c85ab1ea3_667df1acf377945efc6506ad_AD_4nXcHqM9NB7CDijDk6AqnlvTGNA17D86HXENGzgF4Tu795QjUPpM8PF23oEv3GFiAF2fHIWU0PueyucKkWE2ap-ddD1cMmSKn3k-Rom1C7SHTmQ9ZUVuIE185Ih_nIoNOJdV81HN4C-NJZcagfJoyHKBoKYLHo8c5m_zQnv5L4o-JZunad-gpfdA.webp[CleanShot 2024-06-24 at 10.40.24]
+This isn’t a one-click deploy, but takes me through to the “Create streaming application” page of MSF with pre-populated fields.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5794fb_6702c4a7ac27223c85ab1ea6_667df1ac01ddc45b856ccdb0_AD_4nXeVQ4HJy2cntV3y6gRJfuhJs71avQmv4zgpjY2CTv5BW1uwb0VRdpkmVP9QUr0afI9jLoLu1fhMfRfCHi6aOPTr-pZA5CFIK6JisSv8qNlwiiMuTTsgqhTunDc88qQIk2kqW1Tny54RHU20HCHdhWUTWM07FmaM1TWeKR-wwHP_eVtVbgG3KGk.webp[CleanShot 2024-06-24 at 10.41.31]
+The next step is to click *Create streaming application*, which deploys the Python app that was built from our notebook.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5794fe_6702c4a7ac27223c85ab1eb2_667df1acb2c560a6b4f2b81f_AD_4nXf7NIccYzqF8xVXwzMlu1kdvAM40xIH8TjKF33di-KR19mNUteh8dV-zUuFF-D5LHVUKtStk95ePXmSyiXs6ji_dZCIHxdQS8nOYRGCQ0nGBelr6dCpG6yCRGqtobAkktkFlfnahk9Rf-7XGR5_Z24QSbwlWnFURmsVlveT8GLpKL4sddyKEic.webp[CleanShot 2024-06-24 at 10.42.28]
+Finally, we can *Run* our application:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579501_6702c4a7ac27223c85ab1ea0_667df1aceec53fc7797479e6_AD_4nXezDVTQA4jhBqe-RGyKdNGMQTauUooqM01TQXvV7YRLtBb45bWEIiG6c89ivJo5MnQdvkXGeKP65Z2xtHUuIjwp8U1h4xaFRgO7EPKUsMuGLYhq0oUoCW0aF72kBeujhhXUDBOGArF_30f2b3OS6NZKyqsBTBnrx9bqRO_vPwBCas4fXJymOGg.webp[CleanShot 2024-06-24 at 10.45.05]
+At this stage, in theory, we should see the records from our Kafka topic come rolling into the S3 buckets, filtered for only customers whose name begins with `b`…
+
+The application is running:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579519_6702c4a7ac27223c85ab1eb8_667df1ac19c50c47167f2446_AD_4nXeBkiqRM7AkHOwu3s6yD21igni0fqDwBwrG2I2eahtw3pFfLT23xT1juYrbpC-ZE1qg_-bTSPkOKYLvXtwMKlHkHG-shyZXEQTlILMgBBoxt0BNbN02KMAHqXpMqOJJXXCQU5X4ogcAqQtL6mabyN7EmiRNp58Y38GaNe2HAY3jpARl_uCPB6c.webp[CleanShot 2024-06-24 at 10.47.50]
+But on the Flink dashboard that’s available with MSF applications, I don’t see any jobs:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57952e_6702c4a7ac27223c85ab1eac_667df1ac282c551b90a1ff37_AD_4nXcQJjw_kg6OgPF-Y2pDWltLENA4XLUX4LqD6H18vJQ4pSjqoAUXcCLdrlMTaNDAlc1fTWNQBxU2ntuLUmn5tQReu9e-jk8wTa4Xpm_NTfR8TCX4e8swhbnENqRfEsfMyFIIciOSNrNuVVIzvo57ceGwEHzNTKjG-ijRSt5DK0cmuWOQoZeHr2Q.webp[CleanShot 2024-06-24 at 10.49.37]
+Looking closely at the MSF application dashboard I can see under *Monitoring* the *Logs* tab, so click on that—and there are some errors.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57951f_6702c4a7ac27223c85ab1eb5_667df1aceb40816ddd77f2c1_AD_4nXcnkoNQ3edX_gOqmkgpq2aqh1KKZtKMvqZh_CORR4EeHT7Uyu6i49DP6N_Ka4JJf2d-ob5w6FJ9LQRPztibfJUMi1LaQ5lNydWMA9WS1jeSpiuQkzuJtAcIbNbK8jvhv13KXDR1gizYexoR_2AA_AVRTpoiz7ibAAq4gytEiAAJcAgSCKEprQ.webp[CleanShot 2024-06-24 at 10.50.43]
+It looks like `Run python process failed` is the root error, and unfortunately there’s no detail as to why, other than`java.lang.RuntimeException: Python process exits with code: 1`.
+
+At this point I  link:https://dictionary.cambridge.org/dictionary/english/yolo[YOLO] ’d out—getting some Flink SQL to work in the notebook was trouble enough, and deploying it as an application will need to be a job for another day…if ever.
+
+The final and most important step in my MSF exploration was to stop the streaming application and the notebook, since both cost money (even if they are not processing data).
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795a6_6702c4a5ac27223c85ab1e78_667df1ac0a062f494260e498_AD_4nXdikAWiMOMsFasukRu2ObO3UGd3_gGQ1Td_m9bzacXzNDX--Pn4XPgRqjN9bEJ-DvAIeJO78pYNDiuE_5bFcUAn7Ynf3k_AFHSDGIb9N1xoNsMRxbBGhH5yWI8nU601ubVC8O3EeD7hN4vJ7f0haAAMzb0Cgg4aE7nhUPuhmveYs45pUGN4MMs.webp[CleanShot 2024-06-17 at 12.25.59]
+Phew…so that was Amazon MSF (neé Kinesis Analytics).
+What does it look like getting started with Flink SQL on Decodable?
+
+
+=== Running Flink SQL on Decodable
+Decodable is all about doing things the easy—but powerful—way.
+Not because you’re lazy; but because you’re smart.
+Where’s the business differentiation to be had in who can write more boilerplate Flink SQL?
+So things like connectors don’t even need SQL, they’re just built into the product as first class resources.
+
+
+==== Reading data from Kafka with Decodable
+From the home page of the product I’m going to connect to Kafka, and I’ll do it by clicking on the rather obvious “Connect to a source”:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c57962a_6702c4a8ac27223c85ab1f84_667df1ac78128194f0070b14_AD_4nXclp9PwI4ax1FlnHh017U6-GCA6a-fS4Qg_IXaHndbRG8D0B0Ha4sw2ccQdApamvtO2VBz6AUbjZAzJkDhnH3QNbJ85U2eVaS2Wko1KUaasqvPcPlcheqDPPHMOUk9M6Kh5jM5tO-z_4uMU48NnSeSaDHAvG0aJMwaNK7XnW8vsM1sdLJD33SM.webp[CleanShot 2024-06-18 at 16.02.19]
+From the list of source connectors I click on the Kafka connector…
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579627_6702c4a8ac27223c85ab1f8a_667df1ac4ad10d8e7a110165_AD_4nXeIdGDzEC_QKuV1Xm8iJ2-WlfSN2jBSxMjG-m0cS35NzsmM_UTq-AGwEKsuzsCKBgoO6uF17oFh9e5kqFAY5GJNXNxl3-KXeQ5BRGVBT1Ym0ICQCgXc7fOyecH3TJ-m9zCuwGqBC1oA8nfOc3rP-krIplea1OUb3XWba_cRgGManUrnPt87C5c.webp[CleanShot 2024-06-18 at 16.05.15 1]
+and configure the broker and topic details:
+
+
+image::/images/2024/07/6717dc1b82a396e17c5795b5_6702c4a8ac27223c85ab1fe5_667e7f7a96b712fe2849c431_kafka-01.webp[]
+Next I need to give Decodable a destination for this data:
+
+
+image::/images/2024/07/6717dc1b82a396e17c5795a9_6702c4a8ac27223c85ab2006_667e7f85ee23ac35599b6c4b_kafka-02.webp[]
+On the next screen I need to provide the schema.
+If I had a proper schema to hand I’d use it; for now I’ll take advantage of the schema inference and just give it a sample record:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795bb_6702c4a7ac27223c85ab1eaf_667df1acaa665cf51c36b07f_AD_4nXdoiEcRZYPvdvNAXE3bfhjmpc167PhOOhk1m0jVhourU5kuBlAGr4GtheZ0X6_wgQCQZnKClVxjAgDQKdR9TAI_-y9jQxoEFozVFHBkPf1zsMusl1ukUmldMZIMXy0QuQhY1ByQA4iX9X09K2NENgSuqAHZ3lRhcOpiTa_Y9LnUOq7lSJr3IZM.webp[CleanShot 2024-06-18 at 16.09.50]
+From this it picks up the schema automagically–I could further refine this if necessary, but it’s good for now:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579513_6702c4a7ac27223c85ab1ebb_667df1acf46d977724786891_AD_4nXePi2smafv9hc_Pv-DwdBXS1dL-tDfM3qGglboZfTcQ9qFrhG7MRiqhiXJ_0ZJAIOc-jpxMo5nxTn-tcIwD7SkpYy0V6jPxAJP9vF0zRBaZEgdjUObG0DEOTcp5Yk9-XVeC1EXpE8f0ekJFAXKoW3UYXaYEO6wDbHYn80i5YffVTgzdFNKkVSk.webp[CleanShot 2024-06-18 at 16.10.22]
+Once I’ve created the connection I click *Start* and shortly after the metrics screen confirms that data is being read successfully from Kafka.
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57952b_6702c4a7ac27223c85ab1ed9_667df1ac03154df610baa33c_AD_4nXcw_VRF6CT_uqcCP6rKIgcOUasvak5id7cRUuGunXKp6sLHNHMopVxXu1FCa5kpI8jeQHX-xKqF1wPHtBVTREE8ZKIorj9klZFePg2OGLbxA3mJVzPUefNx-4H4KWVVpBGTMvpR1lZfNYSo29K3yHAd_v3z-yrOVkTlK5rEx0-7K7je48FW9OE.webp[CleanShot 2024-06-18 at 16.19.25]
+Let’s check that we can indeed see this data by clicking on the stream that’s linked to from the connector page and using the preview feature:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579624_6702c4a8ac27223c85ab1f81_667df1acd19b8242069b4e01_AD_4nXc6qiX0XEWP4k7zTCFgn6ihXI8pVsNjbkf_CjJOyqUnC021esMrMyAaIopqY0OGR7j7mPQD_gxLf8PKZWPlURkSFhErgVjj1PyQkkYrBnsqFTPeL1MrpwMDTSesLkzc7sBimiwCJespZJOsjQQy2dBcxUYKnGJctB1vWZayoQsD0uIikactvPk.webp[CleanShot 2024-06-18 at 16.20.52]
+Looking good!
+
+Let’s now look at the next bit of the pipeline; processing the data to create aggregates.
+
+
+==== Flink SQL in Decodable
+From the stream view of the data, I click on the *Outputs* and *Create a pipeline*
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795af_6702c4a7ac27223c85ab1ed0_667df1acde2d7d2d77d825bb_AD_4nXcHUNajWEXLYlqUfn3Sztxy8pf1ONmk6V1G4WhdFMHUDr_HqNwE5kVYkjSv3gue5jC14loLGaKtXQqkFAukz-KcEirWeq9m_3yejIRLtOSi7acVvoAOvylc9s1RhaZcGAs1sI5Qw4rDJdxe8dEvOCWDiaYUrX7A5nEM2PWN2M6MB0NxGgT97UU.webp[CleanShot 2024-06-18 at 16.22.15]
+This takes me to a SQL editor.
+I’m using pretty much the same SQL as I did originally with MSF above.
+The preview is useful to make sure my SQL compiles and returns the expected data:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795c1_6702c4a7ac27223c85ab1ec7_667df1ac569945e297da2e89_AD_4nXerkARWmahAZJcrq4Dfl9tO9wG0R_MNWbTBrVVTvkQsrWhOffbRPtehNjSlC3wi3WwWl2jd453VUGvvbLAnHqDrC0uUqEWcbd040ZUfXwAh9UmSndgrg5rXg7R1CimJIZA51WgJj25lqkIAv0mfm29LM98dld7Q01GuKEet5OyG57S97XRGTg.webp[CleanShot 2024-06-18 at 16.32.31]
+You may notice the `INSERT INTO` there too.
+This creates another stream which holds the continually-computed result of my query.
+As new records are sent to the Kafka topic, they’re read by Decodable, processed by my SQL pipeline, and the `basket_agg` stream updated.
+This is the stream that we’re going to send to Iceberg in the next section.
+
+The final thing to do, since we want to use `customerName` as the primary key for the results (that is, the one by which the aggregate values are summarised), is use a `COALESCE` on `customerName` so that it is by definition a `NOT NULL` field.
+The final SQL looks like this:
+
+
+[source,sql]
+----
+INSERT INTO basket_agg 
+SELECT COALESCE(customerName,'unknown') AS customerName,
+    COUNT(*) AS unique_items,
+    SUM(quantity) AS unit_ct
+FROM basket01
+    CROSS JOIN UNNEST(products) AS t(productName, quantity, unitPrice, category)
+GROUP BY customerName
+----
+With the SQL created and tested, on the next screen we define the stream and set its primary key explicitly:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795a3_6702c4a7ac27223c85ab1ecd_667df1ac5c1163b8e8839d91_AD_4nXek5xwXzyaUUsZC7a8Db3p4cq0xA1_RsRJSzmfbDkKKQ6hQnF7ygQGMfw3oEPcul4tX5RXnYwyB27bPadLa5-mH-ovae5W6NMMgcPC6-yh4OUTF-LjJ_9kWLugnj6Jr2SLIjLBeev4KZVyqBmAwYR3YlCAOaKooHJVitVwC95wiWjWoVCYe9bs.webp[CleanShot 2024-06-24 at 12.42.48]
+Finally, I’ll save the pipeline:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57959d_6702c4a8ac27223c85ab1fe2_667df1ac27ed2fae92516d35_AD_4nXf7PcZUNdfgxZN1F0_TRrdDTGyZHkxmRWkGix7due84Y1PfpbyxbL1V_qt2Os6Kjhu06gKRbWENyp77aaZtn7OBl7r3s-O3U5irKxJDYWgFAQ0hDGS1IiE3ugMYDEPKavQZqjoOqU3WvH5WNKJXUaQr9JWkWpxOWYSRujDBqOcnwEZvnhe6Dw.webp[CleanShot 2024-06-24 at 12.44.56]
+and then start it.
+Depending on the amount of data being processed and the complexity of the pipeline calculations, I could adjust the number and size of the  link:https://docs.decodable.co/administer/manage-task-sizes.html[tasks]  used for processing, but the defaults are fine for now:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c579522_6702c4a7ac27223c85ab1ea9_667df1ac7e2404fee1ac35c8_AD_4nXfQxwwu4j2BI0gOYUelDok1xC-n_ss5EMmOC8-QOm8nIBJditXem4F6tGdOxir_U9LbOLdkmUkWoFbP0lY53H9BrQhSsiKg-4k3ROaaA1PO2_T6uD4d5L2geEoM59topTBj8OF5j64SKZdKlh1Rp62eJeOxCHX-2XTi3U2CJEabR1EfRvS9AdA.webp[CleanShot 2024-06-24 at 12.45.51]
+Now I can see data coming in from my Kafka source (`basket01`) and out to an aggregate stream (`basket_agg`):
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c57962d_6702c4a8ac27223c85ab1f87_667df1acf6e3c70e81a48b18_AD_4nXclQ9Rr6bKolH7I2cNPv7o3dKJ-hSPYL90IjoGsH6k13eIK88o_YJ-9Qqwe-JFD8fzsh1yYdsA9SDqd6FfiUzOf4UnsOs7lIzQ_GGUAlgsIlDUwFdUP2X_U8U3GKg6_cgEaD6e9o2IZpI69B92qiyEngfUBrJN7_jJOlaudcAd54x4JHZadScg.webp[CleanShot 2024-06-24 at 12.51.32]
+
+==== Writing to Apache Iceberg from Decodable
+The final part here is to wire up our new stream, `basket_agg`, to the Apache Iceberg sink.
+From the stream we can directly add a sink connection:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795be_6702c4a8ac27223c85ab1fdf_667df1ac8a617e4076666277_AD_4nXe8wNRwSZVXyWfg1YHLaNl46HzI_SSZzpuYsOJkaAQOxVdFBNio88r89J_920EnR9fX_E8AwbcFraI-4Fqv2Dfp8XlApSZYrF5hK4ndmLMX8NU6fvRZoPyJwRMU95CZL73Ycmt1qHZJI8esFK90gfeyLrtdDcLKVSn_9Y1g5SWMHwsvimbBZg.webp[CleanShot 2024-06-24 at 14.36.34]
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c579621_6702c4a8ac27223c85ab1f8d_667df1acbed2f9bc0b6aeff4_AD_4nXdo-iIoBIU200FBiAxpvcH7IctsMZw7wnIMwv_13oZ05P41bblF_CjfkiqBPobKHN-TzAvD9DXyTWTCOXM0JE88q896UY34eyV6z4BIukCHeC4cWpEBJRu34gQ7JwSalVrXa3RFy3hWoSrzEBdSy05hvXoK4hfAWKQy6AJ5-Qj2fx0rglePVMw.webp[CleanShot 2024-06-24 at 14.37.02]
+Then it’s just a matter of entering the type of catalog (AWS Glue), table details, and an IAM role with the necessary permissions:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c57959a_6702c4a7ac27223c85ab1ed3_667df1acd266b39d117a5902_AD_4nXcaW2SJ_F2PIFWrMQTZuQmGYYkeC0amNnR99v0zrQVZHwXlaYxDcs5cyGduUb6eomaZnFPIPVMAxVnB3YNW3JIQKqppwkGhOTtpnbMYd-MUBbzwX6s_Qs5UUpEj0Yzov5MrOWO_cQytEbZccQQtQvrQxknuAYQVX-vAE_k-yMFNWofc3Fud1YU.webp[CleanShot 2024-06-24 at 14.40.52]
+Finally, save the connection
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795b8_6702c4a7ac27223c85ab1ebe_667df1ace023a7b5bc2a21ab_AD_4nXeKYqluG7awPL9gs0N9eBS80t8DRHb2k6ujUkGgToaTJERJ6n74MpOlOD1iM2GVilu0Ek-8Sb6w4PKzznqmijocUDZqzIq9cZM7w2o6veLInRCBxWeqIKz9lvvUXHpOGUCmMOC3OzFhsyRiihSJl9FDquibMzFjkVr-WrN4AjZ92GTZERpnN40.webp[CleanShot 2024-06-24 at 14.41.56]
+and start it.
+With that, we’re up and running!
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795ac_6702c4a7ac27223c85ab1ed6_667df1ac69b1efb4110b7b49_AD_4nXezF74zA4-qsZyFDYail6T0SEyxDigIfFUUm9i3kHsHjMcNyth7imZlLrTFVBkPCuvPWxozlkT_dpfhQjXkvUl4OqfoudgyfIzQp_X2gX40D3fefzkgX3Ec12zdLIlMaRq8ewDL10ZYSfrlJfW8oLLx-oQ-zaob6KDyVCbDlq7Niow62rddols.webp[CleanShot 2024-06-24 at 15.14.09]
+
+[source,shell]
+----
+aws s3 ls --recursive s3://rmoff/rmoff.db/basket_agg_01/
+2024-06-24 15:13:31     752343 rmoff.db/basket_agg_01/data/00000-0-be4c1e53-17c1-429c-a4c9-7680f92a2eac-00001.parquet
+2024-06-24 15:13:32     206222 rmoff.db/basket_agg_01/data/00000-0-be4c1e53-17c1-429c-a4c9-7680f92a2eac-00002.parquet
+2024-06-24 15:13:30     122327 rmoff.db/basket_agg_01/data/00000-0-be4c1e53-17c1-429c-a4c9-7680f92a2eac-00003.parquet
+[…]
+----
+For completeness, here’s the Iceberg data queried through Amazon Athena:
+
+
+image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795c4_6702c4a8ac27223c85ab200d_667df1ac65b64e1b7e6b4594_AD_4nXe91ewZMohn69PmE8MvV-7PKgl1tATBcKyT90qTmvS_TWf54NnafSPipQext_PsJDmx7h6Ir-ElH3AniS4GpCzRzTT87EUGz5ZyYHt4X1JiFJnr4IWoRJzW4V6MTOtMX_0fFQcl6InoNjpkU3SfVc2TBaSrZS_XzcYGDm4bowCIzYHrSa0yoS4.webp[CleanShot 2024-06-24 at 15.26.42]
+
+==== Running real-time ETL on Decodable in production
+In the same way that I looked at what it means to move an MSF notebook through to deployment as an application, let’s see what that looks like on Decodable.
+In practice, what we’ve built _is_ an application.
+There are no further steps needed.
+We can  link:https://docs.decodable.co/monitoring/monitor-decodable-system-health-and-activity.html[monitor]  it and control it through the web interface (or CLI/API if we’d rather).
+
+Decodable has comprehensive  link:https://docs.decodable.co/declarative/overview.html[declarative resource management]  built into the CLI.
+This means that if we want to  link:https://docs.decodable.co/declarative/query.html#export[store the resource definitions in source control]  we can download them easily.
+This could be to restore to another environment, or to promote through as part of a CI/CD process.
+
+
+=== Conclusion
+We’ve seen how two platforms built on Apache Flink offer access to Flink SQL.
+
+On Decodable, the only SQL you need to write is if you want to transform data.
+The ingest and egress of data is done with connectors that just require configuration through a web UI (or CLI if you’d rather).
+Everything is built and deployed for you, including any dependencies.
+You just bring the config and the business logic; we do the rest.
+Speaking of REST, there’s an API to use too if you’d like :)
+
+On Amazon MSF, SQL is used for building connectors as well as transforming data.
+To use a connector other than what’s included means making the JAR and dependencies available to MSF.
+Each time you change a dependency means restarting the notebook, so iteration can be a frustratingly slow process.
+The version of Flink (1.15) also doesn’t help as several features (such as`CREATE TABLE…AS SELECT`) aren’t available.
+Lastly, once you’ve built your pipeline in SQL using the Studio Notebooks, to deploy it as an application means bundling it as a PyFlink ZIP and deploying it—something that for me didn’t work out of the box.
+
+Ready to give it a go for yourself?
+You can find Amazon MSF  link:https://aws.amazon.com/managed-service-apache-flink/[here] , and sign up for Decodable  link:https://app.decodable.co/-/accounts/create[here] .

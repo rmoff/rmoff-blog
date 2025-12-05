@@ -1,0 +1,282 @@
+---
+title: 'How to get data from Apache Kafka to Apache Iceberg on S3 with Decodable'
+date: "2024-06-18T00:00:00+00:00"
+draft: false
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+image: "/images/2024/06/kafka-iceberg-decodable.webp"
+---
+
+NOTE: This post originally appeared on the link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[Decodable blog].
+
+link:https://iceberg.apache.org/[Apache Iceberg]  is an open table format.
+It combines the benefits of data lakes (open standards, cheap object storage) with the good things that data warehouses have, like first-class support for tables and SQL capabilities including updates to data in place, time-travel, and transactions.
+With the recent  link:https://www.databricks.com/company/newsroom/press-releases/databricks-agrees-acquire-tabular-company-founded-original-creators[acquisition]  by Databricks of Tabular—one of the main companies that contribute to Iceberg—it’s clear that Iceberg is winning out as one of the primary contenders in this space.
+
+<!--more-->
+With all these benefits, who wouldn't want to use Iceberg?
+And so getting data into it from the ubiquitous real-time streaming tool, link:https://kafka.apache.org/[Apache Kafka] , is a common requirement.
+Perhaps you've got data from your microservices that use Kafka as the message broker and you want to land that data to Iceberg for analysis and audit.
+Maybe you're doing data movement between systems with Kafka as the message bus.
+Whatever the data you've got in Kafka, streaming it in real-time to Iceberg is a piece of cake with Decodable.
+
+
+image::/images/2024/06/6717dc2082a396e17c5796f5_666b8182c3f6e884ad6fefbf_AD_4nXfJJjuYnfNDdRq87E-vQMLH0KruAgoqZxKh30IfnlgatmusWo1qQx-QQzDp3uNdNAag-dKwtneg1fYEOvr_ac_8QRL5j1Do_aX5rejyNSeYhrfYmn0OA6XNOKkvKIec0idcaJr9vzblDwSBeCpJJFG2Gok.webp[]
+Decodable is built on  link:https://flink.apache.org/[Apache Flink]  and  link:https://debezium.io/[Debezium] , but the beauty of it being a fully managed platform is that you don't even need to know that.
+_I mean, you can know that, because I've just told you._
+_And in fact, you can_ link:https://docs.decodable.co/pipelines/create-pipelines-using-your-own-apache-flink-jobs.html[bring your own Flink jobs and run them directly on Decodable] _._ But I'm going off on a tangent here…to do data movement and processing with Decodable, you use a web interface, CLI, or API to define connections, and that's it.
+You can add some processing with SQL along the way if you want to, and if you do it's again just web, CLI or API.
+Not a jot of code to be written!
+
+So let's get started.
+In this scenario we've got point of sale (PoS) data from multiple stores streaming into a Kafka topic.
+It is at the basket level, telling us for a particular transaction who the customer was, which store it was at, and what the customer bought.
+We're going to stream this to Amazon S3 in Iceberg format so that we can then build some analyses against it to answer business questions such as the number of baskets processed during the day, and volume of items sold.
+
+
+=== Step 1: Set up a connection to Kafka
+Our Kafka broker has a topic called `supermarketBaskets` with data in each record that looks like this:
+
+`Key:`
+
+[source,json]
+----
+{
+    "basketId": "4728c75b-ed83-eff3-9ed9-3fb11eb83443"
+}
+----
+
+`Value:`
+
+[source,json]
+----
+{
+    "customerId": "d540b741-d188-ecd6-601d-de1b1b509502",
+    "customerName": "Ardath Jenkins",
+    "customerAddress": "Suite 726 730 Jeffry Ranch, East Isrealview, AR 73579",
+    "storeId": "e1196df6-bb39-ab63-1082-4deafadc57f2",
+    "storeName": "Leuschke-Langworth",
+    "storeLocation": "Haiside",
+    "products": [
+        {
+            "productName": "Intelligent Plastic Wallet",
+            "quantity": 4,
+            "unitPrice": 13.13,
+            "category": "Beauty, Home & Outdoors"
+        },
+        {
+            "productName": "Sleek Marble Shoes",
+            "quantity": 5,
+            "unitPrice": 3.61,
+            "category": "Clothing & Games"
+        }
+    ],
+    "timestamp": "2024-06-05T11:21:56.736+0000"
+}
+----
+Using the link:https://docs.decodable.co/cli.html[Decodable CLI]  we'll create a *source connection* for ingesting the messages from the Kafka topic into Decodable:
+
+
+[source,shell]
+----
+decodable connection create                                \
+    --name rmoff-kafka-basket                              \
+    --type source                                          \
+    --connector kafka                                      \
+    --prop bootstrap.servers=my_broker:9092                \
+    --prop value.format=json                               \
+    --prop key.fields=basketId                             \
+    --prop key.format=json                                 \
+    --prop parse-error-policy=FAIL                         \
+    --prop properties.auto.offset.reset=none               \
+    --prop scan.startup.mode=earliest-offset               \
+    --prop topic=supermarketBaskets                        \
+    --prop value.fields-include=EXCEPT_KEY                 \
+    --field basketId="STRING"                              \
+    --field customerId="STRING"                            \
+    --field customerName="STRING"                          \
+    --field customerAddress="STRING"                       \
+    --field storeId="STRING"                               \
+    --field storeName="STRING"                             \
+    --field storeLocation="STRING"                         \
+    --field products="ARRAY"  \
+    --field timestamp="STRING"
+----
+From this we get the id of the connection that’s been created:
+
+
+[source,shell]
+----
+Created connection rmoff-kafka-basket (97f8ace4)
+----
+With the connection defined we can now start it:
+
+
+[source,shell]
+----
+decodable connection activate 97f8ace4
+----
+At this point let's hop over to the Decodable web UI and look at the data being brought in.
+
+
+image::/images/2024/06/6717dc2082a396e17c579707_666b818263d50583545649ac_AD_4nXcRcPhoe_wru5chUWqEcbT7vNzp9fI6Yp5Ncj5ZIfiVgT_fNa4hs0zQEZ7qfK4ubfiL_RCaP_pvzEp0x5hiaFSKvtSMD1dqiadh8L96ciQ8V9GmSlPhomSLhO2wf4kXZzLPJ-EKz52m_-urlrL_NyY7FcjQ.webp[CleanShot 2024-06-06 at 12.35.03@2x.png]
+
+=== Step 2: Set up a connection to Iceberg
+I've already created an S3 bucket, Glue catalog, and done the necessary IAM configuration.
+Now I just need to tell Decodable to send the data that we're ingesting from Kafka over to Iceberg by creating a sink connection:
+
+
+[source,shell]
+----
+$ decodable connection create                                                      \
+    --name rmoff-basket-iceberg                                                    \
+    --type sink                                                                    \
+    --connector iceberg                                                            \
+    --prop catalog-database=rmoff                                                  \
+    --prop catalog-table=rmoff_basket                                              \
+    --prop catalog-type=glue                                                       \
+    --prop format=parquet                                                          \
+    --prop region=us-west-2                                                        \
+    --prop role-arn=arn:aws:iam::xxxxx:role/rmoff-decodable-s3                     \
+    --prop warehouse=s3://rmoff/iceberg-test/                                      \
+    --stream-id $(decodable query --keep-ids --name                                \
+                  $(decodable query --name rmoff-kafka-basket |                    \
+                    yq '.spec.stream_name') |                                      \
+                    yq '.metadata.id')                                             \
+    --field basketId="STRING"                                                      \
+    --field customerId="STRING"                                                    \
+    --field customerName="STRING"                                                  \
+    --field customerAddress="STRING"                                               \
+    --field storeId="STRING"                                                       \
+    --field storeName="STRING"                                                     \
+    --field storeLocation="STRING"                                                 \
+    --field products="ARRAY"  \
+    --field timestamp="STRING"
+----
+One thing to point out here is that the stream id is dynamically derived.
+You can also hard code it based on the id shown in the web UI (as shown above when previewing the data).
+
+
+[source,shell]
+----
+Created connection rmoff-basket-iceberg (003247ff)
+----
+As before, once created, we need to start the connection.
+Because we want to send all of the data that we've read (and are reading) from Kafka to Iceberg, we'll use `--start-position earliest`:
+
+
+[source,shell]
+----
+decodable connection activate 003247ff --start-position earliest
+----
+Over in the Decodable web UI we can see that the connection is running, and metrics about the records processed +
+
+
+image::/images/2024/06/6717dc2082a396e17c579704_666b81824d25e28f748a297b_AD_4nXdg0_qEpm8T8MADsPFfTr-nBlHjA8yDqzU-5JiTFs-YU8KLxDlWrd869ctoHhOtjhcJI9F98YjvoeKFbbU5s-T5hvkI51r4gxqpexORIzQY9ZTDUng8_TmL7q9CBQA40joM4-MKNitssomsM4UhxHCePWs.webp[CleanShot 2024-06-06 at 13.35.04.png]
+Let's check that the data is indeed being written:
+
+
+[source,shell]
+----
+$ aws s3 ls s3://rmoff/iceberg-test/rmoff.db/rmoff_basket02/
+                           PRE data/
+                           PRE metadata/
+$ aws s3 ls s3://rmoff/iceberg-test/rmoff.db/rmoff_basket02/data/
+2024-06-05 18:07:22      30440 00000-0-dd5fc5f4-9821-448a-8bf6-b3b0a4e3d267-00001.parquet
+[…]
+----
+
+=== Using the Iceberg data
+
+==== DuckDB
+The wonderful thing about open formats is the proliferation of support from multiple technologies that they often prompt.
+Iceberg has swept through the data ecosystem, with support from distributed compute such as Flink and Spark, and query engines including Presto, and DuckDB.
+
+Using  link:https://duckdb.org/[DuckDB]  we can quickly do a row count check to make sure we're seeing what we'd expect:
+
+
+[source,sql]
+----
+SELECT COUNT(*)
+FROM iceberg_scan('s3://dw/iceberg-test/rmoff.db/rmoff_basket02/metadata/00640-ed419044-046c-44c0-a20a-e51f0cce381f.metadata.json', skip_schema_inference=True);
+┌──────────────┐
+| count_star() |
+|    int64     |
+├──────────────┤
+|        20100 |
+└──────────────┘
+Run Time (s): real 19.045 user 2.377048 sys 9.469687
+----
+We can also sample the data:
+
+
+[source,sql]
+----
+SELECT *
+FROM iceberg_scan('s3://dw/iceberg-test/rmoff.db/rmoff_basket02/metadata/00640-ed419044-046c-44c0-a20a-e51f0cce381f.metadata.json', skip_schema_inference=True)
+LIMIT 1;
+
+┌──────────────────────┬──────────────────────┬──────────────┬──────────────────────┬──────────────────────
+|       basketId       |      customerId      | customerName |   customerAddress    |       storeId
+|       varchar        |       varchar        |   varchar    |       varchar        |       varchar
+├──────────────────────┼──────────────────────┼──────────────┼──────────────────────┼──────────────────────
+| 4629c66e-7b28-2d3f…  | 0e65ac50-0c12-0cbd…  | Sarita Hane  | Suite 069 65438 Wa…  | 4238f9ef-0c08-a4c3…
+└──────────────────────┴──────────────────────┴──────────────┴──────────────────────┴──────────────────────
+----
+
+==== Amazon Athena and Quicksight
+There are a variety of tools available for working with Iceberg data to build queries.
+With the data in S3 and wanting a web UI (rather than CLI like DuckDB above) I reached for the obvious tool— link:https://aws.amazon.com/athena/[Amazon Athena]  (which is built on PrestoDB).
+
+Since I'm using the Glue catalog it's easy to find the table that I've loaded:
+
+
+image::/images/2024/06/6717dc2082a396e17c5796f2_666b818277a3b30c979cd9e2_AD_4nXffoy4JsnedDt5ppfmA2iKS2FUA-UaW5QyHNsY4xBMsZRbUEckpfuomLTm4gqVPeyIFmea6Dx79DxQiFfT884VjWIG7ElcJG5Tr1aak4rmLnm-5XhAobIif1PY7xmQnbBNPqk1VVZuDsOA_-1E4vFSdIu2e.webp[CleanShot 2024-06-05 at 19.02.08.png]
+From here I can write a SQL query in Athena to look at the data and expand out the nested `products` field using `CROSS JOIN`: +
+
+
+image::/images/2024/06/6717dc2082a396e17c57970a_666b8182c9b3461caad0bc80_AD_4nXf2rRvggwznql2ZVcsZcWleBye5yQQB3XhLpUv5K5NoKFRV5ezSCv81ivUoERzc7EioWkJjwimWmmqkuhAdL0GPHkmiqiabfKhlr-VVSvezrKqADEpYjDUYlz2TqRU0AgA7rgEsHjQH4J322sHs7Un1zBlp.webp[CleanShot 2024-06-05 at 19.01.45.png]
+Using this query, I then put together a simple dashboard in  link:https://aws.amazon.com/quicksight/[Amazon Quicksight]  (again; easiest tool to hand since I had the AWS console already open…).
+This uses a slightly modified version of the SQL shown above to split out the date and time components:
+
+
+[source,sql]
+----
+SELECT 
+  basketid,
+  customername,
+  storename,
+  "timestamp"  AS basket_ts,
+  cast(from_iso8601_timestamp("timestamp") as date) as basket_date,
+  cast(from_iso8601_timestamp("timestamp") as time) as basket_time,
+  p.productName,
+  p.quantity,
+  p.unitPrice,
+  p.category
+FROM 
+  "rmoff"."rmoff_basket02" 
+CROSS JOIN 
+  UNNEST(products) AS t(p);
+----
+Using this, I can plot the number of baskets (transactions) and products sold over time at different granularities, as well as a breakdown of unit sales by category.
++
+
+
+image::/images/2024/06/6717dc2082a396e17c57970d_666b818297bd5839934c8d8d_AD_4nXdBCNibph6MEM1FAcqCyxqqhg0GdeSHon4EcYerSo7JFf8YuUpTrm1cBOa9qEQXxORnZiKO63msMAtaLpZubFQk20Jomnhu_7eDPkZKfo3HWgtAFJIWdXTdl24RomsLgpnAVQ_RC10TeNiO2sDhfdNjaoma.webp[CleanShot 2024-06-05 at 19.39.19.png]
+The brilliant thing here is that this is not a batch process, in which I need to rerun a job to see the latest data.
+As new sales are made in the stores, the data will flow into a Kafka topic and through to Iceberg, ready to query and drive my dashboard.
+
+
+image::/images/2024/06/6717dc2082a396e17c5796f5_666b8182c3f6e884ad6fefbf_AD_4nXfJJjuYnfNDdRq87E-vQMLH0KruAgoqZxKh30IfnlgatmusWo1qQx-QQzDp3uNdNAag-dKwtneg1fYEOvr_ac_8QRL5j1Do_aX5rejyNSeYhrfYmn0OA6XNOKkvKIec0idcaJr9vzblDwSBeCpJJFG2Gok.webp[]
+
+=== Learn more
+Ready to dive deeper into Flink and looking to avoid some of the more common technical pitfalls?
+Check out the link:https://www.decodable.co/resource/top-5-mistakes-when-deploying-apache-flink[Top 5 Mistakes When Deploying Apache Flink] .
+
+
+=== Resources
+* link:https://app.decodable.co/-/accounts/create[Sign up to Decodable]  and try the Iceberg sink for free today—no credit card required.
+* link:https://docs.decodable.co/connect/source/kafka.html[Apache Kafka source connector]
+* link:https://docs.decodable.co/connect/sink/iceberg.html[Apache Iceberg sink connector]
+* link:https://github.com/decodableco/examples/tree/main/kafka-iceberg/decodable[Code used to generate this example]

@@ -1,0 +1,230 @@
+---
+title: 'Why Do I Need CDC?'
+date: "2024-10-15T00:00:00+00:00"
+draft: false
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+image: "/images/2024/10/why-cdc.png"
+---
+
+NOTE: This post originally appeared on the link:https://www.decodable.co/blog/why-do-i-need-cdc[Decodable blog].
+
+Whether it’s _Understanding CDC_ or _CDC Explained_ or even _Five things about CDC; number four will shock you!_, the internet is awash with articles about  link:https://en.wikipedia.org/wiki/Change_data_capture[Change Data Capture (CDC)] .
+CDC is the process of incrementally extracting data change events as they occur within a database.
+In this post I’d like to take a step back from these and look at the reasons why you might even want to consider CDC in the first place.
+From here we’ll then build on the requirements we identify to come up with a proposed solution.
+
+<!--more-->
+The starting point for any exploration of CDC is your data in a database.
+And most probably a transactional, or operational, one.
+You’ve got an order system, an inventory management system, you’ve got any kind of system that’s built on an OLTP database—where the focus is on getting the data _in_ quickly in a highly performant and resilient way.
+
+
+image::/images/2024/10/670e226e1f2a4fec8b668137_670d5e163a128c160a76c21c_AD_4nXf3o0BOdT2LF-cRdqT_0aFa0mAUoa6nM43dZ2b2GVZwDxutbks-xcixiZE1vEe4Jmz5AfaL2aFhudk7pACU0tOBWz1Nhlcmi_sK_-JFrKIIEaeZfMLK66fciRQVAsrx2NuXcqCd7ooZ10zz6Dnss6FxZ5GC.webp[]
+With that data in the database, you want to do something else.
+But before you can do it, you need the data out of the database.
+
+Or do you?
+Perhaps you could just use the data in place.
+After all, who doesn’t enjoy baiting the friendly neighborhood DBA?
+What could possibly go wrong with running unbounded queries on a production database that’s backing an operational system?
+🤡
+
+OK, I jest, I jest.
+A _huge_ amount could go wrong.
+OLTP systems are primarily optimized for writing and reading data for specific transactions, such as the creation or update of an individual customer order, rather than for efficiently extracting large volumes of data.
+Depending on what kind of things you want to do with the data your query access paths could be both slow for you, and worse, slow down the production system.
+
+
+image::/images/2024/10/670e226e1f2a4fec8b66813f_670d5e16fdf3474b55b23bc7_AD_4nXeX0Vrcg_8W3KXzZ4rr6xjBUv83J_FOHGVebFtV85_Fdd6J1EnpUzINJQx7eRUZq6HghmQ70ioj8kVJodX8tJoV657HdMjOTMfY1jv7CTRi0d64oG5ZcG-fH-DtHoP7uOwbzPBnyo1UyZhexfdO5ADIb2zw.webp[]
+So let’s assume you want the data out of the database.
+Before we get onto _how_ (and we’re not burying the lede here, the answer is in the title of the post 😉) let’s take a moment to think about the kind of things that we might want to do with the data.
+
+
+=== Common CDC use cases
+* *Analytics* is the great big obvious one. Every man and his dog wants a dashboard or a data science notebook. Always has, and always will. The data to power these is not going to come from the operational database because it’s not optimized for that kind of querying. It’s going to be built on a data warehouse or data lake.
+* Perhaps a data lake is too slow, and we’re looking at *real-time Analytics*. The kind of things that power queries that are built into applications and need to return with low-latency. Again; you don’t want to be running this against your operational database. For quick response times you’ll want decent indexing as well as pre-aggregations. Here, you’d be looking at dedicated technologies such as Clickhouse, Apache Pinot, or Apache Druid.
+* *Other applications* might well want to use the data. Every time an order is placed, we probably want to think about updating the inventory system, right? Or our customer database, or a dozen other systems that users today will rightly assume are interconnected.
+* Boring, but important: *audit logging*. Your operational database will give you the current state, but it’d be rather handy to keep a record in cheap but reliable storage of every single change made and when, wouldn’t it?
+* *Query offload* is a catch-all that encompasses several of the points above and a few others. It’s basically to say, you want to query the operational data? Fine, but you do it against this other database instead, where you can’t break operational systems with your queries.
+* A distinct subset of query offload is the requirement for *streaming queries*. These can incrementally recompute aggregations on the source data as it changes, avoiding the need to reprocess a full dataset each time.
+
+
+_You can read more about_ link:https://www.decodable.co/blog/seven-ways-to-put-cdc-to-work[CDC use cases in this blog post] _from Gunnar Morling._
+
+
+=== Why not just query the production database?
+You can look at this list another way.
+There are some things that you want to do with the data but can’t against the operational database because you’ll risk impacting the system that it’s serving.
+Workloads like big number-crunching analytical queries is a great example.
+We might well serve the data from the same database _platform_ (e.g.
+Postgres, Oracle, etc) but optimized for analytical queries (i.e.
+OLAP) in configuration and table indexing and design strategies.
+
+The other aspect here is that the database we’ve built the operational system on is not the best one for serving what we want with our other uses of the data.
+Analytics, as mentioned, could be served from a data lake (S3 + Iceberg, for example).
+Real-time analytics from Pinot et al.
+We’ve not mentioned them yet but search indexes and application caches are two other important places where operational data is needed but in their own specialized serving technologies.
+For example, OpenSearch (indexing) and Redis (cache).
+
+The overarching point is; we need that operational data _out_, so that we put it somewhere else.
+Doing so gives us the best of both worlds; a performant operational system protected from the performance impact of other uses, and those other uses being best served by the respective optimal technology.
+
+My colleague, Gunnar Morling, put it succinctly:
+
+
+> Change data capture is one giant enabler; it lets you +
+>  +
+> * replicate data +
+> * feed search indexes +
+> * update caches +
+> * run streaming queries +
+> * sync data between microservices +
+> * maintain denormalized views +
+> * create audit logs and so much more.*
+*+
+>  +
+> Ultimately, it's liberation for your data.
+>
+> — Gunnar Morling 🌍 (@gunnarmorling)  link:https://twitter.com/gunnarmorling/status/1123191912800845825?ref_src=twsrc%5Etfw[April 30, 2019]
+ 
+=== CDC saves the day!
+This being a vendor blog, I am of course going to tell you that there is a silver bullet to all your problems, and that it’s CDC 😁.
+The thing is, CDC _is_ one of those patterns that _does_ fit amazingly well into a lot of system architectures.
+
+Before I get too evangelical, let’s pause to look at what CDC _is_.
+
+
+==== What CDC is (and isn’t)
+CDC, or Change Data Capture,  link:https://www.youtube.com/watch?v=zR2Ox4HWaXM[does what it says on the tin] .
+It captures changes to data.
+Specifically, changes made to data in one or more tables in a database.
+For example, the creation of a new customer record, an update to a purchase order, or the deletion of an inventory item.
+
+
+image::/images/2024/10/670e226e1f2a4fec8b668133_670d5e16045ba6cb9857053e_AD_4nXeZgl2HxVecgenkknVMN9OpfXeTeqEKucuaV_IRcExRByHhDQDzrbQrJo5mYQ6sxQp6vpzRJQHgWOrbutOa1WHI5t4AIPaNUuUC0h0rJihXkT8LZ50Sh8N4cyWPFCfiLWp57wfVJiGJV73IFPrSS48RpNk.webp[]
+So after three changes to the data by the application, we’d have three entries captured by CDC:
+
+
+image::/images/2024/10/670e226e1f2a4fec8b66813c_670d5e16ad5b3c699a70ad90_AD_4nXdqkz8RLL8GMrUN0Tq8cWmYIBbnzgyVv1-jiKHzB08tbpZC-yFBMKWhaF-chBqbXyIA30-3vJYKFPFZxPFBNWkPMUDhjY9FrYQJ8YWOuG-mRrzbhfsGj110OLBtiSIFSK6HIguAYm8Bb4kA6L2_on2V6zg.webp[]
+What happens to those changes is then up to the implementation of the CDC tool.
+CDC is _just_ the extraction of changes from a database.
+This is where one of the big confusions seems to arise around CDC:
+
+* CDC does not load or ingest data
+* CDC is not a method of ETL
+* CDC is not real-time analytics
+* CDC does not transfer changes to a target database
+
+CDC is often _part_ of an ETL process, and the output from CDC is often written to a target system, perhaps even for real-time analytics.
+But CDC itself is just getting the data out.
+
+One of the reasons there are misunderstandings around what CDC is stems from the different ways in which CDC can be implemented.
+Fortunately for you, dear reader, there is one way that is objectively better than the others.
+
+
+=== The best way to do CDC is log-based CDC
+Most databases are built on a concept known as the transaction log.
+
+It goes by different names (binlog, redo log, write-ahead log) in different implementations, but the concept is the same throughout.
+
+When you perform an `INSERT`, `UPDATE`, or `DELETE` against a table, that operation is recorded in the transaction log.
+This has nothing to do with CDC—this is just how databases work.
+The transaction log serves as a point of recovery should the server go bang.
+If that happens, the database takes the last known-good point and _replays the transaction log forward_, thus applying all the committed changes that were made since.
+
+What log-based CDC does is tap into the transaction log of the source database and expose it in a form that can be used downstream.
+This is what makes log-based CDC so powerful.
+The database itself uses the transaction log as its system of record, of absolute truth.
+What better way to get the highest possible fidelity of what’s happening in a database than the component that the database itself uses?
++
+_If theory is your thing, you’ll love Martin Kleppmann’s talk_ link:https://martin.kleppmann.com/2015/11/05/database-inside-out-at-oredev.html[Turning the database inside-out] _and the_ link:https://queue.acm.org/detail.cfm?id=2884038[Immutability Changes Everything]  _paper from Pat Helland._
+
+Log-based CDC has the following fantastically  link:https://debezium.io/blog/2018/07/19/advantages-of-log-based-change-data-capture/[powerful features] :
+
+* Low impact on the database
+* Low latency availability of changes to the database
+* High fidelity of the changed data
+* _All_ changes are captured, including DELETEs
+* The current and previous version of a row is captured
+
+* Efficient (only captures rows that change)
+* Cross-platform (read from one database, write to another)
+* Available for all common databases
+* Since it’s based on events, log-based CDC is an excellent match for integration with streaming platforms like Apache Kafka
+
+The rising star in this space is the open-source  link:https://debezium.io/[Debezium]  project.
+Founded and led by Red Hat, and often rebadged by vendors as their own CDC tool, Debezium supports  link:https://debezium.io/documentation/reference/stable/connectors/index.html[numerous]  databases and has  link:https://debezium.io/community/users/[wide adoption] .
+
+
+=== Pfff, I don’t need that, I can just do
+Okay, okay.
+Whether it’s “_Not Invented Here_” syndrome or simply skepticism about using the transaction log for CDC, you may well be thinking of other ways of capturing changes to data.
+AirBnB have a  link:https://medium.com/airbnb-engineering/capturing-data-evolution-in-a-service-oriented-architecture-72f7c643ee6f[nice run-down]  from 2018 of the options available and their pros and cons.
+Here’s a very quick look at the gotchas for other techniques, with reference to the list above of benefits of log-based CDC.
+
+* *Query-based CDC,* a.k.a., *Polling*. Relies on a data model for the tables that include a column by which differences since the last poll can be determined. Higher impact because you’re actively querying the database. Can’t capture deletes or before-state of changed rows.  link:https://youtu.be/4-MeJJt3B2Q?feature=shared&t=639[Learn more] .
+* Friends don’t let friends do *Dual Writes*. If your application needs the same data being written to a database, one way to achieve this is to have the source send it to both your application and the database. You don’t impact the database but you run the real risk of data inconsistencies and divergence, and unintended coupling.  link:https://developers.redhat.com/articles/2021/07/30/avoiding-dual-writes-event-driven-applications#[Learn more] .
+* *Triggers* are a feature of many databases, but using them for CDC requires you to literally code SQL in the source database for each condition you want to capture. You are then tied into needing to test, document, and maintain that code. When the code fires you need to do something with the event, which if you’re trying to replicate data outside of the database could get tricky. That’s before you’ve considered the performance impact on the source database of a trigger firing for every single change.  link:https://asktom.oracle.com/Misc/oramag/the-trouble-with-triggers.html[Learn more] .
+* *Table replication*. This is the sledgehammer-to-crack a nut approach. Instead of doing *Change* Data Capture you just do *Data Capture* and dump the full tables each time. Wasteful (unless every row changed), low fidelity (no change details per row), high latency, resource intensive on the source database.
+* Similar to the above would be *in-built replication* in which the database replicates tables to another instance of the database. This is fine if you want an exact replica of the tables being served by the same database, but not useful if you want the data on a different platform. It’s worth noting that built-in replication usually is built on the same transaction log concepts that log-based CDC uses.
+* *Comparing source and target* tables might make sense for a one-off data replication scenario, but is not credible as a genuine way of replicating changes from a source database. Each comparison execution will put a query load on the source database, similar to replication discussed above.
+
+
+=== Limitations of log-based CDC
+Remember, this is a vendor blog.
+We’re supposed to present these silver bullets as infallible, right?
+Whilst log-based CDC is pretty darn good and most of the time the correct answer, there are some challenges with it to be aware of.
+Some are more real than others, some have better mitigations than others.
+
+
+==== Is CDC expensive?
+No, unless you’re in Oracle GoldenGate (OGG) world.
+The Rolex-watch of the CDC world, OGG is well respected for a reason, but comes with a price tag to match.
+There are other ‘regular’ enterprise offerings, not to mention the open source  link:https://debezium.io/[Debezium]  project which is, well, open source!
+
+*Mitigation*: Did I mention Debezium yet?
+
+
+==== CDC can be more complex to set up
+OK, there’s a little bit more in this one, I’ll admit.
+Once you start diving into the world of transaction logs, you need to be on your DBA’s good side because you’ll need to do some work to configure your CDC tool to access it.
+Depending on what you’re then integrating with your CDC tool might also need some work to configure it to write the data where you want it.
+
+*Mitigation:* Log-based CDC is widely adopted and documentation is well-tested and thorough.
+
+*Mitigation*: If you use  link:https://decodable.co[a managed provider for Debezium]  a lot of the configuration and management is done for you.
+
+
+==== Does CDC have an impact on the operational system?
+Yes and no.
+The question is whether that impact is impactful or not.
+Whilst log-based CDC _is_ the lightest-touch way to get change data out of the system (see above for other, heavier, options), you are still interfacing with an operational system.
+You need to watch out for things like the  link:https://www.morling.dev/blog/insatiable-postgres-replication-slot/[Postgres replication slot filling up]  and eating all the disk space.
+You also need to make sure that whatever the source database, it’s configured to retain the transaction log for as long as needed for the CDC tool to read from it.
+If you don’t then you’ll miss change events.
+
+*Mitigation*: As above; log-based CDC is widely used at scale in production systems world-wide. Read the friendly manual, and you’ll be fine. Just make sure your DBA is on-board 😁.
+
+
+=== Log-based CDC in action—an overview
+Here’s a very simple overview of what you might build with log-based CDC.
+The requirement is populating a data lake from an operational database.
+We’ll use Postgres in the example, but the concept applies to any database.
+
+
+image::/images/2024/10/670e226f1f2a4fec8b66814f_670d5e17d16123873c4e0ff6_AD_4nXcdi7ZZf2LP4qXUXHtgBH6vfuteVWyhUCbDBxyTd656iKUfnBg4xjeuMX4dYcPUTj_PVQjWgVnyuD8NlujmScnKVIVp0OepUhtYxfu7TnqYvM4dVNwy0KADFwhCwDVE7Kf8RXGk3d3nGz5k82CtXXTgY3fO.webp[]
+* Any `INSERT`, `UPDATE`, or `DELETE` is captured in the write-ahead-log (WAL)
+* Debezium streams the changes as they happen to an Apache Kafka topic (although it’s worth noting that these days  link:https://www.decodable.co/blog/understanding-cdc-with-debezium-server-and-debezium-engine[Debezium doesn’t have to use Kafka] ). The Kafka topic buffers the changes and makes them available for downstream use
+* A tool such as Apache Flink or Kafka Connect reads the data from the Kafka topic and writes it in Apache Iceberg format to S3
+
+
+=== Okay Okay, I’m sold! Where do I buy a log-based CDC?
+_(I told you: this is a vendor blog; did you think the CTA really wasn’t going to be to sign up for our service?_
+_😜)_
+
+
+image::/images/2024/10/670e226f1f2a4fec8b66814c_670d5e171d0283de88249bd0_AD_4nXd_1bvudAxAa0jC7RBG0K2HrExF8pNRifjIpy73DQTRrCRjZtqPHSG4WNUIcGNweK9O2HIV7sSX7pFJsqvVw5wbqMCBuDZCNVBOYAxbLsdV4osK_oC9bJNozsmN_DZ0WraWB5rzqfr-V8ZbcAZ1ls-TdsEp.webp[]
+Well, since you ask, Decodable provides a  link:https://decodable.co[fully-managed Debezium service]  as well as a rich connector library for sending the changes captured to other platforms such as OpenSearch, S3, as well as other databases.
+We also have a Flink-SQL based stream processing platform so you can choose to transform the changes that are captured before sending them onwards.

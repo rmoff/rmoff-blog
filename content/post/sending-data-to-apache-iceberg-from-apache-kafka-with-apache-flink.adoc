@@ -1,0 +1,671 @@
+---
+title: 'Sending Data to Apache Iceberg from Apache Kafka with Apache Flink'
+date: "2024-07-18T00:00:00+00:00"
+draft: false
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+image: "/images/2024/07/6717dc3082a396e17c57a59a_6702b313ba409e39eee51f23_66884e3f38cc82cbe10d8b31_AD_4nXd2dALz1nQWoouC2exuwXTaEFKIOLoK7AB1ZJtco1Q40A8_ZDqryvMnnm3uDjFL4RyrdmZv3ImqmIvc0-wJKCDJEx7UA70I0SNd-lI5_gj59L_L_KDUkSgSHW_rJTgC4k2gD_kRFXrav8KZZwLZveF87JL-.webp"
+---
+
+NOTE: This post originally appeared on the link:https://www.decodable.co/blog/kafka-to-iceberg-with-flink[Decodable blog].
+
+_Sometimes it's not possible to have too much of a good thing, and whilst this blog may look at first-glance rather similar to the one that_ link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[I published just recently] _, today we're looking at a 100% pure Apache solution._
+_Because who knows, maybe you prefer rolling your own tech stacks instead of letting Decodable do it for you 😉._
+
+<!--more-->
+Apache Iceberg is an open-table format (OTF) which along with Delta Lake has been gaining a huge amount of traction in recent months.
+Supported by most of the big platforms—including now, notably, Databricks with their acquisition of Tabular—it's proving popular in "Data Lakehouse" implementations.
+This splices the concept of data lake (chuck it all in an object store and worry about it later) with that of a data warehouse (y'know, a bit of data modeling and management wouldn't be entirely the worst idea ever).
+Apache Hudi and Apache Paimon are also part of this cohort, although with less apparent traction so far.
+
+Let's look at implementing a very common requirement: taking a stream of data in Kafka and writing it to Iceberg.
+Depending on your pipeline infrastructure of choice you might decide to do this using link:https://github.com/tabular-io/iceberg-kafka-connect[Kafka Connect] , or as is the case commonly these days, Apache Flink—and that's what we're going to look at here.
+Using Flink SQL for streaming data to Iceberg also gives us the advantage of being able to do some transformation to the data directly with SQL.
+
+
+image::/images/2024/07/6717dc3082a396e17c57a59a_6702b313ba409e39eee51f23_66884e3f38cc82cbe10d8b31_AD_4nXd2dALz1nQWoouC2exuwXTaEFKIOLoK7AB1ZJtco1Q40A8_ZDqryvMnnm3uDjFL4RyrdmZv3ImqmIvc0-wJKCDJEx7UA70I0SNd-lI5_gj59L_L_KDUkSgSHW_rJTgC4k2gD_kRFXrav8KZZwLZveF87JL-.webp[]
+
+=== tl;dr Create a Source; Create a Sink
+Let's leave the messy and boring dependency prerequisites for later, and jump straight to the action.
+For now, all you need to know for getting data from Kafka to Iceberg with Flink SQL is that you need to do the following:
+
+* Create a Kafka *source*table
+* Create an Iceberg *sink*table
+* Submit an `INSERT` that reads data from the Kafka source and writes it to the Iceberg sink
+
+The Kafka source needs to declare the schema of the data in the topic, its serialisation format, and then link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/#connector-options[configuration details]  about the topic and broker:
+
+
+[source,sql]
+----
+CREATE TABLE t_k_orders
+  (
+     orderId          STRING,
+     customerId       STRING,
+     orderNumber      INT,
+     product          STRING,
+     backordered      BOOLEAN,
+     cost             FLOAT,
+     description      STRING,
+     create_ts        BIGINT,
+     creditCardNumber STRING,
+     discountPercent  INT
+  ) WITH (
+    'connector'                    = 'kafka',
+    'topic'                        = 'orders',
+    'properties.bootstrap.servers' = 'broker:29092',
+    'scan.startup.mode'            = 'earliest-offset',
+    'format'                       = 'json'
+  );
+----
+This is for reading a Kafka topic called `orders` with a payload that looks like this:
+
+
+[source,shell]
+----
+$ kcat -b broker:29092 -C -t orders -c1
+
+{
+    "create_ts": 1719830895031,
+    "customerId": "e6658457-532f-6daa-c31b-7c136db250e0",
+    "product": "Enormous Granite Table",
+    "cost": 122.30769057331563,
+    "creditCardNumber": "1211-1221-1234-2201",
+    "backordered": false,
+    "orderNumber": 0,
+    "orderId": "f5e7256c-1572-b986-a4fc-ba22badac9cd",
+    "discountPercent": 8,
+    "description": "Alias eligendi quam perspiciatis quia eos quis tenetur."
+}
+----
+Now to set up the Iceberg sink.
+We're going to combine it with an implicit `INSERT` and do it as a single piece of DDL.
+Before that, let's make sure that we get some data written to the files, by telling Flink to periodically checkpoint and flush the data to Iceberg:
+
+
+[source,sql]
+----
+SET 'execution.checkpointing.interval' = '60sec';
+----
+All that's left to do now is create the Iceberg table, using the `CREATE TABLE…AS SELECT` syntax:
+
+
+[source,sql]
+----
+CREATE TABLE t_i_orders WITH (
+	  'connector'     = 'iceberg',
+	  'catalog-type'  = 'hive',
+	  'catalog-name'  = 'dev',
+	  'warehouse'     = 's3a://warehouse',
+	  'hive-conf-dir' = './conf')
+  AS SELECT * FROM t_k_orders;
+----
+This creates the table, and also a Flink SQL job:
+
+
+[source,shell]
+----
+Flink SQL> SHOW JOBS;
++----------------------------------+---------------------------------------------------------+---------+-------------------------+
+|                           job id |                                                job name |  status |              start time |
++----------------------------------+---------------------------------------------------------+---------+-------------------------+
+| b26d89f20f2665f099609f616ef34d10 | insert-into_default_catalog.default_database.t_i_orders | RUNNING | 2024-07-01T12:30:47.098 |
++----------------------------------+---------------------------------------------------------+---------+-------------------------+
+----
+
+image::/images/2024/07/6717dc3182a396e17c57a5ba_6702b313ba409e39eee51f32_66884e3fda90f2afe81518a4_AD_4nXfGPa6RyosZ5Ajuv1wznzBvxAtGN1d7rHtnignbD_chtu9LfFGPHkGOsAZJftCZE9_HAtjajQFiYO6CM13ODvq8fAllLI74Q74Vg53bLLvAK1i5F2nc8SgkJyCk9gtfb4ACi_az0Di6ew6xe6d35k3rbkhy.webp[]
+We’re writing the Iceberg files to MinIO, which is a self-hosted S3-compatible object store.
+Once the job has checkpointed (which I've configured to happen every minute) I can see files appearing in the object store:
+
+
+[source,shell]
+----
+❯ docker exec mc bash -c \
+        "mc ls -r minio/warehouse/"
+[2024-06-28 15:23:45 UTC] 6.3KiB STANDARD default_database.db/t_i_orders/data/00000-0-131b86c6-f4fc-4f26-9541-674ec3101ea8-00001.parquet
+[2024-06-28 15:22:55 UTC] 2.0KiB STANDARD default_database.db/t_i_orders/metadata/00000-59d5c01b-1ab2-457b-9365-bf1cd056bf1d.metadata.json
+[2024-06-28 15:23:47 UTC] 3.1KiB STANDARD default_database.db/t_i_orders/metadata/00001-5affbf21-7bb7-4360-9d65-d547211d63ab.metadata.json
+[2024-06-28 15:23:46 UTC] 7.2KiB STANDARD default_database.db/t_i_orders/metadata/6bf97c2e-0e10-410f-8db8-c6cc279e3475-m0.avro
+[2024-06-28 15:23:46 UTC] 4.1KiB STANDARD default_database.db/t_i_orders/metadata/snap-3773022978137163897-1-6bf97c2e-0e10-410f-8db8-c6cc279e3475.avro
+----
+So that's our writing to Iceberg set up and running.
+Now it's just Iceberg, so we can use any Iceberg-compatible tooling with it.
+
+
+=== Examining the metadata with pyiceberg
+A bunch of Parquet and Avro files in an object store aren't much use on their own; but combined they make up the link:https://iceberg.apache.org/spec/[Iceberg table format] .
+A quick way to inspect them is with `pyiceberg` which offers a CLI.
+To use it you need to connect it to a catalog—in my example I'm using the Hive MetaStore, so configure it thus:
+
+
+[source,shell]
+----
+export PYICEBERG_CATALOG__DEFAULT__URI=thrift://localhost:9083
+export PYICEBERG_CATALOG__DEFAULT__S3__ACCESS_KEY_ID=admin
+export PYICEBERG_CATALOG__DEFAULT__S3__SECRET_ACCESS_KEY=password
+export PYICEBERG_CATALOG__DEFAULT__S3__PATH_STYLE_ACCESS=true
+export PYICEBERG_CATALOG__DEFAULT__S3__ENDPOINT=http://localhost:9000
+----
+Now we can find out about the Iceberg table directly:
+
+
+[source,shell]
+----
+$ pyiceberg schema default_database.t_i_orders
+orderId           string
+customerId        string
+orderNumber       int
+product           string
+backordered       boolean
+cost              float
+description       string
+create_ts         long
+creditCardNumber  string
+discountPercent   int
+
+$ pyiceberg properties get table default_database.t_i_orders
+hive-conf-dir                    ./conf
+connector                        iceberg
+write.parquet.compression-codec  zstd
+catalog-type                     hive
+catalog-name                     dev
+warehouse                        s3a://warehouse
+----
+
+=== Querying Iceberg data with DuckDB
+Having poked around the metadata, let's query the data itself.
+There are a variety of engines and platforms that can read Iceberg data, including link:https://iceberg.apache.org/docs/nightly/flink/[Flink]  (obviously!), link:https://iceberg.apache.org/docs/nightly/spark-getting-started/[Apache Spark] , link:https://trino.io/docs/current/connector/iceberg.html[Trino] , link:https://docs.snowflake.com/en/user-guide/tables-iceberg[Snowflake] , link:https://prestodb.io/docs/current/connector/iceberg.html[Presto] , link:https://cloud.google.com/bigquery/docs/query-iceberg-data[BigQuery] , and link:https://clickhouse.com/docs/en/engines/table-engines/integrations/iceberg[ClickHouse] .
+Here I'm going to use DuckDB.
+
+We'll install a couple of libraries that are needed; link:https://duckdb.org/docs/extensions/iceberg.html[iceberg]  (can you guess why?!) and link:https://duckdb.org/docs/extensions/httpfs/overview[httpfs]  (because we're reading data from S3/MinIO):
+
+
+[source,shell]
+----
+INSTALL httpfs;
+INSTALL iceberg;
+LOAD httpfs;
+LOAD iceberg;
+----
+Then we set up the connection details for the local MinIO instance:
+
+
+[source,sql]
+----
+CREATE SECRET minio (
+    TYPE S3,
+    KEY_ID 'admin',
+    SECRET 'password',
+    REGION 'us-east-1',
+    ENDPOINT 'minio:9000',
+    URL_STYLE 'path',
+    USE_SSL 'false'
+);
+----
+Finally, let’s query the data.
+There's no direct catalog support in DuckDB yet so we have to point it directly at the Iceberg manifest file:
+
+
+[source,sql]
+----
+SELECT count(*) AS row_ct, 
+       strftime(to_timestamp(max(create_ts)/1000),'%Y-%m-%d %H:%M:%S') AS max_ts,
+       AVG(cost) AS avg_cost, 
+       MIN(cost) AS min_cost
+ FROM iceberg_scan('s3://warehouse/default_database.db/t_i_orders/metadata/00015-a166b870-551b-4279-a9f9-ef3572b53816.metadata.json');
+----
+
+[source,shell]
+----
+┌────────┬─────────────────────┬────────────────────┬───────────┐
+| row_ct |       max_ts        |      avg_cost      | min_cost  |
+| int64  |       varchar       |       double       |   float   |
+├────────┼─────────────────────┼────────────────────┼───────────┤
+|   1464 | 2024-07-01 11:48:13 | 115.64662482569126 | 100.01529 |
+└────────┴─────────────────────┴────────────────────┴───────────┘
+----
+
+=== Back to the start ↩️
+Well that wasn't so bad, right?
+In fact, pretty simple, I would say.
+Create a table, create a sink, and off you go.
+
+There are a few bits that I hugely skimmed over in my keenness to show you the Iceberg-y goodness which I'm now going to cover in more detail
+
+* When I created the sink the CTAS statement did a lot of heavy lifting in terms of its potential power, and I'm going to discuss that some more below
+* I presented my working Iceberg deployment as a _fait accompli_, when in reality it was the output of rather a lot of learning and link:https://libquotes.com/linus-torvalds/quote/lbr1k4j[random jiggling]  until I got it to work—so I'm going to explain that bit too.
+
+
+=== All the power of SQL 💪
+Let's have a look at this innocuous CTAS that we ran above:
+
+
+[source,sql]
+----
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+	  'catalog-type'='hive',
+	  'catalog-name'='dev',
+	  'warehouse' = 's3a://warehouse',
+	  'hive-conf-dir' = './conf')
+  AS SELECT * FROM t_k_orders;
+----
+It's doing several things, only one of which is particularly obvious:
+
+. The obvious: creating a table with a bunch of Iceberg properties
+. Less obvious (1): defining the schema for the Iceberg table implicitly as matching that of the source `t_k_orders`
+. Less obvious (2): populating the Iceberg table with an _unmodified_ stream of records fetched from Kafka
+
+Looking at that final point though, we could do so much more.
+How about filtering for orders with a high cost value?
+
+
+[source,sql]
+----
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+[…]
+  AS SELECT * 
+	   FROM t_k_orders
+	  WHERE cost > 100;
+----
+Or customers who are VIPs?
+
+
+[source,sql]
+----
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+[…]
+  AS SELECT * 
+       FROM t_k_orders 
+      WHERE customerId IN (SELECT customerId 
+				             FROM customers 
+				            WHERE vip_status = 'Gold');
+
+-- Do the same thing but using JOINs
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+[…]
+  AS SELECT ko.* 
+       FROM t_k_orders ko
+		    INNER JOIN 
+		    customers c
+		    ON ko.customerId = c.customerId
+      WHERE c.vip_status = 'Gold';
+----
+We can also project a different set of columns, perhaps to extract just a subset of the fields needed for optimisation reasons:
+
+
+[source,sql]
+----
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+[…]
+  AS SELECT orderId, product, cost
+       FROM t_k_orders;
+----
+Finally, we don't have to use CTAS.
+Perhaps you simply want to decouple the creation from the population, or you want to have multiple streams populating the same sink and keeping things separate is more logical.
+The above two examples combined might look like this:
+
+
+image::/images/2024/07/6717dc3082a396e17c57a5a9_6702b313ba409e39eee51f27_66884e3f4be90236c6e30492_AD_4nXclzqw2DP8yOKl4Tn904WcrnU3xvkkFy5gjXOThLk04wQecjJsmsoyMa34T8ivFXi02pPdQhSaqD2F7wGKXfMzIZ4zN_O0fxry10okYvoxUDSEcwHf0rGGdNFcEMmHGu5N4UnOJ19t-2UhO_3mTnUNuHck.webp[]
+
+[source,sql]
+----
+-- Create the Iceberg sink. 
+-- Using the LIKE syntax we can copy across the schema.
+-- N.B. no data is sent to it at this point
+CREATE TABLE t_i_orders WITH (
+	  'connector' = 'iceberg',
+	  'catalog-type'='hive',
+	  'catalog-name'='dev',
+	  'warehouse' = 's3a://warehouse',
+	  'hive-conf-dir' = './conf')
+  LIKE t_k_orders;
+
+-- Now, send data to it
+INSERT INTO t_i_orders
+SELECT * 
+	   FROM t_k_orders
+	  WHERE cost > 100;
+
+-- Send more data to it
+INSERT INTO t_i_orders
+SELECT ko.* 
+       FROM t_k_orders ko
+		    INNER JOIN 
+		    customers c
+		    ON ko.customerId = c.customerId
+      WHERE c.vip_status = 'Gold';
+----
+The `INSERT` statements are streaming jobs that run continuously, as can be seen from the `SHOW JOBS` output:
+
+
+[source,shell]
+----
+Flink SQL> SHOW JOBS;
++----------------------------------+---------------------------------------------------------+----------+-------------------------+
+|                           job id |                                                job name |   status |              start time |
++----------------------------------+---------------------------------------------------------+----------+-------------------------+
+| 949b0010858fdc29f5176b532b77dc50 | insert-into_default_catalog.default_database.t_i_orders |  RUNNING | 2024-07-01T15:47:01.183 |
+| 66f2277aee439ae69ad7300a86725947 | insert-into_default_catalog.default_database.t_i_orders |  RUNNING | 2024-07-01T15:46:29.247 |
++----------------------------------+---------------------------------------------------------+----------+-------------------------+
+----
+Finally, you could even combine the two `INSERT`s with a `UNION`:
+
+
+[source,sql]
+----
+INSERT INTO t_i_orders
+SELECT * 
+	   FROM t_k_orders
+	  WHERE cost > 100
+UNION ALL
+SELECT ko.* 
+       FROM t_k_orders ko
+		    INNER JOIN 
+		    customers c
+		    ON ko.customerId = c.customerId
+      WHERE c.vip_status = 'Gold';
+----
+This gives us a single Flink job that looks like this:
+
+
+image::/images/2024/07/6717dc3182a396e17c57a5e8_6702b313ba409e39eee51f35_66884e3f21e36c3365b7ee30_AD_4nXfBebJNN3uxtdWn8B3AQJh_HzGrhmT1kHVXwDYusWDvfEHf91eZ52UITlo-hTtHnoIzMD2CFjDVrlgAhZhu1Qdms9dSnyaU-aZaSMM1JnBp6Nq7IdRiw1qbcHlBNkdjmCNoLncy7QyXmt0GVtstFP8213rK.webp[]
+
+=== Iceberg table properties
+There are link:https://iceberg.apache.org/docs/1.5.2/configuration/#write-properties[various properties]  that you can configure for an Iceberg table.
+In my example above I just specified the bare minimum and let everything else use its default.
+
+You can specify additional properties when you create the table.
+For example, to change the format of the data files from the default of Parquet to ORC, set the `write.format.default`:
+
+
+[source,sql]
+----
+CREATE TABLE iceberg_test WITH (
+    'connector' = 'iceberg',
+    'catalog-type'='hive',
+    'catalog-name'='dev',
+    'warehouse' = 's3a://warehouse',
+    'hive-conf-dir' = './conf',
+    'write.format.default'='orc');
+----
+Which when populated stores the data, as expected, in ORC format:
+
+
+[source,shell]
+----
+❯ docker exec mc bash -c \
+        "mc ls -r minio/warehouse/"
+[2024-07-01 10:41:49 UTC]   398B STANDARD default_database.db/iceberg_test/data/00000-0-023674bd-dc7d-4249-8c50-8c1238881e57-00001.orc
+[…]
+----
+You can also change the value after creation:
+
+
+[source,shell]
+----
+Flink SQL> ALTER TABLE iceberg_test SET ('write.format.default'='avro');
+[INFO] Execute statement succeed.
+----
+or reset it to its default value:
+
+
+[source,shell]
+----
+Flink SQL> ALTER TABLE iceberg_test RESET ('write.format.default');
+[INFO] Execute statement succeed.
+----
+
+=== Iceberg dependencies for Flink
+As I explored (_at length_ 😅) in link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[several]  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[previous]  link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[articles] , you often need to add dependencies to Flink for it to work with other technologies.
+Whether it's formats (such as Parquet), catalogs (such as Hive), or connectors (such as Iceberg), juggling JARs is one of _the most fun_ aspects of running Flink yourself.
+Of course, if you don't enjoy _that_ kind of fun, you could just link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[let Decodable do it for you] .
+
+
+==== Catalog
+To use Iceberg you need to have a catalog metastore.
+Catalogs in Flink can be a bit hairy to understand at first, but have a read of link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[this primer]  that I wrote for a gentle yet thorough introduction to them.
+
+Iceberg can work with different catalogs (I explore several of them link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[here] ), and in this blog article I've used the Hive Metastore (HMS).
+
+
+image::/images/2024/07/6717dc3182a396e17c57a5f4_6702b313ba409e39eee51f2a_66884e3f1b06a6fc506bc681_AD_4nXeEw-X8llqxCUmO8EJuvejwMoR9nPSD31qTPlN95msDL4-Mp_6lzs2w1k12Vjya8XVGFhLcm7XMCFaq-YAG0NQ4TGpT8Oob3Dew3XxJi1ibGpAuvSQshrNIzg0wZ-M5uAgJsvFcMHcYaYY57aZtQSo52XvB.webp[]
+To use the Hive metastore with Flink you need the link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/hive/overview/#dependencies[Hive connector]  `flink-sql-connector-hive-3.1.3` which link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[you can find]  on link:https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/[Maven repository] —make sure you use the correct one for your version of Flink.
+
+As well as the Hive connector, you need Hadoop dependencies.
+I wrote about this link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[elsewhere]  but you either install the full Hadoop distribution, or cherry-pick just the JARs needed.
+
+You also need to configure `conf/hive-site.xml` so that Flink can find the Hive MetaStore:
+
+
+[source,xml]
+----
+[…]
+ 
+   hive.metastore.local
+   false
+ 
+
+ 
+   hive.metastore.uris
+   thrift://hms:9083
+ 
+[…]
+----
+
+==== Iceberg JARs
+Iceberg support in Flink is provided by the `iceberg-flink-runtime` JAR.
+As with the catalog JAR, make sure you line up your versions—so in this case both Iceberg and Flink.
+For Iceberg 1.5.0 and Flink 1.18 I used link:https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.18/1.5.0/[iceberg-flink-runtime-1.18-1.5.0.jar]
+
+
+==== Object Store (S3)
+Finally, since we're writing to data on S3-compatible MinIO, we need the correct JARs for that.
+I'm using `s3a`, which is provided by link:https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/[hadoop-aws-3.3.4.jar] .
+
+Flink will also need to know how to authenticate to S3, and in the case of MinIO, how to find it.
+One way to do this is supply these details as part of `conf/hive-site.xml`:
+
+
+[source,xml]
+----
+[…]
+   
+       fs.s3a.access.key
+       admin
+   
+
+   
+       fs.s3a.secret.key
+       password
+   
+
+   
+       fs.s3a.endpoint
+       http://minio:9000
+   
+
+   
+       fs.s3a.path.style.access
+       true
+   
+[…]
+----
+
+==== Want the easy route?
+_(Of course, the_*really*_easy route is to_ link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[use Decodable] _, where we do all of this for you._
+_😁)_
+
+I've shared on the Decodable link:https://github.com/decodableco/examples/[examples GitHub repo]  the following:
+
+* a link:https://github.com/decodableco/examples/blob/main/kafka-iceberg/apache-flink/docker-compose.yml[Docker Compose]  so that you can run all of this yourself just by running `docker compose up`
+* a link:https://github.com/decodableco/examples/blob/main/kafka-iceberg/apache-flink/flink/Dockerfile#L29[list of the specific JAR files]  that I used
+* link:https://github.com/decodableco/examples/tree/main/kafka-iceberg/apache-flink[and more] …sample SQL statements, step-by-step README, and some other noodling around with Iceberg and catalogs for good measure.
+
+
+==== What if you get in a jam with your JARs?
+Here are the various errors (usually a `ClassNotFoundException`, but not always) that you can expect to see if you miss a JAR from your dependencies.
+The missing JAR shown is based on the following versions:
+
+* Flink 1.18
+* Hive 3.1.3
+* Iceberg 1.5.0
+* Hadoop 3.3.4
+
+You can find out more here about link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[locating the correct JAR to download]  and where to put it once you've downloaded it.
+
+
+th, td {
+padding: 4px;
+border-bottom: 1px solid black;
+word-wrap: break-word;
+font-size: 0.8rem;
+}
+    
+
+
+
+
+
+
+*Error*
+
+
+*Missing JAR*
+
+
+
+
+`java.lang.ClassNotFoundException: com.amazonaws.AmazonClientException`
+
+
+`aws-java-sdk-bundle-1.12.648.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.commons.configuration2.Configuration`
+
+
+`commons-configuration2-2.1.1.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.commons.logging.LogFactory`
+
+
+`commons-logging-1.1.3.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.hadoop.hive.metastore.api.NoSuchObjectException`
+
+
+`flink-sql-connector-hive-3.1.3_2.12-1.18.1.jar`
+
+
+
+
+`java.lang.NoClassDefFoundError: Could not initialize class org.apache.hadoop.security.UserGroupInformation`
++
+
+_Prevents the Flink jobmanager and taskmanager starting if not present, only happens if_  ` flink-sql-connector-hive-3.1.3_2.12-1.18.1.jar `  _is present._
+
+
+`hadoop-auth-3.3.4.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: Class org.apache.hadoop.fs.s3a.S3AFileSystem not found`
+
+
+`hadoop-aws-3.3.4.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.hadoop.conf.Configuration`
+
+
+`hadoop-common-3.3.4.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.hadoop.hdfs.HdfsConfiguration`
+
+
+`hadoop-hdfs-client-3.3.4.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.hadoop.mapred.JobConf`
+
+
+`hadoop-mapreduce-client-core-3.3.4.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.apache.hadoop.thirdparty.com.google.common.base.Preconditions`
+
+
+`hadoop-shaded-guava-1.1.1.jar`
+
+
+
+
+`org.apache.flink.table.api.ValidationException: Could not find any factory for identifier 'iceberg' that implements 'org.apache.flink.table.factories.DynamicTableFactory' in the classpath.`
+`Available factory identifiers are:`
+`blackhole`
+`datagen`
+`[…]`
+
+
+`iceberg-flink-runtime-1.18-1.5.0.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.codehaus.stax2.XMLInputFactory2`
+
+
+`stax2-api-4.2.1.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: com.ctc.wstx.io.InputBootstrapper`
+
+
+`woodstox-core-5.3.0.jar`
+
+
+
+
+`java.lang.ClassNotFoundException: org.datanucleus.NucleusContext`
+
+
+_This is a really fun one—I got it when I’d not configured_`hive.metastore.local`
+_in Flink’s_`conf/hive-site.xml`
+
+
+
+
+=== Conclusion
+I've shown you in this blog post how to stream data from Kafka to Iceberg using purely open source tools.
+I used MinIO for storage, but it would work just the same with S3.
+The catalog I used was Hive Metastore, but there are others—such as AWS Glue.
+
+
+image::/images/2024/07/6717dc3082a396e17c57a59a_6702b313ba409e39eee51f23_66884e3f38cc82cbe10d8b31_AD_4nXd2dALz1nQWoouC2exuwXTaEFKIOLoK7AB1ZJtco1Q40A8_ZDqryvMnnm3uDjFL4RyrdmZv3ImqmIvc0-wJKCDJEx7UA70I0SNd-lI5_gj59L_L_KDUkSgSHW_rJTgC4k2gD_kRFXrav8KZZwLZveF87JL-.webp[]
+If you want to try it out for yourself head to link:https://github.com/decodableco/examples/tree/main/kafka-iceberg/apache-flink[the GitHub repository] , and if you want to try loading data from Kafka to Iceberg but don't fancy running Flink for yourself link:https://app.decodable.co/-/accounts/create[sign up for a free Decodable account]  today and give our fully managed service a go.
