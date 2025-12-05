@@ -1,0 +1,294 @@
+---
+title: 'Flink SQL and the Joy of JARs'
+date: "2024-02-27T00:00:00+00:00"
+draft: false
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Apache Flink
+---
+
+NOTE: This post originally appeared on the link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[Decodable blog].
+
+I will wager you half of my lottery winnings from 2023[1] that you're going to encounter this lovely little error at some point on your Flink SQL journey:
+
+<!--more-->
+
+[source,shell]
+----
+Could not execute SQL statement. Reason: java.lang.ClassNotFoundException
+----
+It comes in a variety of flavours, such as this one:
+
+
+[source,shell]
+----
+Flink SQL> CREATE CATALOG c_hive WITH (
+>        'type' = 'hive',
+>        'hive-conf-dir' = './conf/'
+>    );
+[ERROR] Could not execute SQL statement. Reason:
+java.lang.ClassNotFoundException: org.apache.hadoop.fs.FSDataInputStream
+----
+In terms of cause, `ClassNotFoundException` is about as generic and common as errors get.
+It means that part of the code (a 'class') that the program needs to run can't be found.
+In practice, it means that you're missing one or more JAR files, or you have them but they're not getting loaded, perhaps being in the wrong location.
+A JAR file is a “Java ARchive” made up of a set of Java resources such as code and compressed similar to how a ZIP file is.
+
+To fix it you need the right JAR, and that JAR in the right place.
+Let's look at this in a bit more detail.
+
+
+=== Identifying the correct JAR
+Perhaps it'll be clear which JAR you need based on what you're trying to do—but often not.
+As you get more familiar with Flink you'll learn certain patterns of what dependencies there are.
+These include:
+
+* Hadoop, including—but not only—if you're using Hive or Hive Metastore. You can go and get the specific JARs one-by-one, or just make the whole Hadoop distribution available to Flink by setting the `HADOOP_CLASSPATH` as detailed in link:https://decodable.co/blog/catalogs-in-flink-sql-hands-on[my earlier blog post]  and covered in the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[documentation too] .
+* link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/overview/[Connectors] , which might include those within the Flink project such as link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/kafka/[for Apache Kafka] —but also those outside of it (and what you might perhaps think of as format rather than connector) such as link:https://iceberg.apache.org/docs/latest/flink/[Apache Iceberg] .
+* link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/formats/overview/[Formats] , such as Parquet
+* link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/deployment/filesystems/overview/[Filesystems] , such as S3
+
+The easy-but-dangerous route is Google.
+It might shortcut you to the right JAR, but it might also send you off down a rathole of irrelevant links and outdated solutions.
+Beware finding a solution that looks like a hammer for your nail of a problem if you've actually got a screw!
+
+
+=== JAR Naming
+Pay very close attention to names and versions of your JAR files.
+It might look like a bunch of word-and-number salad, but herein can lie the root cause of many a problem.
++
+
+Make sure that you line up the package name with what you actually need.
+For example:
+
+* `flink-parquet` is different from `flink-sql-parquet`, since the latter includes all its dependencies whilst the former doesn't. This is  link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/configuration/connector/#available-artifacts[a standard used in the naming of Flink JARs] : if it’s a `flink-sql` prefix then it includes the dependencies, whilst `flink`- on its own means that it doesn’t..  That's what the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/configuration/connector/#available-artifacts[flink- vs flink-sql prefix]  indicates.
+* `1.14.6` is a pretty old version of Flink if you're using `1.18.1` and so a JAR intended for it is likely not to work. In fact, it’s generally a bad idea to mix versions, even if it appears to work.
+
+When you start integrating with other systems you'll also see their versions come into play, like this: +
+
+
+=== Finding JARs
+link:https://maven.org/[Maven Central Repository]  is where you'll find most of the JARs you need.
+It's used widely in the Java (and adjacent communities) for publishing and retrieving open-source libraries.
+As such, you might find that if you’re coming to it as someone just looking to get Flink SQL to work you might find it a bit confusing (I did) and navigating it takes a little bit of practice.
+
+Let's say we want the necessary JAR to be able to use Parquet with the Flink SQL client.
+With the ever-so useful hindsight, we'd know that we go to the Flink docs, find the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/formats/parquet/[Parquet format page]  and click on "Download" under SQL Client.
+
+(If you do this you'll notice that link:https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-parquet/1.18.1/flink-sql-parquet-1.18.1.jar[the JAR linked to]  is indeed on Maven Central)
+
+Now, that presumes that we knew that we'd find information about Parquet under "Connectors" (_…okay?_), and then Table API Connectors (_…riight?_), and then Formats (yep that one makes sense).
+If we didn't, we'd do what anyone does - Google it.
+And then Google tells you that you need a flink-sql-parquet JAR, and off you go.
+link:https://central.sonatype.com/search?q=flink-sql-parquet[Searching for this on Maven Central]  gives us this:
+
+The first thing to check is the `Latest version` and `Published`.
+You want to get your JARs lined up with your Flink distribution, and since I'm using `1.18.1` I can discount the second two results which show their latest version as `1.14.6` (with the `_2.12` and `_2.11` suffixes).
+
+Clicking on  link:https://central.sonatype.com/artifact/org.apache.flink/flink-sql-parquet[flink-sql-parquet]  takes us to the overview page, with no download link:
+
+_If you're anything like me in your web browsing, stop randomly clicking stuff, and just cool your boots at this point and be patient._
+_Don't click away, because we're_nearly there.
+
+Click on *Versions* and then *Browse* for the 1.18.1 version
+
+The last page is a blast from the past—and if we're going to be nostalgic, a refreshing break from the jarring visual junk yards that are web pages today 😉—with just a directory listing.
++
+
+Look _very_ carefully, and you want the .jar file (but not the -sources one)
+
+Last tip on this: if you have a Maven URL for a JAR and want a different version (or different package), you can just strip back the URL to the parent folders to up the hierarchy and then back down again.
+For example:
+
+
+[source,shell]
+----
+https://repo1.maven.org/maven2/org/apache/flink/flink-sql-parquet/1.18.1
+👇
+https://repo1.maven.org/maven2/org/apache/flink/flink-sql-parquet/
+👇
+https://repo1.maven.org/maven2/org/apache/flink/
+👇
+https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/
+👇
+https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.0.2-1.18/
+----
+
+=== Putting the JAR in the right place
+JARs should go under the `./lib` folder of your Flink installation (or installation*s*) if you're running it as a distributed cluster.
+
+You can create subfolders under `./lib` if you like to keep things tidy:
+
+
+[source,shell]
+----
+lib
+├── aws
+|   ├── aws-java-sdk-bundle-1.12.648.jar
+|   └── hadoop-aws-3.3.4.jar
+[…]
+├── flink-table-runtime-1.18.1.jar
+├── formats
+|   └── flink-sql-parquet-1.18.1.jar
+├── hadoop
+|   ├── commons-configuration2-2.1.1.jar
+|   ├── commons-logging-1.1.3.jar
+|   ├── hadoop-auth-3.3.4.jar
+[…]
+|   ├── stax2-api-4.2.1.jar
+|   └── woodstox-core-5.3.0.jar
+├── hive
+|   └── flink-sql-connector-hive-3.1.3_2.12-1.18.1.jar
+[…]
+└── log4j-slf4j-impl-2.17.1.jar
+----
+You'll notice that I've got a `hadoop` folder with just a small number of JARs in.
+These are just the bare essentials that I found Flink needed.
+However, the proper (and more reliable) way that's documented is to set the `HADOOP_CLASSPATH` pointing to your link:https://hadoop.apache.org/releases.html[Hadoop download] :
+
+
+[source,shell]
+----
+export HADOOP_CLASSPATH=$(/hadoop-3.3.4/bin/hadoop classpath)
+----
+The `HADOOP_CLASSPATH` gets  link:https://github.com/apache/flink/tree/release-1.18/flink-table/flink-sql-client/bin/sql-client.sh#L84[added to the classpath]  (via the  link:https://github.com/apache/flink/tree/release-1.18/flink-dist/src/main/flink-bin/bin/config.sh#L402[INTERNAL_HADOOP_CLASSPATH]  variable) with which Flink is launched.
+
+A final note on `HADOOP_CLASSPATH` is that it's an environment variable local to the session in which you set it.
+So if you do this:
+
+
+[source,shell]
+----
+# terminal session 1
+./bin/start-cluster.sh
+----
+
+[source,shell]
+----
+# terminal session 2
+export HADOOP_CLASSPATH=$(/hadoop-3.3.4/bin/hadoop classpath)
+./bin/sql-client
+----
+You'll find that the SQL Client seems to work just fine (at least, doesn't throw an error):
+
+
+[source,shell]
+----
+Flink SQL> INSERT INTO `c_hive`.`db_rmoff`.t_foo VALUES ('a', 42);
+----
+But querying doesn't work:
+
+
+[source,shell]
+----
+Flink SQL> select * from `c_hive`.`db_rmoff`.t_foo;
+[ERROR] Could not execute SQL statement. Reason:
+java.lang.ClassNotFoundException: org.apache.hadoop.conf.Configuration
+----
+This is because the Flink taskmanager, started as part of `./bin/start-cluster.sh` as shown above, didn't have `HADOOP_CLASSPATH` set when it was launched.
+
+
+=== Checking where Flink is looking for JARs
+You can inspect the classpath that each Flink process is running with through the `jinfo` command:
+
+
+[source,shell]
+----
+$ jinfo $(pgrep -f org.apache.flink.table.client.SqlClient) | grep java_class_path 
+java_class_path (initial): /Users/rmoff/flink/flink-1.18.1/lib/aws/aws-java-sdk-bundle-1.12.648.jar:/Users/rmoff/flink/flink-1.18.1/lib/aws/hadoop-aws-3.3.4.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-cep-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-connector-files-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-csv-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-json-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-scala_2.12-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-table-api-java-uber-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-table-planner-loader-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-table-runtime-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/commons-configuration2-2.1.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/commons-logging-1.1.3.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/hadoop-auth-3.3.4.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/hadoop-common-3.3.4.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/hadoop-hdfs-client-3.3.4.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/hadoop-mapreduce-client-core-3.3.4.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/hadoop-shaded-guava-1.1.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/stax2-api-4.2.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/hadoop/woodstox-core-5.3.0.jar:/Users/rmoff/flink/flink-1.18.1/lib/hive/flink-sql-connector-hive-3.1.3_2.12-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/iceberg/iceberg-aws-bundle-1.4.3.jar:/Users/rmoff/flink/flink-1.18.1/lib/iceberg/iceberg-flink-runtime-1.17-1.4.3.jar:/Users/rmoff/flink/flink-1.18.1/lib/log4j-1.2-api-2.17.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/log4j-api-2.17.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/log4j-core-2.17.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/log4j-slf4j-impl-2.17.1.jar:/Users/rmoff/flink/flink-1.18.1/lib/flink-dist-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/opt/flink-python-1.18.1.jar:/Users/rmoff/flink/flink-1.18.1/opt/flink-sql-gateway-1.18.1.jar::::/Users/rmoff/fli
+----
+With a bit more bash we can display it in a way that's much easier to read, splitting out just the classpath and putting each entry on a new line:
+
+
+[source,shell]
+----
+$ jinfo $(pgrep -f org.apache.flink.table.client.SqlClient) | grep java_class_path | tr ':' '\n'
+
+/Users/rmoff/flink/flink-1.18.1/lib/aws/aws-java-sdk-bundle-1.12.648.jar
+/Users/rmoff/flink/flink-1.18.1/lib/aws/hadoop-aws-3.3.4.jar
+/Users/rmoff/flink/flink-1.18.1/lib/flink-cep-1.18.1.jar
+/Users/rmoff/flink/flink-1.18.1/lib/flink-connector-files-1.18.1.jar
+[…]
+----
+
+=== Don't Forget to Restart All the Flink processes
+When you add or remove a JAR you need to make sure to restart _all_ the Flink components so that they pick it up.
+Some interactions the SQL Client does directly, others get submitted to the job manager and you'll only hit an error then.
+
+Particularly if you're frantically dropping JARs in and out to try and fix a dependency issue, make a point of deliberately restarting all the processes each time.
+Otherwise you find that something 'suddenly' stops working because it's only after numerous changes that you restarted it and now you can't remember what permutation things were in when it did work.
+
+
+=== Have you got the right JAR? Looking Inside a JAR 🔎
+So you've hit the dreaded `ClassNotFoundException` error.
+You know that it's usually down to not having the right JAR loaded by Flink SQL.
+But what if you _think_ you've got the right JAR and want to confirm it?
+
+Let's take this example:
+
+
+[source,shell]
+----
+Flink SQL> CREATE CATALOG c_hive WITH (
+>        'type' = 'hive',
+>        'hive-conf-dir' = './conf/'
+>    );
+[ERROR] Could not execute SQL statement. Reason:
+java.lang.ClassNotFoundException: org.apache.hadoop.fs.FSDataInputStream
+----
+A JAR file is just an archive of code, and using the `-t` attribute of the `jar` command we can list its contents.
+Let's verify if the JAR we _think_ provides this class does indeed do so:
+
+
+[source,shell]
+----
+$ jar -tf hadoop-common-3.3.2.jar | grep org.apache.hadoop.fs.FSDataInputStream
+org/apache/hadoop/fs/FSDataInputStream.class
+----
+Yes it does!
+We can also search a folder for a given class, with this little bit of Bash:
+
+
+[source,bash]
+----
+find ~/hadoop-3.3.4 -name '*.jar' | while read jar; do
+    if jar -tf "$jar" | grep -q 'org.apache.hadoop.fs.FSDataInputStream'; then
+        echo "Found in: $jar"
+    fi
+done
+----
+So we've checked one possible issue off our list, and can move onto the point below: is the JAR even getting picked up by Flink?
+
+
+=== Did the JAR even get loaded?
+There's something in Java called classloading, and you can read about how Flink does it link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/ops/debugging/debugging_classloading/[here] ._
+_From an end-user point of view if you're trying to understand what's going on with a JAR file one useful trick is to see if it's even being loaded, or perhaps if it is by what.
+
+If you set `JVM_ARGS` to `-verbose:class` when you run the SQL Client you can see what's going on.
+Couple it with putting your SQL statements in a file that you pass with -f and you can dump and end-to-end process out to a log file to then poke through at your leisure:
+
+
+[source,shell]
+----
+JVM_ARGS=-verbose:class ./bin/sql-client.sh -f ../my_sql_statements.sql \
+  > jvm_debug_stuff.log
+----
+link:https://gist.github.com/rmoff/41a9324f5aa0854946de18b264540b75#file-iceberg-log-L3329[Here]  is an example of the kind of thing you might see, showing where a particular catalog is being loaded from:
+
+
+[source,shell]
+----
+[0.768s][info][class,load] org.apache.iceberg.flink.FlinkCatalog source: 
+file:/Users/rmoff/flink/flink-1.18.1/lib/iceberg-flink-runtime-1.17-1.4.3.jar
+----
+In this example we can see that in our 1.18 installation of Flink the `FlinkCatalog` is being loaded from a JAR intended for use with 1.17—which as we discussed above, is often going to lead to problem since versions should be kept in alignment.
+
+
+=== Does it really need to be this complicated?
+No, not if you use Decodable's fully managed platform.
+🙂 We have Flink SQL and do all of the jarring-JAR fiddling for you.
+link:https://app.decodable.co/-/accounts/create[Give it a whirl today] .
+
+
+
+[1] I didn't play the lottery in 2023 😉
