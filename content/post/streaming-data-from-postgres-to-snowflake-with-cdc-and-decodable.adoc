@@ -8,16 +8,18 @@ categories:
 - Snowflake
 - Decodable
 image: "/images/2024/11/GdAQ-cXWoAA00tP.jpg"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/streaming-data-from-postgres-to-snowflake"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/streaming-data-from-postgres-to-snowflake[Decodable blog].
 
-In my  link:https://www.decodable.co/blog/why-do-i-need-cdc[last blog post]  I looked at why you might need CDC.
+In my  link:/2024/10/15/why-do-i-need-cdc/[last blog post]  I looked at why you might need CDC.
 In this post I’m going to put it into practice with probably the most common use case—extracting data from an operational transactional database to store somewhere else for analytics.
 I’m going to show Postgres to Snowflake, but the pattern is the same for pretty much any combination, such as MySQL to BigQuery, SQL Server to Redshift, and so on.
 
 <!--more-->
-The data is a set of tables that take inspiration from Gunnar’s recent article about  link:https://www.decodable.co/blog/revisiting-the-outbox-pattern[the Outbox pattern] .
+The data is a set of tables that take inspiration from Gunnar’s recent article about  link:https://www.morling.dev/blog/revisiting-the-outbox-pattern/[the Outbox pattern] .
 We’re developing systems for a pet-grooming company, Oh-My-Dawg.
 But in this version of the cat-cleaning, guinea pig-grooming universe, we went with a monolithic application with all the data held on a single Postgres instance.
 
@@ -53,7 +55,7 @@ In this post I’m going to give you an overview of what’s involved in buildin
 For a hands-on guide,  link:https://app.decodable.co/-/accounts/create[sign up today]  and try out  link:https://docs.decodable.co/get-started/quickstart.html[the quickstart] .
 
 
-=== Getting data out of Postgres with CDC
+== Getting data out of Postgres with CDC
 For CDC to work, the Postgres tables need to have  link:https://www.postgresql.org/docs/current/logical-replication-publication.html[replica identity]  set to `FULL`.
 This is so that the complete (i.e., the `FULL`) contents of the row are captured for each change.
 
@@ -62,8 +64,8 @@ Let’s go ahead and do this from the Postgres SQL prompt:
 
 [source,sql]
 ----
-ALTER TABLE customers REPLICA IDENTITY FULL;  
-ALTER TABLE pets REPLICA IDENTITY FULL;  
+ALTER TABLE customers REPLICA IDENTITY FULL;
+ALTER TABLE pets REPLICA IDENTITY FULL;
 ALTER TABLE appointments REPLICA IDENTITY FULL;
 ----
 We’ll check it worked too—`relreplident` should be `f` (i.e., “full”):
@@ -115,9 +117,9 @@ OK, so that’s the data coming from Postgres.
 Let’s now see about sending it over to Snowflake.
 
 
-=== Loading data into Snowflake
+== Loading data into Snowflake
 
-==== Configuring authentication
+== Configuring authentication
 Similar to when we set up the Postgres connector, we need to store the authentication credentials for Snowflake as a Decodable secret before setting up the connector itself.
 
 The  link:https://docs.decodable.co/connect/sink/snowflake.html#generate-key-pair[documentation]  is comprehensive, so I’ll not cover all the details here.
@@ -165,7 +167,7 @@ As before, make sure you are only using the key itself and not the header or foo
 
 image::/images/2024/11/673a2cd2d2d3bd0a469d2ed7_673a22228903e38734c9bf26_673a2177d746e88bae899f03_AD_4nXc2bdENhptIqDxFpXSyNeqkPCpMa4rMM2Ue4ah3W_hCaISin_dceaKfIaiqiVxZrlftt-84YaX6IIcVU5VYjdGT6llhpiYIemx5cCyF7Ss0XgqEunLLIwZxPsQjvQ-1WvDkXsK_UQ.png[]
 
-==== Creating the Snowflake connector
+== Creating the Snowflake connector
 Now all that remains is to create the sink connector to send the data we’re ingesting from Postgres to Snowflake.
 First off we define the connection details, including the name of the secret that we created to hold the private key:
 
@@ -201,7 +203,7 @@ or which customer has canceled appointments the most:
 
 image::/images/2024/11/673a2cd1d2d3bd0a469d2eb3_673a22228903e38734c9bf33_673a2178d1826ad972c792f9_AD_4nXctzuddtsUr4XtBu18iOZ4uC74dC2Fb50SdwaAu0ksHfaQnLyLhhMyZO4039LNCIyyiwnJavmzyB625L2mhR1rGsOzgLcLA3YHuBYMXMwa4V2BVFWtDY-9Kqj3EN5d2yRKr3KnUrQ.png[]
 
-=== Let’s do the same thing, but declaratively
+== Let’s do the same thing, but declaratively
 If the mouse, or trackpad, is your thing, look away now.
 If, on the other hand, nothing gets you more excited than the idea of a keyboard, a CLI, and a git repository, then this section is for YOU.
 
@@ -225,12 +227,12 @@ The Postgres secret looks like this:
 
 [source,yaml]
 ----
----  
-kind: secret  
-metadata:  
+---
+kind: secret
+metadata:
   name: omd-postgres
-spec_version: v1  
-spec:  
+spec_version: v1
+spec:
   value_literal: Welcome123
 ----
 Whilst the Snowflake one is a bit more complex because of the private key (don’t bother trying to hack into my Snowflake account, this is not my actual key 😉):
@@ -238,19 +240,19 @@ Whilst the Snowflake one is a bit more complex because of the private key (don�
 
 [source,yaml]
 ----
----  
-kind: secret  
-metadata:  
-  name: omd-snowflake  
-spec_version: v1  
-spec:  
-  value_literal: |  
-    MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQChdeAhINX2/Q+0  
-    YkF+45es8sootZHq+nPUNL/9IXaEDasFwAi/w0sjGbjzJE9a2qTIzSoqyRQPob0H  
-    ufu7RZUrF5zV0ga0dZSXn+QGSm7jZDy21tzGCn8it7xstDB3ROjThOPxwjP8TqWa  
-    ytvO0XcSFwn6pVK+MUUqHtPp5E0b8OXb4FHVvCQGihpobM13KiVgjmN/jgw6loMD  
+---
+kind: secret
+metadata:
+  name: omd-snowflake
+spec_version: v1
+spec:
+  value_literal: |
+    MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQChdeAhINX2/Q+0
+    YkF+45es8sootZHq+nPUNL/9IXaEDasFwAi/w0sjGbjzJE9a2qTIzSoqyRQPob0H
+    ufu7RZUrF5zV0ga0dZSXn+QGSm7jZDy21tzGCn8it7xstDB3ROjThOPxwjP8TqWa
+    ytvO0XcSFwn6pVK+MUUqHtPp5E0b8OXb4FHVvCQGihpobM13KiVgjmN/jgw6loMD
     […]
-    5io5kmFVae7r25YO5XoU7EBp1q1zIT+UScbySCLcAdX3o7j8FmFZBs5hsBLb0voB  
+    5io5kmFVae7r25YO5XoU7EBp1q1zIT+UScbySCLcAdX3o7j8FmFZBs5hsBLb0voB
     McOx/+kPJYb2Hzqs5ycjTQ==
 ----
 Declarative resource management in Decodable is provided by commands under the  link:https://docs.decodable.co/cli.html[Decodable CLI]  - primarily `decodable apply` and `decodable query`.
@@ -439,7 +441,7 @@ _To activate it, we run:
 $ decodable query --name oh-my-dawg-pg-02 \
                   --operation activate \
                   --stabilize
-                
+
 ---
 kind: connection
 name: oh-my-dawg-pg-02
@@ -536,7 +538,7 @@ select count(*) from "OMD_APPOINTMENTS-02"
 +----------+
 ----
 
-=== Should you use a web interface or the declarative approach?
+== Should you use a web interface or the declarative approach?
 
 image::/images/2024/11/673a2178dcb347ef4bd005b0_AD_4nXdMNKDl8BebMmyRy3360IO4YfWhz8EOfF65uvxvHEsTYpT_nxIU4gWwPXoxzTr0r95wYkhPbfTPcQ6YS8UflhfkrnATYerF_hGlX0ptvF0nwJA7VjheeREGiDCsIfUeD_cQwBIo3g.gif[]
 A pattern that we see users commonly adopting is that they’ll prototype and build pipelines in the web interface.
@@ -545,7 +547,7 @@ Decodable supports  link:https://docs.decodable.co/cli/integrate-with-github-act
 You can take it a step further and consider generating YAML resource files from a template driven with a tool like  link:https://jsonnet.org/[Jsonnet] .
 
 
-=== Summary
+== Summary
 Getting data from Postgres into Snowflake needs not be hard work 😀.
 With Decodable and its  link:https://docs.decodable.co/connections.html[comprehensive library of connectors]  you can get data from one system to another in a scalable, low-latency way.
 
@@ -558,7 +560,5 @@ With the data in Snowflake, we can perform whatever analytics on it that we want
 But Decodable is not just connectors, it also offers a powerful processing layer built on Flink SQL.
 With this, you could take the streams of data from Postgres and apply transformations before they’re written to Snowflake.
 For example, performing the denormalisation across the three source tables to then write One Big Table (OBT) to Snowflake, thus avoiding any need for subsequent pre-processing before analytical queries can be run.
-
-Sign up for a  link:https://app.decodable.co/-/accounts/create[free trial today]  and give Decodable a try.
 
 _You can find the source code used for the Postgres example, and sample YAML resource definitions,_ link:https://github.com/decodableco/examples/tree/main/postgres-to-snowflake-with-cdc[on GitHub] _._

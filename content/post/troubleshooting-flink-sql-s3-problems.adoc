@@ -6,12 +6,14 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 image: "/images/2024/08/flinksql-s3.jpg"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems[Decodable blog].
 
 You’d think once was enough.
-Having  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[already written]  about the trouble that I had getting Flink SQL to write to S3 (including on MinIO) this should now be a moot issue for me.
+Having  link:/2024/04/17/flink-sqlmisconfiguration-misunderstanding-and-mishaps/[already written]  about the trouble that I had getting Flink SQL to write to S3 (including on MinIO) this should now be a moot issue for me.
 Right?
 RIGHT?!
 
@@ -34,7 +36,7 @@ _I don’t code Java._
 _I don’t actually know what I’m doing half the time 😉._
 
 
-=== Test rig
+== Test rig
 I’m using Flink 1.18.1, with MinIO providing S3-compatible storage, running locally in a Docker container and available on port 9000.
 
 This is my test statement:
@@ -84,7 +86,7 @@ Here I run the `CREATE TABLE` and `INSERT`, and then exit the client.
 This then causes the remainder of the statements to run, which shuts down the Flink cluster, kills any hanging processes, and runs `jps` to confirm this.
 
 
-=== Logging
+== Logging
 Getting an insight into what’s going is a two-fold process:
 
 . What is running where (across SQL Client, Job Manager, and other components such as catalog metastores)
@@ -108,7 +110,7 @@ logger.aws.name = software.amazon
 logger.aws.level = TRACE
 ----
 
-=== Dependency: Hadoop S3 plugin
+== Dependency: Hadoop S3 plugin
 If you don’t include this and try to write to an `s3://` path you’ll get this error:
 
 
@@ -138,7 +140,7 @@ mkdir ./plugins/s3-fs-hadoop && \
 cp ./opt/flink-s3-fs-hadoop-1.18.1.jar ./plugins/s3-fs-hadoop/
 ----
 
-=== Log File Diving
+== Log File Diving
 With the log levels set to `TRACE`, let’s go and have a look at what we get.
 Here's the output from the `taskexecutor` log (in the Flink `./log` folder).
 
@@ -263,7 +265,7 @@ com.amazonaws.SdkClientException: Unable to load AWS credentials from environmen
 […]
 ----
 
-=== Credentials and Configuration
+== Credentials and Configuration
 As we saw from the log above, without any configuration for S3 provided the job fails.
 So let’s rectify that and tell Flink how to authorise to S3 (MinIO).
 Per  link:https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/filesystems/s3/#configure-access-credentials[the docs] , this is done as part of  link:https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/config/#flink-configuration-file[the Flink config file] :
@@ -329,7 +331,7 @@ com.amazonaws.services.s3.model.AmazonS3Exception: The AWS Access Key Id you pro
 […]
 ----
 
-=== Configuring an S3 endpoint for MinIO
+== Configuring an S3 endpoint for MinIO
 If you’re using an S3-compatible object store, such as MinIO, you need to tell the Flink S3 client where to find it, since as we saw above it defaults to literally `warehouse.s3.amazonaws.com`.
 
 Configuring the endpoint is covered  link:https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/filesystems/s3/#configure-non-s3-endpoint[clearly in the docs] —add it to your Flink config:
@@ -396,7 +398,7 @@ com.amazonaws.SdkClientException: Unable to execute HTTP request: warehouse.loca
 This problem comes about because the default option in the S3 client is to use  link:https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#virtual-hosted-style-access[virtual-hosted-style requests]  in which the bucket name (`warehouse`, in our example) is prefixed to the endpoint hostname (`localhost`).
 
 
-=== Configuring path-style access for MinIO from Flink S3
+== Configuring path-style access for MinIO from Flink S3
 Also covered  link:https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/filesystems/s3/[very clearly]  in the Flink S3 docs is how to configure it to use  link:https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access[path-style requests] .
 To the Flink configuration we add:
 
@@ -471,7 +473,7 @@ Flink SQL> show jobs;
 
 image::/images/2024/08/66aabfa762af1f4adc316c18_AD_4nXe5aPirnsid2aG6h4SYCJaB2hxBD8UmrZ1DRX33A-264Ifq67WN-Y2isETbpUOnU3WgZkgy50CQ2nZQU6MQlOefTvi7uFOBdnrJAjERpzcG7lI11cRWLEbi5S_unA8ZiPqXpVjzWFwG-zhpvxO2fwPKwJNG.gif[giphy]
 
-=== Configuration stuff
+== Configuration stuff
 The Flink S3 docs say to use `s3.` for configuring S3, and we saw above that these get mapped to `fs.s3a.` for the Hadoop-AWS module.
 It’s also valid to specify `fs.s3a.` directly—they get read and mapped the same:
 
@@ -497,17 +499,6 @@ If my educated-guess reading of the code is right,  link:https://github.com/apac
 The code mentions a `flink.hadoop.` prefix but this seems to be  link:https://github.com/apache/flink/blob/master/flink-filesystems/flink-s3-fs-hadoop/src/main/java/org/apache/flink/fs/s3hadoop/S3FileSystemFactory.java#L41-L47[overridden for flink-s3-fs-hadoop]  as a set of `FLINK_CONFIG_PREFIXES` which can be `s3., s3a., or fs.s3a.`—they’re all the same.
 
 
-=== References
+== References
 * link:https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/filesystems/s3[Flink S3 filesystem]
 * link:https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html[Hadoop-AWS]
-
-
-=== There’s got to be an easier way?
-There is, and it’s called  link:https://www.decodable.co/product[Decodable]  😀
-
-With pre-built connectors for S3, Apache Iceberg, Delta Lake, and dozens more, it’s the easiest way to move data.
-To use a connector you simply provide the necessary configuration—there’s not a JAR in sight!
-
-Decodable also has managed Flink, so if you _really_ want to write this stuff by hand, you can, and we’ll run it for you.
-
-link:https://app.decodable.co/-/accounts/create[Sign up for free]  and give it a try.

@@ -8,11 +8,13 @@ categories:
 - Apache Kafka
 - Apache Iceberg
 image: "/images/2024/07/6717dc3082a396e17c57a59a_6702b313ba409e39eee51f23_66884e3f38cc82cbe10d8b31_AD_4nXd2dALz1nQWoouC2exuwXTaEFKIOLoK7AB1ZJtco1Q40A8_ZDqryvMnnm3uDjFL4RyrdmZv3ImqmIvc0-wJKCDJEx7UA70I0SNd-lI5_gj59L_L_KDUkSgSHW_rJTgC4k2gD_kRFXrav8KZZwLZveF87JL-.webp"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/kafka-to-iceberg-with-flink"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/kafka-to-iceberg-with-flink[Decodable blog].
 
-_Sometimes it's not possible to have too much of a good thing, and whilst this blog may look at first-glance rather similar to the one that_ link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[I published just recently] _, today we're looking at a 100% pure Apache solution._
+_Sometimes it's not possible to have too much of a good thing, and whilst this blog may look at first-glance rather similar to the one that_ link:/2024/06/18/how-to-get-data-from-apache-kafka-to-apache-iceberg-on-s3-with-decodable/[I published just recently] _, today we're looking at a 100% pure Apache solution._
 _Because who knows, maybe you prefer rolling your own tech stacks instead of letting Decodable do it for you 😉._
 
 <!--more-->
@@ -28,7 +30,7 @@ Using Flink SQL for streaming data to Iceberg also gives us the advantage of bei
 
 image::/images/2024/07/6717dc3082a396e17c57a59a_6702b313ba409e39eee51f23_66884e3f38cc82cbe10d8b31_AD_4nXd2dALz1nQWoouC2exuwXTaEFKIOLoK7AB1ZJtco1Q40A8_ZDqryvMnnm3uDjFL4RyrdmZv3ImqmIvc0-wJKCDJEx7UA70I0SNd-lI5_gj59L_L_KDUkSgSHW_rJTgC4k2gD_kRFXrav8KZZwLZveF87JL-.webp[]
 
-=== tl;dr Create a Source; Create a Sink
+== tl;dr Create a Source; Create a Sink
 Let's leave the messy and boring dependency prerequisites for later, and jump straight to the action.
 For now, all you need to know for getting data from Kafka to Iceberg with Flink SQL is that you need to do the following:
 
@@ -135,7 +137,7 @@ So that's our writing to Iceberg set up and running.
 Now it's just Iceberg, so we can use any Iceberg-compatible tooling with it.
 
 
-=== Examining the metadata with pyiceberg
+== Examining the metadata with pyiceberg
 A bunch of Parquet and Avro files in an object store aren't much use on their own; but combined they make up the link:https://iceberg.apache.org/spec/[Iceberg table format] .
 A quick way to inspect them is with `pyiceberg` which offers a CLI.
 To use it you need to connect it to a catalog—in my example I'm using the Hive MetaStore, so configure it thus:
@@ -175,7 +177,7 @@ catalog-name                     dev
 warehouse                        s3a://warehouse
 ----
 
-=== Querying Iceberg data with DuckDB
+== Querying Iceberg data with DuckDB
 Having poked around the metadata, let's query the data itself.
 There are a variety of engines and platforms that can read Iceberg data, including link:https://iceberg.apache.org/docs/nightly/flink/[Flink]  (obviously!), link:https://iceberg.apache.org/docs/nightly/spark-getting-started/[Apache Spark] , link:https://trino.io/docs/current/connector/iceberg.html[Trino] , link:https://docs.snowflake.com/en/user-guide/tables-iceberg[Snowflake] , link:https://prestodb.io/docs/current/connector/iceberg.html[Presto] , link:https://cloud.google.com/bigquery/docs/query-iceberg-data[BigQuery] , and link:https://clickhouse.com/docs/en/engines/table-engines/integrations/iceberg[ClickHouse] .
 Here I'm going to use DuckDB.
@@ -228,7 +230,7 @@ SELECT count(*) AS row_ct,
 └────────┴─────────────────────┴────────────────────┴───────────┘
 ----
 
-=== Back to the start ↩️
+== Back to the start ↩️
 Well that wasn't so bad, right?
 In fact, pretty simple, I would say.
 Create a table, create a sink, and off you go.
@@ -239,7 +241,7 @@ There are a few bits that I hugely skimmed over in my keenness to show you the I
 * I presented my working Iceberg deployment as a _fait accompli_, when in reality it was the output of rather a lot of learning and link:https://libquotes.com/linus-torvalds/quote/lbr1k4j[random jiggling]  until I got it to work—so I'm going to explain that bit too.
 
 
-=== All the power of SQL 💪
+== All the power of SQL 💪
 Let's have a look at this innocuous CTAS that we ran above:
 
 
@@ -378,7 +380,7 @@ This gives us a single Flink job that looks like this:
 
 image::/images/2024/07/6717dc3182a396e17c57a5e8_6702b313ba409e39eee51f35_66884e3f21e36c3365b7ee30_AD_4nXfBebJNN3uxtdWn8B3AQJh_HzGrhmT1kHVXwDYusWDvfEHf91eZ52UITlo-hTtHnoIzMD2CFjDVrlgAhZhu1Qdms9dSnyaU-aZaSMM1JnBp6Nq7IdRiw1qbcHlBNkdjmCNoLncy7QyXmt0GVtstFP8213rK.webp[]
 
-=== Iceberg table properties
+== Iceberg table properties
 There are link:https://iceberg.apache.org/docs/1.5.2/configuration/#write-properties[various properties]  that you can configure for an Iceberg table.
 In my example above I just specified the bare minimum and let everything else use its default.
 
@@ -423,24 +425,24 @@ Flink SQL> ALTER TABLE iceberg_test RESET ('write.format.default');
 [INFO] Execute statement succeed.
 ----
 
-=== Iceberg dependencies for Flink
-As I explored (_at length_ 😅) in link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[several]  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[previous]  link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[articles] , you often need to add dependencies to Flink for it to work with other technologies.
+== Iceberg dependencies for Flink
+As I explored (_at length_ 😅) in link:/2024/02/27/flink-sql-and-the-joy-of-jars/[several]  link:/2024/04/17/flink-sqlmisconfiguration-misunderstanding-and-mishaps/[previous]  link:/2024/02/19/catalogs-in-flink-sqlhands-on/[articles] , you often need to add dependencies to Flink for it to work with other technologies.
 Whether it's formats (such as Parquet), catalogs (such as Hive), or connectors (such as Iceberg), juggling JARs is one of _the most fun_ aspects of running Flink yourself.
-Of course, if you don't enjoy _that_ kind of fun, you could just link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[let Decodable do it for you] .
+Of course, if you don't enjoy _that_ kind of fun, you could just link:/2024/06/18/how-to-get-data-from-apache-kafka-to-apache-iceberg-on-s3-with-decodable/[let Decodable do it for you] .
 
 
-==== Catalog
+== Catalog
 To use Iceberg you need to have a catalog metastore.
-Catalogs in Flink can be a bit hairy to understand at first, but have a read of link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[this primer]  that I wrote for a gentle yet thorough introduction to them.
+Catalogs in Flink can be a bit hairy to understand at first, but have a read of link:/2024/02/16/catalogs-in-flink-sqla-primer/[this primer]  that I wrote for a gentle yet thorough introduction to them.
 
-Iceberg can work with different catalogs (I explore several of them link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[here] ), and in this blog article I've used the Hive Metastore (HMS).
+Iceberg can work with different catalogs (I explore several of them link:/2024/02/19/catalogs-in-flink-sqlhands-on/[here] ), and in this blog article I've used the Hive Metastore (HMS).
 
 
 image::/images/2024/07/6717dc3182a396e17c57a5f4_6702b313ba409e39eee51f2a_66884e3f1b06a6fc506bc681_AD_4nXeEw-X8llqxCUmO8EJuvejwMoR9nPSD31qTPlN95msDL4-Mp_6lzs2w1k12Vjya8XVGFhLcm7XMCFaq-YAG0NQ4TGpT8Oob3Dew3XxJi1ibGpAuvSQshrNIzg0wZ-M5uAgJsvFcMHcYaYY57aZtQSo52XvB.webp[]
-To use the Hive metastore with Flink you need the link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/hive/overview/#dependencies[Hive connector]  `flink-sql-connector-hive-3.1.3` which link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[you can find]  on link:https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/[Maven repository] —make sure you use the correct one for your version of Flink.
+To use the Hive metastore with Flink you need the link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/hive/overview/#dependencies[Hive connector]  `flink-sql-connector-hive-3.1.3` which link:/2024/02/27/flink-sql-and-the-joy-of-jars/[you can find]  on link:https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/[Maven repository] —make sure you use the correct one for your version of Flink.
 
 As well as the Hive connector, you need Hadoop dependencies.
-I wrote about this link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[elsewhere]  but you either install the full Hadoop distribution, or cherry-pick just the JARs needed.
+I wrote about this link:/2024/02/19/catalogs-in-flink-sqlhands-on/[elsewhere]  but you either install the full Hadoop distribution, or cherry-pick just the JARs needed.
 
 You also need to configure `conf/hive-site.xml` so that Flink can find the Hive MetaStore:
 
@@ -460,13 +462,13 @@ You also need to configure `conf/hive-site.xml` so that Flink can find the Hive 
 […]
 ----
 
-==== Iceberg JARs
+== Iceberg JARs
 Iceberg support in Flink is provided by the `iceberg-flink-runtime` JAR.
 As with the catalog JAR, make sure you line up your versions—so in this case both Iceberg and Flink.
 For Iceberg 1.5.0 and Flink 1.18 I used link:https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.18/1.5.0/[iceberg-flink-runtime-1.18-1.5.0.jar]
 
 
-==== Object Store (S3)
+== Object Store (S3)
 Finally, since we're writing to data on S3-compatible MinIO, we need the correct JARs for that.
 I'm using `s3a`, which is provided by link:https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/[hadoop-aws-3.3.4.jar] .
 
@@ -499,8 +501,8 @@ One way to do this is supply these details as part of `conf/hive-site.xml`:
 […]
 ----
 
-==== Want the easy route?
-_(Of course, the_*really*_easy route is to_ link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[use Decodable] _, where we do all of this for you._
+== Want the easy route?
+_(Of course, the_*really*_easy route is to_ link:/2024/06/18/how-to-get-data-from-apache-kafka-to-apache-iceberg-on-s3-with-decodable/[use Decodable] _, where we do all of this for you._
 _😁)_
 
 I've shared on the Decodable link:https://github.com/decodableco/examples/[examples GitHub repo]  the following:
@@ -510,7 +512,7 @@ I've shared on the Decodable link:https://github.com/decodableco/examples/[examp
 * link:https://github.com/decodableco/examples/tree/main/kafka-iceberg/apache-flink[and more] …sample SQL statements, step-by-step README, and some other noodling around with Iceberg and catalogs for good measure.
 
 
-==== What if you get in a jam with your JARs?
+== What if you get in a jam with your JARs?
 Here are the various errors (usually a `ClassNotFoundException`, but not always) that you can expect to see if you miss a JAR from your dependencies.
 The missing JAR shown is based on the following versions:
 
@@ -519,7 +521,7 @@ The missing JAR shown is based on the following versions:
 * Iceberg 1.5.0
 * Hadoop 3.3.4
 
-You can find out more here about link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[locating the correct JAR to download]  and where to put it once you've downloaded it.
+You can find out more here about link:/2024/02/27/flink-sql-and-the-joy-of-jars/[locating the correct JAR to download]  and where to put it once you've downloaded it.
 
 
 th, td {
@@ -663,7 +665,7 @@ _in Flink’s_`conf/hive-site.xml`
 
 
 
-=== Conclusion
+== Conclusion
 I've shown you in this blog post how to stream data from Kafka to Iceberg using purely open source tools.
 I used MinIO for storage, but it would work just the same with S3.
 The catalog I used was Hive Metastore, but there are others—such as AWS Glue.

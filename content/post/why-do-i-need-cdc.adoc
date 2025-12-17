@@ -6,6 +6,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - CDC
 image: "/images/2024/10/why-cdc.png"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/why-do-i-need-cdc"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/why-do-i-need-cdc[Decodable blog].
@@ -42,7 +44,7 @@ So let’s assume you want the data out of the database.
 Before we get onto _how_ (and we’re not burying the lede here, the answer is in the title of the post 😉) let’s take a moment to think about the kind of things that we might want to do with the data.
 
 
-=== Common CDC use cases
+== Common CDC use cases
 * *Analytics* is the great big obvious one. Every man and his dog wants a dashboard or a data science notebook. Always has, and always will. The data to power these is not going to come from the operational database because it’s not optimized for that kind of querying. It’s going to be built on a data warehouse or data lake.
 * Perhaps a data lake is too slow, and we’re looking at *real-time Analytics*. The kind of things that power queries that are built into applications and need to return with low-latency. Again; you don’t want to be running this against your operational database. For quick response times you’ll want decent indexing as well as pre-aggregations. Here, you’d be looking at dedicated technologies such as Clickhouse, Apache Pinot, or Apache Druid.
 * *Other applications* might well want to use the data. Every time an order is placed, we probably want to think about updating the inventory system, right? Or our customer database, or a dozen other systems that users today will rightly assume are interconnected.
@@ -54,7 +56,7 @@ Before we get onto _how_ (and we’re not burying the lede here, the answer is i
 _You can read more about_ link:https://www.decodable.co/blog/seven-ways-to-put-cdc-to-work[CDC use cases in this blog post] _from Gunnar Morling._
 
 
-=== Why not just query the production database?
+== Why not just query the production database?
 You can look at this list another way.
 There are some things that you want to do with the data but can’t against the operational database because you’ll risk impacting the system that it’s serving.
 Workloads like big number-crunching analytical queries is a great example.
@@ -88,15 +90,15 @@ My colleague, Gunnar Morling, put it succinctly:
 > Ultimately, it's liberation for your data.
 >
 > — Gunnar Morling 🌍 (@gunnarmorling)  link:https://twitter.com/gunnarmorling/status/1123191912800845825?ref_src=twsrc%5Etfw[April 30, 2019]
- 
-=== CDC saves the day!
+
+== CDC saves the day!
 This being a vendor blog, I am of course going to tell you that there is a silver bullet to all your problems, and that it’s CDC 😁.
 The thing is, CDC _is_ one of those patterns that _does_ fit amazingly well into a lot of system architectures.
 
 Before I get too evangelical, let’s pause to look at what CDC _is_.
 
 
-==== What CDC is (and isn’t)
+== What CDC is (and isn’t)
 CDC, or Change Data Capture,  link:https://www.youtube.com/watch?v=zR2Ox4HWaXM[does what it says on the tin] .
 It captures changes to data.
 Specifically, changes made to data in one or more tables in a database.
@@ -124,7 +126,7 @@ One of the reasons there are misunderstandings around what CDC is stems from the
 Fortunately for you, dear reader, there is one way that is objectively better than the others.
 
 
-=== The best way to do CDC is log-based CDC
+== The best way to do CDC is log-based CDC
 Most databases are built on a concept known as the transaction log.
 
 It goes by different names (binlog, redo log, write-ahead log) in different implementations, but the concept is the same throughout.
@@ -158,7 +160,7 @@ The rising star in this space is the open-source  link:https://debezium.io/[Debe
 Founded and led by Red Hat, and often rebadged by vendors as their own CDC tool, Debezium supports  link:https://debezium.io/documentation/reference/stable/connectors/index.html[numerous]  databases and has  link:https://debezium.io/community/users/[wide adoption] .
 
 
-=== Pfff, I don’t need that, I can just do
+== Pfff, I don’t need that, I can just do
 Okay, okay.
 Whether it’s “_Not Invented Here_” syndrome or simply skepticism about using the transaction log for CDC, you may well be thinking of other ways of capturing changes to data.
 AirBnB have a  link:https://medium.com/airbnb-engineering/capturing-data-evolution-in-a-service-oriented-architecture-72f7c643ee6f[nice run-down]  from 2018 of the options available and their pros and cons.
@@ -172,14 +174,14 @@ Here’s a very quick look at the gotchas for other techniques, with reference t
 * *Comparing source and target* tables might make sense for a one-off data replication scenario, but is not credible as a genuine way of replicating changes from a source database. Each comparison execution will put a query load on the source database, similar to replication discussed above.
 
 
-=== Limitations of log-based CDC
+== Limitations of log-based CDC
 Remember, this is a vendor blog.
 We’re supposed to present these silver bullets as infallible, right?
 Whilst log-based CDC is pretty darn good and most of the time the correct answer, there are some challenges with it to be aware of.
 Some are more real than others, some have better mitigations than others.
 
 
-==== Is CDC expensive?
+== Is CDC expensive?
 No, unless you’re in Oracle GoldenGate (OGG) world.
 The Rolex-watch of the CDC world, OGG is well respected for a reason, but comes with a price tag to match.
 There are other ‘regular’ enterprise offerings, not to mention the open source  link:https://debezium.io/[Debezium]  project which is, well, open source!
@@ -187,7 +189,7 @@ There are other ‘regular’ enterprise offerings, not to mention the open sour
 *Mitigation*: Did I mention Debezium yet?
 
 
-==== CDC can be more complex to set up
+== CDC can be more complex to set up
 OK, there’s a little bit more in this one, I’ll admit.
 Once you start diving into the world of transaction logs, you need to be on your DBA’s good side because you’ll need to do some work to configure your CDC tool to access it.
 Depending on what you’re then integrating with your CDC tool might also need some work to configure it to write the data where you want it.
@@ -197,7 +199,7 @@ Depending on what you’re then integrating with your CDC tool might also need s
 *Mitigation*: If you use  link:https://decodable.co[a managed provider for Debezium]  a lot of the configuration and management is done for you.
 
 
-==== Does CDC have an impact on the operational system?
+== Does CDC have an impact on the operational system?
 Yes and no.
 The question is whether that impact is impactful or not.
 Whilst log-based CDC _is_ the lightest-touch way to get change data out of the system (see above for other, heavier, options), you are still interfacing with an operational system.
@@ -208,7 +210,7 @@ If you don’t then you’ll miss change events.
 *Mitigation*: As above; log-based CDC is widely used at scale in production systems world-wide. Read the friendly manual, and you’ll be fine. Just make sure your DBA is on-board 😁.
 
 
-=== Log-based CDC in action—an overview
+== Log-based CDC in action—an overview
 Here’s a very simple overview of what you might build with log-based CDC.
 The requirement is populating a data lake from an operational database.
 We’ll use Postgres in the example, but the concept applies to any database.
@@ -218,13 +220,3 @@ image::/images/2024/10/670e226f1f2a4fec8b66814f_670d5e17d16123873c4e0ff6_AD_4nXc
 * Any `INSERT`, `UPDATE`, or `DELETE` is captured in the write-ahead-log (WAL)
 * Debezium streams the changes as they happen to an Apache Kafka topic (although it’s worth noting that these days  link:https://www.decodable.co/blog/understanding-cdc-with-debezium-server-and-debezium-engine[Debezium doesn’t have to use Kafka] ). The Kafka topic buffers the changes and makes them available for downstream use
 * A tool such as Apache Flink or Kafka Connect reads the data from the Kafka topic and writes it in Apache Iceberg format to S3
-
-
-=== Okay Okay, I’m sold! Where do I buy a log-based CDC?
-_(I told you: this is a vendor blog; did you think the CTA really wasn’t going to be to sign up for our service?_
-_😜)_
-
-
-image::/images/2024/10/670e226f1f2a4fec8b66814c_670d5e171d0283de88249bd0_AD_4nXd_1bvudAxAa0jC7RBG0K2HrExF8pNRifjIpy73DQTRrCRjZtqPHSG4WNUIcGNweK9O2HIV7sSX7pFJsqvVw5wbqMCBuDZCNVBOYAxbLsdV4osK_oC9bJNozsmN_DZ0WraWB5rzqfr-V8ZbcAZ1ls-TdsEp.webp[]
-Well, since you ask, Decodable provides a  link:https://decodable.co[fully-managed Debezium service]  as well as a rich connector library for sending the changes captured to other platforms such as OpenSearch, S3, as well as other databases.
-We also have a Flink-SQL based stream processing platform so you can choose to transform the changes that are captured before sending them onwards.

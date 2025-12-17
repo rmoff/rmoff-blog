@@ -6,11 +6,13 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 image: "/images/2024/02/flink-hands-on.webp"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[Decodable blog].
 
-In the  link:https://decodable.co/blog/catalogs-in-flink-sql-a-primer[previous blog post]  I looked at the role of catalogs in Flink SQL, the different types, and some of the quirks around their configuration and use.
+In the  link:/2024/02/16/catalogs-in-flink-sqla-primer/[previous blog post]  I looked at the role of catalogs in Flink SQL, the different types, and some of the quirks around their configuration and use.
 If you are new to Flink SQL and catalogs, I would recommend reading that post just to make sure you’re not making some of the same assumptions that I mistakenly did when looking at this for the first time.
 
 <!--more-->
@@ -23,12 +25,12 @@ Because I found the documentation across the different projects difficult to rec
 Let’s get started with one of the most widely-supported and open-standard catalogs: Apache Hive, and specifically, its Metastore.
 
 
-=== Using the Hive Catalog with Flink SQL
+== Using the Hive Catalog with Flink SQL
 The link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/hive_catalog/[Hive catalog]  is one of the three catalogs that are part of the Flink project._
 _It uses the Hive Metastore to persist object definitions, so is one of the primary choices you've got for a catalog to use with Flink.
 
 
-==== Installation and Configuration
+== Installation and Configuration
 It's important to note that whilst the Hive catalog is _part_ of the Flink project, it's not shipped with the binaries.
 The docs describe the process of link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[installing the dependencies]  and necessary configuration, but to someone not super-familiar with Java and Hadoop I found myself stuck quite often.
 In case you're in the same boat, I'm going to detail here the steps I took to get it working.
@@ -48,7 +50,7 @@ Run this to start the container which listens on port 9083:
 ----
 docker run --rm --detach --name hms-standalone \
 		--publish 9083:9083 \
-		ghcr.io/recap-build/hive-metastore-standalone:latest 
+		ghcr.io/recap-build/hive-metastore-standalone:latest
 ----
 Now we need to create a file that Flink is going to look for to tell it where to find the Hive Metastore.
 This is `hive-site.xml` and needs to go in Flink’s `./conf` folder (by default):
@@ -59,15 +61,15 @@ This is `hive-site.xml` and needs to go in Flink’s `./conf` folder (by default
 cat > ./conf/hive-site.xml <
 
 
-  
+
     hive.metastore.local
     false
-  
 
-  
+
+
     hive.metastore.uris
     thrift://localhost:9083
-  
+
 
 
 EOF
@@ -157,7 +159,7 @@ _You'll notice I'm using $( ) instead of ` ` to enclose the hadoop call because 
 If you're using 1.18 then because of link:https://issues.apache.org/jira/browse/FLINK-33358[[FLINK-33358] Flink SQL Client fails to start in Flink on YARN - ASF JIRA]  you'll need to apply link:https://github.com/apache/flink/pull/23629#issuecomment-1917053501[this small PR]  to your `sql-client.sh` before running the SQL Client.
 
 
-==== SQL Client with the Hive Catalog
+== SQL Client with the Hive Catalog
 With our dependencies installed and configured, and a Hive Metastore instance running, we're ready to go and use our Hive catalog.
 Launch the SQL Client:
 
@@ -190,11 +192,11 @@ List databases:
 [source,sql]
 ----
 Flink SQL> SHOW DATABASES;
-+---------------+           
-| database name |           
-+---------------+           
-|       default |           
-+---------------+           
++---------------+
+| database name |
++---------------+
+|       default |
++---------------+
 1 row in set
 ----
 Create a new database & use it:
@@ -213,42 +215,42 @@ The `SHOW CURRENT` command is useful to orientate yourself in the session:
 
 [source,sql]
 ----
-Flink SQL> SHOW CURRENT CATALOG; 
-+----------------------+         
-| current catalog name |         
-+----------------------+         
-|               c_hive |         
-+----------------------+         
-1 row in set                     
-                                 
+Flink SQL> SHOW CURRENT CATALOG;
++----------------------+
+| current catalog name |
++----------------------+
+|               c_hive |
++----------------------+
+1 row in set
+
 Flink SQL> SHOW CURRENT DATABASE;
-+-----------------------+        
-| current database name |        
-+-----------------------+        
++-----------------------+
+| current database name |
++-----------------------+
 |                new_db |
-+-----------------------+        
-1 row in set    
++-----------------------+
+1 row in set
 ----
 To show that the persistence of the catalog metadata in Hive Metastore is working let's go and create a table:
 
 
 [source,sql]
 ----
-Flink SQL> CREATE TABLE foo (       
-			     c1 INT,                       
-			     c2 STRING                     
-			 ) WITH (                          
-			   'connector' = 'datagen',        
-			   'number-of-rows' = '8'          
+Flink SQL> CREATE TABLE foo (
+			     c1 INT,
+			     c2 STRING
+			 ) WITH (
+			   'connector' = 'datagen',
+			   'number-of-rows' = '8'
 			 );
-[INFO] Execute statement succeed.   
-                                    
-Flink SQL> SHOW TABLES;             
-+------------+                      
-| table name |                      
-+------------+                      
-|        foo |                      
-+------------+                      
+[INFO] Execute statement succeed.
+
+Flink SQL> SHOW TABLES;
++------------+
+| table name |
++------------+
+|        foo |
++------------+
 1 row in set
 ----
 We'll query it, just to make sure things are working:
@@ -295,8 +297,8 @@ Because we're using the Hive catalog and not the in-memory one, we should see th
 
 [source,sql]
 ----
-Flink SQL> SHOW TABLES IN `c_hive`.`new_db`;  
-[ERROR] Could not execute SQL statement. Reason:                            
+Flink SQL> SHOW TABLES IN `c_hive`.`new_db`;
+[ERROR] Could not execute SQL statement. Reason:
 org.apache.flink.table.api.ValidationException: Catalog c_hive does not exist
 ----
 Oh noes!
@@ -304,7 +306,7 @@ It didn't work!
 🙀 Or did it?
 😼
 
-I mentioned Catalog Stores in my  link:https://decodable.co/blog/catalogs-in-flink-sql-a-primer[first blog post] , and I've not defined one—meaning that the catalog _definition_ is not persisted between sessions.
+I mentioned Catalog Stores in my  link:/2024/02/16/catalogs-in-flink-sqla-primer/[first blog post] , and I've not defined one—meaning that the catalog _definition_ is not persisted between sessions.
 If I define the catalog again:
 
 
@@ -326,7 +328,7 @@ Flink SQL> SHOW TABLES IN `c_hive`.`new_db`;
 +------------+
 |        foo |
 +------------+
-1 row in set     
+1 row in set
 ----
 In this sense, when we create a catalog in Flink it's more like creating a _connection_.
 Once that connection is created, whatever metadata is stored the other side of it becomes available to Flink.
@@ -335,7 +337,7 @@ So that's using the Hive catalog with Flink.
 You can skip over the next section if you want, but if you're like me and curious as to what's happening behind the scenes then keep reading.
 
 
-==== Sidenote: Digging a bit Deeper into the Hive Metastore
+== Sidenote: Digging a bit Deeper into the Hive Metastore
 Here's what we'll see on successful connection from the SQL Client to the Hive Metastore in the logs (`flink-rmoff-sql-client-asgard08.log`):
 
 
@@ -375,7 +377,7 @@ Here we see the creation of a table called `foo_new2` in the `new_db` database:
 Of course, none of this is actually _necessary_ for simply using a catalog with Flink—but I found it useful for mapping out in my mind what's actually happening.
 
 
-==== What does the Hive catalog look like when storing Parquet data in S3 (MinIO) from Flink?
+== What does the Hive catalog look like when storing Parquet data in S3 (MinIO) from Flink?
 OK, back to the main storyline.
 We've now got a Hive catalog working, persisting the metadata about a definition-only table.
 What do I mean by a definition-only table?
@@ -384,12 +386,12 @@ Well it's completely self-contained; there is no real data, just `datagen`:
 
 [source,shell]
 ----
-CREATE TABLE foo (       
-     c1 INT,                       
-     c2 STRING                     
- ) WITH (                          
-   'connector' = 'datagen',        
-   'number-of-rows' = '8'          
+CREATE TABLE foo (
+     c1 INT,
+     c2 STRING
+ ) WITH (
+   'connector' = 'datagen',
+   'number-of-rows' = '8'
  );
 ----
 Let's now add in something more realistic, and understand how we can write data from Flink to a table whose data actually exists somewhere.
@@ -524,7 +526,7 @@ DB_ID               |NAME
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 1                   |default
 2                   |db_rmoff
-ij> 
+ij>
 ----
 `ij` is a bit clunky when it comes to pretty output (e.g.
 rows are very wide and not helpfully formatted based on the width of the data) so let's use link:https://dbeaver.io/[DBeaver]  to speed things up and look at the table we created.
@@ -550,7 +552,7 @@ There's just one more catalog that's provided with Flink before we get onto some
 Without further ado, let's look at the JDBC Catalog.
 
 
-=== The Flink JDBC Catalog
+== The Flink JDBC Catalog
 The link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/jdbc/#jdbc-catalog[JDBC Catalog]  in Flink is a bit of an odd one if you're coming to it expecting a catalog that holds object definitions in Flink _of your creation_.
 What the JDBC catalog does is expose the _existing objects_ and their data of a target database to Flink.
 Which is pretty neat—it's just not what you might assume it does.
@@ -559,7 +561,7 @@ With that in mind, let's see how it works.
 
 image::/images/2024/02/6717dbfa82a396e17c578967_6702c5d70cdc849848eddc21_65cee65dcf049d69d181d018_IRKfuQOJXyfJhr6p9lHUN4rMwQER9tjqkf_oVB73wTvK3w_lV4MbeX8tVQHGH5OHBTGPgjJ3B8QfyAnkd1vdL2gGwZ6ydLdwF4zZ6InJNG4UJMIzMmZAWUVGS_doNiPyBe9l6H1PtmxOX-Va9tnyQqk.webp[]
 
-==== Installation and Configuration
+== Installation and Configuration
 Fortunately, the dependencies for the JDBC catalog are a _lot_ simpler than Hive's.
 As with the Hive connector you need to download the JDBC connector separately since it's not bundled with the Flink distribution.
 You also need the JDBC driver of the database to which you want to connect—the docs have a useful reference to the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/jdbc/#dependencies[download links]  for these.
@@ -608,7 +610,7 @@ postgres=#
 Now we’ll hook this up to Flink.
 
 
-==== Using the JDBC Catalog in Flink
+== Using the JDBC Catalog in Flink
 With the Flink JDBC connector JAR and JDBC driver in place, we can launch the Flink cluster and SQL Client:
 
 
@@ -727,7 +729,7 @@ Reading and writing from a database with Flink via the JDBC Connector and its JD
 This is going to be pretty handy, whether we want to analyse the data, or use it for joins with data coming from other sources, such as Apache Kafka or other streams of data.
 
 
-=== Third-Party Flink Catalogs: Apache Iceberg
+== Third-Party Flink Catalogs: Apache Iceberg
 Flink can be used with many different technologies, including the open-table formats.
 Each of these implement a Flink catalog so that you can access and use their objects from Flink directly.
 Here I'll show you Apache Iceberg's Flink catalog, with three different metastores, (or backing catalogs, however you like to think of it).
@@ -737,7 +739,7 @@ Well, to get my head around what was Iceberg, what was Flink, and what was metas
 In all of these I'm using link:https://min.io/[MinIO]  for storage, which is an S3-compatible object store that can be run locally.
 
 
-==== Flink, Iceberg, and Hive Metastore
+== Flink, Iceberg, and Hive Metastore
 This one was link:https://twitter.com/rmoff/status/1753177272045932927[a lot of fun]  to figure out.
 You can perhaps put a hefty number of air-quotes around that innocently-italicised `fun`.
 😉 I'm going to dig into the deluge of dastardly debugging in a subsequent blog—for now we'll just look at things when they go right.
@@ -895,23 +897,23 @@ The Hive metastore—in this case—holds the magical metadata of this relations
 
 [source,sql]
 ----
-ij> SELECT DB."NAME",  
-	       DB.DB_LOCATION_URI,  
-	       TB.TBL_NAME,  
-	       TBP.PARAM_VALUE  
-	FROM   APP.DBS DB  
-	       INNER JOIN APP.TBLS TB  
-	               ON DB.DB_ID = TB.DB_ID  
-	       INNER JOIN APP.TABLE_PARAMS TBP  
-	               ON TB.TBL_ID = TBP.TBL_ID  
+ij> SELECT DB."NAME",
+	       DB.DB_LOCATION_URI,
+	       TB.TBL_NAME,
+	       TBP.PARAM_VALUE
+	FROM   APP.DBS DB
+	       INNER JOIN APP.TBLS TB
+	               ON DB.DB_ID = TB.DB_ID
+	       INNER JOIN APP.TABLE_PARAMS TBP
+	               ON TB.TBL_ID = TBP.TBL_ID
 	WHERE  TBP.PARAM_KEY = 'metadata_location';
 
 NAME    |DB_LOCATION_URI            |TBL_NAME|PARAM_VALUE                                                                                         |
 --------+---------------------------+--------+----------------------------------------------------------------------------------------------------+
-db_rmoff|s3a://warehouse/db_rmoff.db|t_foo   |s3a://warehouse/t_foo/metadata/00000-5946940a-04fa-4a60-9bc9-b83db818560a.metadata.json    
+db_rmoff|s3a://warehouse/db_rmoff.db|t_foo   |s3a://warehouse/t_foo/metadata/00000-5946940a-04fa-4a60-9bc9-b83db818560a.metadata.json
 ----
 
-==== Flink, Iceberg, and DynamoDB Metastore
+== Flink, Iceberg, and DynamoDB Metastore
 This permutation is obviously—given the use of DynamoDB—designed for when you're running Flink on AWS, perhaps with EMR.
 My thanks to link:https://lazypro.medium.com/[Chunting Wu]  who published an link:https://lazypro.medium.com/getting-started-with-flink-sql-apache-iceberg-and-dynamodb-catalog-71b96817e3c3[article]  and corresponding link:https://github.com/wirelessr/flink-iceberg-playground[GitHub repo]  that shows how to get this up and running.
 
@@ -982,7 +984,7 @@ image::/images/2024/02/6717dbfc82a396e17c578998_6702c5d80cdc849848eddc33_65cee65
 
 image::/images/2024/02/6717dc0082a396e17c578a8c_6702c5d80cdc849848eddd15_65cee65dbe7c4a66f3a00500_sWXKyyjS37AS1vIBMRfANnz5x45s00wdnZoSK0igyxDJf3VehwgLMP1Ckcqd4wqYkcRrC9orksyJEPMMz8j1nXhBJ00CqF8o74XmtAHj2YlrR40b8Fr-qFqCgLVlVnjY2RU0W5sc3YLaApj4r9OHk20.webp[CleanShot 2024-01-09 at 17.40.29.png]
 
-==== Flink, Iceberg, and JDBC Metastore
+== Flink, Iceberg, and JDBC Metastore
 Iceberg actually supports link:https://iceberg.apache.org/javadoc/latest/org/apache/iceberg/BaseMetastoreCatalog.html[9 catalog types] , but don't worry—I'm not going to go through each one 😅.
 We've already got a handle on the pattern here:
 
@@ -1009,13 +1011,13 @@ Let's go ahead and create the catalog:
 
 [source,sql]
 ----
-CREATE CATALOG c_iceberg_jdbc WITH ( 
-   'type'                 = 'iceberg', 
-   'io-impl'              = 'org.apache.iceberg.aws.s3.S3FileIO', 
-   'warehouse'            = 's3://warehouse', 
-   's3.endpoint'          = 'http://minio:9000', 
-   's3.path-style-access' = 'true', 
-   'catalog-impl'         = 'org.apache.iceberg.jdbc.JdbcCatalog', 
+CREATE CATALOG c_iceberg_jdbc WITH (
+   'type'                 = 'iceberg',
+   'io-impl'              = 'org.apache.iceberg.aws.s3.S3FileIO',
+   'warehouse'            = 's3://warehouse',
+   's3.endpoint'          = 'http://minio:9000',
+   's3.path-style-access' = 'true',
+   'catalog-impl'         = 'org.apache.iceberg.jdbc.JdbcCatalog',
    'uri'                  ='jdbc:postgresql://postgres:5432/?user=dba&password=rules');
 ----
 You know the drill by now—create the database, set it as current, create the table and populate it:
@@ -1069,10 +1071,8 @@ c_iceberg_jdbc  | db01            | t_foo      | s3://warehouse/db01/t_foo/metad
 (1 row)
 ----
 
-=== In Conclusion…
+== In Conclusion…
 If you’ve stuck with me this far, well done!
 🙂 My aim was not to put you through the same pain as I had in traversing this, but to summarise the key constants and variables when using the different components and catalogs.
 
-Stay tuned to this blog for my next post which will be a look at some of the troubleshooting techniques that can be useful when exploring Flink SQL.
-
-*Fun fact: if you use Decodable’s fully managed Flink platform you don’t ever have to worry about catalogs—we handle it all for you!*
+Stay tuned to this blog for my link:/2024/02/27/flink-sql-and-the-joy-of-jars/[next] link:/2024/08/06/troubleshooting-flink-sql-s3-problems/[posts] which will be a look at some of the troubleshooting techniques that can be useful when exploring Flink SQL.

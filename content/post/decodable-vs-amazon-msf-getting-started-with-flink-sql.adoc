@@ -8,6 +8,8 @@ categories:
 - Amazon MSF
 - Decodable
 image: "https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c5795ff_6702c4a8ac27223c85ab1f72_667df1ac45e3e28f505d0273_AD_4nXcvPGYm5Jb7-jrYXpSSpbmfYjd5CFkRLHkf0PrGwFkibIO_HjUsXsj_apzvOEMRQW7b5zAF3ZY36x-DxFMLxOHHYg76FmikKEDGRi28FXNch-H8nFWzAOb2WcAk_i2Z_Vc9Kwb-1kIJJwzw18PWmXgDPAFJvk_cmxMaX6Kq9kivlpQjhrr8HBk.webp"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/decodable-vs-msf-getting-started-with-flink-sql"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/decodable-vs-msf-getting-started-with-flink-sql[Decodable blog].
@@ -32,14 +34,14 @@ _I’m not interested in that kind of FUD._
 _Hopefully this blog will simply serve to illustrate the similarities and differences between the two._
 
 
-=== Let’s build something!
+== Let’s build something!
 I’m going to take a look at what it takes to build an example of a common pipeline—getting data from a Kafka topic and using SQL to create some aggregate calculations against the data and send it to an S3 bucket in Iceberg format.
 
 I’ll start by exploring Amazon MSF and what it takes to build out the pipeline from the point of view of a data engineer who is deeply familiar with SQL—but not  link:https://www.decodable.co/blog/your-first-apache-flink-job[Java or Python]  (hence this blog - Flink SQL!).
 After that I’ll look at doing the same thing on Decodable and what the differences are.
 
 
-=== Running SQL on Amazon MSF
+== Running SQL on Amazon MSF
 After logging into the AWS Console and going to the MSF page, I have two options for getting started, `Streaming applications` or `Studio notebooks`.
 
 
@@ -80,8 +82,8 @@ So let’s actually give it a go.
 As mentioned above, the pipeline we’re building is to stream data from a Kafka topic into Apache Iceberg on S3, calculating some aggregations on the way.
 
 
-==== Reading data from Kafka with Amazon MSF
-Having explored Flink SQL for myself  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[over]   link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[the]   link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[past]   link:https://www.decodable.co/blog/exploring-the-flink-sql-gateway-rest-api[few]   link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[months]  I knew to go and look up the  link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/[Kafka connector for Flink] .
+== Reading data from Kafka with Amazon MSF
+Having explored Flink SQL for myself  link:/2024/02/16/catalogs-in-flink-sqla-primer/[over]   link:/2024/02/19/catalogs-in-flink-sqlhands-on/[the]   link:/2024/04/17/flink-sqlmisconfiguration-misunderstanding-and-mishaps/[past]   link:/2024/03/12/exploring-the-flink-sql-gateway-rest-api/[few]   link:/2024/02/27/flink-sql-and-the-joy-of-jars/[months]  I knew to go and look up the  link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/kafka/[Kafka connector for Flink] .
 Connectors in Flink SQL are defined as tables, from which one can read and write data to the associated system.
 The  `Examples` notebook also gives, well, _examples_ to follow too.
 To start with I wanted to just check connectivity, so I deleted out what was there in the cell and created a single-column table connecting to my cluster:
@@ -206,7 +208,7 @@ Now we are getting somewhere.
 With data flowing in from our Kafka topic let’s build the second half of our pipeline, in which we’re going to compute aggregates on the data before sending it to Apache Iceberg.
 
 
-==== Running Flink SQL to transform data on Amazon MSF
+== Running Flink SQL to transform data on Amazon MSF
 Whilst configuring the connection to Kafka might have been a bit more fiddly than we’d have liked, building actual transformational SQL in the Zeppelin notebook is precisely its sweet spot.
 You can iterate to your heart’s content to get the syntax right and dataset exactly as you want it.
 You can also take advantage of Zeppelin’s built-in visualisation capabilities to explore the data further:
@@ -229,7 +231,7 @@ GROUP BY customerName;
 Here I’m using `UNNEST` to get at the individual records in the `products` array, and create a result set of the number of basket items (`COUNT(*)`) and total units (`SUM(quantity)`) broken down by customer (`customerName`).
 
 
-==== Attempting to write to Apache Iceberg from Amazon MSF…
+== Attempting to write to Apache Iceberg from Amazon MSF…
 Just as we used a table to read data from Kafka above, we’ll use a table to write to Iceberg on S3.
 
 If I were running this on my own Apache Flink cluster, I’d do this:
@@ -284,7 +286,7 @@ org.apache.flink.table.api.ValidationException:
 Could not find any factory for identifier 'iceberg' that implements
 'org.apache.flink.table.factories.DynamicTableFactory' in the classpath. 
 ----
-I’ve encountered  link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[this error]   link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[previously] .
+I’ve encountered  link:/2024/04/17/flink-sqlmisconfiguration-misunderstanding-and-mishaps/[this error]   link:/2024/02/27/flink-sql-and-the-joy-of-jars/[previously] .
 It means that the Flink installation only has a certain set of connectors installed, and not the one we want.
 The error message actually tells us which ones are available:
 
@@ -307,7 +309,7 @@ The MSF docs  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-zep
 In essence, I need to put the Iceberg JAR in an S3 bucket, and restart the notebook with the dependency added.
 
 Let’s grab the  link:https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.15/1.4.3/iceberg-flink-runtime-1.15-1.4.3.jar[Iceberg JAR for Flink 1.15]  (wanna know more about navigating JAR-hell?
-You’ll enjoy  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[this blog]  that I wrote) and upload it to S3:
+You’ll enjoy  link:/2024/02/27/flink-sql-and-the-joy-of-jars/[this blog]  that I wrote) and upload it to S3:
 
 
 [source,shell]
@@ -398,7 +400,7 @@ The complication here—and the reason I can’t just copy and paste like any go
 The MSF documentation on connectors outside Kinesis and Kafka is  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-zeppelin-connectors.html#zeppelin-custom-connectors[pretty sparse] , and there’s nothing for Iceberg that I could find.
 The  link:https://iceberg.apache.org/docs/1.4.3/flink-connector/[documentation for Apache Iceberg’s Flink connector]  lists the properties required, and after a bit of poking around there I found  link:https://iceberg.apache.org/docs/nightly/aws/#flink[this section about using it with a Glue catalog] .
 There’s also  link:https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-iceberg-use-flink-cluster.html[this section]  on using Iceberg from Amazon EMR—which is not the same as MSF, but perhaps has the same pattern of access for Glue and S3 when writing Iceberg data.
-One point to note here is that the EMR document talks about creating Flink `CATALOG` objects—I’d recommend you review my  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[primer on catalogs in Flink]  too if you haven’t already, since it’s an area full of ambiguity and overloaded terms.
+One point to note here is that the EMR document talks about creating Flink `CATALOG` objects—I’d recommend you review my  link:/2024/02/16/catalogs-in-flink-sqla-primer/[primer on catalogs in Flink]  too if you haven’t already, since it’s an area full of ambiguity and overloaded terms.
 
 Distilling down the above resources, I tried this configuration for the table next:
 
@@ -422,7 +424,7 @@ _I mean, we’re only this far in and haven’t had a ClassNotFoundException yet
 _My impression of MSF is feeling like the trials and tribulations of learning Apache Flink running locally, but with one arm tied behind my back as I try to debug a system running a version of Flink that’s two years old and with no filesystem access to check things like JARs._
 
 Back to our story.
-I spent a bunch of time learning about  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[JARs in Flink]  so was happy taking on this error.
+I spent a bunch of time learning about  link:/2024/02/27/flink-sql-and-the-joy-of-jars/[JARs in Flink]  so was happy taking on this error.
 `ClassNotFoundException` means that Flink can’t find a Java class that it needs.
 It’s usually solved by providing a JAR that includes the class and/or sorting out things like classpaths so that the JAR can be found.
 Searching a local Hadoop installation (remember those?) turned up this:
@@ -483,7 +485,7 @@ Instead of writing to Iceberg on S3, we’ll compromise and simply write parquet
 This should hopefully be easier since the Flink filesystem connector is one of the connectors that _is_ included with MSF.
 
 
-==== Attempting to write Parquet files to S3 from Amazon MSF…
+== Attempting to write Parquet files to S3 from Amazon MSF…
 This _should_ be much simpler:
 
 
@@ -590,7 +592,7 @@ Still no dice.
 
 image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1a82a396e17c5794c2_6702c4a7ac27223c85ab1f1d_667df1ac8f9f8202e99edb0f_AD_4nXf6YD7IilFTAD8lduoeXL1_iCo3_6Hn-5rfuAHbz039naFsXvZaOnOzd58PP6GBIOhF1_RX5KpkwyQMAM4E7krRVxMGp5V6PGL3Sgwkt2S6rOHr-NfZ9bTpWHov17lo0nQinLTT5AOdYvyGztvbROCRICxzw3yyRnqW1pnYfE7cwKJspyiHpaY.webp[CleanShot 2024-06-20 at 11.06.12]
 
-==== Writing CSV or JSON files to S3 from Amazon MSF
+== Writing CSV or JSON files to S3 from Amazon MSF
 So now I’m going to fall back from Iceberg…to Parquet…to CSV…something…anything…
 
 Here’s the CSV table and`INSERT`:
@@ -755,7 +757,7 @@ _Ten seconds is almost certainly what you_ do not _want—if you need the data t
 📓 You can find the source for the notebook  link:https://gist.github.com/rmoff/4700364b90e446adfca74ef22763a41b[here] .
 
 
-==== Wrapping things up on MSF
+== Wrapping things up on MSF
 Well, what a journey that was.
 We eventually got _something_ working to prove out an end-to-end SQL pipeline.
 We had to make a bunch of compromises—including ditching the original requirement to aggregate the data—which in real life would be a lot more difficult to stomach, or would have more complicated workarounds.
@@ -765,7 +767,7 @@ The final step with something like this would be to run it as an application.
 Notebooks are great for exploration and experimentation, but now we have something that works and we don’t want to have to launch Zeppelin each time to run it.
 
 
-==== Running an MSF notebook as an application
+== Running an MSF notebook as an application
 MSF has an option to  link:https://docs.aws.amazon.com/managed-flink/latest/java/how-notebook-durable.html[deploy a notebook as a streaming application] , although the list of caveats is somewhat daunting.
 The one which I’m stumbling on is this one:
 
@@ -918,14 +920,14 @@ Phew…so that was Amazon MSF (neé Kinesis Analytics).
 What does it look like getting started with Flink SQL on Decodable?
 
 
-=== Running Flink SQL on Decodable
+== Running Flink SQL on Decodable
 Decodable is all about doing things the easy—but powerful—way.
 Not because you’re lazy; but because you’re smart.
 Where’s the business differentiation to be had in who can write more boilerplate Flink SQL?
 So things like connectors don’t even need SQL, they’re just built into the product as first class resources.
 
 
-==== Reading data from Kafka with Decodable
+== Reading data from Kafka with Decodable
 From the home page of the product I’m going to connect to Kafka, and I’ll do it by clicking on the rather obvious “Connect to a source”:
 
 
@@ -964,7 +966,7 @@ Looking good!
 Let’s now look at the next bit of the pipeline; processing the data to create aggregates.
 
 
-==== Flink SQL in Decodable
+== Flink SQL in Decodable
 From the stream view of the data, I click on the *Outputs* and *Create a pipeline*
 
 
@@ -1012,7 +1014,7 @@ Now I can see data coming in from my Kafka source (`basket01`) and out to an agg
 
 image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1c82a396e17c57962d_6702c4a8ac27223c85ab1f87_667df1acf6e3c70e81a48b18_AD_4nXclQ9Rr6bKolH7I2cNPv7o3dKJ-hSPYL90IjoGsH6k13eIK88o_YJ-9Qqwe-JFD8fzsh1yYdsA9SDqd6FfiUzOf4UnsOs7lIzQ_GGUAlgsIlDUwFdUP2X_U8U3GKg6_cgEaD6e9o2IZpI69B92qiyEngfUBrJN7_jJOlaudcAd54x4JHZadScg.webp[CleanShot 2024-06-24 at 12.51.32]
 
-==== Writing to Apache Iceberg from Decodable
+== Writing to Apache Iceberg from Decodable
 The final part here is to wire up our new stream, `basket_agg`, to the Apache Iceberg sink.
 From the stream we can directly add a sink connection:
 
@@ -1047,7 +1049,7 @@ For completeness, here’s the Iceberg data queried through Amazon Athena:
 
 image::https://cdn.prod.website-files.com/665de628e01a0041a62ecd14/6717dc1b82a396e17c5795c4_6702c4a8ac27223c85ab200d_667df1ac65b64e1b7e6b4594_AD_4nXe91ewZMohn69PmE8MvV-7PKgl1tATBcKyT90qTmvS_TWf54NnafSPipQext_PsJDmx7h6Ir-ElH3AniS4GpCzRzTT87EUGz5ZyYHt4X1JiFJnr4IWoRJzW4V6MTOtMX_0fFQcl6InoNjpkU3SfVc2TBaSrZS_XzcYGDm4bowCIzYHrSa0yoS4.webp[CleanShot 2024-06-24 at 15.26.42]
 
-==== Running real-time ETL on Decodable in production
+== Running real-time ETL on Decodable in production
 In the same way that I looked at what it means to move an MSF notebook through to deployment as an application, let’s see what that looks like on Decodable.
 In practice, what we’ve built _is_ an application.
 There are no further steps needed.
@@ -1058,7 +1060,7 @@ This means that if we want to  link:https://docs.decodable.co/declarative/query.
 This could be to restore to another environment, or to promote through as part of a CI/CD process.
 
 
-=== Conclusion
+== Conclusion
 We’ve seen how two platforms built on Apache Flink offer access to Flink SQL.
 
 On Decodable, the only SQL you need to write is if you want to transform data.
