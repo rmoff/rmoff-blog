@@ -7,6 +7,8 @@ categories:
 - Apache Flink
 - CDC
 image: "/images/2024/12/GeiUNCQW0AAJPg7.jpg"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/exploring-flink-cdc"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/exploring-flink-cdc[Decodable blog].
@@ -62,7 +64,7 @@ And with that Flink CDC will sync all the tables under inventory schema over to 
 It’ll map primary keys to document IDs, update documents in-place if the source MySQL row changes, and so on.
 
 
-=== Why are Flink CDC pipelines such a big deal?
+== Why are Flink CDC pipelines such a big deal?
 Look at that YAML up there 👆
 
 That’s all it takes to generate and run a Flink job:
@@ -90,11 +92,11 @@ A Flink CDC pipeline can do pretty much all the heavy lifting of data integratio
 We’re going to take a look at those later in this post, but first up, let’s explore more about what it is that makes Flink CDC pipelines such a big deal.
 
 
-=== I still don’t get it. How’s this different from Flink SQL? Or, Can’t I just use PyFlink?
-I’ve written  link:https://www.decodable.co/blog/kafka-to-iceberg-with-flink[before]  about using Flink SQL for ETL pipelines.
+== I still don’t get it. How’s this different from Flink SQL? Or, Can’t I just use PyFlink?
+I’ve written  link:/2024/07/18/sending-data-to-apache-iceberg-from-apache-kafka-with-apache-flink/[before]  about using Flink SQL for ETL pipelines.
 At a very high level, the pattern looks like this:
 
-. Get your head around  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[Flink catalogs]  and then  link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[try them out]  until you’ve decided which you’ll use. That, or just use the in-memory Flink catalog and get used to having to re-run all your DDL each time you restart your Flink SQL session…
+. Get your head around  link:/2024/02/16/catalogs-in-flink-sqla-primer/[Flink catalogs]  and then  link:/2024/02/19/catalogs-in-flink-sqlhands-on/[try them out]  until you’ve decided which you’ll use. That, or just use the in-memory Flink catalog and get used to having to re-run all your DDL each time you restart your Flink SQL session…
 . Create a Flink SQL table using the _source connector_. If you want data from a database this might well be one of the  link:https://nightlies.apache.org/flink/flink-cdc-docs-master/docs/connectors/flink-sources/overview/[Flink CDC source connectors] , or  link:https://nightlies.apache.org/flink/flink-docs-master/docs/connectors/table/overview/[any other that Flink offers] .
 . Create a Flink SQL table using a _sink connector_.
 . Run `INSERT INTO my_sink SELECT * FROM my_source`.
@@ -497,14 +499,14 @@ sink:
   hosts: http://es-host.acme.com:9200
 ----
 
-=== Flink CDC is solving a common problem
+== Flink CDC is solving a common problem
 Before the advent of Flink CDC 3.0 and its notion of end-to-end pipelines, maintaining this kind of data flow was much more cumbersome, requiring to define a potentially large number of bespoke source and sink tables by hand.
-In Decodable, we have simplified this set-up via things like  link:https://www.decodable.co/blog/multiplex-magic-how-multi-stream-connectors-maximize-decodables-efficiency[multi-stream connectors] and  link:https://www.decodable.co/blog/declarative-resource-management[declarative resource management] , and it’s great to see that similar concepts are available now in Flink CDC, substantially reducing the effort for creating and operating comprehensive data pipelines.
+In Decodable, we have simplified this set-up via things like  link:https://www.decodable.co/blog/multiplex-magic-how-multi-stream-connectors-maximize-decodables-efficiency[multi-stream connectors] and  link:/2024/08/14/declarative-resource-management-for-real-time-etl-with-decodable/[declarative resource management] , and it’s great to see that similar concepts are available now in Flink CDC, substantially reducing the effort for creating and operating comprehensive data pipelines.
 
 
-=== Digging into Flink CDC pipelines in more depth
+== Digging into Flink CDC pipelines in more depth
 
-==== Schema evolution
+== Schema evolution
 Just as data doesn’t stand still and that’s why we use streams, the _shape_ of data is always changing too.
 If we’ve got a process replicating a set of tables from one place to another, we need to know that it’s going to handle changes happening to the schema.
 
@@ -583,7 +585,7 @@ sink:
   exclude.schema.changes: truncate.table
 ----
 
-==== Routing and renaming tables
+== Routing and renaming tables
 By default, Flink CDC pipelines will use the source table name as the target too.
 In our example `inventory.customers` in MySQL is written to Elasticsearch as exactly that—an index called `inventory.customers`.
 
@@ -651,7 +653,7 @@ route:
     description: Add a suffix to all tables
 ----
 
-==== Transforms
+== Transforms
 As with routing, transforms kind of come as part and parcel of using Flink SQL to build a pipeline.
 If you’re already having to write a `CREATE TABLE` and `INSERT INTO` manually, then customising these to apply transformations is pretty standard.
 Say you want to create a new field that’s a composite of two others, in Flink SQL you’d do this:
@@ -728,7 +730,7 @@ _Note that combining transforms can get a bit problematic if they’re both modi
 _Check the Flink logs if in doubt for errors._
 
 
-=== Some notes about running Flink CDC Pipelines
+== Some notes about running Flink CDC Pipelines
 As I’ll discuss later in this post, there are still some gaps in Flink CDC.
 One of those is the ops side of things.
 Running a pipeline is simple enough:
@@ -792,7 +794,7 @@ specifying a column that doesn’t exist) but don’t abort and instead simply g
 The problem with this is that it’s not always apparent that there’s even a problem, particularly if you happen to look at the job status when it’s `RUNNING< and before it’s failed. Add a route so that you don’t have to clean up the target each time when you’re iteratively testing.`
 
 
-=== This sounds great. What’s the catch?
+== This sounds great. What’s the catch?
 It’s still pretty early days with Flink CDC, and 3.3 is being worked on as I type, so it’ll be good to see how it shapes up.
 
 Put bluntly, Flink CDC pipelines show a ton of _potential_.

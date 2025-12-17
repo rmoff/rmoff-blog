@@ -6,6 +6,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 image: "/images/2024/04/troubleshooting_flinksql.webp"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/flink-sql-misconfiguration-misunderstanding-and-mishaps[Decodable blog].
@@ -16,15 +18,15 @@ Interesting, as in the curse, "may you live in interesting times".
 Because as wonderful and as powerful Flink is, it is not a simple beast to run for yourself, even as a humble developer just trying to try out some SQL.
 
 <!--more-->
-Quite a few of the problems are a subset of the broader challenge of getting the right JAR in the right place at the right time—a topic link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[worth its own blog] .
+Quite a few of the problems are a subset of the broader challenge of getting the right JAR in the right place at the right time—a topic link:/2024/02/27/flink-sql-and-the-joy-of-jars/[worth its own blog] .
 
 Let's start off by looking at the JDBC connector.
-This provides its own catalog, which I link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[explored recently]  in another post.
+This provides its own catalog, which I link:/2024/02/19/catalogs-in-flink-sqlhands-on/[explored recently]  in another post.
 In that article I trod the happy path; below are the potholes and pitfalls that befell me on the way 🧌.
 
 
-=== The JDBC Catalog
-_You can learn more about the JDBC Catalog, and Flink SQL Catalogs in general,_ link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[here] _and_ link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[here] _._
+== The JDBC Catalog
+_You can learn more about the JDBC Catalog, and Flink SQL Catalogs in general,_ link:/2024/02/16/catalogs-in-flink-sqla-primer/[here] _and_ link:/2024/02/19/catalogs-in-flink-sqlhands-on/[here] _._
 
 We'll start by provisioning the environment.
 Using link:https://github.com/decodableco/examples/blob/main/troubleshooting-flinksql/01-flink-jdbc-catalog/docker-compose.yml[this Docker Compose]  from the link:https://github.com/decodableco/examples/[Decodable examples repository]  we can spin up a Postgres container and a Flink cluster.
@@ -191,7 +193,7 @@ On the other hand, if you're getting this error and you actually did mean to swi
 Check the current catalog with`SHOW CURRENT CATALOG`.
 
 
-=== What's Running Where? (Fun with Java Versions)
+== What's Running Where? (Fun with Java Versions)
 To recount the next incident, I'll start by describing the environment.
 This was before the JDBC connector for Flink 1.18 was released, so I was running Flink 1.17.1, and locally on my laptop.
 
@@ -436,8 +438,8 @@ Received a total of 5 rows
 🎉 that's more like it!
 
 
-=== What's Running Where? (Fun with JAR dependencies)
-I wrote link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[a whole article]  about JAR files because they are so central to the successful operation of Flink.
+== What's Running Where? (Fun with JAR dependencies)
+I wrote link:/2024/02/27/flink-sql-and-the-joy-of-jars/[a whole article]  about JAR files because they are so central to the successful operation of Flink.
 Let's look at an example of the kind of "fun" you can get with them.
 Moving around the Flink versions, this incident was with 1.18.1.
 Let's start with a clean slate and a fresh Flink install:
@@ -483,7 +485,7 @@ Flink SQL> INSERT INTO t_foo VALUES ('bar',42);
 [ERROR] Could not execute SQL statement. Reason:
 java.lang.ClassNotFoundException: org.apache.hadoop.conf.Configuration
 ----
-This one I'd come across before - I needed the Hadoop JARs (discussed in more detail link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[here] ).
+This one I'd come across before - I needed the Hadoop JARs (discussed in more detail link:/2024/02/19/catalogs-in-flink-sqlhands-on/[here] ).
 I downloaded Hadoop (words I never thought I'd write in 2024 😉) and set the environment variable:
 
 
@@ -636,14 +638,14 @@ Flink SQL> SHOW JOBS;
 1 row in set
 ----
 
-=== A JAR full of Trouble
+== A JAR full of Trouble
 Most of the problems that I've encountered seem bewildering at first, but once solved can be understood and reverse-engineered to see how I could, in theory, have avoided the problem from better comprehension of the documentation or concepts.
 This one though defies that.
 I fixed the error, but I still have no idea what causes it.
 Explanations welcome!
 
 My original starting point was link:https://github.com/wirelessr/flink-iceberg-playground[this Docker Compose]  file, which provides a Flink stack with support for writing to Apache Iceberg on S3-compatible link:https://min.io/[MinIO] .
-I used it as the basis for link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[exploring catalogs provided by the Iceberg Flink connector] , including using JDBC as a backing store for the catalog.
+I used it as the basis for link:/2024/02/19/catalogs-in-flink-sqlhands-on/[exploring catalogs provided by the Iceberg Flink connector] , including using JDBC as a backing store for the catalog.
 I added a Postgres container to the setup, as well as adapting the link:https://github.com/developer-advocacy-dremio/flink-iceberg-nessie-environment/blob/main/flink-image/FLINK-ICEBERG.Dockerfile[base Flink container]  to include the necessary Postgres driver.
 
 The Iceberg JDBC catalog (`org.apache.iceberg.jdbc.JdbcCatalog`) uses a JDBC database for storing the metadata of the catalog, similar to what the Hive metastore would.
@@ -876,7 +878,7 @@ I have no idea why.
 But at least I know now how to fix it 🙂
 
 
-=== Writing to S3 from Flink
+== Writing to S3 from Flink
 Unlike the previous problem, this one makes sense once you get it working and look back over what was needed.
 Nonetheless, it took me a lot of iterating (a.k.a.
 changing random things) to get it to work.
@@ -1154,7 +1156,7 @@ environment:
 Oh - and the CSV bug that I hit is link:https://issues.apache.org/jira/browse/FLINK-33536[FLINK-33536]  and I worked around it by just not using CSV :)
 
 
-=== What's Running Where? (Not So Much Fun with Hive MetaStore)
+== What's Running Where? (Not So Much Fun with Hive MetaStore)
 If this blog so far has been some gnarly but reasonable challenges, I'd like to round off with the big end-of-level boss.
 This brings together JARs, Flink configuration—and the importance of understanding _what is running where._
 
@@ -1274,7 +1276,7 @@ MetaException(message:java.lang.RuntimeException: java.lang.ClassNotFoundExcepti
 ----
 Fear not!
 We've seen this before, right?
-Based on my exploration of Flink SQL and JARs link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[previously]  I thought I'd be well-equipped to deal with this one.`ClassNotFound`?
+Based on my exploration of Flink SQL and JARs link:/2024/02/27/flink-sql-and-the-joy-of-jars/[previously]  I thought I'd be well-equipped to deal with this one.`ClassNotFound`?
 Piece of cake.
 Right?
 
@@ -1298,11 +1300,11 @@ flink@jobmanager:~$ tree /opt/flink/lib
 |   └── iceberg-flink-runtime-1.18-1.5.0.jar
 […]
 ----
-Using `jinfo`  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[we can see that]  the Classpath for the SQL Client shows that the `hadoop-aws` JAR is present: +
+Using `jinfo`  link:/2024/02/27/flink-sql-and-the-joy-of-jars/[we can see that]  the Classpath for the SQL Client shows that the `hadoop-aws` JAR is present: +
 
 
 image::/images/2024/04/6717dc5082a396e17c57be83_6702c780e3a93018db085b0a_661dde08256a38683d008aa5_2PCS5XYRfUas08ZRIqglZVjWW48qOeG9rWumgurHc0bDdyGX5Eu3if0OWqtPDA9q7dZ0Ws6Sr7X-WmbZNwic50xEMnyTpRlMmhowusY_-7xjEzT4HyxSTzmmg2963eHkkms1ZqOvpgKW9DM01sTqLv0.webp[CleanShot 2024-04-11 at 15.30.02.png]
-We can even double-check that this is indeed the JAR that we want by link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[searching its contents]  for the class:
+We can even double-check that this is indeed the JAR that we want by link:/2024/02/27/flink-sql-and-the-joy-of-jars/[searching its contents]  for the class:
 
 
 [source,shell]

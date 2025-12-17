@@ -6,6 +6,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Apache Flink
 image: "/images/2024/02/jars_sm.jpg"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[Decodable blog].
@@ -39,12 +41,12 @@ To fix it you need the right JAR, and that JAR in the right place.
 Let's look at this in a bit more detail.
 
 
-=== Identifying the correct JAR
+== Identifying the correct JAR
 Perhaps it'll be clear which JAR you need based on what you're trying to do—but often not.
 As you get more familiar with Flink you'll learn certain patterns of what dependencies there are.
 These include:
 
-* Hadoop, including—but not only—if you're using Hive or Hive Metastore. You can go and get the specific JARs one-by-one, or just make the whole Hadoop distribution available to Flink by setting the `HADOOP_CLASSPATH` as detailed in link:https://decodable.co/blog/catalogs-in-flink-sql-hands-on[my earlier blog post]  and covered in the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[documentation too] .
+* Hadoop, including—but not only—if you're using Hive or Hive Metastore. You can go and get the specific JARs one-by-one, or just make the whole Hadoop distribution available to Flink by setting the `HADOOP_CLASSPATH` as detailed in link:/2024/02/19/catalogs-in-flink-sqlhands-on/[my earlier blog post]  and covered in the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[documentation too] .
 * link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/overview/[Connectors] , which might include those within the Flink project such as link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/kafka/[for Apache Kafka] —but also those outside of it (and what you might perhaps think of as format rather than connector) such as link:https://iceberg.apache.org/docs/latest/flink/[Apache Iceberg] .
 * link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/formats/overview/[Formats] , such as Parquet
 * link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/deployment/filesystems/overview/[Filesystems] , such as S3
@@ -54,7 +56,7 @@ It might shortcut you to the right JAR, but it might also send you off down a ra
 Beware finding a solution that looks like a hammer for your nail of a problem if you've actually got a screw!
 
 
-=== JAR Naming
+== JAR Naming
 Pay very close attention to names and versions of your JAR files.
 It might look like a bunch of word-and-number salad, but herein can lie the root cause of many a problem.
 +
@@ -68,7 +70,7 @@ For example:
 When you start integrating with other systems you'll also see their versions come into play, like this: +
 
 
-=== Finding JARs
+== Finding JARs
 link:https://maven.org/[Maven Central Repository]  is where you'll find most of the JARs you need.
 It's used widely in the Java (and adjacent communities) for publishing and retrieving open-source libraries.
 As such, you might find that if you’re coming to it as someone just looking to get Flink SQL to work you might find it a bit confusing (I did) and navigating it takes a little bit of practice.
@@ -115,7 +117,7 @@ https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/
 https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.0.2-1.18/
 ----
 
-=== Putting the JAR in the right place
+== Putting the JAR in the right place
 JARs should go under the `./lib` folder of your Flink installation (or installation*s*) if you're running it as a distributed cluster.
 
 You can create subfolders under `./lib` if you like to keep things tidy:
@@ -189,7 +191,7 @@ java.lang.ClassNotFoundException: org.apache.hadoop.conf.Configuration
 This is because the Flink taskmanager, started as part of `./bin/start-cluster.sh` as shown above, didn't have `HADOOP_CLASSPATH` set when it was launched.
 
 
-=== Checking where Flink is looking for JARs
+== Checking where Flink is looking for JARs
 You can inspect the classpath that each Flink process is running with through the `jinfo` command:
 
 
@@ -212,7 +214,7 @@ $ jinfo $(pgrep -f org.apache.flink.table.client.SqlClient) | grep java_class_pa
 […]
 ----
 
-=== Don't Forget to Restart All the Flink processes
+== Don't Forget to Restart All the Flink processes
 When you add or remove a JAR you need to make sure to restart _all_ the Flink components so that they pick it up.
 Some interactions the SQL Client does directly, others get submitted to the job manager and you'll only hit an error then.
 
@@ -220,7 +222,7 @@ Particularly if you're frantically dropping JARs in and out to try and fix a dep
 Otherwise you find that something 'suddenly' stops working because it's only after numerous changes that you restarted it and now you can't remember what permutation things were in when it did work.
 
 
-=== Have you got the right JAR? Looking Inside a JAR 🔎
+== Have you got the right JAR? Looking Inside a JAR 🔎
 So you've hit the dreaded `ClassNotFoundException` error.
 You know that it's usually down to not having the right JAR loaded by Flink SQL.
 But what if you _think_ you've got the right JAR and want to confirm it?
@@ -261,9 +263,9 @@ done
 So we've checked one possible issue off our list, and can move onto the point below: is the JAR even getting picked up by Flink?
 
 
-=== Did the JAR even get loaded?
-There's something in Java called classloading, and you can read about how Flink does it link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/ops/debugging/debugging_classloading/[here] ._
-_From an end-user point of view if you're trying to understand what's going on with a JAR file one useful trick is to see if it's even being loaded, or perhaps if it is by what.
+== Did the JAR even get loaded?
+There's something in Java called classloading, and you can read about how Flink does it link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/ops/debugging/debugging_classloading/[here].
+From an end-user point of view if you're trying to understand what's going on with a JAR file one useful trick is to see if it's even being loaded, or perhaps if it is by what.
 
 If you set `JVM_ARGS` to `-verbose:class` when you run the SQL Client you can see what's going on.
 Couple it with putting your SQL statements in a file that you pass with -f and you can dump and end-to-end process out to a log file to then poke through at your leisure:

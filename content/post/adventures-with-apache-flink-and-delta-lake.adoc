@@ -7,13 +7,15 @@ categories:
 - Apache Flink
 - Delta Lake
 image: "/images/2024/08/flink-delta-lake0_sm.jpg"
+original_source: "decodable"
+original_url: "https://www.decodable.co/blog/adventures-with-apache-flink-and-delta-lake"
 ---
 
 NOTE: This post originally appeared on the link:https://www.decodable.co/blog/adventures-with-apache-flink-and-delta-lake[Decodable blog].
 
 link:https://delta.io/[Delta Lake]  (or Delta, as it’s often shortened to) is an open-source project from the Linux Foundation that’s primarily backed by Databricks.
 It’s an open table format (OTF) similar in concept to Apache Iceberg and Apache Hudi.
-Having  link:https://www.decodable.co/blog-author/robin-moffatt[previously]  dug into using Iceberg with both  link:https://www.decodable.co/blog/kafka-to-iceberg-with-flink[Apache Flink]  and  link:https://www.decodable.co/blog/kafka-to-iceberg-with-decodable[Decodable] , I wanted to see what it was like to use Delta with Flink—and specifically, Flink SQL.
+Having  link:https://www.decodable.co/blog-author/robin-moffatt[previously]  dug into using Iceberg with both  link:/2024/07/18/sending-data-to-apache-iceberg-from-apache-kafka-with-apache-flink/[Apache Flink]  and  link:/2024/06/18/how-to-get-data-from-apache-kafka-to-apache-iceberg-on-s3-with-decodable/[Decodable] , I wanted to see what it was like to use Delta with Flink—and specifically, Flink SQL.
 
 <!--more-->
 The Delta Lake project provides  link:https://github.com/delta-io/delta/tree/master/connectors/flink[a connector for Flink] .
@@ -23,14 +25,14 @@ Which given that Delta is backed by Databricks (whose whole platform stems from 
 link:https://docs.delta.io/latest/integrations.html#other-integrations[Other integrations]  for query engines such as Trino do exist with apparently better support.
 
 Just a tip before we begin: regardless of table format, if you’re using Flink you need to understand catalogs and catalog metastores before going any further.
-The good news for you is that I’ve written both a  link:https://www.decodable.co/blog/catalogs-in-flink-sql-a-primer[primer]  and detailed  link:https://www.decodable.co/blog/catalogs-in-flink-sql-hands-on[hands-on guide] .
-Once you’ve understood catalogs, you’ll also want to have an appreciation of  link:https://www.decodable.co/blog/flink-sql-and-the-joy-of-jars[JAR management in Flink] .
+The good news for you is that I’ve written both a  link:/2024/02/16/catalogs-in-flink-sqla-primer/[primer]  and detailed  link:/2024/02/19/catalogs-in-flink-sqlhands-on/[hands-on guide] .
+Once you’ve understood catalogs, you’ll also want to have an appreciation of  link:/2024/02/27/flink-sql-and-the-joy-of-jars/[JAR management in Flink] .
 
-This blog post follows on from the one that prompted it,  link:https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems[Understanding Flink and S3 configuration] , since as you’ll see later this is the very nub of the challenge that I had getting Delta to work with Flink SQL.
+This blog post follows on from the one that prompted it,  link:/2024/08/06/troubleshooting-flink-sql-s3-problems/[Understanding Flink and S3 configuration] , since as you’ll see later this is the very nub of the challenge that I had getting Delta to work with Flink SQL.
 To begin with, I’ll give you the conclusion, and then work backwards from there.
 
 
-=== tl;dr: Getting Flink to write to Delta Lake on S3
+== tl;dr: Getting Flink to write to Delta Lake on S3
 1.
 In `conf/flink-conf.yaml` configure your S3 authentication with *both* sets of prefixes:
 
@@ -136,7 +138,7 @@ Delta on Flink SQL.
 Read on below to find out the gorey details of how I got here, and how you can troubleshoot errors that you might encounter on the way.
 
 
-=== Running it with Docker Compose
+== Running it with Docker Compose
 I’ve built out a self-contained stack so that you can experiment with running Flink SQL and Delta Lake together.
 It’s on the  link:https://github.com/decodableco/examples/[Decodable examples repository] .
 
@@ -166,7 +168,7 @@ $ docker exec mc bash -c "mc ls --recursive minio"
 [2024-07-10 19:11:39 UTC]   428B STANDARD warehouse/t_foo/part-9ac74dad-4111-42d5-a287-915f1a0d3dc8-0.snappy.parquet
 ----
 
-==== Reading the Delta Lake table with DuckDB
+== Reading the Delta Lake table with DuckDB
 _Unfortunately DuckDB Delta_ link:https://github.com/duckdb/duckdb_delta/issues/14[doesn’t seem to yet support MinIO] _, but if I re-run the test against a real S3 bucket we can query the Delta Lake data successfully_:
 
 
@@ -194,7 +196,7 @@ _Unfortunately DuckDB Delta_ link:https://github.com/duckdb/duckdb_delta/issues/
 Run Time (s): real 7.059 user 0.354942 sys 1.599596
 ----
 
-=== Getting from here…to there: a Flink/Delta Lake troubleshooting detective story 🔍
+== Getting from here…to there: a Flink/Delta Lake troubleshooting detective story 🔍
 Above is what works, since that’s usually what people find most useful.
 But what can also be useful is understanding how I got there, since it can throw up some useful pointers for others experiencing the same problems, as well as a general lesson in methodical troubleshooting.
 
@@ -271,7 +273,7 @@ rm log/*.* && ./bin/start-cluster.sh                                     && \
     jps
 ----
 
-=== Step 1: Add Delta JARs
+== Step 1: Add Delta JARs
 Based loosely on the  link:https://github.com/delta-io/delta/tree/master/connectors/flink#sql-support[Delta Lake connector doc]  I started by adding Delta JARs to my Flink `./lib` folder:
 
 
@@ -295,7 +297,7 @@ logger.delta.name = io.delta
 logger.delta.level = TRACE
 ----
 
-=== Trying it out for the first time…🤞
+== Trying it out for the first time…🤞
 The very first statement failed:
 
 
@@ -335,7 +337,7 @@ This class is part of `delta-storage`, so let’s add `delta-storage-3.2.0.jar` 
 (At this point I’m not going to repeat '_and then I bounced the stack_'; take it as a given that after each thing I changed, I bounced the stack and reran the test, using the bash code I showed above.)
 
 
-=== When is S3AFileSystem not S3AFileSystem?
+== When is S3AFileSystem not S3AFileSystem?
 
 [source,shell]
 ----
@@ -403,7 +405,7 @@ Caused by: java.lang.RuntimeException: java.lang.ClassNotFoundException: Class o
     at org.apache.flink.table.catalog.CatalogManager.execute(CatalogManager.java:1290) ~[flink-table-api-java-uber-1.18.1.jar:1.18.1]
     ... 16 more
 ----
-What’s really puzzling me here is that `S3AFileSystem` was found just fine on exactly the same deployment when I used it to write my  link:https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems[previous article]  about S3 troubleshooting.
+What’s really puzzling me here is that `S3AFileSystem` was found just fine on exactly the same deployment when I used it to write my  link:/2024/08/06/troubleshooting-flink-sql-s3-problems/[previous article]  about S3 troubleshooting.
 All that’s changed is setting the Hadoop classpath, and adding the Delta JARs:
 
 
@@ -479,7 +481,7 @@ java.lang.ClassNotFoundException: com.amazonaws.AmazonClientException
 From past, bitter, experience I know that I need `aws-java-sdk-bundle` JAR here, so add `aws-java-sdk-bundle-1.12.648.jar` to the `./lib` folder too.
 
 
-=== S3 Authentication from Flink with Delta Lake
+== S3 Authentication from Flink with Delta Lake
 Things now move on past JAR files and onto other problems:
 
 
@@ -497,7 +499,7 @@ Remember, in this _same environment_ I have S3 working *just fine*.
 Credentials, end points, it’s all good.
 But switch to writing to S3 via the Delta connector and everything goes screwy.
 
-Heading to the `sql-client` log file we can see that our existing `flink-conf.yaml` configuration for S3 just isn’t being used, as evidenced by the lack of a custom S3 endpoint being recognised (see my  link:https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems[previous post]  for more detail):
+Heading to the `sql-client` log file we can see that our existing `flink-conf.yaml` configuration for S3 just isn’t being used, as evidenced by the lack of a custom S3 endpoint being recognised (see my  link:/2024/08/06/troubleshooting-flink-sql-s3-problems/[previous post]  for more detail):
 
 
 [source,shell]
@@ -550,7 +552,7 @@ What’s more, it includes this:
 ----
 FLINK_CONFIG_PREFIXES = {"flink.hadoop."};
 ----
-I talked about `FLINK_CONFIG_PREFIXES` in my previous  link:https://www.decodable.co/blog/troubleshooting-flink-sql-s3-problems[Flink S3 troubleshooting post] .
+I talked about `FLINK_CONFIG_PREFIXES` in my previous  link:/2024/08/06/troubleshooting-flink-sql-s3-problems/[Flink S3 troubleshooting post] .
 Taking a bit of a punt, let’s change our `flink-conf.yaml` and add this `flink.hadoop.` prefix:
 
 
@@ -583,7 +585,7 @@ DEBUG org.apache.hadoop.fs.s3a.AWSCredentialProviderList           [] - Using cr
 So similar to the previous (but different 😡) S3 configuration handling, what’s needed in the Flink configuration file isn’t what the `S3AFileSystem` module is using (or logging), which is all `fs.s3a.` prefixed.
 
 
-=== More JARs Please
+== More JARs Please
 Anyway, back to our next error:
 
 
@@ -598,7 +600,7 @@ Google wasn’t much help on this one, but I eventually found  link:https://gith
 _Adding this to `./lib` did the trick!
 
 
-=== Success! (almost)
+== Success! (almost)
 
 [source,shell]
 ----
@@ -660,7 +662,7 @@ The contents of this looks like this:
 }
 ----
 
-=== Even More JARs Please
+== Even More JARs Please
 Now can we write data to our new Delta Lake table?
 
 
@@ -699,7 +701,7 @@ Flink SQL> SHOW JOBS;
 1 row in set
 ----
 
-=== S3 Authentication (again!)
+== S3 Authentication (again!)
 Looking at the `taskexecutor` log file from the Flink job manager we can see a very familiar error:
 
 
@@ -854,7 +856,7 @@ Flink SQL> SELECT * FROM c_delta.db_new.t_foo;
 Received a total of 1 rows
 ----
 
-=== Troubleshooting: Will the real S3AFileSystem please stand up?
+== Troubleshooting: Will the real S3AFileSystem please stand up?
 Since we’re into the realms of trying random shit, let’s think about the `S3AFileSystem` dependency.
 If we’re just writing vanilla JSON (for example) from Flink, we add the `flink-s3-fs-hadoop` JAR.
 But as we saw above, that wasn’t enough for Delta Lake, and we had to add `hadoop-aws`.
@@ -890,7 +892,7 @@ There we go—it’s a double act show, with `hadoop-aws` *and* `flink-s3-fs-had
 
 image::/images/2024/08/66c750d03cca8ff9b7831958_66c750ac8642e0d040372c90_delicate_ecosystem.webp[]
 
-=== Finding the smoking gun
+== Finding the smoking gun
 Having a bit of an itch to scratch here I wanted to find out more about the conflicting log messages.
 After a perusal of the  link:https://logging.apache.org/log4j/2.x/manual/layouts.html#PatternLayout[log4j PatternLayout codes]  I amended the log4j.properties to use:
 
