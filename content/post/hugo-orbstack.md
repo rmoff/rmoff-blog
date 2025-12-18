@@ -23,15 +23,17 @@ I've used Hugo for my blog for several years now, and it's great. One of the thi
 
 💡 Docker. Or rather, not Docker. 
 
-I run Hugo with Docker because it's self-contained, reproducable, portable, and all those good things: 
+I run Hugo with Docker because it's self-contained, reproducable, portable, and all those good things:
 
 ```bash
 docker run --rm -it \
   -v $(pwd):/src \
   -p 1313:1313 \
-  klakegg/hugo:0.105.0-asciidoctor-onbuild \
-  server --buildFuture --buildDrafts
+  rmoff-blog-hugo:0.152.2 \
+  server --buildFuture --buildDrafts --bind 0.0.0.0
 ```
+
+_Note: The blog now uses Hugo 0.152.2 with a custom Docker image. See the [README](https://github.com/rmoff/rmoff-blog#running-locally) for how to build it._
 
 And the one thing that had changed was that I'd moved from running [Docker Desktop](https://www.docker.com/products/docker-desktop/) to [Orbstack](https://orbstack.dev/). Until now I'd not noticed a single difference—it's the same `docker` CLI commands as before, it's just not Docker Desktop. 
 
