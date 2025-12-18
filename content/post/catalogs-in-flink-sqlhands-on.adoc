@@ -30,7 +30,7 @@ The link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connect
 _It uses the Hive Metastore to persist object definitions, so is one of the primary choices you've got for a catalog to use with Flink.
 
 
-== Installation and Configuration
+=== Installation and Configuration
 It's important to note that whilst the Hive catalog is _part_ of the Flink project, it's not shipped with the binaries.
 The docs describe the process of link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[installing the dependencies]  and necessary configuration, but to someone not super-familiar with Java and Hadoop I found myself stuck quite often.
 In case you're in the same boat, I'm going to detail here the steps I took to get it working.
@@ -58,29 +58,30 @@ This is `hive-site.xml` and needs to go in Flink’s `./conf` folder (by default
 
 [source,xml]
 ----
-cat > ./conf/hive-site.xml <
+cat > ./conf/hive-site.xml <<EOF
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hive.metastore.local</name>
+    <value>false</value>
+  </property>
 
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://localhost:9083</value>
+  </property>
 
-
-    hive.metastore.local
-    false
-
-
-
-    hive.metastore.uris
-    thrift://localhost:9083
-
-
-
+</configuration>
 EOF
 ----
+
 Note that `localhost:9083` points to the Docker container we just started.
 If you're using a Hive Metastore on a different host/port then amend this as needed.
 
 Now we get to the fun bit— link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/hive/overview/#dependencies[dependencies] !
 
 The Hive dependency is actually straightforward: download `flink-sql-connector-hive-3.1.3` from link:https://central.sonatype.com/artifact/org.apache.flink/flink-sql-connector-hive-3.1.3_2.12/versions[Maven Central]  into a new subfolder under your `./lib` folder:
-
 
 [source,bash]
 ----
@@ -89,12 +90,12 @@ curl https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.
 	-o ./lib/hive/flink-sql-connector-hive-3.1.3_2.12-1.18.1.jar
 ----
 
-===== This is where it gets "fun": Hadoop Dependency
+=== This is where it gets "fun": Hadoop Dependency
 Unless you have a Hadoop distribution lying around on your hard drive you're going to need to avail yourself of some JARs.
 There's the simple way, and the hacky way.
 Let's start with the hacky one.
 
-*Option 1: Slightly Hacky but light-weight*
+==== Option 1: Slightly Hacky but light-weight
 
 The alternative to a full Hadoop download which we'll see below (and resulting JAR clashes as seen with link:https://issues.apache.org/jira/browse/FLINK-33358[FLINK-33358] ) is to just download the JARs that Hive _seems_ to want and make those available.
 I've identified these by trial-and-error because I was offended by needing such a heavy-weight download `¯\_(ツ)_/¯`.
@@ -115,7 +116,7 @@ curl https://repo1.maven.org/maven2/org/apache/hadoop/thirdparty/hadoop-shaded-g
 curl https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.1/stax2-api-4.2.1.jar -o ./lib/hive/stax2-api-4.2.1.jar
 ----
 
-====== Option 2: The Proper (but bloated) Option
+==== Option 2: The Proper (but bloated) Option
 Download and extract 600MB Hadoop tar file:
 
 
@@ -159,7 +160,7 @@ _You'll notice I'm using $( ) instead of ` ` to enclose the hadoop call because 
 If you're using 1.18 then because of link:https://issues.apache.org/jira/browse/FLINK-33358[[FLINK-33358] Flink SQL Client fails to start in Flink on YARN - ASF JIRA]  you'll need to apply link:https://github.com/apache/flink/pull/23629#issuecomment-1917053501[this small PR]  to your `sql-client.sh` before running the SQL Client.
 
 
-== SQL Client with the Hive Catalog
+=== SQL Client with the Hive Catalog
 With our dependencies installed and configured, and a Hive Metastore instance running, we're ready to go and use our Hive catalog.
 Launch the SQL Client:
 
@@ -337,7 +338,7 @@ So that's using the Hive catalog with Flink.
 You can skip over the next section if you want, but if you're like me and curious as to what's happening behind the scenes then keep reading.
 
 
-== Sidenote: Digging a bit Deeper into the Hive Metastore
+=== Sidenote: Digging a bit Deeper into the Hive Metastore
 Here's what we'll see on successful connection from the SQL Client to the Hive Metastore in the logs (`flink-rmoff-sql-client-asgard08.log`):
 
 
@@ -377,7 +378,7 @@ Here we see the creation of a table called `foo_new2` in the `new_db` database:
 Of course, none of this is actually _necessary_ for simply using a catalog with Flink—but I found it useful for mapping out in my mind what's actually happening.
 
 
-== What does the Hive catalog look like when storing Parquet data in S3 (MinIO) from Flink?
+=== What does the Hive catalog look like when storing Parquet data in S3 (MinIO) from Flink?
 OK, back to the main storyline.
 We've now got a Hive catalog working, persisting the metadata about a definition-only table.
 What do I mean by a definition-only table?
@@ -400,7 +401,7 @@ We’ll store the data on link:https://min.io/[MinIO] , which is an S3-compatibl
 
 image::/images/2024/02/6717dbfa82a396e17c57896f_6702c5d80cdc849848eddc30_65cee65ee28c340f206096a1_94MI5dKvnbsyglRSZ6xLYAJEK7weLu9GxvTxmehKEu6v__lNwi56IrLJ4qOEbtwOPBHqdglYZVEwXrJYULgb0GwMUmyZ_VkFiaR4HsXnRe6aZKkkDIXNVLLz6bF6EamR5unTT5t0DfGlMit0W2nBGNI.webp[]
 
-===== Setup
+==== Setup
 First we need to add the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/formats/parquet/[Parquet format]  to the available JARs:
 
 
@@ -452,7 +453,7 @@ cat >> ./conf/flink-conf.yaml <
 [Re]start your Flink cluster, and launch the SQL Client.
 
 
-===== Using Parquet and S3 from Flink
+==== Using Parquet and S3 from Flink
 Declare the Hive catalog connection again, and create a new database within it:
 
 
@@ -561,7 +562,7 @@ With that in mind, let's see how it works.
 
 image::/images/2024/02/6717dbfa82a396e17c578967_6702c5d70cdc849848eddc21_65cee65dcf049d69d181d018_IRKfuQOJXyfJhr6p9lHUN4rMwQER9tjqkf_oVB73wTvK3w_lV4MbeX8tVQHGH5OHBTGPgjJ3B8QfyAnkd1vdL2gGwZ6ydLdwF4zZ6InJNG4UJMIzMmZAWUVGS_doNiPyBe9l6H1PtmxOX-Va9tnyQqk.webp[]
 
-== Installation and Configuration
+=== Installation and Configuration
 Fortunately, the dependencies for the JDBC catalog are a _lot_ simpler than Hive's.
 As with the Hive connector you need to download the JDBC connector separately since it's not bundled with the Flink distribution.
 You also need the JDBC driver of the database to which you want to connect—the docs have a useful reference to the link:https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/jdbc/#dependencies[download links]  for these.
@@ -610,7 +611,7 @@ postgres=#
 Now we’ll hook this up to Flink.
 
 
-== Using the JDBC Catalog in Flink
+=== Using the JDBC Catalog in Flink
 With the Flink JDBC connector JAR and JDBC driver in place, we can launch the Flink cluster and SQL Client:
 
 
@@ -739,7 +740,7 @@ Well, to get my head around what was Iceberg, what was Flink, and what was metas
 In all of these I'm using link:https://min.io/[MinIO]  for storage, which is an S3-compatible object store that can be run locally.
 
 
-== Flink, Iceberg, and Hive Metastore
+=== Flink, Iceberg, and Hive Metastore
 This one was link:https://twitter.com/rmoff/status/1753177272045932927[a lot of fun]  to figure out.
 You can perhaps put a hefty number of air-quotes around that innocently-italicised `fun`.
 😉 I'm going to dig into the deluge of dastardly debugging in a subsequent blog—for now we'll just look at things when they go right.
@@ -913,7 +914,7 @@ NAME    |DB_LOCATION_URI            |TBL_NAME|PARAM_VALUE                       
 db_rmoff|s3a://warehouse/db_rmoff.db|t_foo   |s3a://warehouse/t_foo/metadata/00000-5946940a-04fa-4a60-9bc9-b83db818560a.metadata.json
 ----
 
-== Flink, Iceberg, and DynamoDB Metastore
+=== Flink, Iceberg, and DynamoDB Metastore
 This permutation is obviously—given the use of DynamoDB—designed for when you're running Flink on AWS, perhaps with EMR.
 My thanks to link:https://lazypro.medium.com/[Chunting Wu]  who published an link:https://lazypro.medium.com/getting-started-with-flink-sql-apache-iceberg-and-dynamodb-catalog-71b96817e3c3[article]  and corresponding link:https://github.com/wirelessr/flink-iceberg-playground[GitHub repo]  that shows how to get this up and running.
 
@@ -984,7 +985,7 @@ image::/images/2024/02/6717dbfc82a396e17c578998_6702c5d80cdc849848eddc33_65cee65
 
 image::/images/2024/02/6717dc0082a396e17c578a8c_6702c5d80cdc849848eddd15_65cee65dbe7c4a66f3a00500_sWXKyyjS37AS1vIBMRfANnz5x45s00wdnZoSK0igyxDJf3VehwgLMP1Ckcqd4wqYkcRrC9orksyJEPMMz8j1nXhBJ00CqF8o74XmtAHj2YlrR40b8Fr-qFqCgLVlVnjY2RU0W5sc3YLaApj4r9OHk20.webp[CleanShot 2024-01-09 at 17.40.29.png]
 
-== Flink, Iceberg, and JDBC Metastore
+=== Flink, Iceberg, and JDBC Metastore
 Iceberg actually supports link:https://iceberg.apache.org/javadoc/latest/org/apache/iceberg/BaseMetastoreCatalog.html[9 catalog types] , but don't worry—I'm not going to go through each one 😅.
 We've already got a handle on the pattern here:
 
