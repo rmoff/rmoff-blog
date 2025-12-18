@@ -6,25 +6,33 @@ on:
 jobs:
   build_preview:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: read
+      deployments: write
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Ruby Dev                     
-      run: sudo apt-get install ruby-dev
-
-    - name: Install AsciiDoctor
-      run: sudo gem install asciidoctor
-      
-    - name: Install Rouge
-      run: sudo gem install rouge -v 3.30.0
-
-    - name: Setup Hugo                           
-      uses: peaceiris/actions-hugo@v2
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
       with:
-        hugo-version: '0.105.0'
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build
-      run: hugo --baseURL https://preview.rmoff.net/ --destination public
+    - name: Build reveal.js presentations (requires local asciidoctor)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ruby-dev
+        sudo gem install asciidoctor asciidoctor-revealjs
+        ./build-slides.sh
+
+    - name: Build Hugo site with Docker
+      run: |
+        docker run --rm \
+          -v $(pwd):/src \
+          ghcr.io/${{ github.repository }}:0.152.2 \
+          --baseURL https://preview.rmoff.net/ --destination public
 
     - name: Publish to Cloudflare Pages
       uses: cloudflare/pages-action@v1
