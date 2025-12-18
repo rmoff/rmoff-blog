@@ -55,41 +55,6 @@ The Docker image is automatically built and published when:
 
 Published to: `ghcr.io/rmoff/rmoff-blog:0.152.2` (public package)
 
-## Git Workflow
-
-### ⚠️ Important: Push Restrictions
-
-**Direct git push is blocked from local development machines.**
-
-Instead, use the git bundle workflow:
-
-```bash
-# 1. Commit your changes locally
-git add .
-git commit -m "Your commit message"
-
-# 2. Create a bundle
-git bundle create /tmp/mybranch.bundle main..your-branch-name
-
-# 3. Transfer to asgard05
-scp /tmp/mybranch.bundle rmoff@asgard05.moffatt.me:/tmp/
-
-# 4. SSH to asgard05 and push
-ssh rmoff@asgard05.moffatt.me "cd ~/git/rmoff-blog && \
-  git fetch /tmp/mybranch.bundle your-branch-name:your-branch-name && \
-  git push origin your-branch-name"
-```
-
-### Remotes
-
-- **origin**: Points to local server (asgard05) - use for bundling
-- **gh**: Points to GitHub - only usable from asgard05
-
-### Branch Structure
-
-- **main**: Production branch (triggers live deployment)
-- **Feature branches**: Use descriptive names like `feature-name` or `fix-description`
-
 ## Development Workflows
 
 ### Creating a New Post
