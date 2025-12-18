@@ -50,12 +50,12 @@ Successfully upgraded Hugo from version 0.105.0 (Nov 2022) to 0.152.2 (Oct 2024)
    - Now uses Docker image from GHCR
    - Updated checkout action to v3
 
-2. **Surge Preview** (`preview-blog.yaml`)
+2. **CloudFlare Preview** (`preview-blog-cloudflare.yaml`)
+   - Fixed missing dependencies (asciidoctor-revealjs, build-slides.sh)
    - Now uses Docker for consistent builds
 
-3. **CloudFlare Preview** (`preview-blog-cloudflare.yaml`)
-   - Fixed missing dependencies
-   - Now uses Docker for consistent builds
+3. **Surge Preview** (`preview-blog.yaml`)
+   - ❌ Removed (no longer needed)
 
 ### 5. Documentation Updates
 
