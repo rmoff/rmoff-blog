@@ -1,0 +1,336 @@
+---
+draft: false
+title: 'I tried out Replacements for MinIO - Here are the Best (You Won't Believe #3)'
+date: "2026-01-12T14:42:10Z"
+image: "/images/2026/01/"
+thumbnail: "/images/2026/01/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- S3
+- MinIO
+- Apache Iceberg
+---
+
+:source-highlighter: rouge
+:icons: font
+:rouge-css: style
+:rouge-style: monokai
+
+In late 2025 the company behind MinIO https://github.com/minio/object-browser/pull/3509[decided] https://github.com/minio/minio/issues/21647#issuecomment-3418675115[to] https://github.com/minio/minio/commit/27742d469462e1561c776f88ca7a1f26816d69e2[abandon] it to pursue other commercial interests.
+As well as upsetting a bunch of folk, it also put the cat amongst the pigeons of many software demos that relied on MinIO to provide S3-compatible local storage, not to mention build pipelines that used it for validating S3 compatibility.
+
+In this blog post I'm going to look at some alternatives to MinIO.
+
+<!--more-->
+
+Whilst MinIO is a lot more than 'just' a glorified tool for emulating S3 when building demos, my focus here is going to be on what is the _simplest_ replacement.
+In practice that means the following:
+
+* *Must* have a Docker image.
+    * So many demos are shipped as Docker Compose, and no-one likes brewing their own Docker images unless _really_ necessary.
+* *Must* provide S3 compatibility
+    * The whole point of MinIO in these demos is to stand-in for writing to actual S3.
+* *Must* be free to use, with a strong preference for Open-Source (per OSI definition) licence e.g. Apache 2.0.
+    * OSS projects are unlikely to use a replacement for MinIO that is not also OSS
+* Should be **simple** to use for a *single node deployment*;
+* Should have a clear and active community and/or commercial backer.
+    * Any fule can vibe-code some abandon-ware slop, or fork a project in a fit of enthusiasm—but MinIO stood the test of time until now and we don't want to be repeating this exercise in six months time.
+* Bonus points for excellent developer experience (DX), smoother configuration, good docs, etc.
+
+What I'm *not* looking at is, for example, distributed storage, production licence requirements (although OSS would negate this point), GUI, and so on.
+That is, this blog post is not aimed at folk who were using MinIO as self-managed S3 in production.
+Feel free to leave a comment below though if you have useful things to add in this respect :)
+
+== Baseline project
+
+My starting point for this is a very simple stack: DuckDB to read and write Iceberg data that's stored on S3, provided by MinIO to start with.
+
+image::/images/2026/01/minio01.excalidraw.png[]
+
+When I insert data into DuckDB:
+
+[source,sql]
+----
+INSERT INTO iceberg_catalog.demo.users VALUES
+    (1, 'Alice', 'alice@example.com', CURRENT_TIMESTAMP),
+    (2, 'Bob', 'bob@example.com', CURRENT_TIMESTAMP),
+    (3, 'Charlie', 'charlie@example.com', CURRENT_TIMESTAMP);
+----
+
+it ends up in Iceberg format on S3, here in MinIO:
+
+[source,bash]
+----
+$ mc ls minio/warehouse/demo/users/data/
+
+[2026-01-12 14:35:55 UTC]   693B STANDARD 019bb2a2-8ad5-7159-968c-3693c3578902.parquet
+[2026-01-12 14:35:55 UTC] 2.7KiB STANDARD 188ee032-8576-4f46-9834-1cac6d3080a3-m0.avro
+[2026-01-12 14:35:55 UTC] 1.6KiB STANDARD snap-2633370813252912097-95ad4df0-3243-4cfb-a736-8f785aac100c.avro
+----
+
+The Docker Compose is pretty straightforward:
+
+1. DuckDB, obviously, along with Iceberg REST Catalog
+2. MinIO (S3 local storage)
+3. `mc`, which is a MinIO CLI and used to automagically create a bucket for the data.
+
+In the next sections I'll explore the different alternatives, and how easy they are to switch out MinIO for.
+
+== https://rustfs.com/[RustFS]
+
+Git: https://github.com/rustfs/rustfs
+
+Version tested: `1.0.0-alpha.79`
+
+NOTE: Be aware that there was recently a https://github.com/rustfs/rustfs/security/advisories/GHSA-h956-rh7x-ppgj[pretty bad security vuln] found in RustFS, which has put some people off from using it.
+The website looks pretty smart but several links resolve to the same page, giving it that "fresh paint" smell of a new project :)
+This might matter less for demos (particularly if it's easy to switch out), and MinIO had such a hold on this space that probably any suitable replacement is going to be equally new.
+
+* ✅ https://hub.docker.com/r/rustfs/rustfs[Docker image] (100k+ pulls)
+* ✅ Licence: https://docs.rustfs.com/developer/license.html[Apache 2.0]
+* ✅ https://docs.rustfs.com/features/s3-compatibility/[S3 compatibility]
+
+RustFS' own documents suggest using MinIO's `mc` (since an S3 endpoint is just an S3 endpoint, whether MinIO or RustFS), so I'm going to retain that here.
+
+image::/images/2026/01/rustfs.excalidraw.png[]
+
+Ease of deployment: ✅✅
+
+[source,diff]
+----
+<   minio:
+<     image: minio/minio:latest
+---
+>   rustfs:
+>     image: rustfs/rustfs:1.0.0-alpha.79
+8,10c8,10
+<       MINIO_ROOT_USER: admin
+<       MINIO_ROOT_PASSWORD: password
+<     command: ["server", "/data", "--console-address", ":9001"]
+---
+>       RUSTFS_CONSOLE_ENABLE: true
+>       RUSTFS_ACCESS_KEY: admin
+>       RUSTFS_SECRET_KEY: password
+----
+
+Pretty good.
+
+RustFS also includes a GUI:
+
+image::/images/2026/01/rustfs-gui.png[]
+
+== https://garagehq.deuxfleurs.fr/[Garage]
+
+Git: https://git.deuxfleurs.fr/Deuxfleurs/garage
+
+Version tested: `1.0.0`
+
+* ✅ https://hub.docker.com/r/dxflrs/garage[Docker image] (1M+ pulls)
+* ✅ Licence: https://git.deuxfleurs.fr/Deuxfleurs/garage/src/branch/main-v2/LICENSE[AGPL]
+* ✅ https://garagehq.deuxfleurs.fr/documentation/reference-manual/features/[S3 compatibility]
+
+Ease of deployment: 😵
+
+I had to get https://code.claude.com/docs/en/overview[a friend] to help me with this one.
+As well as the `garage` container, I needed another to do the initial configuration, as well as a TOML config file which I've inlined in the Docker Compose to keep things concise.
+
+image::/images/2026/01/garage.excalidraw.png[]
+
+Could I have sat down and RTFM'd to figure it out myself? Yes.
+Do I have better things to do with my time? Damn right I do.
+
+So, Garage _does_ work, but gosh…it is _not_ just a drop-in replacement in terms of code changes.
+It requires different plumbing for initialisation, and it's not simple at that either.
+A simple example: `The specified key ID is not a valid Garage key ID (starts with GK, followed by 12 hex-encoded bytes)`.
+Excellent for production hygiene…overkill for local demos, and in fact somewhat of a hindrance TBH.
+
+Is this an entirely fair assessment?
+If I were looking at it as a new piece of technology in its own right, completely not!
+Many pieces of excellent technology, particularly those that can support running distributed, will have a steep learning curve for configuration.
+However, my requirement here is a _simple_ drop-in replacement for MinIO—which Garage is not.
+
+== https://seaweedfs.com/[SeaweedFS]
+
+GitHub: https://github.com/seaweedfs/seaweedfs
+
+Version tested: `4.06`
+
+* ✅ https://hub.docker.com/r/chrislusf/seaweedfs[Docker image] (5M+ pulls)
+* ✅ Licence: https://github.com/seaweedfs/seaweedfs/blob/master/LICENSE[Apache 2.0]
+* ✅ https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API[S3 compatibility]
+
+Ease of deployment: 👍
+
+https://github.com/seaweedfs/seaweedfs/wiki/Quick-Start-with-weed-mini[This quickstart] is useful for getting bare-minimum S3 functionality working.
+(That said, I still just got Claude to do the implementation…).
+Overall there's not too much to change here; a fairly straightforward switchout of Docker images, but the auth does need its own config file (which as with Garage, I inlined in the Docker Compose).
+
+[source,yaml]
+----
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.06
+    ports:
+      - "9000:9000"
+      - "9001:8888"
+    command: server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -master.port=9333 -volume.port=8080 -filer -filer.port=8888
+    configs:
+      - source: s3-config
+        target: /etc/seaweedfs/s3.json
+[…]
+
+configs:
+  s3-config:
+    content: |
+      { "identities": [ { "name": "anonymous", "credentials": [ { "accessKey": "admin", "secretKey": "password" } ], "actions": [ "Admin", "Read", "Write" ] } ] }
+----
+
+SeaweedFS comes with its own basic UI which is handy:
+
+image::/images/2026/01/seaweedfs-ui.png[]
+
+The SeaweedFS website is surprisingly sparse and at a glance you'd be forgiven for missing that it's an OSS project, since there's a "pricing" option and the title of the front page is "SeaweedFS Enterprise".
+But an OSS project it is, and a long-established one: SeaweedFS has been around with S3 support since its https://github.com/seaweedfs/seaweedfs/blob/master/LICENSE[0.91 release in 2018].
+You can also learn more about SeaweedFS from these conference talk https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.p#slide=id.p[slides], including a https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.g3593a652b55_0_473#slide=id.g3593a652b55_0_473[comparison chart with MinIO].
+
+== https://ozone.apache.org/[Apache Ozone]
+
+GitHub: https://github.com/apache/ozone
+
+Version tested: `2.10`
+
+* ✅ https://hub.docker.com/r/apache/ozone[Docker images] (1M+ pulls)
+* ✅ Licence: https://github.com/apache/ozone/blob/master/LICENSE.txt[Apache 2.0]
+* ✅ https://ozone.apache.org/docs/2.1.0/interface/s3.html[S3 compatibility]
+
+Ozone was spun out of Apache Hadoop (remember that?) https://apache.org/foundation/records/minutes/2020/board_minutes_2020_10_21.txt[in 2020], having been initially created as part of the HDFS project back in 2015.
+
+Ease of deployment: 😵
+
+image::/images/2026/01/apacheonzone.excalidraw.png[]
+
+It does work as a replacement for MinIO, but it is not a lightweight alternative; Neither I nor Claude could figure out how to deploy it with any fewer than **four** nodes.
+It gives heavy Hadoop vibes, and I wouldn't be rushing to adopt it for my usecase here.
+
+== https://www.zenko.io/cloudserver/[Zenko Cloudserver]
+
+GitHub: https://github.com/scality/cloudserver
+
+Version tested: `9.2.8`
+
+* ✅ https://github.com/scality/cloudserver/pkgs/container/cloudserver/606409638?tag=9.2.8[Docker image] (also outdated ones on https://hub.docker.com/r/zenko/cloudserver[Dockerhub] with 5M+ pulls)
+* ✅ Licence: https://github.com/scality/cloudserver/blob/development/9.2/LICENSE[Apache 2.0]
+* ✅ https://github.com/scality/cloudserver?tab=readme-ov-file#overview[S3 compatibility]
+
+Ease of deployment: 👍
+
+[source,diff]
+----
+<   minio:
+<     image: minio/minio:latest
+---
+>   cloudserver:
+>     image: ghcr.io/scality/cloudserver:9.2.8
+>     platform: linux/amd64
+5,6c6
+<       - "9000:9000"
+<       - "9001:9001"
+---
+>       - "8000:8000"
+8,10c8,13
+<       MINIO_ROOT_USER: admin
+<       MINIO_ROOT_PASSWORD: password
+<     command: ["server", "/data", "--console-address", ":9001"]
+---
+>       S3BACKEND: mem
+>       REMOTE_MANAGEMENT_DISABLE: "1"
+>       LOG_LEVEL: info
+>       ENDPOINT: "cloudserver,s3.docker.internal,localhost,127.0.0.1"
+>       SCALITY_ACCESS_KEY_ID: admin
+>       SCALITY_SECRET_ACCESS_KEY: password
+----
+
+Formerly known as S3 Server, CloudServer is part of a toolset called Zenko, published by Scality.
+It drops in to replace MinIO pretty easily, but I did find it slightly tricky at first to disentangle the set of names (cloudserver/zenko/scality) and what the actual software I needed to run was.
+There's also a slightly odd feel that the docs link to an outdated Docker image.
+
+== S3Proxy
+
+GitHub: https://github.com/gaul/s3proxy
+
+Version tested: `3.0.0`
+
+* ✅ https://hub.docker.com/r/andrewgaul/s3proxy/[Docker image] (5M+ pulls)
+* ✅ Licence: https://github.com/gaul/s3proxy/blob/master/LICENSE[Apache 2.0]
+* ✅ https://github.com/gaul/s3proxy?tab=readme-ov-file#limitations[S3 compatibility]
+
+Ease of switch: 👍👍
+
+[source,diff]
+----
+<   minio:
+<     image: minio/minio:latest
+---
+>   s3proxy:
+>     image: andrewgaul/s3proxy:3.0.0
+5,6c5
+<       - "9000:9000"
+<       - "9001:9001"
+---
+>       - "8000:8000"
+8,10c7,10
+<       MINIO_ROOT_USER: admin
+<       MINIO_ROOT_PASSWORD: password
+<     command: ["server", "/data", "--console-address", ":9001"]
+---
+>       S3PROXY_AUTHORIZATION: aws-v2-or-v4
+>       S3PROXY_IDENTITY: admin
+>       S3PROXY_CREDENTIAL: password
+>       S3PROXY_ENDPOINT: http://0.0.0.0:8000
+----
+
+Very easy to implement, and seems like a nice lightweight option.
+One thing I did notice was this one of the projects that it uses, https://jclouds.apache.org/[jclouds], is retired.
+
+== https://docs.ceph.com/en/reef/radosgw/#object-gateway[Ceph Object Gateway]
+
+I took one look at the https://docs.ceph.com/en/reef/cephadm/install/#requirements[installation instructions] and noped right out of this one.
+Ozone (above) is heavyweight enough; I'm sure both are great at what they do, but they are not a lightweight container to slot into my Docker Compose stack for local demos.
+
+
+--
+
+Add to table:
+
+* Date of first commit
+* Date of most recent commit
+* GUI
+* GitHub stars
+* Docker pulls (although if used in CICD one tool's use alone could distort this)
+
+Cover in notes:
+
+* Commercial backing / longevity
+* Community
+* Liveness (issue backlog, release cadence)
+* Overall purpose of the tool
+
+Intro at top what S3 tools exist for (trying out cloud tools locally, CICD for said tools, self-managed distributed storage with an S3 interface as one of the options.
+
+| Name                | URL                                           | Ease of Switching for MinIO | Licence    | Commercial Backing / longevity        | Liveness | Community | Docker pulls| GH Stars                                                 | GH                                          |
+| :------------------ | :-------------------------------------------- | :-------------------------- | :--------- | :------------------------------------ | :------- | :-------- |             | -------------------------------------------------------- | ------------------------------------------- |
+| (SeaweedFS      )[https://github.com/seaweedfs/seaweedfs/    ]      | not too bad                 | Apache 2.0 | single contributor, Enterprise option | yes      |           |             | 29.5k                                                    | https://github.com/seaweedfs/seaweedfs/     |
+| (gaul/s3proxy       )[https://github.com/gaul/s3proxy            ]  | easy peasy                  | Apache 2.0 |                                       |          |           |             | 2.1k                                                     | https://github.com/gaul/s3proxy             |
+| (RustFS         )[https://rustfs.com/                        ]      | very                        | Apache 2.0 | none?                                 | yes      |           |             | 19.5k                                                    | https://github.com/rustfs/rustfs            |
+| (Zenko CloudServer  )[https://hub.docker.com/r/zenko/cloudserver/]  | not too bad                 | Apache 2.0 |                                       |          |           |             | 1.9k                                                     | https://github.com/scality/cloudserver      |
+| (Garage         )[https://garagehq.deuxfleurs.fr/            ]      | jfc no                      | AGPL       | none?                                 | yes      |           |             | [112](https://git.deuxfleurs.fr/Deuxfleurs/garage/stars) | https://git.deuxfleurs.fr/Deuxfleurs/garage |
+| (Apache Ozone   )[https://ozone.apache.org/                  ]      | jfc no                      | Apache 2.0 | ASF                                   | yes?     |           |             | 1.1k                                                     | https://github.com/apache/ozone |
+
+
+Would I use it?
+
+RustFS - probably, but is it dodgy?
+Garage - no, too complex for what I need
+SeaweedFS - yes, long history, established project. Solo contributor tho?
+Apache Ozone - fuck no
+CloudServer - yes, maybe? not convinced.
+S3Proxy - yes. History & contribs tho?
