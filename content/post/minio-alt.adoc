@@ -31,9 +31,9 @@ In practice that means the following:
 * *Must* provide S3 compatibility.
     ** The whole point of MinIO in these demos is to stand-in for writing to actual S3.
 * *Must* be free to use, with a strong preference for Open Source (per https://opensource.org/osd[OSI definition]) licence e.g. Apache 2.0.
-* Should be **simple** to use for a *single node deployment*
+* Should be **simple** to use for a *single-node deployment*
 * Should have a clear and active community and/or commercial backer.
-    ** _Any fule can vibe-code some abandon-ware slop, or fork a project in a fit of enthusiasm—but MinIO stood the test of time until now and we don't want to be repeating this exercise in six months time._
+    ** _Any fule can vibe-code some abandon-ware slop, or fork a project in a fit of enthusiasm—but MinIO stood the test of time until now and we don't want to be repeating this exercise in six months' time._
 * Bonus points for excellent developer experience (DX), smooth configuration, good docs, etc.
 
 NOTE: I'm purely looking at the single-node local S3 experience.
@@ -65,17 +65,17 @@ When I insert data into DuckDB:
 
 [source,sql]
 ----
-INSERT INTO iceberg_catalog.demo.users VALUES
-    (1, 'Alice', 'alice@example.com', CURRENT_TIMESTAMP),
-    (2, 'Bob', 'bob@example.com', CURRENT_TIMESTAMP),
-    (3, 'Charlie', 'charlie@example.com', CURRENT_TIMESTAMP);
+INSERT INTO cat.test.products VALUES
+    (1, 'Widget', 9.99),
+    (2, 'Gadget', 19.99),
+    (3, 'Doohickey', 14.99);
 ----
 
 it ends up in Iceberg format on S3, here in MinIO:
 
 [source,bash]
 ----
-$ mc ls minio/warehouse/demo/users/data/
+$ mc ls minio/warehouse/test/products/data/
 
 [2026-01-12 14:35:55 UTC]   693B STANDARD 019bb2a2-8ad5-7159-968c-3693c3578902.parquet
 [2026-01-12 14:35:55 UTC] 2.7KiB STANDARD 188ee032-8576-4f46-9834-1cac6d3080a3-m0.avro
@@ -127,7 +127,7 @@ In each of the samples I've built you can run the `test.sh` to verify it.
 
 == MinIO alternatives
 
-Let's now explore the different alternatives to MinIO, and how easy they are to switch out MinIO for.
+Let's now explore the different alternatives to MinIO, and how easy they are to switch MinIO out for.
 
 I've taken the above project and tried to implement it with as few changes to use the replacement for MinIO.
 I've left the MinIO S3 client, `mc` in place since that's no big deal to replace if you want to rip out MinIO completely (s3cmd, `aws` CLI, etc etc).
@@ -146,12 +146,12 @@ Ease of config: 👍👍
 
 Very easy to implement, and seems like a nice lightweight option.
 
-NOTE: One thing I did notice was this one of the projects that S3Proxy uses, https://jclouds.apache.org/[jclouds], was moved to the Apache Attic (i.e. retired) in mid-2025—although probably nbd if you're only using local storage anyway?
+NOTE: One thing I did notice was that one of the projects that S3Proxy uses, https://jclouds.apache.org/[jclouds], was moved to the Apache Attic (i.e. retired) in mid-2025—although probably nbd if you're only using local storage anyway?
 
 
 === https://github.com/rustfs/rustfs[RustFS]
 
-💾 https://github.com/rmoff/minio-alternatives/blob/main/rustfs/docker-compose.yml[Complete Complete test code]
+💾 https://github.com/rmoff/minio-alternatives/blob/main/rustfs/docker-compose.yml[Example Docker Compose]
 
 Version tested: `1.0.0-alpha.79`
 
@@ -184,6 +184,8 @@ Version tested: `4.06`
 
 Ease of config: 👍
 
+image::/images/2026/01/seaweedfs.excalidraw.png[]
+
 https://github.com/seaweedfs/seaweedfs/wiki/Quick-Start-with-weed-mini[This quickstart] is useful for getting bare-minimum S3 functionality working.
 (That said, I still just got Claude to do the implementation…).
 Overall there's not too much to change here; a fairly straightforward switchout of Docker images, but the auth does need its own config file (which as with Garage, I inlined in the Docker Compose).
@@ -193,35 +195,22 @@ SeaweedFS comes with its own basic UI which is handy:
 image::/images/2026/01/seaweedfs-ui.png[]
 
 The https://seaweedfs.com/[SeaweedFS website] is surprisingly sparse and at a glance you'd be forgiven for missing that it's an OSS project, since there's a "pricing" option and the title of the front page is "SeaweedFS Enterprise" (and no GitHub link that I could find!).
-But an OSS project it is, and a long-established one: SeaweedFS has been around with S3 support since its https://github.com/seaweedfs/seaweedfs/blob/master/LICENSE[0.91 release in 2018].
-You can also learn more about SeaweedFS from these conference talk https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.p#slide=id.p[slides], including a https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.g3593a652b55_0_473#slide=id.g3593a652b55_0_473[comparison chart with MinIO].
-=== https://github.com/scality/cloudserver[Zenko Cloudserver]
+But an OSS project it is, and a long-established one: SeaweedFS has been around with S3 support since its https://github.com/seaweedfs/seaweedfs/releases/tag/0.91[0.91 release in 2018].
+You can also learn more about SeaweedFS from these https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.p#slide=id.p[slides], including a https://docs.google.com/presentation/d/1tdkp45J01oRV68dIm4yoTXKJDof-EhainlA0LMXexQE/edit?slide=id.g3593a652b55_0_473#slide=id.g3593a652b55_0_473[comparison chart with MinIO].
 
-💾 https://github.com/rmoff/minio-alternatives/blob/main/cloudeserver/docker-compose.yml[Example Docker Compose]
+=== https://github.com/scality/cloudserver[Zenko CloudServer]
+
+💾 https://github.com/rmoff/minio-alternatives/blob/main/cloudserver/docker-compose.yml[Example Docker Compose]
 
 Version tested: `9.2.8`
 
-* ✅ https://github.com/scality/cloudserver/pkgs/container/cloudserver/606409638?tag=9.2.8[Docker image] (also outdated ones on https://hub.docker.com/r/zenko/cloudserver[Dockerhub] with 5M+ pulls)
+* ✅ https://github.com/scality/cloudserver/pkgs/container/cloudserver/606409638?tag=9.2.8[Docker image] (also outdated ones on https://hub.docker.com/r/zenko/cloudserver[Docker Hub] with 5M+ pulls)
 * ✅ Licence: https://github.com/scality/cloudserver/blob/development/9.2/LICENSE[Apache 2.0]
 * ✅ https://github.com/scality/cloudserver?tab=readme-ov-file#overview[S3 compatibility]
 
 Ease of config: 👍
 
-Formerly known as S3 Server, CloudServer is part of a toolset called Zenko, published by Scality.
-It drops in to replace MinIO pretty easily, but I did find it slightly tricky at first to disentangle the set of names (cloudserver/zenko/scality) and what the actual software I needed to run was.
-There's also a slightly odd feel that the docs link to an outdated Docker image.
-
-=== https://github.com/scality/cloudserver[Zenko Cloudserver]
-
-💾 https://github.com/rmoff/minio-alternatives/blob/main/cloudeserver/docker-compose.yml[Example Docker Compose]
-
-Version tested: `9.2.8`
-
-* ✅ https://github.com/scality/cloudserver/pkgs/container/cloudserver/606409638?tag=9.2.8[Docker image] (also outdated ones on https://hub.docker.com/r/zenko/cloudserver[Dockerhub] with 5M+ pulls)
-* ✅ Licence: https://github.com/scality/cloudserver/blob/development/9.2/LICENSE[Apache 2.0]
-* ✅ https://github.com/scality/cloudserver?tab=readme-ov-file#overview[S3 compatibility]
-
-Ease of config: 👍
+image::/images/2026/01/cloudserver.excalidraw.png[]
 
 Formerly known as S3 Server, CloudServer is part of a toolset called Zenko, published by Scality.
 It drops in to replace MinIO pretty easily, but I did find it slightly tricky at first to disentangle the set of names (cloudserver/zenko/scality) and what the actual software I needed to run was.
@@ -262,9 +251,9 @@ However, my requirement here is a _simple_ drop-in replacement for MinIO—which
 
 === https://github.com/apache/ozone[Apache Ozone]
 
-💾 https://github.com/rmoff/minio-alternatives/blob/main/apache-ozone/docker-compose.yml[Complete Complete test code]
+💾 https://github.com/rmoff/minio-alternatives/blob/main/apache-ozone/docker-compose.yml[Example Docker Compose]
 
-Version tested: `2.10`
+Version tested: `2.1.0`
 
 * ✅ https://hub.docker.com/r/apache/ozone[Docker images] (1M+ pulls)
 * ✅ Licence: https://github.com/apache/ozone/blob/master/LICENSE.txt[Apache 2.0]
@@ -274,10 +263,10 @@ Ozone was spun out of Apache Hadoop (remember that?) https://apache.org/foundati
 
 Ease of config: 😵
 
-image::/images/2026/01/apacheonzone.excalidraw.png[]
+image::/images/2026/01/apacheozone.excalidraw.png[]
 
-It does work as a replacement for MinIO, but it is not a lightweight alternative; Neither I nor Claude could figure out how to deploy it with any fewer than **four** nodes.
-It gives heavy Hadoop vibes, and I wouldn't be rushing to adopt it for my usecase here.
+It does work as a replacement for MinIO, but it is not a lightweight alternative; neither I nor Claude could figure out how to deploy it with any fewer than **four** nodes.
+It gives heavy Hadoop vibes, and I wouldn't be rushing to adopt it for my use case here.
 
 === https://docs.ceph.com/en/reef/radosgw/#object-gateway[Ceph Object Gateway]
 
@@ -291,7 +280,7 @@ Everyone loves a bake-off chart, right?
 
 [cols="1,1,1,2,1,1,1,1", options="header"]
 |===
-| Name | Ease of config | Licence | Commercial Backing & Governance | Docker pulls^1^ | GH Stars | Date of first commit | Main Committers
+| Name | Ease of config | Licence | Commercial Backing & Governance | Docker pulls^1^ | GH Stars | Date of first commit | Significant Committers
 
 | https://github.com/gaul/s3proxy[gaul/s3proxy]
 
@@ -373,7 +362,7 @@ So, having tried them out, which of the options will I actually use?
 * Garage - no, config too complex for what I need.
 * Apache Ozone - lol no.
 
-I mean no cast no shade on those options against which I've not recorded a `yes`; they're probably excellent projects, but just not focussed on my primary use case (simple & easy to configure single-node local S3).
+I mean to cast no shade on those options against which I've not recorded a `yes`; they're probably excellent projects, but just not focussed on my primary use case (simple & easy to configure single-node local S3).
 
 A few parting considerations to bear in mind when choosing a replacement for MinIO:
 
