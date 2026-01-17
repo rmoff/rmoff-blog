@@ -21,13 +21,31 @@ jobs:
     - name: Setup Hugo                           
       uses: peaceiris/actions-hugo@v2
       with:
-        hugo-version: '0.105.0'
+        hugo-version: '0.152.2'
 
     - name: Build                                
       run: hugo --buildFuture --destination public
 
     - name: Link Checker (hyperlink)
-      uses: untitaker/hyperlink@0.1.26
-      with:
-        args: public
+      run: |
+        # Download and install hyperlink
+        curl -sL -o hyperlink https://github.com/untitaker/hyperlink/releases/download/0.1.26/hyperlink-linux-x86_64
+        chmod +x hyperlink
+        # Run hyperlink and filter out known false positives (JavaScript string concatenation parsed as URLs)
+        ./hyperlink public 2>&1 | tee /tmp/hyperlink-output.txt || true
+        # Filter out false positives and check for real errors
+        grep -v 'elem.attr("href")' /tmp/hyperlink-output.txt | grep -v '" + href + "' | grep -E "^\s*error:" && exit 1 || true
+        # Check if hyperlink found any bad links (excluding filtered ones)
+        if grep -q "Found [0-9]* bad link" /tmp/hyperlink-output.txt; then
+          TOTAL=$(grep -oP "Found \K[0-9]+" /tmp/hyperlink-output.txt)
+          # Count filtered false positives
+          FILTERED=$(grep -c 'elem.attr\|" + href' /tmp/hyperlink-output.txt || echo 0)
+          REAL=$((TOTAL - FILTERED))
+          if [ "$REAL" -gt 0 ]; then
+            echo "Found $REAL real bad links (filtered $FILTERED false positives)"
+            exit 1
+          else
+            echo "All $TOTAL detected issues were false positives (JavaScript string concatenation)"
+          fi
+        fi
         
