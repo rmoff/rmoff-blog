@@ -14,15 +14,15 @@ It all started with a tweet.
 
 <!--more-->
 
-{{< tweet user="dcwj" id="1623373904612888588" >}}
+{{< x user="dcwj" id="1623373904612888588" >}}
 
 You see, [I have a soft spot for Alfred](/2021/07/29/why-i-use-alfred-app-and-maybe-you-should-too/) so this piqued my interest on two fronts. First, *how dare anyone say anything about this great tool*. Second…what if I'm missing out?
 
 The subsequent short thread only drew me in further
 
-{{< tweet user="rewtraw" id="1623715318958034944" >}}
+{{< x user="rewtraw" id="1623715318958034944" >}}
 
-{{< tweet user="rewtraw" id="1623730947358359553" >}}
+{{< x user="rewtraw" id="1623730947358359553" >}}
 
 🔥 Not gonna lie…this bit stung:
 
