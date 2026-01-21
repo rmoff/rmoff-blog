@@ -1,9 +1,10 @@
 // Medium Mirror Helper
 // Rewrites Medium.com links to use freedium-mirror.cfd proxy
-// Adds small icon linking to original Medium URL
+// Adds fallback link to original Medium URL
 
 jQuery(document).ready(function($) {
-  // Find all links to medium.com (including various subdomains)
+  var FREEDIUM_BASE = 'https://freedium-mirror.cfd/';
+
   $('a[href*="medium.com"]').each(function() {
     var $link = $(this);
     var originalUrl = $link.attr('href');
@@ -16,36 +17,34 @@ jQuery(document).ready(function($) {
     // Mark as processed
     $link.addClass('medium-mirror-processed');
 
-    // Rewrite href to proxy
-    var proxyUrl = 'https://freedium-mirror.cfd/' + originalUrl;
+    // Rewrite href to Freedium proxy
+    var proxyUrl = FREEDIUM_BASE + originalUrl;
     $link.attr('href', proxyUrl);
 
-    // Create icon link to original
-    var $icon = $('<a>')
+    // Create bracketed fallback link to original Medium
+    var $fallback = $('<a>')
       .attr('href', originalUrl)
       .attr('title', 'View original on Medium.com')
       .attr('target', '_blank')
       .attr('rel', 'noopener noreferrer')
-      .addClass('medium-original-icon')
+      .addClass('medium-original-link')
       .css({
-        'margin-left': '0.25em',
+        'margin-left': '0.4em',
         'font-size': '0.85em',
         'text-decoration': 'none',
-        'display': 'inline-block',
-        'vertical-align': 'super',
-        'opacity': '0.6'
+        'opacity': '0.5'
       })
-      .text('ⓜ️')
+      .text('[Medium ↗]')
       .hover(
         function() {
           $(this).css('opacity', '1');
         },
         function() {
-          $(this).css('opacity', '0.6');
+          $(this).css('opacity', '0.5');
         }
       );
 
-    // Insert icon after the link
-    $link.after($icon);
+    // Insert fallback after the link
+    $link.after($fallback);
   });
 });
