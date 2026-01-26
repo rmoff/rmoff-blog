@@ -75,61 +75,97 @@
 		matter of an individual post.
 		-->
 		{{- $hdr := cond (or (in .Site.Params.classes "feature-nohdr") (in .Params.classes "feature-nohdr")) false true -}}
-		<header class="cover bg-top" {{ if $hdr }}style="background-image: url('{{ absURL (default "img/default-header-img.jpg" .Params.image) }}'); background-position: center;"{{ end }}>
+
+		<!-- Header with background image -->
+		<header class="cover bg-top header-wrapper" {{ if $hdr }}style="background-image: url('{{ absURL (default "img/default-header-img.jpg" .Params.image) }}'); background-position: center;"{{ end }}>
 			<div class="{{ cond $hdr "bg-black-30 bb bt" "" }}">
 
-				<nav class="hide-print sans-serif {{ cond $hdr "" "bg-black" }} border-box pa3 ph5-l">
-					<a href="{{ .Site.BaseURL }}" title="Home">
-						<link rel="preload" as="image" href="{{ "img/repton.gif" | absURL }}">
-						<img
-							src="{{ "img/logo.jpg" | absURL }}"
-							class="w2 h2 br-100"
-							alt="{{ .Site.Title }}"
-							onmouseover="this.src='{{ "img/repton.gif" | absURL }}';"
-							onmouseout="this.src='{{ "img/logo.jpg" | absURL }}';"
-						/>
-					</a>
-					<div class="fr h2 pv2 tr">
-						{{- range .Site.Menus.main }}
-						<a class="link f5 ml2 dim near-white" href="{{ .URL }}">{{ .Name }}</a>
-						{{- end }}
-						{{- range .Site.Menus.social }}
-						<a class="link f5 ml2 dim near-white" href="{{ .URL }}"><i class="{{ .Title }}"></i></a>
-						{{- end }}
-						<a class="link f5 ml2 dim near-white fas fa-rss-square" href="{{ "index.xml" | absURL }}" title="RSS Feed"></a>
-						<a class="link f5 ml2 dim near-white fas fa-search" href="{{ "search/" | absURL }}" role="search" title="Search"></a>
+				<!-- Glass header with bio - shows on homepage/list pages -->
+				{{ if not .IsPage }}
+				<div class="glass-header hide-print">
+					<div class="glass-header-content">
+						<div class="header-left">
+							<a href="{{ .Site.BaseURL }}" title="Home">
+								<img
+									src="{{ "img/logo.jpg" | absURL }}"
+									class="headshot"
+									alt="{{ .Site.Title }}"
+								/>
+							</a>
+						</div>
+						<div class="header-center">
+							<h1 class="header-name">Robin Moffatt</h1>
+							<p class="header-bio">
+								Robin is a DevEx Engineer. He has been speaking at conferences since 2009 including QCon, Devoxx, Strata, Kafka Summit, and Øredev. Outside of work, Robin enjoys running, drinking good beer, and eating fried breakfasts—although generally not at the same time.
+							</p>
+						</div>
+						<div class="header-right">
+							<div class="header-icons">
+								{{- range .Site.Menus.social }}
+								<a class="icon-link" href="{{ .URL }}" title="{{ .Name }}"><i class="{{ .Title }}"></i></a>
+								{{- end }}
+								<a class="icon-link" href="{{ "index.xml" | absURL }}" title="RSS Feed"><i class="fas fa-rss"></i></a>
+								<a class="icon-link" href="{{ "search/" | absURL }}" title="Search"><i class="fas fa-search"></i></a>
+							</div>
+							<div class="header-nav">
+								{{- range .Site.Menus.main }}
+								<a class="nav-link" href="{{ .URL }}">{{ .Name }}</a>
+								{{- end }}
+							</div>
+						</div>
 					</div>
-				</nav>
+				</div>
+				{{ else }}
+				<!-- Compact nav for article pages -->
+				<div class="glass-nav hide-print">
+					<nav class="sans-serif border-box pa3 ph5-l">
+						<a href="{{ .Site.BaseURL }}" title="Home">
+							<img
+								src="{{ "img/logo.jpg" | absURL }}"
+								class="w2 h2 br-100"
+								alt="{{ .Site.Title }}"
+							/>
+						</a>
+						<div class="fr h2 pv2 tr">
+							{{- range .Site.Menus.main }}
+							<a class="link f5 ml2 dim near-white" href="{{ .URL }}">{{ .Name }}</a>
+							{{- end }}
+							{{- range .Site.Menus.social }}
+							<a class="icon-link-small" href="{{ .URL }}"><i class="{{ .Title }}"></i></a>
+							{{- end }}
+							<a class="icon-link-small" href="{{ "index.xml" | absURL }}" title="RSS Feed"><i class="fas fa-rss"></i></a>
+							<a class="icon-link-small" href="{{ "search/" | absURL }}" title="Search"><i class="fas fa-search"></i></a>
+						</div>
+					</nav>
+				</div>
+				{{ end }}
 
-				<div id="hdr" class="tc-l {{ cond $hdr "pv4-ns pv5-l" "" }} pv2 ph3 ph4-ns">
+				<!-- Title area - different for homepage vs article pages -->
+				{{ if .IsPage }}
+				<div id="hdr" class="tc-l {{ cond $hdr "pv3-ns pv4-l" "" }} pv2 ph3 ph4-ns">
 					<h1 class="{{ cond $hdr "near-white mt1-ns" "" }} f2 fw3 mb0 mt0 lh-title">
 						<span class="terminal-title">{{ cond (eq .Site.Params.titlecase true) (.Title | title | markdownify) (.Title | markdownify) }}<span class="terminal-cursor"></span></span>
 					</h1>
 					<h2 class="{{ cond $hdr "near-white mt3-l mb4-l" "" }} fw1 f6 f3-l measure-wide-l center lh-copy mt2 mb3">
-						<!-- You can put a subtitle here in _index.md parameters, or it'll get
-						filled in with date and categories if it's a post -->
-						{{ if .IsPage }}
-							{{ if eq .Section "talks" }}
-								<time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
-									{{- .Date.Format "January 2, 2006" -}}
-								</time>
-								{{ with .Params.event }}
-									<a class="no-underline category {{ cond $hdr "near-white dim" "black hover-gray" }}" href="{{ $.Params.site }}">{{ . }}</a>
-								{{ end }}
-							{{ else }}
-								Published
-								<time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
-									{{- .Date.Format "Jan 2, 2006" -}}
-								</time>
-								<span class="display-print">by {{ .Params.author | default .Site.Params.author }}</span>
-								{{ range $idx, $cat := .Params.categories }}{{ if gt $idx 0 }}, {{ end }}{{ if eq $idx 0 }} in {{ end }}<a href="{{ "categories" | absURL }}/{{ . | urlize }}" class="no-underline category {{ cond $hdr "near-white dim" "black hover-gray" }}">{{ . | title }}</a>{{ end }}
-								<span class="display-print">at {{ .Permalink }}</span>
+						{{ if eq .Section "talks" }}
+							<time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+								{{- .Date.Format "January 2, 2006" -}}
+							</time>
+							{{ with .Params.event }}
+								<a class="no-underline category {{ cond $hdr "near-white dim" "black hover-gray" }}" href="{{ $.Params.site }}">{{ . }}</a>
 							{{ end }}
 						{{ else }}
-							{{ with .Params.subtitle }}{{ . | markdownify }}{{ end }}
+							Published
+							<time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+								{{- .Date.Format "Jan 2, 2006" -}}
+							</time>
+							<span class="display-print">by {{ .Params.author | default .Site.Params.author }}</span>
+							{{ range $idx, $cat := .Params.categories }}{{ if gt $idx 0 }}, {{ end }}{{ if eq $idx 0 }} in {{ end }}<a href="{{ "categories" | absURL }}/{{ . | urlize }}" class="no-underline category {{ cond $hdr "near-white dim" "black hover-gray" }}">{{ . | title }}</a>{{ end }}
+							<span class="display-print">at {{ .Permalink }}</span>
 						{{ end }}
 					</h2>
 				</div>
+				{{ end }}{{/* end if .IsPage - no title block on homepage */}}
 
 				<!-- if there's a "credits" parameter in front matter there'll be a camera icon here -->
 				{{ if $hdr }}
@@ -142,7 +178,7 @@
 
 			</div>
 		</header>
-		{{ end }}
+		{{ end }}{{/* end block "header" */}}
 		<main role="main">
 		{{ block "main" . }}
 		{{ end }}
