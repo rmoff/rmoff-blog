@@ -23,3 +23,10 @@ When asked to proofread or review a blog post:
 - Use `/proofread-blog` for regular articles
 - Use `/proofread-links` for "Interesting Links" posts (files matching `il-*.adoc` or posts mentioning "Interesting Links")
   - Switch to Haiku first for cost efficiency: `/model haiku`
+
+## CI/CD Changes
+
+When adding or modifying build steps in GitHub Actions workflows:
+1. Check ALL workflow files in `.github/workflows/` 
+2. Identify which workflows build/deploy the site (e.g., production AND preview deployments)
+3. Apply the change consistently to all relevant workflows
