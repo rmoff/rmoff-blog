@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Pagefind Search', () => {
   test('search page loads with Pagefind UI', async ({ page }) => {
-    await page.goto('http://localhost:8080/search/');
+    await page.goto('http://localhost:1313/search/');
 
     // Pagefind search input should be visible
     const searchInput = page.locator('.pagefind-ui__search-input');
@@ -10,7 +10,7 @@ test.describe('Pagefind Search', () => {
   });
 
   test('search returns results for "kafka"', async ({ page }) => {
-    await page.goto('http://localhost:8080/search/');
+    await page.goto('http://localhost:1313/search/');
 
     const searchInput = page.locator('.pagefind-ui__search-input');
     await searchInput.fill('kafka');
@@ -24,7 +24,7 @@ test.describe('Pagefind Search', () => {
   });
 
   test('search results have excerpts with highlights', async ({ page }) => {
-    await page.goto('http://localhost:8080/search/');
+    await page.goto('http://localhost:1313/search/');
 
     const searchInput = page.locator('.pagefind-ui__search-input');
     await searchInput.fill('docker');

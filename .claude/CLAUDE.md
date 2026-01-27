@@ -15,7 +15,7 @@ docker run --rm -it \
 For background/detached mode, add `-d` flag and `--name hugo-server`.
 
 ### Validation
-Use Playwright for validating UI changes. Run tests to verify visual and functional changes work correctly.
+**MANDATORY:** For any website changes (layouts, templates, CSS, JavaScript, configuration, etc.) other than new articles, you MUST run Playwright tests to validate the changes before considering the work complete. Run tests to verify visual and functional changes work correctly.
 
 ## Proofreading
 
