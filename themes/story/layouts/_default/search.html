@@ -51,16 +51,43 @@
             }
         }, 50);
 
-        // Watch for input changes to filter categories
+        // URL state management
+        function getQueryFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('q') || '';
+        }
+
+        function updateURL(query) {
+            const url = new URL(window.location);
+            if (query) {
+                url.searchParams.set('q', query);
+            } else {
+                url.searchParams.delete('q');
+            }
+            window.history.replaceState({}, '', url);
+        }
+
+        // Watch for input changes to filter categories and update URL
         const suggestions = document.getElementById('search-suggestions');
         const checkForInput = setInterval(() => {
             const searchInput = document.querySelector('.pagefind-ui__search-input');
             if (searchInput) {
                 clearInterval(checkForInput);
 
+                // Load initial query from URL
+                const initialQuery = getQueryFromURL();
+                if (initialQuery) {
+                    searchInput.value = initialQuery;
+                    // Trigger Pagefind search
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    suggestions.classList.add('hidden');
+                    updateCategoryResults(initialQuery.toLowerCase());
+                }
+
                 searchInput.addEventListener('input', (e) => {
                     const query = e.target.value.toLowerCase().trim();
                     updateCategoryResults(query);
+                    updateURL(e.target.value.trim());
                     // Hide suggestions when typing
                     if (query.length > 0) {
                         suggestions.classList.add('hidden');
@@ -90,7 +117,7 @@
             // Render category matches
             categoryResults.innerHTML = `
                 <div class="category-matches">
-                    <h3 class="category-matches-heading">Categories</h3>
+                    <h3 class="category-matches-heading">Matching categories</h3>
                     <div class="category-chips">
                         ${matches.map(cat => `
                             <a href="${cat.url}" class="category-chip">
@@ -110,7 +137,13 @@
                     entry.target.click();
                 }
             });
-        }, { rootMargin: '200px' });
+        }, { rootMargin: '200px', threshold: 0 });
+
+        // Check if element is in viewport
+        function isInViewport(el) {
+            const rect = el.getBoundingClientRect();
+            return rect.top < window.innerHeight + 200 && rect.bottom > -200;
+        }
 
         // Watch for the "Load more" button to appear
         const mutationObserver = new MutationObserver(() => {
@@ -118,6 +151,10 @@
             if (loadMoreBtn && !loadMoreBtn.dataset.observed) {
                 loadMoreBtn.dataset.observed = 'true';
                 observer.observe(loadMoreBtn);
+                // Immediately check if already in view and click
+                if (isInViewport(loadMoreBtn)) {
+                    loadMoreBtn.click();
+                }
             }
         });
         mutationObserver.observe(searchContainer, { childList: true, subtree: true });
@@ -125,59 +162,94 @@
 </script>
 
 <style>
-/* Pagefind styling to match site theme */
+/* Pagefind styling - refined editorial aesthetic */
 .pagefind-ui {
     --pagefind-ui-scale: 0.9;
-    --pagefind-ui-primary: #333;
+    --pagefind-ui-primary: #2c2c2c;
     --pagefind-ui-text: #333;
     --pagefind-ui-background: #fff;
-    --pagefind-ui-border: #eeeeee;
-    --pagefind-ui-tag: #f0f0f0;
+    --pagefind-ui-border: #e0e0e0;
+    --pagefind-ui-tag: #f5f5f5;
     --pagefind-ui-border-width: 1px;
-    --pagefind-ui-border-radius: 8px;
-    --pagefind-ui-font: 'Domine', Georgia, Times, serif;
+    --pagefind-ui-border-radius: 6px;
+    --pagefind-ui-font: 'Quattrocento Sans', sans-serif;
     --pagefind-ui-image-border-radius: 4px;
     --pagefind-ui-image-box-ratio: 3 / 2;
 }
 
+/* Search input refinement */
 .pagefind-ui__search-input {
-    font-size: 1.25rem !important;
-    padding: 0.75rem 1rem 0.75rem 3rem !important;
+    font-size: 1.1rem !important;
+    padding: 0.875rem 1rem 0.875rem 2.75rem !important;
+    border: 1px solid #d0d0d0 !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* Category matches section */
+.pagefind-ui__search-input:focus {
+    border-color: #888 !important;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05) !important;
+    outline: none !important;
+}
+
+/* Category matches section - tighter spacing */
 .category-matches {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #eee;
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+    padding-bottom: 0.5rem;
+}
+
+/* Tighten spacing in results area */
+.pagefind-ui__drawer {
+    gap: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.pagefind-ui__results-area {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Category results - full width above article results */
+#category-results {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 0.75rem;
+}
+
+.category-matches {
+    display: block !important;
+    width: 100% !important;
 }
 
 .category-matches-heading {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #666;
-    margin: 0 0 0.75rem 0;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin: 0 0 0.5rem 0;
     font-weight: 600;
+    font-family: 'Quattrocento Sans', sans-serif;
 }
 
 .category-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .category-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    color: #333;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    color: #444;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    font-family: 'Quattrocento Sans', sans-serif;
     transition: all 0.15s ease;
 }
 
@@ -185,83 +257,143 @@
     background: #333;
     color: #fff;
     border-color: #333;
+    text-decoration: none;
 }
 
 .category-count {
-    font-size: 0.75rem;
-    color: #888;
-    background: #e0e0e0;
-    padding: 0.1rem 0.4rem;
-    border-radius: 10px;
+    font-size: 0.7rem;
+    color: #999;
+    font-weight: 500;
 }
 
 .category-chip:hover .category-count {
-    background: rgba(255,255,255,0.2);
-    color: #fff;
+    color: rgba(255,255,255,0.7);
 }
 
-/* Compact result layout */
+/* Results count - tighter to results */
+.pagefind-ui__message {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.75rem !important;
+    font-size: 0.85rem !important;
+    color: #666 !important;
+    font-family: 'Quattrocento Sans', sans-serif !important;
+}
+
+/* Lightweight card results */
+.pagefind-ui__results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Card styling on the outer result container */
 .pagefind-ui__result {
-    padding: 0.75rem 0 !important;
-    border-bottom: 1px solid #eee;
-}
-
-.pagefind-ui__result-inner {
     display: flex !important;
     align-items: flex-start !important;
-    gap: 1rem !important;
+    gap: 0.875rem !important;
+    padding: 0.75rem !important;
+    margin: 0 !important;
+    background: #fcfcfc !important;
+    border: 1px solid #ebebeb !important;
+    border-radius: 6px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
 }
 
+.pagefind-ui__result:hover {
+    border-color: #d0d0d0 !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+
+/* Thumbnail aligned inside the card */
 .pagefind-ui__result-thumb {
     width: 80px !important;
     min-width: 80px !important;
-    height: 53px !important;
+    height: 54px !important;
     margin: 0 !important;
     flex-shrink: 0 !important;
+    border-radius: 4px !important;
+    overflow: hidden !important;
+    align-self: center !important;
 }
 
 .pagefind-ui__result-thumb img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    border-radius: 4px !important;
+}
+
+/* Inner content takes remaining space */
+.pagefind-ui__result-inner {
+    flex: 1 !important;
+    min-width: 0 !important;
 }
 
 .pagefind-ui__result-link {
-    color: #333 !important;
+    color: #2c2c2c !important;
     text-decoration: none !important;
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
     font-weight: 600 !important;
-    line-height: 1.3 !important;
+    line-height: 1.35 !important;
+    font-family: 'Quattrocento', serif !important;
+    display: block !important;
 }
 
 .pagefind-ui__result-link:hover {
-    text-decoration: underline !important;
+    color: #000 !important;
+    text-decoration: none !important;
 }
 
 .pagefind-ui__result-excerpt {
-    font-size: 0.85rem !important;
-    line-height: 1.4 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.5 !important;
     color: #666 !important;
     margin-top: 0.25rem !important;
+    font-family: 'Quattrocento Sans', sans-serif !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
 
-/* Hide sub-results completely */
+.pagefind-ui__result-excerpt mark {
+    background: #fff3cd !important;
+    color: inherit !important;
+    padding: 0.1em 0.15em !important;
+    border-radius: 2px !important;
+}
+
+/* Hide sub-results */
 .pagefind-ui__result-nested {
     display: none !important;
 }
 
-/* Search suggestions for empty state */
+/* Load more button */
+.pagefind-ui__button {
+    background: transparent !important;
+    border: 1px solid #d0d0d0 !important;
+    color: #555 !important;
+    font-size: 0.85rem !important;
+    padding: 0.6rem 1.25rem !important;
+    border-radius: 4px !important;
+    font-family: 'Quattrocento Sans', sans-serif !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    margin-top: 0.5rem !important;
+}
+
+.pagefind-ui__button:hover {
+    background: #f5f5f5 !important;
+    border-color: #bbb !important;
+}
+
+/* Search suggestions - empty state */
 .search-suggestions {
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    border: 1px solid #dee2e6;
+    margin-top: 1.75rem;
+    padding: 1.25rem 1.5rem;
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
 }
 
 .search-suggestions.hidden {
@@ -269,10 +401,13 @@
 }
 
 .suggestions-label {
-    font-size: 0.9rem;
-    color: #666;
-    margin: 0 0 1rem 0;
-    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin: 0 0 0.875rem 0;
+    font-weight: 600;
+    font-family: 'Quattrocento Sans', sans-serif;
 }
 
 .suggestion-chips {
@@ -283,13 +418,14 @@
 
 .suggestion-chip {
     display: inline-block;
-    padding: 0.4rem 0.9rem;
-    background: white;
+    padding: 0.4rem 0.85rem;
+    background: #fff;
     border: 1px solid #ddd;
-    border-radius: 20px;
-    color: #333;
+    border-radius: 4px;
+    color: #444;
     text-decoration: none;
     font-size: 0.85rem;
+    font-family: 'Quattrocento Sans', sans-serif;
     transition: all 0.15s ease;
 }
 
