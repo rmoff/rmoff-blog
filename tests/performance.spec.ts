@@ -51,6 +51,30 @@ test.describe('Page Load - Article Page', () => {
     await expect(page.locator('.glass-nav')).toBeVisible();
   });
 
+  test('TOC appears on right side on wide viewport', async ({ page }) => {
+    // Set wide viewport
+    await page.setViewportSize({ width: 1400, height: 900 });
+
+    // Go to an article with TOC
+    await page.goto('http://localhost:1313/2026/01/27/reflections-of-a-developer-on-llms-in-january-2026/');
+
+    // TOC should be visible
+    const toc = page.locator('.docs-toc');
+    await expect(toc).toBeVisible();
+
+    // Article content
+    const article = page.locator('.docs-content .article');
+    await expect(article).toBeVisible();
+
+    // TOC should be to the right of article (TOC x > article x + article width * 0.5)
+    const tocBox = await toc.boundingBox();
+    const articleBox = await article.boundingBox();
+
+    expect(tocBox).not.toBeNull();
+    expect(articleBox).not.toBeNull();
+    expect(tocBox!.x).toBeGreaterThan(articleBox!.x + articleBox!.width * 0.5);
+  });
+
   test('article page has readable content', async ({ page }) => {
     await page.goto('http://localhost:1313/');
     const firstCard = page.locator('.retro-card a').first();
