@@ -43,6 +43,14 @@ When the article explicitly signals that I'm learning/exploring a new subject (p
    - Point out when I'm hand-waving through complexity
    - Identify where I've made leaps without evidence
 
+5. **Focus and Structure** - Assess whether the post is trying to do too much:
+   - List the distinct purposes the post is serving (e.g., "explain why X matters", "tutorial on Y", "share experience with Z", "provide tips")
+   - If there are more than 2-3 core purposes, flag this explicitly
+   - Common split: **thinking posts** (why X matters, mental models, opinions, philosophy) vs **doing posts** (tutorials, hands-on examples, practical how-to). These often work better as separate pieces.
+   - Ask: Would this be stronger as two focused posts rather than one sprawling one?
+   - Watch for scope creep where the post starts conceptual and morphs into tutorial (or vice versa)
+   - A post that tries to do 8 things does none of them well
+
 If the article is genuinely solid, say so. But if it's not, be specific about what's wrong.
 
 Ignore the header and footer content, which is this:
