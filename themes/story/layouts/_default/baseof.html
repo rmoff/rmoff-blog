@@ -4,6 +4,17 @@
 		<meta http-equiv=X-Clacks-Overhead content="GNU Terry Pratchett">
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- Preconnect to external domains for faster resource loading -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+		<link rel="preconnect" href="https://cdn.jsdelivr.net">
+		<!-- Preload LCP image for faster largest contentful paint -->
+		{{- $hdrCheck := cond (or (in .Site.Params.classes "feature-nohdr") (in .Params.classes "feature-nohdr")) false true -}}
+		{{ if $hdrCheck }}
+		{{- $headerImg := default "img/default-header-img.webp" .Params.image -}}
+		<link rel="preload" as="image" href="{{ absURL $headerImg }}" {{ if not .Params.image }}type="image/webp"{{ end }}>
+		{{ end }}
 		<title>{{ block "title" . }}{{ .Site.Title }}{{ end }}</title>
 		<link rel="alternate" type="application/rss+xml" title="RSS" href="{{ "index.xml" | absURL }}">
 		<link rel="canonical" href="{{ .Permalink }}">
@@ -30,8 +41,13 @@
 		<link rel="stylesheet" href="{{ "css/retro-cards.css" | absURL }}" />
 		<link rel="stylesheet" href="{{ "css/custom.css" | absURL }}" />
 		{{ end }}
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-		<link href="https://fonts.googleapis.com/css?family=Quattrocento+Sans:400,400i,700,700i|Quattrocento:400,700|Spectral:400,400i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+		<!-- Font Awesome loaded async - not needed for first paint -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="print" onload="this.media='all'">
+		<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"></noscript>
+		<!-- Google Fonts loaded async with display=swap -->
+		<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Domine:wght@400;500;600;700&family=Quattrocento+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Quattrocento:wght@400;700&family=Spectral:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+		<link href="https://fonts.googleapis.com/css2?family=Domine:wght@400;500;600;700&family=Quattrocento+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Quattrocento:wght@400;700&family=Spectral:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+		<noscript><link href="https://fonts.googleapis.com/css2?family=Domine:wght@400;500;600;700&family=Quattrocento+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Quattrocento:wght@400;700&family=Spectral:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"></noscript>
 		{{ end }}
 		<!--Posthog-->
 		<script>
@@ -75,9 +91,10 @@
 		matter of an individual post.
 		-->
 		{{- $hdr := cond (or (in .Site.Params.classes "feature-nohdr") (in .Params.classes "feature-nohdr")) false true -}}
+		{{- $headerImage := default "img/default-header-img.webp" .Params.image -}}
 
 		<!-- Header with background image -->
-		<header class="cover bg-top header-wrapper" {{ if $hdr }}style="background-image: url('{{ absURL (default "img/default-header-img.jpg" .Params.image) }}'); background-position: center;"{{ end }}>
+		<header class="cover bg-top header-wrapper" {{ if $hdr }}style="background-image: url('{{ absURL $headerImage }}'); background-position: center;"{{ end }}>
 			<div class="{{ cond $hdr "bg-black-30 bb bt" "" }}">
 
 				<!-- Glass header with bio - shows on homepage/list pages -->
