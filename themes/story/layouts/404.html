@@ -1,11 +1,173 @@
-{{ define "title" }}Error 404 Not Found{{ end }}
+{{ define "title" }}404 Not Found{{ end }}
+
+{{ define "header" }}
+<!-- Header with background image - full header like homepage -->
+<header class="cover bg-top header-wrapper" style="background-image: url('/img/default-header-img.webp'); background-position: center;">
+    <div class="bg-black-30 bb bt">
+        <div class="glass-header hide-print">
+            <div class="glass-header-content">
+                <div class="header-left">
+                    <a href="{{ .Site.BaseURL }}" title="Home">
+                        <img
+                            src="{{ "img/headshot.jpg" | absURL }}"
+                            class="headshot"
+                            alt="Robin Moffatt"
+                        />
+                    </a>
+                </div>
+                <div class="header-center">
+                    <div class="header-title-row">
+                        <a href="{{ .Site.BaseURL }}" class="terminal-title-link"><span class="terminal-title terminal-title-header">rmoff's random ramblings<span class="terminal-cursor"></span></span></a>
+                    </div>
+                    <p class="header-bio">
+                        Data engineering, Kafka, and other nerdy stuff.
+                    </p>
+                </div>
+            </div>
+            <div class="header-icons-row">
+                <div class="header-icons">
+                    {{- range .Site.Menus.social }}
+                    <a class="icon-link" href="{{ .URL }}"><i class="{{ .Title }}"></i><span class="icon-label">{{ .Name }}</span></a>
+                    {{- end }}
+                    <a class="icon-link" href="{{ "index.xml" | absURL }}"><i class="fas fa-rss"></i><span class="icon-label">rss</span></a>
+                    <a class="icon-link" href="{{ "search/" | absURL }}"><i class="fas fa-search"></i><span class="icon-label">search</span></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+{{ end }}
+
 {{ define "main" }}
 
-	<div class="pa3 pa4-ns w-100 w-70-ns center">
-		<section class="w-100 mw8">
-			<h1>What is the sound of one page missing?</h1>
-			<p>That page doesn't exist. Perhaps you'd like to <a href="{{ "search/" | absURL }}">search</a> this site or start at the homepage.</p>
-		</section>
-	</div>
+<div class="terminal-page">
+    <!-- 404 ASCII art -->
+    <div class="tc pv4">
+        <pre class="terminal-404-text">  j88D   .d88b.    j88D      d8b   db  .d88b.  d888888b   d88888b  .d88b.  db    db d8b   db d8888b.
+ j8~88  .8P  88.  j8~88      888o  88 .8P  Y8. `~~88~~'   88'     .8P  Y8. 88    88 888o  88 88  `8D
+j8' 88  88  d'88 j8' 88      88V8o 88 88    88    88      88ooo   88    88 88    88 88V8o 88 88   88
+V88888D 88 d' 88 V88888D     88 V8o88 88    88    88      88~~~   88    88 88    88 88 V8o88 88   88
+    88  `88  d8'     88      88  V888 `8b  d8'    88      88      `8b  d8' 88b  d88 88  V888 88  .8D
+    VP   `Y88P'      VP      VP   V8P  `Y88P'     YP      YP       `Y88P'  ~Y8888P' VP   V8P Y8888D'</pre>
+    </div>
+
+    <div class="terminal-content">
+        <!-- Popular categories -->
+        <div class="terminal-section">
+            <span class="terminal-prompt">$ cat popular_categories.txt</span>
+            <div class="terminal-output">
+                {{- $topCats := slice }}
+                {{- range $i, $term := .Site.Taxonomies.categories }}
+                    {{- if lt $i 12 }}
+                        {{- $topCats = $topCats | append (dict "name" $term.Page.Title "url" $term.Page.Permalink "count" (len $term.Pages)) }}
+                    {{- end }}
+                {{- end }}
+                {{- range sort $topCats "count" "desc" | first 8 }}
+                <a href="{{ .url }}" class="terminal-link">{{ .name }}</a>
+                {{- end }}
+            </div>
+        </div>
+
+        <!-- Recent posts -->
+        <div class="terminal-section">
+            <span class="terminal-prompt">$ tail -n5 posts.txt</span>
+            <div class="terminal-output">
+                {{- range first 5 (where .Site.RegularPages "Section" "ne" "slides") }}
+                <a href="{{ .Permalink }}" class="terminal-link">{{ .Title }}</a>
+                {{- end }}
+            </div>
+        </div>
+
+        <div class="terminal-section">
+            <span class="terminal-prompt">$ <span class="terminal-cursor-inline">_</span></span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Full terminal page */
+.terminal-page {
+    background: #0a0a0a;
+    min-height: 60vh;
+    padding: 0;
+}
+
+/* 404 ASCII text */
+.terminal-404-text {
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 0.65rem;
+    line-height: 1.15;
+    color: #00ff00;
+    background: transparent;
+    margin: 0;
+    padding: 1.5rem 2rem;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    white-space: pre;
+    display: inline-block;
+}
+
+/* Terminal content area */
+.terminal-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem 2rem 3rem;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.terminal-section {
+    margin-bottom: 1.5rem;
+}
+
+.terminal-prompt {
+    color: #00ff00;
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.terminal-output {
+    padding-left: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.terminal-link {
+    color: #4a9eff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.15s ease;
+}
+
+.terminal-link:hover {
+    color: #00ff00;
+    text-decoration: underline;
+}
+
+.terminal-cursor-inline {
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+    .terminal-404-text {
+        font-size: 0.4rem;
+        padding: 1rem;
+    }
+    .terminal-content {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 450px) {
+    .terminal-404-text {
+        font-size: 0.3rem;
+    }
+}
+</style>
 
 {{ end }}
