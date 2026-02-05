@@ -167,3 +167,29 @@ test.describe('Navigation Consistency', () => {
     await expect(page.locator('.retro-card').first()).toBeVisible({ timeout: 5000 });
   });
 });
+
+test.describe('Syntax Highlighting', () => {
+  test('code blocks use monokai theme', async ({ page }) => {
+    // Page with known code blocks
+    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+
+    // Check that code blocks have monokai styling (dark background #49483e)
+    const codeBlock = page.locator('pre.rouge.highlight').first();
+    await expect(codeBlock).toBeVisible();
+
+    const bgColor = await codeBlock.evaluate(el => getComputedStyle(el).backgroundColor);
+    // Monokai background is #49483e which is rgb(73, 72, 62)
+    expect(bgColor).toBe('rgb(73, 72, 62)');
+  });
+
+  test('admonition blocks use font icons', async ({ page }) => {
+    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+
+    // Check for admonition with font icon
+    const admonition = page.locator('.admonitionblock.tip').first();
+    await expect(admonition).toBeVisible();
+
+    const icon = admonition.locator('.icon i.fa');
+    await expect(icon).toBeVisible();
+  });
+});
