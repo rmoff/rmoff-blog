@@ -21,36 +21,280 @@
 {{ end }}
 
 {{ define "main" }}
-<div class="categories-list-page pa3 pa4-ns w-100 center" style="max-width: 1200px;">
-    <div class="categories-grid">
-        {{- range .Data.Terms.Alphabetical }}
-        <a href="{{ .Page.Permalink }}" class="category-item">
-            <span class="category-name">{{ .Page.Title }}</span>
-            <span class="category-count">{{ .Count }}</span>
-        </a>
+{{/* Build sorted list and extract popular categories */}}
+{{ $allCategories := .Data.Terms.Alphabetical }}
+{{ $popularCategories := .Data.Terms.ByCount }}
+
+{{/* Build list of letters that have categories - group non-alpha under # */}}
+{{ $letters := slice }}
+{{ $hasNonAlpha := false }}
+{{ range $allCategories }}
+    {{ $firstChar := upper (substr .Page.Title 0 1) }}
+    {{ $isAlpha := findRE "^[A-Z]$" $firstChar }}
+    {{ if $isAlpha }}
+        {{ if not (in $letters $firstChar) }}
+            {{ $letters = $letters | append $firstChar }}
+        {{ end }}
+    {{ else }}
+        {{ $hasNonAlpha = true }}
+    {{ end }}
+{{ end }}
+{{/* Prepend # if we have non-alpha categories */}}
+{{ if $hasNonAlpha }}
+    {{ $letters = slice "#" | append $letters }}
+{{ end }}
+
+<div class="categories-list-page w-100 center" style="max-width: 1200px;">
+    <!-- Popular Categories Section -->
+    <div class="popular-categories-section" id="popular-section">
+        <div class="section-strip">
+            <span class="section-strip-label">&gt; Popular categories</span>
+        </div>
+        <div class="popular-categories-content">
+            <div class="popular-categories-grid">
+                {{- range first 12 $popularCategories }}
+                <a href="{{ .Page.RelPermalink }}" class="popular-category-item">
+                    <span class="category-name">{{ .Page.Title }}</span>
+                    <span class="category-count">{{ .Count }}</span>
+                </a>
+                {{- end }}
+            </div>
+        </div>
+    </div>
+
+    <!-- All Categories Section -->
+    <div class="all-categories-section" id="all-categories-section">
+        <div class="section-strip">
+            <span class="section-strip-label">&gt; All categories</span>
+        </div>
+        <!-- A-Z Jump Links -->
+        <div class="az-jump-links" id="az-links">
+            {{- range $letters }}
+            <a href="#letter-{{ . }}" class="jump-link">{{ . }}</a>
+            {{- end }}
+        </div>
+        <!-- Filter Box -->
+        <div class="filter-container">
+            <input type="text" id="category-filter" class="filter-input" placeholder="Filter..." autocomplete="off">
+            <button id="filter-clear" class="filter-clear" title="Clear filter">&times;</button>
+        </div>
+    </div>
+
+    <!-- Categories by Letter -->
+    <div class="categories-by-letter">
+        {{- $currentLetter := "" }}
+        {{- range $allCategories }}
+            {{- $firstChar := upper (substr .Page.Title 0 1) }}
+            {{- $isAlpha := findRE "^[A-Z]$" $firstChar }}
+            {{- $letter := cond (len $isAlpha) $firstChar "#" }}
+            {{- if ne $letter $currentLetter }}
+                {{- if ne $currentLetter "" }}
+                </div></div>
+                {{- end }}
+                {{- $currentLetter = $letter }}
+        <div class="letter-section" id="letter-{{ $letter }}" data-letter="{{ $letter }}">
+            <h2 class="letter-header">{{ $letter }}</h2>
+            <div class="categories-grid">
+            {{- end }}
+            <a href="{{ .Page.RelPermalink }}" class="category-item" data-name="{{ lower .Page.Title }}">
+                <span class="category-name">{{ .Page.Title }}</span>
+                <span class="category-count">{{ .Count }}</span>
+            </a>
         {{- end }}
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
 .categories-list-page {
-    padding-top: 2rem;
+    padding-top: 0;
+}
+
+/* Section Strip - shared dark header style */
+.section-strip {
+    background: #2a2a2a;
+    padding: 0.6rem 1.5rem;
+}
+
+.section-strip-label {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.9rem;
+    color: #4CAF50;
+}
+
+/* Popular Categories Section */
+.popular-categories-section {
+    background: #e8f5e9;
+    border-bottom: 1px solid #c8e6c9;
+    margin-top: 0.75rem;
+}
+
+.popular-categories-content {
+    padding: 1.25rem 1.5rem;
+}
+
+.popular-categories-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.popular-category-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: #fff;
+    border: 2px solid #2a2a2a;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.15s ease;
+}
+
+.popular-category-item:hover {
+    background: #2a2a2a;
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.popular-category-item .category-name {
+    font-family: 'Quattrocento Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.popular-category-item .category-count {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.8rem;
+    color: #fff;
+    background: #2a2a2a;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    min-width: 1.75rem;
+    text-align: center;
+}
+
+.popular-category-item:hover .category-count {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* All Categories Section */
+.all-categories-section {
+    margin-top: 0.75rem;
+}
+
+.filter-container {
+    display: flex;
+    align-items: center;
+    max-width: 500px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+}
+
+.filter-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #333;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 1rem;
+    outline: none;
+}
+
+.filter-input::placeholder {
+    color: #999;
+}
+
+.filter-clear {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+    display: none;
+}
+
+.filter-clear:hover {
+    color: #333;
+}
+
+.filter-clear.visible {
+    display: block;
+}
+
+/* A-Z Jump Links */
+.az-jump-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.75rem 1.5rem 0.5rem;
+    background: #f5f5f5;
+    justify-content: center;
+}
+
+.all-categories-section .filter-container {
+    background: #f5f5f5;
+    padding: 0.5rem 1rem 0.75rem;
+}
+
+.jump-link {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.9rem;
+    color: #555;
+    text-decoration: none;
+    padding: 0.35rem 0.6rem;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.jump-link:hover {
+    background: #2a2a2a;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Letter Sections */
+.categories-by-letter {
+    padding: 1rem 1.5rem 2rem;
+}
+
+.letter-section {
+    margin-bottom: 1.5rem;
+    scroll-margin-top: 80px;
+}
+
+.letter-header {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 1.5rem;
+    color: #2a2a2a;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e5e5;
 }
 
 .categories-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.6rem;
 }
 
 .category-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.875rem 1.25rem;
+    padding: 0.75rem 1rem;
     background: #ffffff;
     border: 1px solid #e5e5e5;
-    border-radius: 8px;
+    border-radius: 6px;
     text-decoration: none;
     color: #333;
     transition: all 0.15s ease;
@@ -65,20 +309,20 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.category-name {
+.category-item .category-name {
     font-family: 'Quattrocento Sans', sans-serif;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
 }
 
-.category-count {
+.category-item .category-count {
     font-family: 'Source Code Pro', monospace;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #888;
     background: #f5f5f5;
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.45rem;
     border-radius: 4px;
-    min-width: 2rem;
+    min-width: 1.75rem;
     text-align: center;
 }
 
@@ -86,5 +330,115 @@
     background: rgba(255, 255, 255, 0.2);
     color: #fff;
 }
+
+/* Hidden state for filtering */
+.category-item.hidden,
+.letter-section.hidden,
+.az-jump-links.hidden {
+    display: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    .section-strip {
+        padding: 0.5rem 1rem;
+    }
+
+    .popular-categories-content,
+    .az-jump-links,
+    .categories-by-letter {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .filter-container {
+        margin: 0.75rem 1rem;
+        max-width: none;
+    }
+
+    .categories-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .az-jump-links {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .jump-link {
+        flex-shrink: 0;
+    }
+}
 </style>
+
+<script>
+(function() {
+    const filterInput = document.getElementById('category-filter');
+    const clearButton = document.getElementById('filter-clear');
+    const categoryItems = document.querySelectorAll('.categories-by-letter .category-item');
+    const letterSections = document.querySelectorAll('.letter-section');
+    const azLinks = document.getElementById('az-links');
+
+    function filterCategories() {
+        const query = filterInput.value.toLowerCase().trim();
+
+        // Show/hide clear button
+        if (query) {
+            clearButton.classList.add('visible');
+        } else {
+            clearButton.classList.remove('visible');
+        }
+
+        // Filter main category items
+        categoryItems.forEach(item => {
+            const name = item.getAttribute('data-name');
+            if (query === '' || name.includes(query)) {
+                item.classList.remove('hidden');
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+
+        // Hide empty letter sections
+        letterSections.forEach(section => {
+            const visibleItems = section.querySelectorAll('.category-item:not(.hidden)');
+            if (visibleItems.length === 0) {
+                section.classList.add('hidden');
+            } else {
+                section.classList.remove('hidden');
+            }
+        });
+
+        // Hide A-Z links when filtering
+        if (query !== '') {
+            azLinks.classList.add('hidden');
+        } else {
+            azLinks.classList.remove('hidden');
+        }
+    }
+
+    filterInput.addEventListener('input', filterCategories);
+
+    clearButton.addEventListener('click', () => {
+        filterInput.value = '';
+        filterCategories();
+        filterInput.focus();
+    });
+
+    // Handle keyboard shortcut (/ to focus search)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== filterInput) {
+            e.preventDefault();
+            filterInput.focus();
+        }
+        if (e.key === 'Escape' && document.activeElement === filterInput) {
+            filterInput.value = '';
+            filterCategories();
+            filterInput.blur();
+        }
+    });
+})();
+</script>
 {{ end }}
