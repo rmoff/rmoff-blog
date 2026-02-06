@@ -1,5 +1,5 @@
 +++
-categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "ksqldb"]
+categories = ["oracle", "cdc", "debezium", "goldengate", "xstream", "logminer", "ksqlDB"]
 date = 2018-12-12T09:49:04Z
 draft = false
 image = "/images/2018/12/IMG_7464.jpg"
