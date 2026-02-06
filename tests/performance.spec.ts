@@ -211,7 +211,10 @@ test.describe('404 Page', () => {
     await expect(page.locator('.terminal-link').first()).toBeVisible();
 
     // Home link visible
-    await expect(page.locator('.terminal-home-link')).toBeVisible();
+    await expect(page.locator('.terminal-home-link').filter({ hasText: 'cd ~' })).toBeVisible();
+
+    // Search link visible
+    await expect(page.locator('.terminal-home-link').filter({ hasText: 'find' })).toBeVisible();
   });
 });
 
