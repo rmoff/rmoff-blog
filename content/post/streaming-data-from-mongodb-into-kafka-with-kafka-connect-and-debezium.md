@@ -5,7 +5,6 @@ description = ""
 draft = false
 image = "/images/2018/03/IMG_8714.JPG"
 slug = "streaming-data-from-mongodb-into-kafka-with-kafka-connect-and-debezium"
-tag = ["mongodb", "debezium", "kafka connect", "apache kafka", "replica set"]
 title = "Streaming Data from MongoDB into Kafka with Kafka Connect and Debezium"
 
 +++

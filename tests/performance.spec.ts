@@ -116,8 +116,8 @@ test.describe('Page Load - Category Page', () => {
     // Go directly to a known category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should have article cards
-    const cards = page.locator('.retro-card');
+    // Should have compact article cards
+    const cards = page.locator('.compact-card');
     await expect(cards.first()).toBeVisible({ timeout: 5000 });
   });
 });
@@ -163,8 +163,8 @@ test.describe('Navigation Consistency', () => {
     // Navigate directly to categories page then to a specific category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should show category page with articles
-    await expect(page.locator('.retro-card').first()).toBeVisible({ timeout: 5000 });
+    // Should show category page with compact article cards
+    await expect(page.locator('.compact-card').first()).toBeVisible({ timeout: 5000 });
   });
 });
 

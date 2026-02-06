@@ -8,7 +8,7 @@
         {{ partial "nav-compact.html" (dict "context" . "searchActive" false) }}
 
         <!-- Title area with dark translucent box -->
-        <div class="tc-l pv3-ns pv4-l pv2 ph3 ph4-ns">
+        <div class="tc pv3-ns pv4-l pv2 ph3 ph4-ns">
             <div class="title-box">
                 <h1 class="near-white f2 fw3 mb2 mt0 lh-title">
                     <span class="terminal-title">{{ .Title }}<span class="terminal-cursor"></span></span>
@@ -23,13 +23,354 @@
 {{ end }}
 
 {{ define "main" }}
+<!-- Search bar with dark background strip -->
+<div class="category-search-strip">
+  <div class="category-search-strip-inner">
+    <div class="category-search-box">
+      <span class="search-prompt">&gt;</span>
+      <input type="text" id="category-search-input" placeholder="Search within {{ .Title }}..." autocomplete="off">
+      <button id="category-search-clear" class="search-clear" style="display: none;">&times;</button>
+    </div>
+  </div>
+</div>
+
 <div class="pa3 pa4-ns w-100 center" style="max-width: 1200px;">
-  <section class="w-100">
+  <!-- Search results (hidden by default) -->
+  <div id="category-search-results" class="category-search-results" style="display: none;"></div>
+
+  <!-- Article list -->
+  <section id="category-article-list" class="compact-card-list">
   {{ range where .Paginator.Pages ".Params.skip" "ne" "true" }}
-      {{ partial "li.html" . }}
+      {{ partial "li-compact.html" . }}
   {{ end }}
   </section>
 </div>
+
+<script type="module">
+(async function() {
+    const categoryName = {{ .Title }};
+    const searchInput = document.getElementById('category-search-input');
+    const clearBtn = document.getElementById('category-search-clear');
+    const resultsContainer = document.getElementById('category-search-results');
+    const articleList = document.getElementById('category-article-list');
+
+    // Initialize Pagefind
+    const pagefind = await import('/pagefind/pagefind.js');
+
+    let debounceTimer;
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearBtn.style.display = query ? 'block' : 'none';
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => performSearch(query), 150);
+    });
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        resultsContainer.style.display = 'none';
+        articleList.style.display = 'block';
+        resultsContainer.innerHTML = '';
+    });
+
+    async function performSearch(query) {
+        if (!query || query.length < 2) {
+            resultsContainer.style.display = 'none';
+            articleList.style.display = 'block';
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        // Search with category filter
+        const search = await pagefind.search(query, {
+            filters: { category: categoryName }
+        });
+
+        // Show results, hide article list
+        articleList.style.display = 'none';
+        resultsContainer.style.display = 'block';
+
+        if (search.results.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="search-no-results">
+                    No results found for "<strong>${escapeHtml(query)}</strong>" in "${escapeHtml(categoryName)}"
+                </div>
+            `;
+            return;
+        }
+
+        // Load result data (first 20)
+        const results = await Promise.all(
+            search.results.slice(0, 20).map(r => r.data())
+        );
+
+        resultsContainer.innerHTML = `
+            <div class="search-result-count">${search.results.length} result${search.results.length === 1 ? '' : 's'} for "${escapeHtml(query)}"</div>
+            <div class="search-results-list">
+                ${results.map(r => `
+                    <a href="${r.url}" class="search-result-card">
+                        ${r.meta?.image ? `<img src="${r.meta.image}" alt="" class="search-result-thumb">` : ''}
+                        <div class="search-result-content">
+                            <h3 class="search-result-title">${r.meta?.title || r.url}</h3>
+                            <p class="search-result-excerpt">${r.excerpt}</p>
+                        </div>
+                    </a>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+})();
+</script>
+
+<style>
+/* Dark search strip across full width */
+.category-search-strip {
+    background: #2a2a2a;
+    padding: 1.25rem 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.category-search-strip-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .category-search-strip-inner {
+        padding: 0 1rem;
+    }
+}
+
+.category-search-box {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    padding: 0.75rem 1rem;
+    max-width: 600px;
+    transition: box-shadow 0.2s ease;
+}
+
+.category-search-box:focus-within {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.search-prompt {
+    font-family: 'Source Code Pro', 'Monaco', monospace;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #333;
+    margin-right: 0.75rem;
+    user-select: none;
+}
+
+#category-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: 'Quattrocento Sans', sans-serif;
+    font-size: 1rem;
+    color: #333;
+    background: transparent;
+}
+
+#category-search-input::placeholder {
+    color: #999;
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #999;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.search-clear:hover {
+    color: #333;
+}
+
+/* Search results styling */
+.category-search-results {
+    margin-bottom: 2rem;
+}
+
+.search-result-count {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 1rem;
+    font-family: 'Quattrocento Sans', sans-serif;
+}
+
+.search-no-results {
+    padding: 2rem;
+    text-align: center;
+    color: #666;
+    font-family: 'Quattrocento Sans', sans-serif;
+}
+
+.search-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.search-result-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+}
+
+.search-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: #d0d0d0;
+    text-decoration: none;
+}
+
+.search-result-thumb {
+    width: 120px;
+    min-width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 768px) {
+    .search-result-thumb {
+        width: 160px;
+        min-width: 160px;
+        height: 107px;
+    }
+}
+
+.search-result-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-result-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+    font-family: 'Quattrocento Sans', sans-serif;
+}
+
+.search-result-excerpt {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #555;
+    margin: 0;
+    font-family: 'Quattrocento Sans', sans-serif;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.search-result-excerpt mark {
+    background: #fff3cd;
+    color: inherit;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+}
+
+/* Compact card list for category articles */
+.compact-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.compact-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+}
+
+.compact-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: #d0d0d0;
+    text-decoration: none;
+}
+
+.compact-card-thumb {
+    width: 120px;
+    min-width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 768px) {
+    .compact-card-thumb {
+        width: 160px;
+        min-width: 160px;
+        height: 107px;
+    }
+}
+
+.compact-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.compact-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+    font-family: 'Quattrocento Sans', sans-serif;
+}
+
+.compact-card-excerpt {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #555;
+    margin: 0;
+    font-family: 'Quattrocento Sans', sans-serif;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
 {{ end }}
 
 {{ define "pagination" }}

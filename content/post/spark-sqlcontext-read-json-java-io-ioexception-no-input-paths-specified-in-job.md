@@ -4,12 +4,11 @@ date = 2016-07-13T04:50:16Z
 description = ""
 draft = false
 slug = "spark-sqlcontext-read-json-java-io-ioexception-no-input-paths-specified-in-job"
-tag = ["spark", "sparksql", "json"]
 title = "Spark sqlContext.read.json - java.io.IOException: No input paths specified in job"
 
 +++
 
-Trying to use [SparkSQL to read a JSON file](http://spark.apache.org/docs/latest/sql-programming-guide.html#json-datasets), from either pyspark or spark-shell, I got this error: 
+Trying to use [SparkSQL to read a JSON file](http://spark.apache.org/docs/latest/sql-programming-guide.html#json-datasets), from either pyspark or spark-shell, I got this error:
 
     java.io.IOException: No input paths specified in job
 
@@ -19,7 +18,7 @@ java.io.IOException: No input paths specified in job
         at org.apache.hadoop.mapred.FileInputFormat.listStatus(FileInputFormat.java:202)
 ```
 
-Despite the reference articles that I found using this local path syntax (`/u02/custom/twitter/twitter.json`), it turned out that I needed to prefix it with `file://`: 
+Despite the reference articles that I found using this local path syntax (`/u02/custom/twitter/twitter.json`), it turned out that I needed to prefix it with `file://`:
 
 ```
 scala> sqlContext.read.json("file:///u02/custom/twitter/twitter.json")
@@ -27,7 +26,7 @@ res3: org.apache.spark.sql.DataFrame = [@timestamp: string, @version: string, co
 scala>
 ```
 
-An alternative to `file://` is `hdfs://`, assuming you have some data residing there too: 
+An alternative to `file://` is `hdfs://`, assuming you have some data residing there too:
 
 ```
 scala> sqlContext.read.json("hdfs:///user/oracle/incoming/twitter/2016/07/12/FlumeData.1468339844123")
