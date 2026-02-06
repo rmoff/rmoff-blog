@@ -13,7 +13,7 @@ test.describe('Header UI', () => {
     await expect(label).toHaveText('talks');
   });
 
-  test('talks icon appears before youtube icon', async ({ page }) => {
+  test('youtube icon appears before talks icon', async ({ page }) => {
     const icons = page.locator('.header-icons .icon-link');
     const labels = await icons.locator('.icon-label').allTextContents();
 
@@ -22,7 +22,7 @@ test.describe('Header UI', () => {
 
     expect(talksIndex).toBeGreaterThan(-1);
     expect(youtubeIndex).toBeGreaterThan(-1);
-    expect(talksIndex).toBeLessThan(youtubeIndex);
+    expect(youtubeIndex).toBeLessThan(talksIndex);
   });
 
   test('icon label appears on hover', async ({ page }) => {
