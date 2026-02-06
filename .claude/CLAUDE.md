@@ -1,5 +1,16 @@
 # Blog Project Instructions
 
+## Git Workflow
+
+**NEVER work directly on main.** Always create a feature branch for any changes:
+```bash
+git checkout -b <descriptive-branch-name>
+```
+
+## Content Files
+
+This blog contains **both AsciiDoc (`.adoc`) and Markdown (`.md`) files**. When making bulk changes or searching for content patterns, always check both file types.
+
 ## Development Environment
 
 ### Hugo Server
