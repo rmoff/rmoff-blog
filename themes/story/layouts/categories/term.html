@@ -48,7 +48,7 @@
 
 <script type="module">
 (async function() {
-    const categoryName = {{ .Title }};
+    const categoryDisplayName = {{ .Title }};
     const searchInput = document.getElementById('category-search-input');
     const clearBtn = document.getElementById('category-search-clear');
     const resultsContainer = document.getElementById('category-search-results');
@@ -56,6 +56,20 @@
 
     // Initialize Pagefind
     const pagefind = await import('/pagefind/pagefind.js');
+
+    // Find the actual category filter value (case-insensitive match)
+    let categoryFilterValue = categoryDisplayName;
+    try {
+        const filters = await pagefind.filters();
+        if (filters.category) {
+            const match = Object.keys(filters.category).find(
+                cat => cat.toLowerCase() === categoryDisplayName.toLowerCase()
+            );
+            if (match) categoryFilterValue = match;
+        }
+    } catch (e) {
+        console.error('Error loading filters:', e);
+    }
 
     let debounceTimer;
 
@@ -83,9 +97,9 @@
             return;
         }
 
-        // Search with category filter
+        // Search with category filter (using matched filter value)
         const search = await pagefind.search(query, {
-            filters: { category: categoryName }
+            filters: { category: categoryFilterValue }
         });
 
         // Show results, hide article list
@@ -95,7 +109,7 @@
         if (search.results.length === 0) {
             resultsContainer.innerHTML = `
                 <div class="search-no-results">
-                    No results found for "<strong>${escapeHtml(query)}</strong>" in "${escapeHtml(categoryName)}"
+                    No results found for "<strong>${escapeHtml(query)}</strong>" in "${escapeHtml(categoryDisplayName)}"
                 </div>
             `;
             return;

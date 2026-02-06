@@ -78,4 +78,20 @@ test.describe('Pagefind Search', () => {
 
     expect(hasResults || hasNoResultsMessage).toBeTruthy();
   });
+
+  test('category search works with case-insensitive category names', async ({ page }) => {
+    // OBIEE has lowercase category in frontmatter but title-cased page title
+    await page.goto('http://localhost:1313/categories/obiee/');
+
+    const searchInput = page.locator('#category-search-input');
+    await searchInput.fill('oracle');
+
+    // Wait for results
+    const resultsOrMessage = page.locator('.search-results-list, .search-no-results');
+    await expect(resultsOrMessage).toBeVisible({ timeout: 10000 });
+
+    // Should find results (OBIEE articles mention Oracle)
+    const resultCards = page.locator('.search-result-card');
+    expect(await resultCards.count()).toBeGreaterThan(0);
+  });
 });
