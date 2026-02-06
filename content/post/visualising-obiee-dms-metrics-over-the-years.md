@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "dms", "metrics", "jmanage", "jmx"]
+categories = ["OBIEE", "dms", "metrics", "jmanage", "jmx"]
 date = 2016-02-26T17:54:54Z
 description = ""
 draft = false
 image = "/images/2016/02/metrics05.png"
 slug = "visualising-obiee-dms-metrics-over-the-years"
-tag = ["obiee", "dms", "metrics", "jmanage", "jmx"]
+tag = ["OBIEE", "dms", "metrics", "jmanage", "jmx"]
 title = "Visualising OBIEE DMS Metrics over the years"
 
 +++

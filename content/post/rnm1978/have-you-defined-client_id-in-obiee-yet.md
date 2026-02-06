@@ -2,7 +2,7 @@
 title: "Have you defined CLIENT_ID in OBIEE yet?"
 date: "2011-08-08"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "oracle"
 ---
 

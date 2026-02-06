@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "obiee12c", "hang", "boot.properties", "start.cmd"]
+categories = ["OBIEE", "obiee12c", "hang", "boot.properties", "start.cmd"]
 date = 2016-05-20T14:22:21Z
 description = ""
 draft = false
 image = "/images/2016/05/limes_lemons.jpeg"
 slug = "obiee-12c-hangs-at-startup"
-tag = ["obiee", "obiee12c", "hang", "boot.properties", "start.cmd"]
+tag = ["OBIEE", "obiee12c", "hang", "boot.properties", "start.cmd"]
 title = "OBIEE 12c hangs at startup - Starting AdminServer ..."
 
 +++

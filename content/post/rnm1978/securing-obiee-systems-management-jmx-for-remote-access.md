@@ -3,7 +3,7 @@ title: "Securing OBIEE Systems Management JMX for remote access"
 date: "2010-03-05"
 categories: 
   - "jmx"
-  - "obiee"
+  - "OBIEE"
   - "security"
   - "systemsmanagement"
 ---

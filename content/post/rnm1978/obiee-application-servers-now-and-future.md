@@ -3,7 +3,7 @@ title: "OBIEE application servers, now and future"
 date: "2009-11-25"
 categories: 
   - "oas"
-  - "obiee"
+  - "OBIEE"
   - "obiee-11g"
   - "weblogic"
 ---

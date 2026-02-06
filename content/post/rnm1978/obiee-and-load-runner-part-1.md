@@ -3,7 +3,7 @@ title: "OBIEE and Load Runner - part 1"
 date: "2009-08-19"
 categories: 
   - "loadrunner"
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

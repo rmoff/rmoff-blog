@@ -3,7 +3,7 @@ title: "OBIEE on Opera 10 / IE 7 / FF 3.5 / Chrome 4"
 date: "2009-09-10"
 categories: 
   - "firefox"
-  - "obiee"
+  - "OBIEE"
 ---
 
 A new version of the web browser [Opera](http://www.opera.com/) was released recently. Several years ago I used Opera and may even have paid for it IIRC. Then Firefox came along, and the "it's not IE" excuse was lost for Opera. Not that I mind IE too much nowadays but at the time it was atrocious. Since then I've revisited Opera each time a new release has come out, but nothing has impressed me enough to ditch Firefox (and nowadays Google Chrome).

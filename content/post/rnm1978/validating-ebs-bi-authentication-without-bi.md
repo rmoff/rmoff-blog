@@ -3,7 +3,7 @@ title: "Validating EBS-BI authentication, without BI"
 date: "2010-05-17"
 categories: 
   - "obia"
-  - "obiee"
+  - "OBIEE"
   - "security"
 ---
 

@@ -4,7 +4,7 @@ date: "2009-05-18"
 categories: 
   - "apache"
   - "oas"
-  - "obiee"
+  - "OBIEE"
 ---
 
 It's possible to change the error pages served up by OAS/Apache by using the ErrorDocument directive. This is [widely documented](http://httpd.apache.org/docs/1.3/mod/core.html#errordocument).  

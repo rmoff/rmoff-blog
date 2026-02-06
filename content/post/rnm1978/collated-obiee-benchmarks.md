@@ -2,7 +2,7 @@
 title: "Collated OBIEE benchmarks"
 date: "2009-09-18"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

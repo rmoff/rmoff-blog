@@ -116,8 +116,8 @@ test.describe('Page Load - Category Page', () => {
     // Go directly to a known category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should have article cards
-    const cards = page.locator('.retro-card');
+    // Should have compact article cards
+    const cards = page.locator('.compact-card');
     await expect(cards.first()).toBeVisible({ timeout: 5000 });
   });
 });
@@ -163,8 +163,84 @@ test.describe('Navigation Consistency', () => {
     // Navigate directly to categories page then to a specific category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should show category page with articles
-    await expect(page.locator('.retro-card').first()).toBeVisible({ timeout: 5000 });
+    // Should show category page with compact article cards
+    await expect(page.locator('.compact-card').first()).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('404 Page', () => {
+  test('404 page has black background throughout', async ({ page }) => {
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // Terminal content should be visible
+    await expect(page.locator('.terminal-page')).toBeVisible();
+
+    // Check body background is black (#0a0a0a = rgb(10, 10, 10))
+    const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bodyBg).toBe('rgb(10, 10, 10)');
+
+    // Check main element background is also black
+    const mainBg = await page.evaluate(() => getComputedStyle(document.querySelector('main')!).backgroundColor);
+    expect(mainBg).toBe('rgb(10, 10, 10)');
+  });
+
+  test('404 page footer is at bottom of viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // Footer should be visible
+    const footer = page.locator('footer');
+    await expect(footer).toBeVisible();
+
+    // Footer should be at or near the bottom of the viewport
+    const footerBox = await footer.boundingBox();
+    const viewportHeight = 800;
+
+    expect(footerBox).not.toBeNull();
+    // Footer bottom edge should be at the viewport bottom (within small margin)
+    expect(footerBox!.y + footerBox!.height).toBeGreaterThanOrEqual(viewportHeight - 5);
+  });
+
+  test('404 page shows terminal content', async ({ page }) => {
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // ASCII art visible
+    await expect(page.locator('.terminal-404-text')).toBeVisible();
+
+    // Category links visible
+    await expect(page.locator('.terminal-link').first()).toBeVisible();
+
+    // Home link visible
+    await expect(page.locator('.terminal-home-link').filter({ hasText: 'cd ~' })).toBeVisible();
+
+    // Search link visible
+    await expect(page.locator('.terminal-home-link').filter({ hasText: 'find' })).toBeVisible();
+  });
+});
+
+test.describe('Syntax Highlighting', () => {
+  test('code blocks use monokai theme', async ({ page }) => {
+    // Page with known code blocks
+    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+
+    // Check that code blocks have monokai styling (dark background #49483e)
+    const codeBlock = page.locator('pre.rouge.highlight').first();
+    await expect(codeBlock).toBeVisible();
+
+    const bgColor = await codeBlock.evaluate(el => getComputedStyle(el).backgroundColor);
+    // Monokai background is #49483e which is rgb(73, 72, 62)
+    expect(bgColor).toBe('rgb(73, 72, 62)');
+  });
+
+  test('admonition blocks use font icons', async ({ page }) => {
+    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+
+    // Check for admonition with font icon
+    const admonition = page.locator('.admonitionblock.tip').first();
+    await expect(admonition).toBeVisible();
+
+    const icon = admonition.locator('.icon i.fa');
+    await expect(icon).toBeVisible();
   });
 });
 

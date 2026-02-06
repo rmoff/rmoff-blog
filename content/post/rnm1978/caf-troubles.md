@@ -4,7 +4,7 @@ date: "2009-09-03"
 categories: 
   - "caf"
   - "catalogmanager"
-  - "obiee"
+  - "OBIEE"
   - "windows"
 ---
 

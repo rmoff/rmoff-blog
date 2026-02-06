@@ -4,7 +4,7 @@ date: "2011-02-23"
 categories: 
   - "hack"
   - "ldap"
-  - "obiee"
+  - "OBIEE"
   - "udml"
 ---
 

@@ -4,7 +4,7 @@ date: "2011-08-08"
 categories: 
   - "hp"
   - "itanium"
-  - "obiee"
+  - "OBIEE"
 ---
 
 OK, [a bit tired](http://twitter.com/#!/rnm1978/status/98045868221018113) on a Monday morning, and so a bit sarcastic.

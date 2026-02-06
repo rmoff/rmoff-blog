@@ -3,7 +3,7 @@ title: "CAF"
 date: "2009-12-11"
 categories: 
   - "caf"
-  - "obiee"
+  - "OBIEE"
 ---
 
 Very interesting post by Kevin McGinley about CAF here:  [CAF = Migration Utility? Use Caution!](http://oraclebiblog.blogspot.com/2009/12/caf-migration-utility-use-caution.html)

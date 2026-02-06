@@ -2,7 +2,7 @@
 title: "sawserver won't start (analytics: Servlet error java.net.ConnectException: Connection refused (errno:239))"
 date: "2009-03-30"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "unix"
 ---

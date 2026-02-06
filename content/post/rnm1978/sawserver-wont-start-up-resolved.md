@@ -2,7 +2,7 @@
 title: "sawserver won't start up - resolved"
 date: "2009-04-01"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "unix"
 ---

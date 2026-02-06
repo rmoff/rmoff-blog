@@ -4,7 +4,7 @@ date: "2010-03-05"
 categories: 
   - "cluster"
   - "load-balancing"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "support"
 ---

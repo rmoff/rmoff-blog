@@ -2,7 +2,7 @@
 title: "OBIEE benchmarks"
 date: "2009-09-17"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

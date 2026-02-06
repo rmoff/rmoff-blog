@@ -2,7 +2,7 @@
 title: "UKOUG TEBS 2009"
 date: "2009-12-03"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 This was my first UKOUG TEBS, in fact my first conference I'd ever attended! I was quite unsure what to expect, but three days later I can safely say it was **invaluable**.

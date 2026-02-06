@@ -2,7 +2,7 @@
 title: "Troubleshooting Presentation Services / analytics connectivity"
 date: "2009-12-09"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "sawping"
   - "sawserver"
 ---

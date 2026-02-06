@@ -3,7 +3,7 @@ title: "New releases"
 date: "2009-04-28"
 categories: 
   - "obia"
-  - "obiee"
+  - "OBIEE"
 ---
 
 New releases this week - 10.1.3.4.1 of OBIEE, and 7.9.6 of OBIA.  

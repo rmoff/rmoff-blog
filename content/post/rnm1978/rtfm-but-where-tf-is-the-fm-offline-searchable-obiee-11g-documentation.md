@@ -3,7 +3,7 @@ title: "RTFM? But where TF is the FM?  &gt;&gt; Offline searchable OBIEE 11g doc
 date: "2010-09-13"
 categories: 
   - "documentation"
-  - "obiee"
+  - "OBIEE"
   - "oracle"
   - "rant"
 ---

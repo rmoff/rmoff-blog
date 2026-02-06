@@ -5,7 +5,7 @@ categories:
   - "dbms_application_info"
   - "dbms_session"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "systemsmanagement"
 ---

@@ -6,7 +6,7 @@ categories:
   - "cluster"
   - "dac"
   - "obia"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "unix"
 ---

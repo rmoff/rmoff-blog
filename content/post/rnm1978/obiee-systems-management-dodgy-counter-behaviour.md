@@ -6,7 +6,7 @@ categories:
   - "bug"
   - "jmx"
   - "mbeans"
-  - "obiee"
+  - "OBIEE"
   - "systemsmanagement"
 ---
 

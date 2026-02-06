@@ -2,7 +2,7 @@
 title: "SoOotW and sweep"
 date: "2009-11-25"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 (Sorry for the lame title, but it gives me an excuse to put this picture in :) ![](/images/rnm1978/sooty_sweep_150_150x180.jpg))

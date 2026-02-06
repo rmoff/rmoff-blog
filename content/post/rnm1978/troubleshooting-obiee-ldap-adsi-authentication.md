@@ -2,7 +2,7 @@
 title: "Troubleshooting OBIEE - LDAP (ADSI) authentication"
 date: "2010-12-02"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "unix"
 ---
 

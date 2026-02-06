@@ -5,7 +5,7 @@ categories:
   - "jmx"
   - "mbeans"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "systemsmanagement"
 ---
 

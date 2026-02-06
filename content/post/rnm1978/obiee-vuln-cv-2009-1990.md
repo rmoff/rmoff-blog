@@ -3,7 +3,7 @@ title: "Critical Patch Update - OBIEE vuln CVE-2009-1990"
 date: "2009-10-21"
 categories: 
   - "bug"
-  - "obiee"
+  - "OBIEE"
   - "security"
 ---
 

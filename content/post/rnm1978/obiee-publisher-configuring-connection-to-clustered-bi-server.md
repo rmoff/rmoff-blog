@@ -4,7 +4,7 @@ date: "2009-03-23"
 categories: 
   - "bi-publisher"
   - "cluster"
-  - "obiee"
+  - "OBIEE"
 ---
 
 I'm setting up a clustered OBIEE 10.1.3.4 production environment. There are four servers; two BI Server + Cluster Controller + Scheduler and two OAS + Presentation Services + Publisher. Clustering of BI is configured, now I'm setting up the other bits. Today is Publisher.  

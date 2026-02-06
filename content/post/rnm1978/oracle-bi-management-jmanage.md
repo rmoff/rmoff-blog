@@ -5,7 +5,7 @@ categories:
   - "jmanage"
   - "jmx"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "systemsmanagement"
 ---

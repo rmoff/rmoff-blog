@@ -4,7 +4,7 @@ date: "2010-11-04"
 categories: 
   - "jmx"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "systemsmanagement"
 ---
 

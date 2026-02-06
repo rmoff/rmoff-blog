@@ -3,7 +3,7 @@ title: "How to find out what web application server is in use"
 date: "2009-07-28"
 categories: 
   - "oas"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
 ---
 

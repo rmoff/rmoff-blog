@@ -5,7 +5,7 @@ categories:
   - "documentation"
   - "hack"
   - "nqcmd"
-  - "obiee"
+  - "OBIEE"
 ---
 
 I noticed on [Nico's wiki](http://gerardnico.com/wiki/dat/obiee/) (which is amazing by the way, it has **so** much information in it) a [bunch of additional parameters for nqcmd](http://gerardnico.com/wiki/dat/obiee/nqcmd) other than those which are displayed in the default helptext (nqcmd -h).

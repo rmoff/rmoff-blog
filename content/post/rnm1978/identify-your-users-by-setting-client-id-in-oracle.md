@@ -2,7 +2,7 @@
 title: "Identify your OBIEE users by setting Client ID in Oracle connection"
 date: "2010-01-26"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "oracle"
   - "support"
 ---

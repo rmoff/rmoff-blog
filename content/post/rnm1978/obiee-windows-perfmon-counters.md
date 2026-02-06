@@ -3,7 +3,7 @@ title: "OBIEE Windows PerfMon counters"
 date: "2009-07-24"
 categories: 
   - "hack"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "windows"
 ---

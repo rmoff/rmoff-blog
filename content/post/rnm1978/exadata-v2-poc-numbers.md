@@ -2,7 +2,7 @@
 title: "Exadata V2 POC numbers"
 date: "2010-02-10"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 I stumbled across this blog posting recently, and am reposting the link here as I've seen no mention of it elsewhere. This surprised me as with Exadata (and most new technologies) any snippet of news or tech insight gets blogged and tweeted multiple times over.

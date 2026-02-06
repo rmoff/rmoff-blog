@@ -4,7 +4,7 @@ date: "2009-03-24"
 categories: 
   - "bi-publisher"
   - "jdbc"
-  - "obiee"
+  - "OBIEE"
 ---
 
 In setting the scheduler in Publisher I discovered a useful difference in jdbc drivers.  

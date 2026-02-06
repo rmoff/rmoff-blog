@@ -1,10 +1,10 @@
 +++
-categories = ["obiee", "obiee12c", "xsa", "dataset", "datasetsvc"]
+categories = ["OBIEE", "obiee12c", "xsa", "dataset", "datasetsvc"]
 date = 2016-05-27T08:44:24Z
 description = ""
 draft = false
 slug = "obiee-12c-add-data-source-in-answers"
-tag = ["obiee", "obiee12c", "xsa", "dataset", "datasetsvc"]
+tag = ["OBIEE", "obiee12c", "xsa", "dataset", "datasetsvc"]
 title = "OBIEE 12c - \"Add Data Source\" in Answers"
 
 +++

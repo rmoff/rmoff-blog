@@ -3,7 +3,7 @@ title: "New blog from Oracle - OBI Product Assurance"
 date: "2011-08-15"
 categories: 
   - "bi"
-  - "obiee"
+  - "OBIEE"
 ---
 
 Blogging from Oracle itself about OBIEE has always been a bit sparse, certainly in comparison to that which there is for core RDBMS.

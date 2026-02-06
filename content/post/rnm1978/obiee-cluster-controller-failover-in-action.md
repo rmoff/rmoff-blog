@@ -4,7 +4,7 @@ date: "2009-09-15"
 categories: 
   - "cluster"
   - "load-balancing"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "sawserver"
   - "unix"
