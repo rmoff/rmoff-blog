@@ -3,7 +3,7 @@ title: "JConsole / JMX - followup"
 date: "2009-07-21"
 categories: 
   - "jmx"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "sawserver"
 ---

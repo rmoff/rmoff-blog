@@ -3,7 +3,7 @@ title: "Deploying Oracle Business Intelligence Enterprise Edition on Sun Systems
 date: "2009-11-12"
 categories: 
   - "cluster"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "unix"
 ---

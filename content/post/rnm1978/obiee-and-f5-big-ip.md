@@ -5,7 +5,7 @@ categories:
   - "apache"
   - "load-balancing"
   - "oas"
-  - "obiee"
+  - "OBIEE"
 ---
 
 We've got a setup of two OAS/Presentation Services boxes and two BI Server boxes, with load balancing/failover throughout.  

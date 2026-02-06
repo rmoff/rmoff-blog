@@ -2,7 +2,7 @@
 title: "awk - split a fixed width file into separate files named on content"
 date: "2010-10-19"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 More of a unix thing than DW/BI this post, but I have a beard so am semi-qualified....

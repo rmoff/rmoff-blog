@@ -3,7 +3,7 @@ title: "Security issue on OBIEE 10.1.3.4.1, 11.1.1.3"
 date: "2011-08-04"
 categories: 
   - "bug"
-  - "obiee"
+  - "OBIEE"
   - "security"
 ---
 

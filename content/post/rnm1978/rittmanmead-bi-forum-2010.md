@@ -2,7 +2,7 @@
 title: "RittmanMead BI Forum 2010"
 date: "2010-05-21"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "presentation"
   - "weblogic"
 ---

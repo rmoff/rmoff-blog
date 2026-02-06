@@ -2,7 +2,7 @@
 title: "Measuring real user response times for OBIEE"
 date: "2010-06-14"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "sawserver"
 ---

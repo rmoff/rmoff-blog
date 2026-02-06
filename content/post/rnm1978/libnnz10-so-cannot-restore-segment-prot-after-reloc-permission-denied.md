@@ -2,7 +2,7 @@
 title: "libnnz10.so: cannot restore segment prot after reloc: Permission denied"
 date: "2009-12-18"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "oel"
 ---
 

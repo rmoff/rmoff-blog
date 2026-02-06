@@ -3,7 +3,7 @@ title: "Performance Testing and OBIEE"
 date: "2010-05-24"
 categories: 
   - "biforum"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "presentation"
 ---

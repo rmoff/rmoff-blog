@@ -4,7 +4,7 @@ date: "2011-05-19"
 categories: 
   - "bi"
   - "dwh"
-  - "obiee"
+  - "OBIEE"
   - "oracle"
   - "performance"
   - "rant"

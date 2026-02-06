@@ -3,7 +3,7 @@ title: "Performance testing OBIEE using HP Performance Center (a.k.a. LoadRunner
 date: "2009-10-01"
 categories: 
   - "loadrunner"
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

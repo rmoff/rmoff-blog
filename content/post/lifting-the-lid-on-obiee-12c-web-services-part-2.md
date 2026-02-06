@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "obiee12c", "rpd", "downloadrpd", "uploadrpd", "data-model-cmd", "web service", "rest", "curl", "sysdig"]
+categories = ["OBIEE", "obiee12c", "rpd", "downloadrpd", "uploadrpd", "data-model-cmd", "web service", "rest", "curl", "sysdig"]
 date = 2016-05-28T20:30:00Z
 description = ""
 draft = false
 image = "/images/2016/05/1__oracle_demo____ssh_.png"
 slug = "lifting-the-lid-on-obiee-12c-web-services-part-2"
-tag = ["obiee", "obiee12c", "rpd", "downloadrpd", "uploadrpd", "data-model-cmd", "web service", "rest", "curl", "sysdig"]
+tag = ["OBIEE", "obiee12c", "rpd", "downloadrpd", "uploadrpd", "data-model-cmd", "web service", "rest", "curl", "sysdig"]
 title = "Lifting the Lid on OBIEE 12c Web Services - Part 2"
 
 +++

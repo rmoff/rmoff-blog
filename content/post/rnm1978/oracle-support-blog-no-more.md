@@ -2,7 +2,7 @@
 title: "Oracle Support blog no more"
 date: "2010-02-15"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 A sad little passing last week, of the [Oracle Support Blog](http://blogs.oracle.com/Support/) and [related tweets](http://twitter.com/cwarticki) by Chris Warticki.

@@ -2,7 +2,7 @@
 title: "nqcmd and [nQSError: 27005] Unresolved column"
 date: "2009-05-28"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 I'm working on a scripted load test for OBIEE using nqcmd to run reports multiple times. I hit this interesting issue.  

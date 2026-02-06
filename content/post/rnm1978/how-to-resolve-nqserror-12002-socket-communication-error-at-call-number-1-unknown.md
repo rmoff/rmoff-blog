@@ -3,7 +3,7 @@ title: "How to resolve \"[nQSError: 12002] Socket communication error at call=: 
 date: "2010-01-22"
 categories: 
   - "config"
-  - "obiee"
+  - "OBIEE"
   - "security"
   - "unix"
   - "windows"

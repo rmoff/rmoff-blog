@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "jdbc", "jisql", "logical sql"]
+categories = ["OBIEE", "jdbc", "jisql", "logical sql"]
 date = 2016-03-28T21:01:00Z
 description = ""
 draft = false
 image = "/images/2016/03/2016-03-28_22-53-18.png"
 slug = "connecting-to-obiee-via-jdbc-with-jisql"
-tag = ["obiee", "jdbc", "jisql", "logical sql"]
+tag = ["OBIEE", "jdbc", "jisql", "logical sql"]
 title = "Connecting to OBIEE via JDBC - with jisql"
 
 +++

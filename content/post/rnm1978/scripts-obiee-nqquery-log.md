@@ -4,7 +4,7 @@ date: "2010-06-11"
 categories: 
   - "hack"
   - "nqcmd"
-  - "obiee"
+  - "OBIEE"
   - "unix"
 ---
 

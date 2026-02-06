@@ -4,7 +4,7 @@ date: "2009-11-06"
 categories: 
   - "load-balancing"
   - "oas"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "unix"
 ---

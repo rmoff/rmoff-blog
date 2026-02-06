@@ -1,11 +1,11 @@
 +++
-categories = ["obiee"]
+categories = ["OBIEE"]
 date = 2016-04-18T15:36:00Z
 description = ""
 draft = false
 image = "/images/2016/05/photo-1459620842579-b4421440f66b.jpeg"
 slug = "obiee-security-patches-and-final-11-1-1-7-patchset-release"
-tag = ["obiee"]
+tag = ["OBIEE"]
 title = "OBIEE security patches, and FINAL 11.1.1.7 patchset release"
 
 +++

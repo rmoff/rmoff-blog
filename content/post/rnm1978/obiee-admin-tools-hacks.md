@@ -5,7 +5,7 @@ categories:
   - "hack"
   - "mbeans"
   - "nqcmd"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "sawping"
   - "sawserver"

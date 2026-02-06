@@ -2,7 +2,7 @@
 title: "New OBIEE benchmark - 50,000 users"
 date: "2009-10-12"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

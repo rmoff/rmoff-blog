@@ -3,7 +3,7 @@ title: "Advanced Googling for OBIEE information"
 date: "2009-11-03"
 categories: 
   - "google"
-  - "obiee"
+  - "OBIEE"
   - "oracle"
 ---
 

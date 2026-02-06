@@ -4,7 +4,7 @@ date: "2009-10-16"
 categories: 
   - "bug"
   - "oas"
-  - "obiee"
+  - "OBIEE"
   - "security"
 ---
 

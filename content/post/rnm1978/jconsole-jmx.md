@@ -4,7 +4,7 @@ date: "2009-07-16"
 categories: 
   - "jmx"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "unix"
 ---

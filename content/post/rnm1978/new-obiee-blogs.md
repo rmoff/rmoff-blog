@@ -2,7 +2,7 @@
 title: "New OBIEE blogs"
 date: "2009-10-19"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 Two new blogs of note :

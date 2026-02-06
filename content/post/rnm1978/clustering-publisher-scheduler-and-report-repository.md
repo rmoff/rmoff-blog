@@ -4,7 +4,7 @@ date: "2009-03-24"
 categories: 
   - "bi-publisher"
   - "cluster"
-  - "obiee"
+  - "OBIEE"
   - "quartz"
 ---
 

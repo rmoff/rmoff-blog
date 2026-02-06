@@ -6,7 +6,7 @@ categories:
   - "jmx"
   - "monitoring"
   - "oas"
-  - "obiee"
+  - "OBIEE"
   - "unix"
 ---
 

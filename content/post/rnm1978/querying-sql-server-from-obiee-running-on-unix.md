@@ -2,7 +2,7 @@
 title: "Querying SQL Server from OBIEE running on Unix"
 date: "2009-08-21"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "sqlserver"
   - "unix"
   - "windows"

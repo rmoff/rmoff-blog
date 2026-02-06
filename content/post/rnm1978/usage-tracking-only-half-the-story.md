@@ -2,7 +2,7 @@
 title: "Usage Tracking - only half the story ..."
 date: "2009-10-06"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "systemsmanagement"
   - "usagetracking"
 ---

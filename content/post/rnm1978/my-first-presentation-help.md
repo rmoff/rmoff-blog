@@ -2,7 +2,7 @@
 title: "My first presentation - help!"
 date: "2010-04-21"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "presentation"
 ---
 

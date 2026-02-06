@@ -2,7 +2,7 @@
 title: "RSS feeds for OBIEE, including del.icio.us obiee tags"
 date: "2009-09-04"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "rss"
 ---
 

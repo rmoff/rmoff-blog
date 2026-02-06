@@ -2,7 +2,7 @@
 title: "OBIEE error/message code reference"
 date: "2009-08-24"
 categories: 
-  - "obiee"
+  - "OBIEE"
   - "oracle"
   - "support"
 ---

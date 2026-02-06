@@ -2,7 +2,7 @@
 title: "Blogging"
 date: "2011-11-28"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 I will now be blogging mostly over at the venerable blog of my employer, [Rittman Mead](http://www.rittmanmead.com).

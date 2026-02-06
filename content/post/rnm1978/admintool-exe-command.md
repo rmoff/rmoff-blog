@@ -4,7 +4,7 @@ date: "2009-09-08"
 categories: 
   - "admintool"
   - "hack"
-  - "obiee"
+  - "OBIEE"
   - "windows"
 ---
 

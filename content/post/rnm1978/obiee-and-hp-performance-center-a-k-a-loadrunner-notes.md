@@ -3,7 +3,7 @@ title: "OBIEE and HP Performance Center (a.k.a. LoadRunner) - Notes"
 date: "2009-10-01"
 categories: 
   - "loadrunner"
-  - "obiee"
+  - "OBIEE"
   - "performance"
 ---
 

@@ -4,7 +4,7 @@ date: "2009-07-23"
 categories: 
   - "dac"
   - "etl"
-  - "obiee"
+  - "OBIEE"
 ---
 
 [Mark Rittman has an excellent article](http://www.rittmanmead.com/2009/01/30/analyzing-bi-apps-etl-runs-using-obiee-and-the-dac-repository/) about querying the DAC repository database tables, including a [downloadable RPD file](http://www.rittmanmead.com/files/DAC%20Analysis.rpd). Being new to working with RPDs I thought it would be good practise to explore this as well as hopefully get some useful information about our current ETL deployment.  

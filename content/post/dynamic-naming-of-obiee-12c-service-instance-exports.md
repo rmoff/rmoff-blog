@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "obiee12c", "exportserviceinstance", "wlst"]
+categories = ["OBIEE", "obiee12c", "exportserviceinstance", "wlst"]
 date = 2016-05-27T09:13:00Z
 description = ""
 draft = false
 image = "/images/2016/05/1__oracle_demo___demo_us_oracle_com_127_0_0_1_20160527T094829__ssh_.png"
 slug = "dynamic-naming-of-obiee-12c-service-instance-exports"
-tag = ["obiee", "obiee12c", "exportserviceinstance", "wlst"]
+tag = ["OBIEE", "obiee12c", "exportserviceinstance", "wlst"]
 title = "Dynamic Naming of OBIEE 12c Service Instance Exports"
 
 +++

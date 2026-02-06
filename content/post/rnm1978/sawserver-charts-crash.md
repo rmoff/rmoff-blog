@@ -3,7 +3,7 @@ title: "sawserver charts crash"
 date: "2009-07-23"
 categories: 
   - "bug"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
 ---
 

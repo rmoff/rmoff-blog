@@ -2,7 +2,7 @@
 title: "Metalink 3 RIP"
 date: "2009-09-02"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 This weekend just gone Metalink3 went to the digital dustbin. In principle this is a Good Thing, as multiple support websites for a single company is confusing and frustrating.

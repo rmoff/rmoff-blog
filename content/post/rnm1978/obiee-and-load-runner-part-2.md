@@ -3,7 +3,7 @@ title: "OBIEE and Load Runner - part 2"
 date: "2009-08-21"
 categories: 
   - "loadrunner"
-  - "obiee"
+  - "OBIEE"
   - "performance"
   - "sawserver"
 ---

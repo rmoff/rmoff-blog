@@ -2,7 +2,7 @@
 title: "Friday miscellany"
 date: "2011-09-16"
 categories: 
-  - "obiee"
+  - "OBIEE"
 ---
 
 - **If you only read one blog post this month**, read [James Morle's eloquent attack on the term "Best Practice"](http://jamesmorle.wordpress.com/2011/09/16/right-practice/).

@@ -3,7 +3,7 @@ title: "psservice - Windows command line goodness!"
 date: "2009-07-23"
 categories: 
   - "hack"
-  - "obiee"
+  - "OBIEE"
   - "sawserver"
   - "services"
   - "windows"

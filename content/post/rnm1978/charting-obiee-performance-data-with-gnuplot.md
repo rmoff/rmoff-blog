@@ -5,7 +5,7 @@ categories:
   - "gnuplot"
   - "jmx"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "unix"
   - "visualisation"
 ---

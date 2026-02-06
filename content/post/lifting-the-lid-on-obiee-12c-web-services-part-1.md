@@ -1,11 +1,11 @@
 +++
-categories = ["obiee", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
+categories = ["OBIEE", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
 date = 2016-05-24T21:15:00Z
 description = ""
 draft = false
 image = "/images/2016/05/rest03.png"
 slug = "lifting-the-lid-on-obiee-12c-web-services-part-1"
-tag = ["obiee", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
+tag = ["OBIEE", "obiee12c", "rest", "paw", "postman", "api", "visual analyzer", "process substitution", "command substitution", "sysdig"]
 title = "Lifting the Lid on OBIEE 12c Web Services - Part 1"
 
 +++

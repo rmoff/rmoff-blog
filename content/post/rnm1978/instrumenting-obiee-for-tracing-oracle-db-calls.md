@@ -4,7 +4,7 @@ date: "2011-02-02"
 categories: 
   - "log"
   - "monitoring"
-  - "obiee"
+  - "OBIEE"
   - "oracle"
   - "performance"
   - "usagetracking"
