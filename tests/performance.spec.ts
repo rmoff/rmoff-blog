@@ -168,6 +168,53 @@ test.describe('Navigation Consistency', () => {
   });
 });
 
+test.describe('404 Page', () => {
+  test('404 page has black background throughout', async ({ page }) => {
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // Terminal content should be visible
+    await expect(page.locator('.terminal-page')).toBeVisible();
+
+    // Check body background is black (#0a0a0a = rgb(10, 10, 10))
+    const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bodyBg).toBe('rgb(10, 10, 10)');
+
+    // Check main element background is also black
+    const mainBg = await page.evaluate(() => getComputedStyle(document.querySelector('main')!).backgroundColor);
+    expect(mainBg).toBe('rgb(10, 10, 10)');
+  });
+
+  test('404 page footer is at bottom of viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // Footer should be visible
+    const footer = page.locator('footer');
+    await expect(footer).toBeVisible();
+
+    // Footer should be at or near the bottom of the viewport
+    const footerBox = await footer.boundingBox();
+    const viewportHeight = 800;
+
+    expect(footerBox).not.toBeNull();
+    // Footer bottom edge should be at the viewport bottom (within small margin)
+    expect(footerBox!.y + footerBox!.height).toBeGreaterThanOrEqual(viewportHeight - 5);
+  });
+
+  test('404 page shows terminal content', async ({ page }) => {
+    await page.goto('http://localhost:1313/nonexistent-page-test');
+
+    // ASCII art visible
+    await expect(page.locator('.terminal-404-text')).toBeVisible();
+
+    // Category links visible
+    await expect(page.locator('.terminal-link').first()).toBeVisible();
+
+    // Home link visible
+    await expect(page.locator('.terminal-home-link')).toBeVisible();
+  });
+});
+
 test.describe('Syntax Highlighting', () => {
   test('code blocks use monokai theme', async ({ page }) => {
     // Page with known code blocks
