@@ -37,12 +37,13 @@ jobs:
         # Run hyperlink and filter out known false positives (JavaScript string concatenation parsed as URLs)
         ./hyperlink public 2>&1 | tee /tmp/hyperlink-output.txt || true
         # Filter out false positives and check for real errors
-        grep -v 'elem.attr("href")' /tmp/hyperlink-output.txt | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -E "^\s*error:" && exit 1 || true
+        # Patterns filtered: JavaScript template literals from search/category pages
+        grep -v 'elem.attr("href")' /tmp/hyperlink-output.txt | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -E "^\s*error:" && exit 1 || true
         # Check if hyperlink found any bad links (excluding filtered ones)
         if grep -q "Found [0-9]* bad link" /tmp/hyperlink-output.txt; then
           TOTAL=$(grep -oP "Found \K[0-9]+" /tmp/hyperlink-output.txt)
-          # Count filtered false positives
-          FILTERED=$(grep -c 'elem.attr\|" + href\|\${cat\.url}' /tmp/hyperlink-output.txt || echo 0)
+          # Count filtered false positives (JS template literals: cat.url, r.url, r.meta.image, etc.)
+          FILTERED=$(grep -c 'elem.attr\|" + href\|\${cat\.url}\|\${r\.' /tmp/hyperlink-output.txt || echo 0)
           REAL=$((TOTAL - FILTERED))
           if [ "$REAL" -gt 0 ]; then
             echo "Found $REAL real bad links (filtered $FILTERED false positives)"
