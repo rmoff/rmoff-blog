@@ -1,0 +1,46 @@
+{{ define "main" }}
+<div class="homepage-hero" style="background-image: url('{{ absURL "img/default-header-img.webp" }}');">
+	<div class="homepage-hero-overlay"></div>
+</div>
+<div class="container">
+	<div class="layout-with-sidebar">
+		<div>
+			{{- $pages := where (where .Paginator.Pages ".Section" "post") ".Params.skip" "ne" "true" -}}
+			{{/* Featured post */}}
+			{{- $firstPage := index $pages 0 -}}
+			{{- if $firstPage -}}
+			{{- $thumbImage := default "img/default-header-img.tn-500x500.webp" (default $firstPage.Params.image $firstPage.Params.thumbnail) -}}
+			<article class="featured-post">
+				<a href="{{ $firstPage.Permalink }}" class="featured-post-thumb-link">
+					<img class="featured-post-thumb" src="{{ absURL $thumbImage }}" alt="" loading="lazy">
+				</a>
+				<div class="featured-post-body">
+					<div class="featured-post-meta">{{ $firstPage.Date.Format "02 Jan 2006" }}{{ with (index $firstPage.Params.categories 0) }} &middot; {{ . }}{{ end }}</div>
+					<h2 class="featured-post-title">
+						<a href="{{ $firstPage.Permalink }}">{{ cond (eq .Site.Params.titlecase true) ($firstPage.Title | title | markdownify) ($firstPage.Title | markdownify) }}</a>
+					</h2>
+					<p class="featured-post-excerpt">{{ $firstPage.Summary | plainify | truncate 200 }}</p>
+				</div>
+			</article>
+			{{- end -}}
+
+			{{/* Remaining posts as rows */}}
+			<ul class="post-list">
+				{{- range after 1 $pages }}
+				{{ partial "li-row.html" . }}
+				{{- end }}
+			</ul>
+		</div>
+
+		{{ partial "sidebar.html" . }}
+	</div>
+</div>
+{{ end }}
+
+{{ define "pagination" }}
+<footer class="hide-print" role="contentinfo">
+	<nav class="sans-serif pb3 f6 center db" style="max-width: 1200px; padding: 0 2rem;" role="navigation">
+		{{- template "_internal/pagination.html" . -}}
+	</nav>
+</footer>
+{{ end }}

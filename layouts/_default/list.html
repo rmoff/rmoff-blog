@@ -1,0 +1,57 @@
+{{ define "title" }}{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Section | title }} &bull; {{ .Site.Title }}{{ end }}{{ end }}
+
+{{ define "main" }}
+<div class="container">
+	<div class="layout-with-sidebar">
+		<div>
+			{{- $pages := where .Paginator.Pages ".Params.skip" "ne" "true" -}}
+			{{- if .IsHome -}}
+			{{/* Featured post — first item gets special treatment */}}
+			{{- $firstPage := index $pages 0 -}}
+			{{- if $firstPage -}}
+			{{- $hdr := cond (or (in .Site.Params.classes "feature-nohdr") (in $firstPage.Params.classes "feature-nohdr")) false true -}}
+			{{- $featImage := default "img/default-header-img.webp" $firstPage.Params.image -}}
+			<article class="featured-post">
+				{{ if $hdr }}
+				<a href="{{ $firstPage.Permalink }}">
+					<img class="featured-post-image" src="{{ absURL $featImage }}" alt="{{ $firstPage.Title }}" loading="eager">
+				</a>
+				{{ end }}
+				<div class="featured-post-body">
+					<div class="featured-post-meta">{{ $firstPage.Date.Format "02 Jan 2006" }}{{ with (index $firstPage.Params.categories 0) }} &middot; {{ . }}{{ end }}</div>
+					<h2 class="featured-post-title">
+						<a href="{{ $firstPage.Permalink }}">{{ cond (eq .Site.Params.titlecase true) ($firstPage.Title | title | markdownify) ($firstPage.Title | markdownify) }}</a>
+					</h2>
+					<p class="featured-post-excerpt">{{ $firstPage.Summary | plainify | truncate 200 }}</p>
+				</div>
+			</article>
+			{{- end -}}
+
+			{{/* Remaining posts as rows */}}
+			<ul class="post-list">
+				{{- range after 1 $pages }}
+				{{ partial "li-row.html" . }}
+				{{- end }}
+			</ul>
+			{{- else -}}
+			{{/* Non-home list pages: all posts as rows */}}
+			<ul class="post-list">
+				{{- range $pages }}
+				{{ partial "li-row.html" . }}
+				{{- end }}
+			</ul>
+			{{- end -}}
+		</div>
+
+		{{ partial "sidebar.html" . }}
+	</div>
+</div>
+{{ end }}
+
+{{ define "pagination" }}
+<footer class="hide-print" role="contentinfo">
+	<nav class="sans-serif pb3 f6 center db" style="max-width: 1200px; padding: 0 2rem;" role="navigation">
+		{{- template "_internal/pagination.html" . -}}
+	</nav>
+</footer>
+{{ end }}

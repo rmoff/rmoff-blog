@@ -1,0 +1,135 @@
+{{ define "title" }}Categories &bullet; {{ .Site.Title }}{{ end }}
+
+{{ define "main" }}
+<div class="page-hero" style="background-image: url('/images/2023/05/h_IMG_2435.jpeg');">
+    <div class="page-hero-overlay">
+        <div class="page-hero-content">
+            <h1>Categories</h1>
+            <p>{{ len .Data.Terms }} categories</p>
+        </div>
+    </div>
+</div>
+{{ $allCategories := .Data.Terms.Alphabetical }}
+{{- $popularSorted := partial "popular-categories" . -}}
+
+{{/* Build list of letters that have categories - group non-alpha under # */}}
+{{ $letters := slice }}
+{{ $hasNonAlpha := false }}
+{{ range $allCategories }}
+    {{ $firstChar := upper (substr .Page.Title 0 1) }}
+    {{ $isAlpha := findRE "^[A-Z]$" $firstChar }}
+    {{ if $isAlpha }}
+        {{ if not (in $letters $firstChar) }}
+            {{ $letters = $letters | append $firstChar }}
+        {{ end }}
+    {{ else }}
+        {{ $hasNonAlpha = true }}
+    {{ end }}
+{{ end }}
+{{/* Prepend # if we have non-alpha categories */}}
+{{ if $hasNonAlpha }}
+    {{ $letters = slice "#" | append $letters }}
+{{ end }}
+
+<div class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+    <!-- Popular Categories Section -->
+    <div class="cat-section">
+        <h2 class="cat-section-title">Popular</h2>
+        <div class="cat-popular-grid">
+            {{- range sort (first 13 $popularSorted) "name" }}
+            <a href="{{ "categories" | absURL }}/{{ .name | urlize }}/" class="cat-popular-item">
+                <span>{{ .name }}</span>
+                <span class="cat-count">{{ .count }}</span>
+            </a>
+            {{- end }}
+        </div>
+    </div>
+
+    <!-- All Categories Section -->
+    <div class="cat-section">
+        <h2 class="cat-section-title">All Categories</h2>
+        <!-- A-Z Jump Links -->
+        <div class="cat-az-links" id="az-links">
+            {{- range $letters }}
+            <a href="#letter-{{ . }}" class="cat-jump-link">{{ . }}</a>
+            {{- end }}
+        </div>
+        <!-- Filter Box -->
+        <div class="cat-filter-container">
+            <input type="text" id="category-filter" class="cat-filter-input" placeholder="Filter categories..." autocomplete="off">
+            <button id="filter-clear" class="cat-filter-clear" title="Clear filter">&times;</button>
+        </div>
+    </div>
+
+    <!-- Categories by Letter -->
+    <div class="cat-by-letter">
+        {{- $currentLetter := "" }}
+        {{- range $allCategories }}
+            {{- $firstChar := upper (substr .Page.Title 0 1) }}
+            {{- $isAlpha := findRE "^[A-Z]$" $firstChar }}
+            {{- $letter := cond (len $isAlpha) $firstChar "#" }}
+            {{- if ne $letter $currentLetter }}
+                {{- if ne $currentLetter "" }}
+                </div></div>
+                {{- end }}
+                {{- $currentLetter = $letter }}
+        <div class="cat-letter-section" id="letter-{{ $letter }}" data-letter="{{ $letter }}">
+            <h3 class="cat-letter-header">{{ $letter }}</h3>
+            <div class="cat-grid">
+            {{- end }}
+            <a href="{{ .Page.RelPermalink }}" class="cat-item" data-name="{{ lower .Page.Title }}">
+                <span>{{ .Page.Title }}</span>
+                <span class="cat-count">{{ .Count }}</span>
+            </a>
+        {{- end }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const filterInput = document.getElementById('category-filter');
+    const clearButton = document.getElementById('filter-clear');
+    const categoryItems = document.querySelectorAll('.cat-by-letter .cat-item');
+    const letterSections = document.querySelectorAll('.cat-letter-section');
+    const azLinks = document.getElementById('az-links');
+
+    function filterCategories() {
+        const query = filterInput.value.toLowerCase().trim();
+        clearButton.style.display = query ? 'block' : 'none';
+
+        categoryItems.forEach(item => {
+            const name = item.getAttribute('data-name');
+            item.style.display = (!query || name.includes(query)) ? '' : 'none';
+        });
+
+        letterSections.forEach(section => {
+            const visibleItems = section.querySelectorAll('.cat-item:not([style*="display: none"])');
+            section.style.display = visibleItems.length === 0 ? 'none' : '';
+        });
+
+        azLinks.style.display = query ? 'none' : '';
+    }
+
+    filterInput.addEventListener('input', filterCategories);
+    clearButton.addEventListener('click', () => {
+        filterInput.value = '';
+        filterCategories();
+        filterInput.focus();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== filterInput) {
+            e.preventDefault();
+            filterInput.focus();
+        }
+        if (e.key === 'Escape' && document.activeElement === filterInput) {
+            filterInput.value = '';
+            filterCategories();
+            filterInput.blur();
+        }
+    });
+})();
+</script>
+{{ end }}

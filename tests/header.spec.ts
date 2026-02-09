@@ -5,73 +5,61 @@ test.describe('Header UI', () => {
     await page.goto('http://localhost:1313/');
   });
 
-  test('talks icon is in social icons row', async ({ page }) => {
-    const talksIcon = page.locator('.header-icons .icon-link', { has: page.locator('i.fa-chalkboard') });
-    await expect(talksIcon).toBeVisible();
-
-    const label = talksIcon.locator('.icon-label');
-    await expect(label).toHaveText('talks');
+  test('site title is visible and links to homepage', async ({ page }) => {
+    const title = page.locator('.site-title');
+    await expect(title).toBeVisible();
+    await expect(title).toHaveText('rmoff\'s random ramblings');
+    await expect(title).toHaveAttribute('href', /\/$/);
   });
 
-  test('youtube icon appears before talks icon', async ({ page }) => {
-    const icons = page.locator('.header-icons .icon-link');
-    const labels = await icons.locator('.icon-label').allTextContents();
-
-    const talksIndex = labels.indexOf('talks');
-    const youtubeIndex = labels.indexOf('youtube');
-
-    expect(talksIndex).toBeGreaterThan(-1);
-    expect(youtubeIndex).toBeGreaterThan(-1);
-    expect(youtubeIndex).toBeLessThan(talksIndex);
+  test('nav links are present', async ({ page }) => {
+    const nav = page.locator('.site-nav');
+    await expect(nav.locator('a', { hasText: 'Categories' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Search' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'RSS' })).toBeVisible();
   });
 
-  test('icon label appears on hover', async ({ page }) => {
-    const githubIcon = page.locator('.header-icons .icon-link', { has: page.locator('.fa-github-square') });
-    const label = githubIcon.locator('.icon-label');
+  test('social icons are present in nav', async ({ page }) => {
+    const socialNav = page.locator('.nav-social');
+    const socialLinks = socialNav.locator('a');
 
-    // Label should be hidden initially
-    await expect(label).toHaveCSS('opacity', '0');
+    // Should have at least a few social links (linkedin, x-twitter, bluesky, youtube, github, talks)
+    const count = await socialLinks.count();
+    expect(count).toBeGreaterThanOrEqual(4);
 
-    // Hover over icon
-    await githubIcon.hover();
-
-    // Label should be visible
-    await expect(label).toHaveCSS('opacity', '1');
-    await expect(label).toHaveText('github');
+    // Each social link should have an SVG icon
+    for (let i = 0; i < count; i++) {
+      await expect(socialLinks.nth(i).locator('svg')).toBeVisible();
+    }
   });
 
-  test('header content box is width-constrained', async ({ page }) => {
-    const headerContent = page.locator('.glass-header-content');
-    await expect(headerContent).toBeVisible();
-
-    const box = await headerContent.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.width).toBeLessThanOrEqual(800);
+  test('talks link is present in social icons', async ({ page }) => {
+    const talksLink = page.locator('.nav-social a[title="talks"]');
+    await expect(talksLink).toBeVisible();
   });
 
-  test('header icons row is width-constrained', async ({ page }) => {
-    const iconsRow = page.locator('.header-icons-row');
-    await expect(iconsRow).toBeVisible();
-
-    const box = await iconsRow.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.width).toBeLessThanOrEqual(800);
-  });
-
-  test('header is centered on wide viewport', async ({ page }) => {
-    // Set wide viewport
+  test('header is width-constrained and centered on wide viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.goto('http://localhost:1313/');
 
-    const headerContent = page.locator('.glass-header-content');
-    const box = await headerContent.boundingBox();
+    const headerInner = page.locator('.site-header-inner');
+    const box = await headerInner.boundingBox();
     expect(box).not.toBeNull();
 
-    // Check it's roughly centered (viewport 1400px, content max 800px, so ~300px margin each side)
+    // Max-width is 1200px, so content should be narrower than viewport
+    expect(box!.width).toBeLessThanOrEqual(1250);
+
+    // Should be roughly centered
     const leftMargin = box!.x;
     const rightMargin = 1400 - (box!.x + box!.width);
-
-    // Allow some tolerance for padding/borders
     expect(Math.abs(leftMargin - rightMargin)).toBeLessThan(50);
+  });
+
+  test('mobile nav toggle is hidden on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.goto('http://localhost:1313/');
+
+    const toggle = page.locator('.nav-toggle');
+    await expect(toggle).toBeHidden();
   });
 });

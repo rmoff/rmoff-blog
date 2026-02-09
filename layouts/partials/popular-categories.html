@@ -1,0 +1,24 @@
+{{/*
+  Popular Categories — recency-weighted (posts from 2017+).
+  Returns a slice of dicts sorted by count desc: [ {name, count}, ... ]
+  Usage:  {{ $popular := partial "popular-categories" . }}
+          {{ range sort (first 13 $popular) "name" }} ... {{ end }}
+  Consumers: Use `first N` to pick top N by popularity,
+  then `sort ... "name"` to display alphabetically.
+  Update the cutoff date or counting logic here — it's used by both
+  the homepage sidebar and the /categories/ page.
+*/}}
+{{- $cutoff := time "2017-01-01" -}}
+{{- $counts := dict -}}
+{{- range where .Site.RegularPages ".Date" ">=" $cutoff -}}
+    {{- range .Params.categories -}}
+        {{- $cat := . -}}
+        {{- $prev := index $counts $cat | default 0 -}}
+        {{- $counts = merge $counts (dict $cat (add $prev 1)) -}}
+    {{- end -}}
+{{- end -}}
+{{- $sorted := slice -}}
+{{- range $name, $count := $counts -}}
+    {{- $sorted = $sorted | append (dict "name" $name "count" $count) -}}
+{{- end -}}
+{{- return (sort $sorted "count" "desc") -}}
