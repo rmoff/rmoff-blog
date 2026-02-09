@@ -36,20 +36,15 @@ jobs:
         chmod +x hyperlink
         # Run hyperlink and filter out known false positives (JavaScript string concatenation parsed as URLs)
         ./hyperlink public 2>&1 | tee /tmp/hyperlink-output.txt || true
-        # Filter out false positives and check for real errors
-        # Patterns filtered: JavaScript template literals and string concatenation from search/category pages
-        grep -v 'elem.attr("href")' /tmp/hyperlink-output.txt | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\." | grep -E "^\s*error:" && exit 1 || true
-        # Check if hyperlink found any bad links (excluding filtered ones)
-        if grep -q "Found [0-9]* bad link" /tmp/hyperlink-output.txt; then
-          TOTAL=$(grep -oP "Found \K[0-9]+" /tmp/hyperlink-output.txt)
-          # Count filtered false positives (JS template literals: cat.url, r.url, r.meta.image, etc.)
-          FILTERED=$(grep -c 'elem.attr\|" + href\|\${cat\.url}\|\${r\.\|+ r\.' /tmp/hyperlink-output.txt || echo 0)
-          REAL=$((TOTAL - FILTERED))
-          if [ "$REAL" -gt 0 ]; then
-            echo "Found $REAL real bad links (filtered $FILTERED false positives)"
-            exit 1
-          else
-            echo "All $TOTAL detected issues were false positives (JavaScript string concatenation)"
-          fi
+        # Filter out false positives (JS string concatenation in search/category pages) and count real errors
+        REAL=$(grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\." | wc -l)
+        if [ "$REAL" -gt 0 ]; then
+          TOTAL=$(grep -c -E '^\s*error:' /tmp/hyperlink-output.txt || echo 0)
+          FILTERED=$((TOTAL - REAL))
+          echo "Found $REAL real bad links (filtered $FILTERED false positives):"
+          grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\."
+          exit 1
+        else
+          echo "No real bad links found (all detected issues were JS string concatenation false positives)"
         fi
         
