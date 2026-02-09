@@ -1,0 +1,45 @@
+{{- $page := .page -}}
+{{- $variant := default "list" .variant -}}
+{{- $defaultImg := "img/default-header-img.tn-500x500.webp" -}}
+
+{{- /* Resolve image path: thumbnail → image → default */ -}}
+{{- $imgPath := default $defaultImg (default $page.Params.image $page.Params.thumbnail) -}}
+
+{{- /* Determine processing dimensions based on variant */ -}}
+{{- $fill := "180x120 webp q80" -}}
+{{- $width := 90 -}}
+{{- $height := 60 -}}
+{{- $class := "post-thumb" -}}
+{{- $loading := "lazy" -}}
+{{- if eq $variant "featured" -}}
+  {{- $fill = "320x214 webp q80" -}}
+  {{- $width = 160 -}}
+  {{- $height = 107 -}}
+  {{- $class = "featured-post-thumb" -}}
+{{- else if eq $variant "featured-image" -}}
+  {{- $fill = "640x360 webp q80" -}}
+  {{- $width = 320 -}}
+  {{- $height = 180 -}}
+  {{- $class = "featured-post-image" -}}
+  {{- $loading = "eager" -}}
+{{- end -}}
+
+{{- /* Strip leading slash for resources.Get */ -}}
+{{- $resourcePath := strings.TrimPrefix "/" $imgPath -}}
+
+{{- /* Check if this is a GIF/SVG or has a filename too long for processing */ -}}
+{{- $ext := path.Ext $imgPath | lower -}}
+{{- $basename := path.Base $imgPath -}}
+{{- $skipProcessing := or (eq $ext ".gif") (eq $ext ".svg") (gt (len $basename) 200) -}}
+
+{{- if $skipProcessing -}}
+<img class="{{ $class }}" src="{{ absURL $imgPath }}" alt="" loading="{{ $loading }}" decoding="async">
+{{- else -}}
+  {{- $resource := resources.Get $resourcePath -}}
+  {{- if $resource -}}
+    {{- $processed := $resource.Fill $fill -}}
+<img class="{{ $class }}" src="{{ $processed.RelPermalink }}" alt="" width="{{ $width }}" height="{{ $height }}" loading="{{ $loading }}" decoding="async">
+  {{- else -}}
+<img class="{{ $class }}" src="{{ absURL $imgPath }}" alt="" loading="{{ $loading }}" decoding="async">
+  {{- end -}}
+{{- end -}}

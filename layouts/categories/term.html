@@ -1,0 +1,153 @@
+{{ define "title" }}{{ .Title }} &bullet; {{ .Site.Title }}{{ end }}
+
+{{ define "main" }}
+<div class="page-hero" style="background-image: url('{{ with .Params.image }}{{ . }}{{ else }}/images/2023/05/h_IMG_2435.jpeg{{ end }}');">
+    <div class="page-hero-overlay">
+        <div class="page-hero-content">
+            <h1>{{ .Title }}</h1>
+            <p>{{ len .Pages }} {{ if eq (len .Pages) 1 }}article{{ else }}articles{{ end }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="cat-search-strip">
+    <div class="cat-search-strip-inner">
+        <input type="text" id="category-search-input" class="cat-search-input" placeholder="Search within {{ .Title }}..." autocomplete="off">
+        <button id="category-search-clear" class="cat-search-clear" style="display: none;">&times;</button>
+    </div>
+</div>
+
+<div class="container" style="padding-top: 1rem; padding-bottom: 3rem;">
+    {{ if eq .Title "Interesting Links" }}
+    {{ with .Content }}
+    <section class="cat-description">
+        <div class="content">{{ . }}</div>
+    </section>
+    {{ end }}
+    {{ end }}
+
+    <div id="category-search-results" style="display: none;"></div>
+
+    <div id="category-article-list">
+        {{- $pages := where .Pages ".Params.skip" "ne" "true" -}}
+        {{- $currentYear := "" -}}
+        {{- $isFirst := true -}}
+        {{- range $pages -}}
+            {{- $year := .Date.Format "2006" -}}
+            {{- if ne $year $currentYear -}}
+                {{- if ne $currentYear "" -}}
+                    </ul>
+                    {{- if $isFirst }}</div>{{ else }}</details>{{ end }}
+                    {{- $isFirst = false -}}
+                {{- end -}}
+                {{- $currentYear = $year -}}
+                {{- if $isFirst }}
+        <div class="year-group">
+            <h2 class="year-group-header">{{ $year }}</h2>
+            <ul class="post-list">
+                {{- else }}
+        <details class="year-group">
+            <summary class="year-group-header">{{ $year }}</summary>
+            <ul class="post-list">
+                {{- end -}}
+            {{- end }}
+            {{ partial "li-row.html" . }}
+        {{- end }}
+        {{- if ne $currentYear "" -}}
+            </ul>
+            {{- if $isFirst }}</div>{{ else }}</details>{{ end }}
+        {{- end }}
+    </div>
+</div>
+
+<script type="module">
+(async function() {
+    const categoryDisplayName = {{ .Title }};
+    const searchInput = document.getElementById('category-search-input');
+    const clearBtn = document.getElementById('category-search-clear');
+    const resultsContainer = document.getElementById('category-search-results');
+    const articleList = document.getElementById('category-article-list');
+
+    let pagefind;
+    try {
+        pagefind = await import('/pagefind/pagefind.js');
+    } catch (e) {
+        // Pagefind not available in dev mode
+        searchInput.placeholder = 'Search not available in dev mode';
+        searchInput.disabled = true;
+        return;
+    }
+
+    let categoryFilterValue = categoryDisplayName;
+    try {
+        const filters = await pagefind.filters();
+        if (filters.category) {
+            const match = Object.keys(filters.category).find(
+                cat => cat.toLowerCase() === categoryDisplayName.toLowerCase()
+            );
+            if (match) categoryFilterValue = match;
+        }
+    } catch (e) {
+        console.error('Error loading filters:', e);
+    }
+
+    let debounceTimer;
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearBtn.style.display = query ? 'block' : 'none';
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => performSearch(query), 150);
+    });
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        resultsContainer.style.display = 'none';
+        articleList.style.display = '';
+        resultsContainer.innerHTML = '';
+    });
+
+    async function performSearch(query) {
+        if (!query || query.length < 2) {
+            resultsContainer.style.display = 'none';
+            articleList.style.display = '';
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        const search = await pagefind.search(query, {
+            filters: { category: categoryFilterValue }
+        });
+
+        articleList.style.display = 'none';
+        resultsContainer.style.display = 'block';
+
+        if (search.results.length === 0) {
+            resultsContainer.innerHTML = '<p class="cat-search-no-results">No results found for "' + query.replace(/</g, '&lt;') + '" in this category.</p>';
+            return;
+        }
+
+        const results = await Promise.all(
+            search.results.slice(0, 20).map(r => r.data())
+        );
+
+        resultsContainer.innerHTML =
+            '<p class="cat-search-count">' + search.results.length + ' result' + (search.results.length === 1 ? '' : 's') + '</p>' +
+            '<ul class="post-list">' +
+            results.map(r =>
+                '<li class="post-row">' +
+                (r.meta && r.meta.image ? '<a href="' + r.url + '" class="post-thumb-link"><img class="post-thumb" src="' + r.meta.image + '" alt="" loading="lazy"></a>' : '') +
+                '<div class="post-info">' +
+                '<a href="' + r.url + '" class="post-title-link">' + (r.meta && r.meta.title ? r.meta.title : r.url) + '</a>' +
+                '</div>' +
+                '</li>'
+            ).join('') +
+            '</ul>';
+    }
+})();
+</script>
+{{ end }}
+
+{{ define "pagination" }}
+{{ end }}

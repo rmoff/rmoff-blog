@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv=X-Clacks-Overhead content="GNU Terry Pratchett">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- Preconnect -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<!-- Preload LCP image -->
+		{{- $hdrCheck := cond (or (in .Site.Params.classes "feature-nohdr") (in .Params.classes "feature-nohdr")) false true -}}
+		{{ if $hdrCheck }}
+		{{- $headerImg := default "img/default-header-img.webp" .Params.image -}}
+		<link rel="preload" as="image" href="{{ absURL $headerImg }}" {{ if not .Params.image }}type="image/webp"{{ end }}>
+		{{ end }}
+		<title>{{ block "title" . }}{{ .Site.Title }}{{ end }}</title>
+		<link rel="alternate" type="application/rss+xml" title="RSS" href="{{ "index.xml" | absURL }}">
+		<link rel="canonical" href="{{ .Permalink }}">
+		{{ with .Description }}<meta name="description" content="{{. | markdownify }}">{{ end }}
+		{{ with .Keywords }}<meta name="keywords" content="{{.}}">{{ end }}
+
+		{{ block "social" . }}{{ end }}
+
+		<!-- Critical CSS for FOUC prevention -->
+		<style>
+			html { background-color: #FAF8F5; color: #2D2926; }
+			body { opacity: 0; transition: opacity 0.1s ease; }
+			body.loaded { opacity: 1; }
+			.site-header { height: 60px; background-color: #FAF8F5; border-bottom: 1px solid #E8421E; }
+		</style>
+
+		{{ block "layout" . }}
+		<!-- Redesign CSS — single file replaces all old stylesheets -->
+		<link rel="stylesheet" href="{{ "css/redesign.css" | absURL }}" />
+		<!-- Google Fonts (async) -->
+		<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap">
+		<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+		<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+		{{ end }}
+
+		{{ if (findRE "class=\"rouge highlight\"" .Content 1) }}
+		<script src="/js/copy-code.js"></script>
+		{{ end }}
+
+		<!-- Posthog analytics -->
+		<script>
+			!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+            posthog.init('phc_93NEP79Ju4xqXYWXnoLbr4HMW0Iaepj1BGOVoEXYX6P',{api_host:'https://eu.i.posthog.com', person_profiles: 'identified_only'})
+		</script>
+
+		{{ if or (in .Site.Params.classes "feature-highlight") (in .Params.classes "feature-highlight") -}}
+			{{- if not (or (in .Site.Params.classes "feature-nohighlight") (in .Params.classes "feature-nohighlight") ) -}}
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+			{{- end -}}
+		{{- end -}}
+		{{ if or (in .Site.Params.classes "feature-math") (in .Params.classes "feature-math") -}}
+			{{- if not (or (in .Site.Params.classes "feature-nomath") (in .Params.classes "feature-nomath") ) -}}
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.9.0/dist/katex.min.css" integrity="sha384-TEMocfGvRuD1rIAacqrknm5BQZ7W7uWitoih+jMNFXQIbNl16bO8OZmylH/Vi/Ei" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/katex@0.9.0/dist/katex.min.js" integrity="sha384-jmxIlussZWB7qCuB+PgKG1uLjjxbVVIayPJwi6cG6Zb4YKq0JIw+OMnkkEC7kYCq" crossorigin="anonymous"></script>
+		<script src="{{ "js/auto-render.min.js" | absURL }}"></script>
+			{{- end -}}
+		{{- end -}}
+		{{ if or (in .Site.Params.classes "feature-music") (in .Params.classes "feature-music") -}}
+			{{- if not (or (in .Site.Params.classes "feature-nomusic") (in .Params.classes "feature-nomusic") ) -}}
+		<script src="{{ "js/abcjs_basic_5.6.3-min.js" | absURL }}"></script>
+			{{- end -}}
+		{{- end -}}
+		{{ with .Site.Params.head }}{{ range . }}
+		{{ . | safeHTML }}{{ end }}{{ end }}
+		<script src="{{ "js/story.js" | absURL }}"></script>
+		<script src="{{ "js/toc.js" | absURL }}"></script>
+		<script src="{{ "js/medium-mirror.js" | absURL }}"></script>
+	</head>
+	<body class="ma0 {{ with .Section }}section-{{ . }}{{ end }} page-kind-{{ .Kind }} is-page-{{ .IsPage }} {{ with .Site.Params.classes }}{{ range . }} {{ . }}{{ end }}{{ end }}{{ with .Params.classes }}{{ range . }} {{ . }}{{ end }}{{ end }}">
+		<script>document.body.classList.add('loaded');</script>
+
+		{{ block "header" . }}
+		{{- partial "header.html" . -}}
+		{{ end }}
+
+		<main role="main">
+		{{ block "main" . }}
+		{{ end }}
+		</main>
+
+		{{ block "pagination" . }}{{ end }}
+
+		{{ block "footer" . }}
+		<footer class="site-footer hide-print" role="contentinfo">
+			<span>&copy; {{ now.Format "2006" }} {{ with .Site.Params.author }}{{ . }}{{ end }}</span>
+		</footer>
+		{{ end }}
+
+		{{ with .Site.Params.foot }}{{ range . }}
+		{{ . | safeHTML }}{{ end }}{{ end }}
+	</body>
+</html>
