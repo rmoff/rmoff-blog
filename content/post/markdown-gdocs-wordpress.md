@@ -53,7 +53,7 @@ At this point the Google Doc is ready to publish. However, Google Docs doesn't h
 1. Export the copy edited & reviewed [GDoc back to Markdown using a Chrome plugin](https://workspace.google.com/marketplace/app/docs_to_markdown/700168918607?ref=iain-broome)
 
 2. Do a diff and import changes back to original Markdown document (so that code blocks & language are not lost)
-	   ![|700](/images/2023/05/CleanShot%202023-03-17%20at%2006.39.02@2x.png)
+	   ![|700](/images/2023/05/CleanShot%202023-03-17%20at%2006.39.02_2x.png)
 
 ## Publish the Markdown to Wordpress
 
@@ -98,9 +98,9 @@ At this point the Google Doc is ready to publish. However, Google Docs doesn't h
 
     2. **Use this one weird trick…** switch back to the visual editor, put the cursor in the editor box, and click the **Convert to blocks** option that appears 
 
-        ![|400](/images/2023/05/CleanShot%202023-03-17%20at%2011.01.58@2x.png)
+        ![|400](/images/2023/05/CleanShot%202023-03-17%20at%2011.01.58_2x.png)
 
     4. If you click in one of the code blocks you'll see that it's picked up the language, and when you preview the blog it should highlight its syntax correctly
-        ![|400](/images/2023/05/CleanShot%202023-03-17%20at%2011.04.18@2x.png)
-        ![|500](/images/2023/05/CleanShot%202023-03-17%20at%2011.11.29@2x.png)
+        ![|400](/images/2023/05/CleanShot%202023-03-17%20at%2011.04.18_2x.png)
+        ![|500](/images/2023/05/CleanShot%202023-03-17%20at%2011.11.29_2x.png)
 

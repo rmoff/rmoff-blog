@@ -104,7 +104,7 @@ GROUP BY window_start, window_end)
 
 This uses the `ARRAY_AGG` function to return an array of all the user messages within the time window:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.33.35@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.33.35_2x.webp)
 
 ### Watermarks on the input table
 
@@ -127,7 +127,7 @@ By automatically sending these 'heartbeat' events to the topic on a regular basi
 Heartbeat messages are  just regular Kafka messages serving a special purpose.
 Here's what they look like:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.17.55@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.17.55_2x.webp)
 We set them to be every minute; as it happened during the keynote enough people were adding messages that the heartbeat was not needed.
 
 ### Filtering the input data
@@ -159,7 +159,7 @@ GROUP BY window_start, window_end
 ```
 
 This gives us a nice clean output, ready for our AI part of the pipeline:
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.36.23@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2014.36.23_2x.webp)
 
 ## Let's AI-ify this thing!
 
@@ -181,7 +181,7 @@ Bills, Go bills
 We want to summarise this into a nice pithy summary.
 This is where AI comes in! Done manually with something like ChatGPT it would look like this:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2015.16.34@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2015.16.34_2x.webp)
 
 Introducing some [terminology](https://rmoff.net/2025/09/16/stumbling-into-ai-part-4terminology-tidy-up-and-a-little-rant/) around this, what we're doing is using _generative AI_ (oooooh buzzword!)—which is what it says on the tin, i.e. _generates_ content (as opposed to things like sentiment analysis, which is also AI but a different kind).
 Specifically, we're using _[model](https://rmoff.net/2025/09/08/stumbling-into-ai-part-2models/) inference_ (i.e. invoking a model) for _completion_ (crudely put: given a prompt, guess the next words—just like when you're typing on your phone).
@@ -239,7 +239,7 @@ FROM my_input
 
 This uses the input `messages` field (also included in the output schema) and passes it to Claude Sonnet 4.5, using it as input for the LLM to complete given its system prompt—which it does, and gives us back the `output_json`:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2016.04.28@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2016.04.28_2x.webp)
 So now all that remains is to hook up the windowed output from `user_messages` above with the `AI_COMPLETE` here.
 I'm sticking with CTEs because I think they make the logic of the query much easier to follow
 
@@ -335,7 +335,7 @@ Tim and Adi on stage, in costume [[MSG]] Confetti falls [[MSG]] I'm bored, will 
 ```
 
 LLMs can work much more easily with this, as this chat with Claude (on [Raycast](https://rmoff.net/categories/raycast/)) shows:
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.43.04@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.43.04_2x.webp)
 
 So, with the now-`STRING`-ified array, let's try again with the LLM call:
 
@@ -377,7 +377,7 @@ FROM windowed_messages
 
 And it works!
 
-![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.51.30@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-05%20at%2017.51.30_2x.webp)
 
 ## Prompt Engineering and Model versions
 
@@ -481,7 +481,7 @@ To see what versions of a model you have and what their configuration is use:
 ```sql
 DESCRIBE MODEL rmoff_claude45_completion_01$all;
 ```
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2010.27.27@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2010.27.27_2x.webp)
 
 By default new versions of a model won't be used unless you invoke them explicitly, which I'm doing here by referencing the `$2` version of the model in the `AI_COMPLETE` call:
 
@@ -708,17 +708,17 @@ Rules:
 Here the `summary` is the output from the two LLM models I showed above; the `eval` is the output from passing `summary` to the above model definition.
 It correctly spots that one of the `summary` messages includes the LLM's internal commentary and thinking process:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.03.52@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.03.52_2x.webp)
 
 However, the eval process still relies on an LLM and isn't infallible—here, the above prompt isn't catching Markdown:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.08.33@2x%201.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2014.08.33_2x%201.webp)
 
 Time for one more, *just one more*, round of prompt engineering…
 
 ## Bonus: What _did_ people actually type into the app?
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.39.00@2x%201.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.39.00_2x%201.webp)
 *Hey, 2005 called and wants its word cloud back!*
 
 I've already called out the wannabe `133t h4x0rs` with their attempts at SQL injection and prompt injection, but I thought it'd be fun to take a closer look at all the messages.
@@ -728,7 +728,7 @@ If I wanted a more proper solution I'd probably enable Tableflow on the topic in
 But anyway, this is just throwaway so hacky is just fine.
 
 To get the data to DuckDB I'll just dump it to JSON (the conference has passed, the data is no longer changing, a static data set is all I need).
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2011.44.07@2x.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2011.44.07_2x.webp)
 
 DuckDB is so low-friction, and makes it quick to get in and amongst the data.
 Let's dump it into its own DuckDB table and flatten the structure:
@@ -876,7 +876,7 @@ Leaderboard drama
 
 And then pasting this into the nifty wordart.com site produced this:
 
-![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.45.58@2x%201.webp)
+![](/images/2025/11/nola25/CleanShot%202025-11-06%20at%2013.45.58_2x%201.webp)
 
 We can also give the raw set of messages to an LLM and have it pick out the funniest raw messages:
 
