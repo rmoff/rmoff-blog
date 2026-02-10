@@ -30,35 +30,58 @@
 
     <div id="category-article-list">
         {{- $pages := where .Pages ".Params.skip" "ne" "true" -}}
-        {{- $currentYear := "" -}}
-        {{- $isFirst := true -}}
+        {{- $.Scratch.Set "currentYear" "" -}}
+        {{- $.Scratch.Set "articleCount" 0 -}}
+        {{- $minVisible := 10 -}}
         {{- range $pages -}}
             {{- $year := .Date.Format "2006" -}}
-            {{- if ne $year $currentYear -}}
-                {{- if ne $currentYear "" -}}
+            {{- if ne $year ($.Scratch.Get "currentYear") -}}
+                {{- if ne ($.Scratch.Get "currentYear") "" -}}
                     </ul>
-                    {{- if $isFirst }}</div>{{ else }}</details>{{ end }}
-                    {{- $isFirst = false -}}
+                    </details>
                 {{- end -}}
-                {{- $currentYear = $year -}}
-                {{- if $isFirst }}
-        <div class="year-group">
-            <h2 class="year-group-header">{{ $year }}</h2>
-            <ul class="post-list">
-                {{- else }}
-        <details class="year-group">
+                {{- $.Scratch.Set "currentYear" $year -}}
+        <details class="year-group" data-year="{{ $year }}"{{ if lt ($.Scratch.Get "articleCount") $minVisible }} open{{ end }}>
             <summary class="year-group-header">{{ $year }}</summary>
             <ul class="post-list">
-                {{- end -}}
             {{- end }}
             {{ partial "li-row.html" . }}
+            {{- $.Scratch.Set "articleCount" (add ($.Scratch.Get "articleCount") 1) -}}
         {{- end }}
-        {{- if ne $currentYear "" -}}
+        {{- if ne ($.Scratch.Get "currentYear") "" -}}
             </ul>
-            {{- if $isFirst }}</div>{{ else }}</details>{{ end }}
+            </details>
         {{- end }}
     </div>
 </div>
+
+<script>
+// Year-group expand/collapse state persistence
+(function() {
+    const storeKey = 'year-expand:' + location.pathname;
+    const groups = document.querySelectorAll('details.year-group[data-year]');
+    if (!groups.length) return;
+
+    // Restore saved state (if any) from sessionStorage
+    const saved = sessionStorage.getItem(storeKey);
+    if (saved) {
+        try {
+            const openYears = JSON.parse(saved);
+            groups.forEach(d => {
+                d.open = openYears.includes(d.dataset.year);
+            });
+        } catch(e) {}
+    }
+
+    // Save state on every toggle
+    function saveState() {
+        const openYears = [];
+        groups.forEach(d => { if (d.open) openYears.push(d.dataset.year); });
+        sessionStorage.setItem(storeKey, JSON.stringify(openYears));
+    }
+    groups.forEach(d => d.addEventListener('toggle', saveState));
+})();
+</script>
 
 <script type="module">
 (async function() {
