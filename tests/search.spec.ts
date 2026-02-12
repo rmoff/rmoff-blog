@@ -9,6 +9,17 @@ test.describe('Pagefind Search', () => {
     await expect(searchInput).toBeVisible();
   });
 
+  test('search input is auto-focused on page load', async ({ page }) => {
+    await page.goto('http://localhost:1313/search/');
+
+    // Wait for search input to be visible
+    const searchInput = page.locator('.pagefind-ui__search-input');
+    await expect(searchInput).toBeVisible();
+
+    // Search input should be focused
+    await expect(searchInput).toBeFocused();
+  });
+
   test('search returns results for "kafka"', async ({ page }) => {
     await page.goto('http://localhost:1313/search/');
 
