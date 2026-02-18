@@ -12,7 +12,7 @@ categories:
 
 * * *
 
-This is following on from [my first post about OBIEE and LoadRunner](/post/rnm1978/obiee-and-load-runner-part-1/), in which I failed dismally to get a simple session replaying.
+This is following on from [my first post about OBIEE and LoadRunner](/2009/08/19/obiee-and-load-runner-part-1/), in which I failed dismally to get a simple session replaying.
 
 In a nutshell where I'd got to was using the "Web (Click and Script)" function which worked fine for logging in but when running a report resulted in an error on the rendered page. Digging around showed the error was from the javascript of the OBIEE front end.
 

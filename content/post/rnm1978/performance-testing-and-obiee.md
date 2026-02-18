@@ -8,7 +8,7 @@ categories:
   - "presentation"
 ---
 
-Here's my presentation "Performance Testing and OBIEE" that I gave at the [RittmanMead BI Forum 2010](/post/rnm1978/rittmanmead-bi-forum-2010/): **[Performance Testing and OBIEE.pptx](https://talks.rmoff.net/performance-testing-and-obiee-sd/)**
+Here's my presentation "Performance Testing and OBIEE" that I gave at the [RittmanMead BI Forum 2010](/2010/05/21/rittmanmead-bi-forum-2010/): **[Performance Testing and OBIEE.pptx](https://talks.rmoff.net/performance-testing-and-obiee-sd/)**
 
 It's a Powerpoint 2007 file (pptx) for which you may need the [Microsoft PowerPoint Viewer 2007](http://www.microsoft.com/downloads/details.aspx?familyid=048dc840-14e1-467d-8dca-19d2a8fd7485&displaylang=en). I've included copious notes on each slide which hopefully cover the gist of what I talked about when I was delivering it. There are also a handful of funky animations which is why I've left it in pptx and not exported to PDF or other format (sorry Open Office users).
 

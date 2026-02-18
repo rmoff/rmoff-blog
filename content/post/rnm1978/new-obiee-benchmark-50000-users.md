@@ -10,4 +10,4 @@ A new OBIEE benchmark has been published by Oracle. It's on the same hardware as
 
 Details [here](http://blogs.sun.com/mandalika/entry/oracle_business_intelligence_10_1)
 
-Numbers added to my collation post [here](/post/rnm1978/collated-obiee-benchmarks/)
+Numbers added to my collation post [here](/2009/09/18/collated-obiee-benchmarks/)

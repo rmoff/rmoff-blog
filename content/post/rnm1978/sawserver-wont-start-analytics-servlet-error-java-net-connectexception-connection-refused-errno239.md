@@ -85,4 +85,4 @@ Update: running gpm (glance for x-windows) I found this:
 ![](/images/rnm1978/image_lost.png)sawserver64 being reported as "Blocked On" "Other" for 100% of the time.  
 Not sure what that translates to in real money yet though.  
   
-Update: [solution here!](/post/rnm1978/sawserver-wont-start-up-resolved/)
+Update: [solution here!](/2009/04/01/sawserver-wont-start-up-resolved/)

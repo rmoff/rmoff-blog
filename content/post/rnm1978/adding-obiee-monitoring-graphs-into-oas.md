@@ -12,9 +12,9 @@ categories:
 
 ## Introduction
 
-This is the third part of three detailed articles making up a mini-series about [OBIEE monitoring](/post/rnm1978/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
+This is the third part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
-This final article describes how to bolt on to OAS a simple web page hosting the graphs that you created in [part 2](/post/rnm1978/charting-obiee-performance-data-with-gnuplot/), plotting data from OBIEE collected in [part 1](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/).
+This final article describes how to bolt on to OAS a simple web page hosting the graphs that you created in [part 2](/2010/12/06/charting-obiee-performance-data-with-gnuplot/), plotting data from OBIEE collected in [part 1](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/).
 
 ## The webpage
 

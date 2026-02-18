@@ -22,7 +22,7 @@ categories:
 
  
 
-(_Previously on this blog: [1](/2010/01/26/identify-your-obiee-users-by-setting-client-id-in-oracle-connection/), [2](/post/rnm1978/instrumenting-obiee-for-tracing-oracle-db-calls/), [3](/post/rnm1978/have-you-defined-client_id-in-obiee-yet/)..._)
+(_Previously on this blog: [1](/2010/01/26/identify-your-obiee-users-by-setting-client-id-in-oracle-connection/), [2](/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/), [3](/2011/08/08/have-you-defined-client_id-in-obiee-yet/)..._)
 
 ## Summary
 
@@ -49,7 +49,7 @@ By taking advantage of native Oracle procedures, we can instrument our OBIEE cod
 
 This works in both OBIEE 10g and 11g.
 
-See [my previous post here for further background](/post/rnm1978/instrumenting-obiee-for-tracing-oracle-db-calls/), and discussion of the procedures used.
+See [my previous post here for further background](/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/), and discussion of the procedures used.
 
 ## Implementing it - overview
 

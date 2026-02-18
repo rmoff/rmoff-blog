@@ -8,7 +8,7 @@ categories:
   - "unix"
 ---
 
-Here are a couple of little unix scripts that I wrote whilst developing my [performance testing OBIEE method](/post/rnm1978/performance-testing-and-obiee/).
+Here are a couple of little unix scripts that I wrote whilst developing my [performance testing OBIEE method](/2010/05/24/performance-testing-and-obiee/).
 
 They're nothing particularly special, but may save you the couple of minutes it'd take to write them :)
 

@@ -8,7 +8,7 @@ categories:
   - "support"
 ---
 
-[Last month I wrote about a problem](/post/rnm1978/misbehaving-informatica-kills-oracle/) that Informatica as part of OBIA was causing us, wherein an expired database account would bring Oracle down by virtue of multiple connections from Informatica.
+[Last month I wrote about a problem](/2010/09/02/misbehaving-informatica-kills-oracle/) that Informatica as part of OBIA was causing us, wherein an expired database account would bring Oracle down by virtue of multiple connections from Informatica.
 
 I raised an SR with Oracle (under OBIA support), who after some back-and-forth with Informatica, were told:
 

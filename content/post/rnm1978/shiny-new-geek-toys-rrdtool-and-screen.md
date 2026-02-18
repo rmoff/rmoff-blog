@@ -11,7 +11,7 @@ I've added two new toys to my geek arsenal today. First is one with which I've d
 
 ## rrdtool
 
-[rrdtool](http://oss.oetiker.ch/rrdtool) is a data collection and graphing tool which I've been aware of for a while. I wanted to use it when I wrote about [Collecting OBIEE systems management data](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/) with JMX, but couldn't get it to work. I'll not lie to you - it is a bitch to work with at first. Or put a more polite way, it has a steep learning curve. But when you reach the top of the curve and realise its potential...wow. You'll soon understand why it is so widely used. I plan to write this up soon, but it let me draw nice graphs like this: ![](/images/rnm1978/graph.png "OBIEE - OBIA")
+[rrdtool](http://oss.oetiker.ch/rrdtool) is a data collection and graphing tool which I've been aware of for a while. I wanted to use it when I wrote about [Collecting OBIEE systems management data](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) with JMX, but couldn't get it to work. I'll not lie to you - it is a bitch to work with at first. Or put a more polite way, it has a steep learning curve. But when you reach the top of the curve and realise its potential...wow. You'll soon understand why it is so widely used. I plan to write this up soon, but it let me draw nice graphs like this: ![](/images/rnm1978/graph.png "OBIEE - OBIA")
 
 ## screen
 

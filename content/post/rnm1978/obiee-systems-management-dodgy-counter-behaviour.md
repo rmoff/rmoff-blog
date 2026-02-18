@@ -10,7 +10,7 @@ categories:
   - "systemsmanagement"
 ---
 
-Over the last few months I've been doing a lot of exploring of OBIEE Systems Management data, covered in a mini-series of blog posts, [Collecting OBIEE systems management data](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/).
+Over the last few months I've been doing a lot of exploring of OBIEE Systems Management data, covered in a mini-series of blog posts, [Collecting OBIEE systems management data](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/).
 
 There are a vast number of counters exposed, ranging from the very interesting (Active Sessions, Cache Hits, etc) to the less so (Total Query Piggybacks, although for some seriously hardcore performance tuning even this may be of interest).
 

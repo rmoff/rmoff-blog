@@ -32,7 +32,7 @@ Oracle Support directed me to [the documentation](http://download.oracle.com/doc
 
 **Oracle Support also pointed out that undocumented parameters are not supported except under direct instruction**
 
-The -T flag looks very useful for [performance testing](/post/rnm1978/performance-testing-and-obiee/) purposes, as it appends this information to the output from nqcmd: 
+The -T flag looks very useful for [performance testing](/2010/05/24/performance-testing-and-obiee/) purposes, as it appends this information to the output from nqcmd: 
 ```
 Clock time: batch start: 15:44:32.000 Query from: 15:44:32.000 to: 15:44:59.000 Row count: 0 total: 27 prepare: 1 execute: 26 fetch: 0 Cumulative time(seconds): Batch elapsed: 26 Query total: 27 prepare: 1, execute: 26, fetch: 0, query count: 1, cumulative rows: 0
 ```

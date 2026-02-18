@@ -6,7 +6,7 @@ categories:
   - "OBIEE"
 ---
 
-Very interesting post by Kevin McGinley about CAF here:  [CAF = Migration Utility? Use Caution!](http://oraclebiblog.blogspot.com/post/rnm1978/caf/)
+Very interesting post by Kevin McGinley about CAF here:  [CAF = Migration Utility? Use Caution!](http://oraclebiblog.blogspot.com/2009/12/11/caf/)
 
 It articulates better than I ever could reasons against using CAF particularly in a production environment.
 

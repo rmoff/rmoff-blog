@@ -20,12 +20,12 @@ To whet your appetite, here's a sample of what you can produce, in realtime:
 
 ![](/images/rnm1978/summary-6hr.png "summary.6hr")
 
-Before you start this, I recommend reading [how to secure your jmx agent](/post/rnm1978/securing-obiee-systems-management-jmx-for-remote-access/) if you're working with production systems.
+Before you start this, I recommend reading [how to secure your jmx agent](/2010/03/05/securing-obiee-systems-management-jmx-for-remote-access/) if you're working with production systems.
 
 ## Overview
 
 There are three parts to my monitoring application, and you can pretty much pick and mix as you want. Obviously without any data collected then graphing it will be pretty dull, but you may opt to collect the data and then work with it another way (Excel, OBIEE, etc). I've broken the details down into three separate blog posts:
 
-1. **[Metric collection](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/)** from a remote BI Server, using jmxsh
-2. **[Graph rendering](/post/rnm1978/charting-obiee-performance-data-with-gnuplot/)** of the collected data, using gnuplot
-3. **[Web page serving](/post/rnm1978/adding-obiee-monitoring-graphs-into-oas/)** of the rendered graphs, bolted onto the OAS already in place for Presentation Services.
+1. **[Metric collection](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/)** from a remote BI Server, using jmxsh
+2. **[Graph rendering](/2010/12/06/charting-obiee-performance-data-with-gnuplot/)** of the collected data, using gnuplot
+3. **[Web page serving](/2010/12/06/adding-obiee-monitoring-graphs-into-oas/)** of the rendered graphs, bolted onto the OAS already in place for Presentation Services.

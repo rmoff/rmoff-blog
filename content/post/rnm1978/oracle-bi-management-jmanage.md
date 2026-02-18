@@ -14,7 +14,7 @@ categories:
 
 - [JConsole](/2009/07/16/jconsole-/-jmx/) (see also [here](/2009/07/21/jconsole-/-jmx-followup/))
 - [oc4j](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html)
-- [Windows PerfMon](/post/rnm1978/obiee-windows-perfmon-counters/) (although I guess this isn't actually using MBeans/JMX?)
+- [Windows PerfMon](/2009/07/24/obiee-windows-perfmon-counters/) (although I guess this isn't actually using MBeans/JMX?)
 - [saw.dll?perfmon](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html)
 - [BI Management Pack](http://www.oracle.com/technology/pub/articles/rittman-oem-bipack.html)
 

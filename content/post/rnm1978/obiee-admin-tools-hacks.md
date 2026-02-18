@@ -30,7 +30,7 @@ An alternative to jconsole is to access the Oracle BI Management MBeans through 
 
 ![](/images/rnm1978/image_lost.png)
 
-More details in [separate post here](/post/rnm1978/obiee-windows-perfmon-counters/)
+More details in [separate post here](/2009/07/24/obiee-windows-perfmon-counters/)
 
 ### jconsole
 

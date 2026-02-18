@@ -7,7 +7,7 @@ categories:
   - "sawserver"
 ---
 
-Hot on the heels of [one problem](/post/rnm1978/troubleshooting-obiee-ldap-adsi-authentication/), another has just reared its head.
+Hot on the heels of [one problem](/2010/12/02/troubleshooting-obiee-ldap-adsi-authentication/), another has just reared its head.
 
 Users started reporting an error with reports that included charts: 
 ```

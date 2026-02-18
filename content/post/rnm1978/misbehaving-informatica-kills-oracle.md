@@ -114,4 +114,4 @@ At the very least, if Informatica isn't treating ORA-28001 as fatal it should cl
 
 * * *
 
-[An update from Informatica here](/post/rnm1978/when-is-a-bug-not-a-bug-when-its-a-design-decision/)
+[An update from Informatica here](/2010/10/18/when-is-a-bug-not-a-bug-when-its-a-design-decision/)

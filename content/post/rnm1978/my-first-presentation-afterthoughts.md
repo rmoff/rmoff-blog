@@ -8,7 +8,7 @@ categories:
 
 I delivered my first presentation today, at the [RittmanMead BI Forum](http://www.rittmanmead.com/biforum2010/).I was really nervous in the hours and minutes leading up to it, but once I got up there and started talking I actually quite enjoyed it. If you were in the audience, I'd love some feedback in the comments section below, particularly any "constructive criticism". I obviously didn't make too much of a mess of it, as I was awarded "best speaker" of the event, which was a great honour. Hopefully I'll get the opportunity to present again soon, perhaps at an UKOUG event.
 
-You can [download the presentation here](/post/rnm1978/performance-testing-and-obiee/).
+You can [download the presentation here](/2010/05/24/performance-testing-and-obiee/).
 
 Whilst I was writing the presentation I went through a lot of versions (iterative, huh), as having never delivered a presentation before it took me a while to figure out how to go about writing it. Here are my thoughts that I jotted down during the process, and which hopefully may help someone else:
 
@@ -25,4 +25,4 @@ Someone mentioned "The Curve" to me, and if you think of good presentations you'
 
 Finally - possibly trite, but something I found to be true: **The presentation will write itself.** How's that work? Well do a version, and then leave it for a week, completely alone. When you come back to it you'll be fresher and some bits will be obviously superfluous or missing detail.
 
-[Here's a link to a previous posting](/post/rnm1978/my-first-presentation-help/) with some good advice on writing a presentation. One which I found particularly helpful was to remember [Pete Scott](http://twitter.com/dw_pete)'s advice -- the audience will be on your side (hopefully!). It's not a sales pitch to a sceptical audience, it's sharing your knowledge with others who will find it interesting.
+[Here's a link to a previous posting](/2010/04/21/my-first-presentation-help/) with some good advice on writing a presentation. One which I found particularly helpful was to remember [Pete Scott](http://twitter.com/dw_pete)'s advice -- the audience will be on your side (hopefully!). It's not a sales pitch to a sceptical audience, it's sharing your knowledge with others who will find it interesting.

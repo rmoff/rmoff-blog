@@ -12,9 +12,9 @@ categories:
 
 ## Introduction
 
-This is the second part of three detailed articles making up a mini-series about [OBIEE monitoring](/post/rnm1978/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
+This is the second part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
-This article takes data that [part one](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/) showed you how to collect into a tab-separated file that looks something like this:
+This article takes data that [part one](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) showed you how to collect into a tab-separated file that looks something like this:
 
 
 ```
@@ -116,7 +116,7 @@ set key box outside below
 
 ## Generating gnuplot scripts automagically
 
-You may have realised by now that this is all quite fiddly to set up. Here are two scripts that will help generate gnuplot scripts. It's based on the tcl script from [part one](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/) and uses the first item in the array, ID, to determine the column number that a metric will appear in in the datafile.
+You may have realised by now that this is all quite fiddly to set up. Here are two scripts that will help generate gnuplot scripts. It's based on the tcl script from [part one](/2010/12/06/collecting-obiee-systems-management-data-with-jmx/) and uses the first item in the array, ID, to determine the column number that a metric will appear in in the datafile.
 
 This first one writes a series of gnuplot statements to plot each metric out on an individual graph, and assumes you have a two-server cluster so plots the datafiles from two servers on the same graph. 
 ```bash
@@ -172,4 +172,4 @@ nohup ./run\_graphs\_forever.sh &
 
 ## What next?
 
-So you've got your data ... you've got your graphs ... now why not serve them up through a convenient webpage that refreshes automatically? [Click here for part three](/post/rnm1978/adding-obiee-monitoring-graphs-into-oas/) that shows you how to bolt this onto an existing OAS installation.
+So you've got your data ... you've got your graphs ... now why not serve them up through a convenient webpage that refreshes automatically? [Click here for part three](/2010/12/06/adding-obiee-monitoring-graphs-into-oas/) that shows you how to bolt this onto an existing OAS installation.

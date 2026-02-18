@@ -7,7 +7,7 @@ categories:
   - "unix"
 ---
 
-(See [here](/post/rnm1978/sawserver-wont-start-analytics-servlet-error-java-net-connectexception-connection-refused-errno239/) and [here](/post/rnm1978/troubleshooting-an-hpux-program/) for history)  
+(See [here](/2009/03/30/sawserver-wont-start-analytics-servlet-error-java-net-connectexception-connection-refused-errno239/) and [here](/2009/04/01/troubleshooting-an-hpux-program/) for history)  
   
 I edited the shell script which is eventually called by run-saw.sh to start the sawserver, (OracleBI)/setup/sawserver.sh, to use trus:  
 Comment out the final line:  

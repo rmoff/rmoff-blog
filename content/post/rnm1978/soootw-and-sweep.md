@@ -7,7 +7,7 @@ categories:
 
 (Sorry for the lame title, but it gives me an excuse to put this picture in :) ![](/images/rnm1978/sooty_sweep_150_150x180.jpg))
 
-I was really pleased by the response I got from my posting about [The state of OBIEE on the web](/post/rnm1978/the-state-of-obiee-on-the-web/), knowing that it's not just me goes a long way to keeping my blood pressure down.
+I was really pleased by the response I got from my posting about [The state of OBIEE on the web](/2009/10/30/the-state-of-obiee-on-the-web/), knowing that it's not just me goes a long way to keeping my blood pressure down.
 
 The OTN forum is still an unbalanced mix of tosh ([is this guy for real?](http://forums.oracle.com/forums/thread.jspa?threadID=992547&tstart=0)) with the occasional insightful and interesting post or idea such as [this really neat one from Joe Bertram](http://forums.oracle.com/forums/thread.jspa?threadID=991528&tstart=0) about using multiple presentation services on top of the same RPD to give different interfaces to different end devices.
 

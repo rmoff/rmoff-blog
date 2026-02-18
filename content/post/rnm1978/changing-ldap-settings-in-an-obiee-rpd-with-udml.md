@@ -76,6 +76,6 @@ All this can be done on Unix too, just make sure you have set your OBIEE environ
 
 Whether Windows or Unix, make sure you work on a copy of your RPD, because you might corrupt it otherwise. I'm pretty sure some UDML hacking is unsupported, so use this at your own risk. And did I mention, work on a copy of your files and take backups.
 
-From a note [that I wrote last year](/post/rnm1978/obiee-11g-tidbit-xudml-support/) it looks like UDML is on its way out and an XML-based version on its way in for OBIEE 11g.
+From a note [that I wrote last year](/2010/03/18/obiee-11g-tidbit-xudml-support/) it looks like UDML is on its way out and an XML-based version on its way in for OBIEE 11g.
 
 The code snippets assume that you have OBIEE installed to c:\\OracleBI - amend the path as necessary if you have it elsewhere. You'll always find NQUDMLGen & NQUDMLExec in <wherever you installed OracleBI>/server/Bin (or Bin64).

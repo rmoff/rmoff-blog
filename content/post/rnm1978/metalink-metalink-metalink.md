@@ -14,7 +14,7 @@ For example, simply searching on "publisher cluster" throws up these two very pe
 - OBIEE Clustered Installation with BI Publisher (Doc ID 744515.1)
 - BI Publisher does not accept cluster jdbc connection strings (Doc ID 559795.1)
 
-The first one is a [publically available PDF](http://www.oracle.com/technology/products/xml-publisher/docs/BIP_HA.pdf), the second one is the answer to the problem I spent more time than I needed to [scratching my head over yesterday](/post/rnm1978/obiee-publisher-configuring-connection-to-clustered-bi-server/).  
+The first one is a [publically available PDF](http://www.oracle.com/technology/products/xml-publisher/docs/BIP_HA.pdf), the second one is the answer to the problem I spent more time than I needed to [scratching my head over yesterday](/2009/03/23/obiee-publisher-configuring-connection-to-clustered-bi-server/).  
   
 My attitude until now has been to reach for Metalink after I've become stuck with a problem - I am now going to try searching it as a matter of course when starting out on any new task.  
   

@@ -33,7 +33,7 @@ Using the excellent [HttpFox add-in](https://addons.mozilla.org/en-US/firefox/ad
 
 We could also just use the direct URL http://bi.mycompany.com/analytics/saw.dll?Dashboard but this is hardly user friendly (and also means that if they typo when entering it they'll get an unhelpful error as above)  
   
-Looking at the httpd.conf for Apache to find the port config made me think of the UseCanonicalName setting which I also [encountered recently](/post/rnm1978/oas-makes-you-log-in-twice/). This setting is to do with how Apache deals with the server name in the URL being requested and the hostname of the server configured in Apache.  
+Looking at the httpd.conf for Apache to find the port config made me think of the UseCanonicalName setting which I also [encountered recently](/2009/04/02/oas-makes-you-log-in-twice/). This setting is to do with how Apache deals with the server name in the URL being requested and the hostname of the server configured in Apache.  
 When I got the behaviour described above UseCanonicalName was set to Off, which I think means Apache does not rewrite the URL at all, so the redirect was to http://bi.mycompany.com:7777/analytics/saw.dll?Dashboard which is the F5 Load Balancer address.  
 If I changed UseCanonicalName to On then the F5 load balancing starts to work, as this happens instead:  
 

@@ -7,7 +7,7 @@ categories:
   - "unix"
 ---
 
-Continuing in the beard-scratching theme of Unix related posts ([previously - awk](/post/rnm1978/awk-split-a-fixed-width-file-into-separate-files-named-on-content/)), here's a way to graph out the I/O profile of your Oracle database via the Oracle metrics in [gv$sysstat](http://download.oracle.com/docs/cd/B28359_01/server.111/b28320/dynviews_3086.htm#REFRN30272), and [gnuplot](http://www.gnuplot.info/). This is only the system I/O as observed by Oracle, so for belts & braces (or to placate a cynical sysadmin ;-)) you may want to cross-reference it with something like sar.
+Continuing in the beard-scratching theme of Unix related posts ([previously - awk](/2010/10/19/awk-split-a-fixed-width-file-into-separate-files-named-on-content/)), here's a way to graph out the I/O profile of your Oracle database via the Oracle metrics in [gv$sysstat](http://download.oracle.com/docs/cd/B28359_01/server.111/b28320/dynviews_3086.htm#REFRN30272), and [gnuplot](http://www.gnuplot.info/). This is only the system I/O as observed by Oracle, so for belts & braces (or to placate a cynical sysadmin ;-)) you may want to cross-reference it with something like sar.
 
 First, a pretty picture of what you can get:
 

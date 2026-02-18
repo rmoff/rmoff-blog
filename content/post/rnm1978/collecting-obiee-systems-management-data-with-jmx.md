@@ -11,7 +11,7 @@ categories:
 
 ## Introduction
 
-This is the first part of three detailed articles making up a mini-series about [OBIEE monitoring](/post/rnm1978/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
+This is the first part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
 For some background on OBIEE's Systems Management component, along with JMX and MBeans, [see here](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/) and [here](/categories/jmx/). The following assumes you know your mbeans from coffee beans and jmx from a bmx.
 
@@ -169,4 +169,4 @@ If you get the error "Cannot convert result to a string" then check your MBean a
 
 ## Where next?
 
-Now you've got the data, do something with it! See [charting OBIEE performance data with gnuplot](/post/rnm1978/charting-obiee-performance-data-with-gnuplot/).
+Now you've got the data, do something with it! See [charting OBIEE performance data with gnuplot](/2010/12/06/charting-obiee-performance-data-with-gnuplot/).

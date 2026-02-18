@@ -6,7 +6,7 @@ categories:
   - "rant"
 ---
 
-After it was [ripped down last week](/post/rnm1978/oracle-support-blog-no-more/), Chris Warticki's blog is [back online](http://blogs.oracle.com/Support/2010/02/support_blog_moved_to_my_oracl.html), albeit with the last posting redirecting visitors to a [new location on Oracle Communities](https://communities.oracle.com/portal/server.pt/community/using_my_oracle_support/221).
+After it was [ripped down last week](/2010/02/15/oracle-support-blog-no-more/), Chris Warticki's blog is [back online](http://blogs.oracle.com/Support/2010/02/support_blog_moved_to_my_oracl.html), albeit with the last posting redirecting visitors to a [new location on Oracle Communities](https://communities.oracle.com/portal/server.pt/community/using_my_oracle_support/221).
 
 Maybe I'm getting too old for this s##t, but I'm yet to really get a handle on how Oracle want to interact with real people on the ground. [Oracle Communities](https://communities.oracle.com/) is a fairly new site that I've not explored so much because of no OBIEE area. [My Oracle Support](http://support.oracle.com) has feedback and comment sections, but in general usability stinks. A support blog is torn down and then reappears. [Oracle Forums](http://forums.oracle.com) are popular as ever but the software blows and some forums (eg OBIEE) are withering under a very high noise to quality-content ratio. Oh, and [Oracle Mix](https://mix.oracle.com) ("Bringing Oracle Customers, Employees, and Developers together") too, which looked quite neat but I have no idea how that's supposed to fit it the picture.
 
