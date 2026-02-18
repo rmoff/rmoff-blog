@@ -27,6 +27,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -138,6 +139,8 @@ def clean_pandoc_markdown(md: str) -> str:
     def replace_div(m):
         kind = m.group(1).strip()   # e.g. "note", "tip", "{}"
         inner = m.group(2)
+        # Strip common leading whitespace (e.g. when div is inside a list item)
+        inner = textwrap.dedent(inner)
         # Extract the ::: title ... ::: content if present
         title_match = re.match(r'^::: title\n(.*?)\n:::\n\n?', inner, flags=re.DOTALL)
         if title_match:
@@ -158,9 +161,62 @@ def clean_pandoc_markdown(md: str) -> str:
         quoted = "\n".join(f"> {line}" if line else ">" for line in inner.splitlines())
         return f"> **{label}:**\n{quoted}\n"
 
+    # Convert pandoc 3-colon video divs to HTML <video> tags.
+    # Pandoc converts AsciiDoc video:: blocks to:
+    #   ::: {wrapper="1" opts="autoplay,loop,nocontrols" title="Title"}
+    #   ![](/images/file.mp4)
+    #   :::
+    def replace_video_div(m):
+        attrs = m.group(1)   # e.g. wrapper="1" opts="autoplay,loop,nocontrols" title="Title"
+        inner = m.group(2).strip()
+        # Extract title from attrs
+        title_match = re.search(r'title="([^"]*)"', attrs)
+        title = title_match.group(1) if title_match else ""
+        # Extract src from the ![](src) inside
+        src_match = re.search(r'!\[[^\]]*\]\(([^)]+)\)', inner)
+        if not src_match:
+            return inner  # can't parse, leave as-is
+        src = src_match.group(1)
+        # Make URL absolute if relative
+        if src.startswith('/'):
+            src = SITE_BASE_URL + src
+        opts = re.search(r'opts="([^"]*)"', attrs)
+        opt_list = opts.group(1).split(',') if opts else []
+        autoplay = 'autoplay' in opt_list
+        loop = 'loop' in opt_list
+        muted = True  # always mute autoplay videos
+        attrs_html = ' '.join(filter(None, [
+            'autoplay' if autoplay else '',
+            'loop' if loop else '',
+            'muted' if muted else '',
+            'controls' if 'nocontrols' not in opt_list else '',
+            'playsinline',
+        ]))
+        title_attr = f' title="{title}"' if title else ''
+        return (f'<video{title_attr} {attrs_html} style="max-width:100%">\n'
+                f'  <source src="{src}" type="video/mp4">\n'
+                f'</video>\n')
+
+    # Video divs: allow leading spaces (they appear indented inside list items)
     md = re.sub(
-        r'^:{4}\s*(\S*)\n(.*?)^:{4}\s*$',
+        r'^ *:::\s*\{([^}]*)\}\n(.*?)^ *:::\s*$',
+        replace_video_div,
+        md,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    md = re.sub(
+        r'^ *:{4}\s*(\S*)\n(.*?)^ *:{4}\s*$',
         replace_div,
+        md,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    # Strip any remaining 3-colon divs (e.g. callout-list from AsciiDoc numbered callouts).
+    # These wrap already-valid Markdown content; just remove the ::: markers.
+    md = re.sub(
+        r'^ *:::[^\n]*\n(.*?)^ *:::\s*$',
+        lambda m: m.group(1),
         md,
         flags=re.MULTILINE | re.DOTALL,
     )
@@ -318,7 +374,18 @@ def post_to_devto(
     return resp.json()
 
 
-def process_file(filepath: Path, dry_run: bool = False, api_key: str = "") -> bool:
+def update_devto_article(article_id: int, body_markdown: str, api_key: str = "") -> dict:
+    resp = requests.put(
+        f"{DEVTO_API_URL}/articles/{article_id}",
+        headers={"api-key": api_key, "Content-Type": "application/json"},
+        json={"article": {"body_markdown": body_markdown}},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def process_file(filepath: Path, dry_run: bool = False, api_key: str = "", update_id: int | None = None) -> bool:
     """Process one blog post file. Returns True on success."""
     print(f"\n→ {filepath}")
 
@@ -376,23 +443,28 @@ def process_file(filepath: Path, dry_run: bool = False, api_key: str = "") -> bo
         print(f"  Image:     {main_image}")
 
     if dry_run:
-        print("  [dry-run] Would POST to dev.to as draft")
+        action = f"UPDATE draft {update_id}" if update_id else "POST as new draft"
+        print(f"  [dry-run] Would {action} on dev.to")
         return True
 
     try:
-        result = post_to_devto(
-            title=title,
-            body_markdown=body,
-            canonical_url=canonical_url,
-            tags=tags,
-            description=description,
-            main_image=main_image,
-            published=False,
-            api_key=api_key,
-        )
-        devto_url = result.get("url", "?")
-        devto_id = result.get("id", "?")
-        print(f"  Created draft: {devto_url} (id={devto_id})")
+        if update_id:
+            result = update_devto_article(body_markdown=body, article_id=update_id, api_key=api_key)
+            print(f"  Updated draft: {result.get('url', '?')} (id={update_id})")
+        else:
+            result = post_to_devto(
+                title=title,
+                body_markdown=body,
+                canonical_url=canonical_url,
+                tags=tags,
+                description=description,
+                main_image=main_image,
+                published=False,
+                api_key=api_key,
+            )
+            devto_url = result.get("url", "?")
+            devto_id = result.get("id", "?")
+            print(f"  Created draft: {devto_url} (id={devto_id})")
         return True
     except requests.HTTPError as e:
         print(f"  Error: HTTP {e.response.status_code}: {e.response.text[:200]}")
@@ -424,6 +496,8 @@ def main():
         help="Auto-detect files newly added in the most recent git commit",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print what would happen, no API calls")
+    parser.add_argument("--update-draft", type=int, metavar="ARTICLE_ID",
+                        help="Update an existing dev.to draft by ID instead of creating a new one")
     args = parser.parse_args()
 
     api_key = os.environ.get("DEVTO_API_KEY", "")
@@ -453,7 +527,8 @@ def main():
             print(f"\n→ {f}\n  Error: file not found")
             err += 1
             continue
-        result = process_file(f, dry_run=args.dry_run, api_key=api_key)
+        result = process_file(f, dry_run=args.dry_run, api_key=api_key,
+                              update_id=args.update_draft)
         if result is True:
             ok += 1
         elif result is False:
