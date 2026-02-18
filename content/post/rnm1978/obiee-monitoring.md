@@ -1,39 +1,30 @@
 ---
-draft: false
-title: 'OBIEE monitoring'
-date: "2010-12-06T21:29:52+0100"
-image: "/images/2010/12/snag-2010-12-03-14-57-19-0000.webp"
-categories:
-- hack
-- jmx
-- mbeans
-- monitoring
-- obiee
-- systemsmanagement
+title: "OBIEE monitoring"
+date: "2010-12-06"
+categories: 
+  - "hack"
+  - "jmx"
+  - "mbeans"
+  - "monitoring"
+  - "OBIEE"
+  - "systemsmanagement"
 ---
 
-Those of you who read my blog regularly may have noticed I have a slight obsession with the OBIEE systems management capability which is exposed through [JMX](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx//). Venkat has [blogged this week about JMX in OBI11g](http://www.rittmanmead.com/2010/11/29/oracle-bi-ee-11g-systems-management-api-jmx-mbeans-dynamic-user-generation/), and it’s clearly a technology worth understanding properly.  
-I’ve recently been tinkering with how to make use of it for monitoring purposes, most recently using JConsole and [discussed here](/post/rnm1978/a-poor-mans-obiee-embi-management-pack//). What follows is an extension of this idea, cobbled together with a bit of shell scripting, awk, gnuplot, and [sticky backed plastic](http://www.google.co.uk/search?q=blue+peter+sticky+backed+plastic). It’s built on OBIEE 10g – for OBI11g it may differ (although I understand that Performance MBeans still exist).
+Those of you who read my blog regularly may have noticed I have a slight obsession with the OBIEE systems management capability which is exposed through [JMX](/categories/jmx/). Venkat has [blogged this week about JMX in OBI11g](http://www.rittmanmead.com/2010/11/29/oracle-bi-ee-11g-systems-management-api-jmx-mbeans-dynamic-user-generation/), and it's clearly a technology worth understanding properly. I've recently been tinkering with how to make use of it for monitoring purposes, most recently using JConsole and [discussed here](/2010/11/04/a-poor-mans-obiee-em/bi-management-pack/). What follows is an extension of this idea, cobbled together with a bit of shell scripting, awk, gnuplot, and [sticky backed plastic](http://www.google.co.uk/search?q=blue+peter+sticky+backed+plastic). It's built on OBIEE 10g - for OBI11g it may differ (although I understand that Performance MBeans still exist).
 
-<!--more-->
-Whether you collect metrics for day-to-day monitoring of OBIEE, capacity planning, or investigative work, it’s valuable data (in my humble opinion) that will help you understand the usage of the application by the users that you support.
+Whether you collect metrics for day-to-day monitoring of OBIEE, capacity planning, or investigative work, it's valuable data (in my humble opinion) that will help you understand the usage of the application by the users that you support.
 
-To whet your appetite, here’s a sample of what you can produce, in realtime:
+To whet your appetite, here's a sample of what you can produce, in realtime:
 
-![](/images/2010/12/snag-2010-12-03-14-57-19-0000.webp "SNAG-2010-12-03-14.57.19-0000")
+![](/images/rnm1978/snag-2010-12-03-14-57-19-0000.png "SNAG-2010-12-03-14.57.19-0000")
 
-Performance metrics from a two-server OBIEE cluster
+![](/images/rnm1978/summary-6hr.png "summary.6hr")
 
-![](/images/2010/12/summary-6hr_74b367.webp "summary.6hr")
-
-Performance data related to Sessions in BI and Presentation Services
-
-Before you start this, I recommend reading [how to secure your jmx agent](/post/rnm1978/securing-obiee-systems-management-jmx-for-remote-access//) if you’re working with production systems.
+Before you start this, I recommend reading [how to secure your jmx agent](/post/rnm1978/securing-obiee-systems-management-jmx-for-remote-access/) if you're working with production systems.
 
 ## Overview
 
-There are three parts to my monitoring application, and you can pretty much pick and mix as you want. Obviously without any data collected then graphing it will be pretty dull, but you may opt to collect the data and then work with it another way (Excel, OBIEE, etc).  
-I’ve broken the details down into three separate blog posts:
+There are three parts to my monitoring application, and you can pretty much pick and mix as you want. Obviously without any data collected then graphing it will be pretty dull, but you may opt to collect the data and then work with it another way (Excel, OBIEE, etc). I've broken the details down into three separate blog posts:
 
 1. **[Metric collection](/post/rnm1978/collecting-obiee-systems-management-data-with-jmx/)** from a remote BI Server, using jmxsh
 2. **[Graph rendering](/post/rnm1978/charting-obiee-performance-data-with-gnuplot/)** of the collected data, using gnuplot
