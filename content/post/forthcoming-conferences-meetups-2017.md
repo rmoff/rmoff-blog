@@ -19,7 +19,7 @@ If you're at any of these, please do come and say hi :)
 *My first time talking at the London Apache Kafka Meetup - always a sold-out crowd, this will be fun!*
 
 * September 20th, 19:00 : **[Look Ma, no Code! Building Streaming Data Pipelines with Apache Kafka](https://www.meetup.com/Apache-Kafka-London/events/242981989/)**
-  * Slides are [available here](https://speakerdeck.com/rmoff/look-ma-no-code-building-streaming-data-pipelines-with-apache-kafka)
+  * Slides are [available here](https://talks.rmoff.net/look-ma-no-code-building-streaming-data-pipelines-with-apache-kafka/)
 
 ### Oracle OpenWorld - San Francisco
 
