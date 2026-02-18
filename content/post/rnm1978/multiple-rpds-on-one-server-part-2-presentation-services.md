@@ -69,7 +69,7 @@ Your modified file should look something like this:
 
 
 ```xml
-<?xml version="1.0" encoding="utf-8"?> <WebConfig> <ServerInstance> <Listener port="9711"/> <DSN>AnalyticsWebSampleSales</DSN> <CatalogPath>/data/web/catalog/samplesales</CatalogPath> \[...\]
+<?xml version="1.0" encoding="utf-8"?> <WebConfig> <ServerInstance> <Listener port="9711"/> <DSN>AnalyticsWebSampleSales</DSN> <CatalogPath>/data/web/catalog/samplesales</CatalogPath> [...]
 ```
 
 

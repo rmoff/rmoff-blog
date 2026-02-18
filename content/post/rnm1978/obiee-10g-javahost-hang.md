@@ -23,7 +23,7 @@ Set up is a OBIEE 10.1.3.4.1 two-server deployment with BI/PS/Javahost clustered
 
 Javahost was running, and listening, on both servers: 
 ```
-$ps -ef|grep javahost obieeadm 14076 1 0 Nov 25 ? 9:23 /app/oracle/product/OracleAS\_1/jdk/bin/IA64N/java -server -classpath /app/oracle/product/obiee/web/javahost/lib/core/sautils.ja $netstat -a|grep 9810|grep LISTEN tcp 0 0 \*.9810 \*.\* LISTEN
+$ps -ef|grep javahost obieeadm 14076 1 0 Nov 25 ? 9:23 /app/oracle/product/OracleAS_1/jdk/bin/IA64N/java -server -classpath /app/oracle/product/obiee/web/javahost/lib/core/sautils.ja $netstat -a|grep 9810|grep LISTEN tcp 0 0 *.9810 *.* LISTEN
 ```
 
 
@@ -53,7 +53,7 @@ It looked like javahost was up, but not responding to requests -- which is prett
 
 Since the rest of the (production!) OBIEE service was up and in use, I didn't want to use the normal shutdown script run-saw.sh as this would also kill Presentation Services. Therefore I extracted the following from run-saw.sh and ran it manually on server01: 
 ```
-set +u ANA\_INSTALL\_DIR=/app/oracle/product/obiee . ${ANA\_INSTALL\_DIR}/setup/common.sh ./shutdown.sh -service
+set +u ANA_INSTALL_DIR=/app/oracle/product/obiee . ${ANA_INSTALL_DIR}/setup/common.sh ./shutdown.sh -service
 ```
 
 

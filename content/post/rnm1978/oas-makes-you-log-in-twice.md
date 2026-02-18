@@ -25,6 +25,6 @@ Ref: [Apache UseCanonicalName documentation](http://httpd.apache.org/docs/2.2/mo
 
 After changing httpd.conf, don't forget to bounce Apache: 
 ```
-opmnctl restartproc ias-component=HTTP\_Server
+opmnctl restartproc ias-component=HTTP_Server
 ```
 

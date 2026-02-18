@@ -19,7 +19,7 @@ This error means that the ODBC Driver for BI Server can't communicate with the B
 
 I validated the BI Server **was** running and listening on port 9703: 
 ```
-\[oracle@RNMVM03 setup\]$ netstat -a|grep 9703 tcp 0 0 \*:9703 \*:\* LISTEN
+[oracle@RNMVM03 setup]$ netstat -a|grep 9703 tcp 0 0 *:9703 *:* LISTEN
 ```
 
 

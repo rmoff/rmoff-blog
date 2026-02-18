@@ -21,7 +21,7 @@ tags
 
 I've known about the language='xx' attribute that you can use with the tag, but Ed's posting prompted me to check on the syntax and it turns out there a few tweaks one can use. Some of them are illustrated below. The list is taken from [Wordpress' Posting Source Code](http://en.support.wordpress.com/code/posting-source-code/) reference page.
 
-## \[sourcecode\] ....
+## [sourcecode] ....
 ```
 
 

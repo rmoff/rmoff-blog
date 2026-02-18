@@ -9,7 +9,7 @@ Bit of an odd one this. Oracle 11g database, a user's password has expired. But 
 ```bash
 $sqlplus MYUSER/oldPW@oraDBServer
 
-SQL\*Plus: Release 10.2.0.1.0 - Production on Wed Sep 23 07:57:41 2009
+SQL*Plus: Release 10.2.0.1.0 - Production on Wed Sep 23 07:57:41 2009
 
 Copyright (c) 1982, 2005, Oracle. All rights reserved.
 
@@ -25,9 +25,9 @@ After a bit of digging around I found [a post](http://www.experts-exchange.com/D
 
 
 ```bash
-C:\\Windows\\System32>C:\\instantclient\_11\_1\\sqlplus.exe MYUSER/oldPW@oraDBServer
+C:\\Windows\\System32>C:\\instantclient_11_1\\sqlplus.exe MYUSER/oldPW@oraDBServer
 
-SQL\*Plus: Release 11.1.0.7.0 - Production on Wed Sep 23 08:34:39 2009
+SQL*Plus: Release 11.1.0.7.0 - Production on Wed Sep 23 08:34:39 2009
 
 Copyright (c) 1982, 2008, Oracle. All rights reserved.
 

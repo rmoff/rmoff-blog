@@ -34,7 +34,7 @@ I wanted a quick way to visualise the data, and also to plot it out once it was 
 
 
 ```bash
-# Download the file from a remote server # Prompts for password, or use ssh key authentication to make it seamless scp user@remotehost:/tmp/io.DBINSTANCE.log . # Convert bar (|) to Space ( ) sed -e 's/|/ /g' io.DBINSTANCE.log > io.log # Plot a graph (remove --persist if you don't want the window displayed) gnuplot --persist <<EOF set title "Read I/O MB/s\\nSampled every 5 seconds" set xdata time set timefmt "%Y-%m-%d-%H:%M:%S" set format x "%d %b\\n%H:%M" set ylabel "MB/s" # You can set the y range to a specific constant based on your IO capacity set yrange \[0:3000\] set xlabel "Date/Time" unset key set grid plot "io.log" using 1:3 with boxes fs set terminal png font "courier, 10" size 1200,800 set output "io.png" replot EOF
+# Download the file from a remote server # Prompts for password, or use ssh key authentication to make it seamless scp user@remotehost:/tmp/io.DBINSTANCE.log . # Convert bar (|) to Space ( ) sed -e 's/|/ /g' io.DBINSTANCE.log > io.log # Plot a graph (remove --persist if you don't want the window displayed) gnuplot --persist <<EOF set title "Read I/O MB/s\\nSampled every 5 seconds" set xdata time set timefmt "%Y-%m-%d-%H:%M:%S" set format x "%d %b\\n%H:%M" set ylabel "MB/s" # You can set the y range to a specific constant based on your IO capacity set yrange [0:3000] set xlabel "Date/Time" unset key set grid plot "io.log" using 1:3 with boxes fs set terminal png font "courier, 10" size 1200,800 set output "io.png" replot EOF
 ```
 
 

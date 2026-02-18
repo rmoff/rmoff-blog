@@ -10,7 +10,7 @@ We routinely change Oracle passwords as part of security best-practice, I keep h
 
 > 
 ```sql
-ALTER USER DAC\_REPO IDENTIFIED BY 1KoBe3RH REPLACE YlR94tqp
+ALTER USER DAC_REPO IDENTIFIED BY 1KoBe3RH REPLACE YlR94tqp
 ```
 
 > 
@@ -20,7 +20,7 @@ Someone better qualified than me can explain why but I suspect it's the leading 
 
 
 ```sql
-ALTER USER DAC\_REPO IDENTIFIED BY "1KoBe3RH" REPLACE "YlR94tqp"
+ALTER USER DAC_REPO IDENTIFIED BY "1KoBe3RH" REPLACE "YlR94tqp"
 ```
 
 

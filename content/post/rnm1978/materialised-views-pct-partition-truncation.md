@@ -69,7 +69,7 @@ Links to 11gR1 docs:
 3. **PCT refresh is nonatomic**
     - That is, you specify the atomic\_refresh parameter in your refresh call as false: 
 ```sql
-EXEC DBMS\_MVIEW.REFRESH( \[…\], \[…\], atomic\_refresh=>false, \[…\]);
+EXEC DBMS_MVIEW.REFRESH( […], […], atomic_refresh=>false, […]);
 ```
 
     - **By default (i.e. if you do not specify it), atomic\_refresh=>true**
@@ -82,11 +82,11 @@ Despite having met all the above conditions for PCT partition truncation, it sti
 
 A 10979 trace (see below) on the MView refresh showed this crucial line : 
 ```
-\[...\]
+[...]
 
-Value of \_mv\_refresh\_costing : rule
+Value of _mv_refresh_costing : rule
 
-\[...\]
+[...]
 ```
 
 
@@ -94,7 +94,7 @@ This undocumented parameter is at the very heart of getting PCT partition trunca
 
 The suggested solution is to set it to Cost, which instructs Oracle to cost the different options and use the best for the given situation. However, during testing we saw an instance of bad costing on this leading Oracle to still DELETE instead of TRUNCATE. Therefore, we opted for forcing the choice through rule, but specified in order of preference: 
 ```sql
-alter session set "\_mv\_refresh\_costing"='rule\_pt\_pd\_fa\_co';
+alter session set "_mv_refresh_costing"='rule_pt_pd_fa_co';
 ```
  where:
 
@@ -115,21 +115,21 @@ After a bit of head-scratching and more RTFMing, we found that the reason for th
 
 Here is an abridged trace for a PCT-Truncate refresh of an MView with the default global index in place: 
 ```sql
-/\* MV\_REFRESH (IND\_UNUSABLE) \*/ ALTER INDEX "HR"."I\_SNAP$\_MV\_WEEK" UNUSABLE
+/* MV_REFRESH (IND_UNUSABLE) */ ALTER INDEX "HR"."I_SNAP$_MV_WEEK" UNUSABLE
 
-ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION PART\_20101122 UPDATE GLOBAL INDEXES
+ALTER TABLE "HR"."MV_WEEK" TRUNCATE PARTITION PART_20101122 UPDATE GLOBAL INDEXES
 
-/\* MV\_REFRESH (INS) \*/ INSERT /\*+ SKIP\_UNQ\_UNUSABLE\_IDX APPEND BYPASS\_RECURSIVE\_CHECK \*/ INTO\[…\]
+/* MV_REFRESH (INS) */ INSERT /*+ SKIP_UNQ_UNUSABLE_IDX APPEND BYPASS_RECURSIVE_CHECK */ INTO[…]
 
-BEGIN sys.dbms\_index\_utl.multi\_level\_build(index\_list=>'"HR"."I\_SNAP$\_MV\_WEEK"',just\_unusable=>TRUE, cont\_after\_err=>TRUE, concurrent=>TRUE); END;
+BEGIN sys.dbms_index_utl.multi_level_build(index_list=>'"HR"."I_SNAP$_MV_WEEK"',just_unusable=>TRUE, cont_after_err=>TRUE, concurrent=>TRUE); END;
 ```
 
 
 By defining the MView using the USING NO INDEX clause, the global index is not created and the PCT-Truncate works much more efficiently: 
 ```sql
-ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION\[…\]
+ALTER TABLE "HR"."MV_WEEK" TRUNCATE PARTITION[…]
 
-/\* MV\_REFRESH (INS) \*/ INSERT /\*+ APPEND \[…\]
+/* MV_REFRESH (INS) */ INSERT /*+ APPEND […]
 ```
 
 
@@ -137,7 +137,7 @@ ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION\[…\]
 
 To get PCT refresh, use method=>'P' 
 ```sql
-EXEC DBMS\_MVIEW.REFRESH( \[…\], \[…\], method=>'P', \[…\]);
+EXEC DBMS_MVIEW.REFRESH( […], […], method=>'P', […]);
 ```
  You can also use method=>'?' where Oracle will try PCT first, and then Complete if PCT is not possible. However, if PCT isn't possible you may have a problem that you want to know about rather than rebuilding the MV each time without you being aware of it.
 
@@ -145,7 +145,7 @@ EXEC DBMS\_MVIEW.REFRESH( \[…\], \[…\], method=>'P', \[…\]);
 
 Interval partitioning removes the headache of partition management for new data. Unfortunately, it appears that you can’t partition MViews and refresh them using PCT partition truncation. If you try to PCT partition truncate refresh an interval-partitioned MView, you get this error: 
 ```
-ERROR at line 1: ORA-12008: error in materialized view refresh path ORA-00936: missing expression ORA-06512: at "SYS.DBMS\_SNAPSHOT", line 2545 ORA-06512: at "SYS.DBMS\_SNAPSHOT", line 2751 ORA-06512: at "SYS.DBMS\_SNAPSHOT", line 2720 ORA-06512: at line 1
+ERROR at line 1: ORA-12008: error in materialized view refresh path ORA-00936: missing expression ORA-06512: at "SYS.DBMS_SNAPSHOT", line 2545 ORA-06512: at "SYS.DBMS_SNAPSHOT", line 2751 ORA-06512: at "SYS.DBMS_SNAPSHOT", line 2720 ORA-06512: at line 1
 ```
 
 
@@ -163,7 +163,7 @@ Test case: [mv\_issue\_02.sql](https://rmoff.net/mv_issue_02-sql/)
 
 To understand exactly what happens when a MView refresh takes place, you can enable tracing using: 
 ```sql
--- enable the trace alter session set events '10979 trace name context forever'; -- SQL commands to trace go here \[...\] -- Disable the trace alter session set events '10979 trace name context off';
+-- enable the trace alter session set events '10979 trace name context forever'; -- SQL commands to trace go here [...] -- Disable the trace alter session set events '10979 trace name context off';
 ```
 
 
@@ -181,21 +181,21 @@ Method 4 is a DELETE ... INSERT, whilst Method 5 is TRUNCATE ... INSERT. Note th
 
 
 ```
-Refresh Method 4 REFRESH Stmt 0 /\* MV\_REFRESH (DEL) \*/ DELETE FROM "HR"."MV\_WEE\[...\] REFRESH Stmt 1 /\* MV\_REFRESH (INS) \*/ INSERT /\*+ BYPASS\_RECURSIVE\_CHEC\[...\]
+Refresh Method 4 REFRESH Stmt 0 /* MV_REFRESH (DEL) */ DELETE FROM "HR"."MV_WEE[...] REFRESH Stmt 1 /* MV_REFRESH (INS) */ INSERT /*+ BYPASS_RECURSIVE_CHEC[...]
 
-Refresh Method 5 REFRESH Stmt 0 /\* MV\_REFRESH (IND\_UNUSABLE) \*/ ALTER INDEX "HR\[...\] REFRESH Stmt 1 ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION \[...\] REFRESH Stmt 2 /\* MV\_REFRESH (INS) \*/ INSERT /\*+ SKIP\_UNQ\_UNUSABLE\_IDX\[...\] REFRESH Stmt 3 BEGIN sys.dbms\_index\_utl.multi\_level\_build(index\_list=\[...\]
+Refresh Method 5 REFRESH Stmt 0 /* MV_REFRESH (IND_UNUSABLE) */ ALTER INDEX "HR[...] REFRESH Stmt 1 ALTER TABLE "HR"."MV_WEEK" TRUNCATE PARTITION [...] REFRESH Stmt 2 /* MV_REFRESH (INS) */ INSERT /*+ SKIP_UNQ_UNUSABLE_IDX[...] REFRESH Stmt 3 BEGIN sys.dbms_index_utl.multi_level_build(index_list=[...]
 ```
  Watch out for this parameter value - it's crucial! 
 ```
-Value of \_mv\_refresh\_costing : COST
+Value of _mv_refresh_costing : COST
 ```
  By default (11.1.0.7) it's "RULE" and will do DELETE...INSERT \*always\* instead of TRUNCATE...INSERT
 
 If you're using COST, then the cost of the possible refresh methods will be calculated: 
 ```
-REFRESH STATEMENT /\* MV\_REFRESH (DEL) \*/ DELETE FROM "HR"."MV\_WEE\[...\] COST = 4.002855 REFRESH STATEMENT /\* MV\_REFRESH (INS) \*/ INSERT /\*+ BYPASS\_RECURSIVE\_CHEC\[...\] COST = 2.571476 TOTAL COST OF REFRESH = 6.574331
+REFRESH STATEMENT /* MV_REFRESH (DEL) */ DELETE FROM "HR"."MV_WEE[...] COST = 4.002855 REFRESH STATEMENT /* MV_REFRESH (INS) */ INSERT /*+ BYPASS_RECURSIVE_CHEC[...] COST = 2.571476 TOTAL COST OF REFRESH = 6.574331
 
-REFRESH STATEMENT /\* MV\_REFRESH (IND\_UNUSABLE) \*/ ALTER INDEX "HR\[...\] COST = 0.000000 REFRESH STATEMENT ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION \[...\] COST = 0.000000 REFRESH STATEMENT /\* MV\_REFRESH (INS) \*/ INSERT /\*+ SKIP\_UNQ\_UNUSABLE\_IDX\[...\] COST = 2.279282 REFRESH STATEMENT BEGIN sys.dbms\_index\_utl.multi\_level\_build(index\_list=\[...\] COST = 0.000000 TOTAL COST OF REFRESH = 2.279282
+REFRESH STATEMENT /* MV_REFRESH (IND_UNUSABLE) */ ALTER INDEX "HR[...] COST = 0.000000 REFRESH STATEMENT ALTER TABLE "HR"."MV_WEEK" TRUNCATE PARTITION [...] COST = 0.000000 REFRESH STATEMENT /* MV_REFRESH (INS) */ INSERT /*+ SKIP_UNQ_UNUSABLE_IDX[...] COST = 2.279282 REFRESH STATEMENT BEGIN sys.dbms_index_utl.multi_level_build(index_list=[...] COST = 0.000000 TOTAL COST OF REFRESH = 2.279282
 ```
  After costing, or by rule, the method chosen will be stated: 
 ```
@@ -203,12 +203,12 @@ Refresh method picked PCT - TRUNC
 ```
  Oracle then records the actual statements executed: 
 ```
-Executed Stmt - /\* MV\_REFRESH (IND\_UNUSABLE) \*/ ALTER INDEX "HR\[...\] Executed Stmt - ALTER TABLE "HR"."MV\_WEEK" TRUNCATE PARTITION \[...\] Executed Stmt - /\* MV\_REFRESH (INS) \*/ INSERT /\*+ SKIP\_UNQ\_UNUSABLE\_IDX\[...\] Executed Stmt - BEGIN sys.dbms\_index\_utl.multi\_level\_build(index\_list=\[...\]
+Executed Stmt - /* MV_REFRESH (IND_UNUSABLE) */ ALTER INDEX "HR[...] Executed Stmt - ALTER TABLE "HR"."MV_WEEK" TRUNCATE PARTITION [...] Executed Stmt - /* MV_REFRESH (INS) */ INSERT /*+ SKIP_UNQ_UNUSABLE_IDX[...] Executed Stmt - BEGIN sys.dbms_index_utl.multi_level_build(index_list=[...]
 ```
 
 
 A final word of warning - remember that the trace file is an internal diagnostic, it is not for user-consumption. I spent a while worrying about this entry in the log: 
 ```
-PARSE ERROR #19:len=12330 dep=1 uid=142 oct=3 lid=142 tim=35441256289311 err=10980 SELECT "R"."BSNS\_WK\_KEY" "WK\_KEY","D"."SOURCE\_SYSTEM\_KEY" "SOURCE\_SYSTEM\_KEY","D"." CLOSE #19:c=0,e=0,dep=1,type=0,tim=35441256289311
+PARSE ERROR #19:len=12330 dep=1 uid=142 oct=3 lid=142 tim=35441256289311 err=10980 SELECT "R"."BSNS_WK_KEY" "WK_KEY","D"."SOURCE_SYSTEM_KEY" "SOURCE_SYSTEM_KEY","D"." CLOSE #19:c=0,e=0,dep=1,type=0,tim=35441256289311
 ```
  Even though there was no error returned to the user session calling the refresh, I figured this must be some problem. However, according to MOS doc [Errors In Refresh Snapshot Trace Files ORA-10980 (Doc ID 294513.1)](https://supporthtml.oracle.com/ep/faces/secure/km/DocumentDisplay.jspx?id=294513.1) the parse error is raised and cleared internally and therefore nothing to worry about.

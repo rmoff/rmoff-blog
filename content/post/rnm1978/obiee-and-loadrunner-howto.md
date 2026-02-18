@@ -52,7 +52,7 @@ _Most of these are set from Tools -> Recording Options, or from the Options butt
     ![](/images/rnm1978/lr51.png "LR50")![LR51](/images/2009/09/lr51.webp "LR51")
 - Copy this to a file called obiee.cor: 
 ```xml
-<?xml version="1.0"?> <CorrelationSettings><Group Name="OBIEE" Enable="1" Icon="logo\_bi.bmp"><Rule Name="scid" LeftBoundText="\_scid=" LeftBoundType="1" LeftBoundInstance="0" RightBoundText=""" RightBoundType="1" AltRightBoundText="" AltRightBoundType="1" Flags="0" ParamPrefix="" Type="8" SaveOffset="0" SaveLen="-1" CallbackName="" CallbackDLLName="" FormField="" ReplaceLB="" ReplaceRB=""/></Group></CorrelationSettings>
+<?xml version="1.0"?> <CorrelationSettings><Group Name="OBIEE" Enable="1" Icon="logo_bi.bmp"><Rule Name="scid" LeftBoundText="_scid=" LeftBoundType="1" LeftBoundInstance="0" RightBoundText=""" RightBoundType="1" AltRightBoundText="" AltRightBoundType="1" Flags="0" ParamPrefix="" Type="8" SaveOffset="0" SaveLen="-1" CallbackName="" CallbackDLLName="" FormField="" ReplaceLB="" ReplaceRB=""/></Group></CorrelationSettings>
 ```
 
     
@@ -70,9 +70,9 @@ Your code should now look something like this:
 
 
 ```html
-Navigate\_to\_dashboard() {
+Navigate_to_dashboard() {
 
-web\_submit\_data("saw.dll\_2", "Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Method=POST", \[...\] ITEMDATA, \[...\] "Name=PortalPath", "Value={Dashboard}", ENDITEM, LAST); return 0; }
+web_submit_data("saw.dll_2", "Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Method=POST", [...] ITEMDATA, [...] "Name=PortalPath", "Value={Dashboard}", ENDITEM, LAST); return 0; }
 ```
 
 
@@ -99,7 +99,7 @@ P0 is XML with backslash-escaped quotation marks (i.e. search and replace `\"` f
 
 
 ```xml
-\[...\] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 " "Product"."P01 Product"</sawx: \[...\]
+[...] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 " "Product"."P01 Product"</sawx: [...]
 ```
 
 
@@ -107,7 +107,7 @@ becomes this:
 
 
 ```xml
-\[...\] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 Product"."P01 Product"</sawx: \[...\]
+[...] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 Product"."P01 Product"</sawx: [...]
 ```
 
 
@@ -173,7 +173,7 @@ It makes sense to parametrise logins so that you simulate many users (rather tha
 
 
 ```bash
-\[...\] ITEMDATA, "Name=NQUser", "Value=Administrator", ENDITEM, "Name=NQPassword", "Value=Administrator", ENDITEM, \[...\]
+[...] ITEMDATA, "Name=NQUser", "Value=Administrator", ENDITEM, "Name=NQPassword", "Value=Administrator", ENDITEM, [...]
 ```
 
 
@@ -181,7 +181,7 @@ to
 
 
 ```bash
-\[...\] ITEMDATA, "Name=NQUser", "Value={Username}", ENDITEM, "Name=NQPassword", "Value={Password}", ENDITEM, \[...\]
+[...] ITEMDATA, "Name=NQUser", "Value={Username}", ENDITEM, "Name=NQPassword", "Value={Password}", ENDITEM, [...]
 ```
 
 
@@ -197,7 +197,7 @@ c:\\OracleBI\\server\\Bin\\nQUDMLGen.exe -U Administrator -P Administrator -R c:
 
 3. Search the resulting UDML file for your new user, should look something like this: 
 ```xml
-DECLARE USER "PerfTestUser\_01" AS "PerfTestUser\_01" UPGRADE ID 2150312724 FULL NAME {Performance Testing user} PASSWORD 'D7EDED84BC624A917F5B462A4DCA05CDCE256EEEEEDC97D5FF150B512EE8ED94985E8734986D5553C8F3BEE6EAF9FC34' NEVER EXPIRES HAS ROLES ( "Administrators" ) NO STATISTICS DESCRIPTION {Pwd is y0rkshire} PRIVILEGES ( READ);
+DECLARE USER "PerfTestUser_01" AS "PerfTestUser_01" UPGRADE ID 2150312724 FULL NAME {Performance Testing user} PASSWORD 'D7EDED84BC624A917F5B462A4DCA05CDCE256EEEEEDC97D5FF150B512EE8ED94985E8734986D5553C8F3BEE6EAF9FC34' NEVER EXPIRES HAS ROLES ( "Administrators" ) NO STATISTICS DESCRIPTION {Pwd is y0rkshire} PRIVILEGES ( READ);
 ```
 
 4. Strip all the line breaks so that it's on a single line, and replace tabs with spaces

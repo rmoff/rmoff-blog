@@ -12,19 +12,19 @@ To list all the tuning sets:
 ```sql
 SET WRAP OFF SET LINE 140 COL NAME FOR A15 COL DESCRIPTION FOR A50 WRAPPED
 
-select name,created,last\_modified,statement\_count,description from DBA\_SQLSET
+select name,created,last_modified,statement_count,description from DBA_SQLSET
 ```
 
 
 
 ```
-NAME CREATED LAST\_MODI STATEMENT\_COUNT DESCRIPTION --------------- --------- --------- --------------- ---------------------------------------------------------------------------------------- sts\_test\_02 09-MAR-10 09-MAR-10 1 Test run 1 sts\_test\_01 12-FEB-10 12-FEB-10 1 an old STS test test test
+NAME CREATED LAST_MODI STATEMENT_COUNT DESCRIPTION --------------- --------- --------- --------------- ---------------------------------------------------------------------------------------- sts_test_02 09-MAR-10 09-MAR-10 1 Test run 1 sts_test_01 12-FEB-10 12-FEB-10 1 an old STS test test test
 ```
 
 
 To delete a tuning set: 
 ```sql
-BEGIN DBMS\_SQLTUNE.DROP\_SQLSET(sqlset\_name => 'sts\_test\_01'); END;
+BEGIN DBMS_SQLTUNE.DROP_SQLSET(sqlset_name => 'sts_test_01'); END;
 ```
 
 
@@ -42,13 +42,13 @@ To look up why the STS is considered active, check the [SQL Tuning Information V
 ```sql
 SET WRAP OFF SET LINE 140 COL NAME FOR A15 COL DESCRIPTION FOR A50 WRAPPED
 
-select description, created, owner from DBA\_SQLSET\_REFERENCES where sqlset\_name = 'sts\_test\_01';
+select description, created, owner from DBA_SQLSET_REFERENCES where sqlset_name = 'sts_test_01';
 ```
 
 
 which in my case showed this: 
 ```
-DESCRIPTION CREATED OWNER -------------------------------------------------- --------- ------------------------------ created by: SQL Tuning Advisor - task: RNM\_TT 12-FEB-10 badger
+DESCRIPTION CREATED OWNER -------------------------------------------------- --------- ------------------------------ created by: SQL Tuning Advisor - task: RNM_TT 12-FEB-10 badger
 ```
 
 
@@ -56,13 +56,13 @@ So we check for this on DBA\_ADVISOR\_TASKS:
 ```sql
 SET WRAP OFF SET LINE 140 COL NAME FOR A15 COL OWNER FOR A10 COL DESCRIPTION FOR A50 WRAPPED
 
-select owner,description, created,last\_modified from DBA\_ADVISOR\_TASKS where task\_name = 'RNM\_TT'
+select owner,description, created,last_modified from DBA_ADVISOR_TASKS where task_name = 'RNM_TT'
 ```
 
 
 and it shows this: 
 ```
-OWNER DESCRIPTION CREATED LAST\_MODI ---------- -------------------------------------------------- --------- --------- badger SQL Advisor - sts\_test\_01 12-FEB-10 12-FEB-10
+OWNER DESCRIPTION CREATED LAST_MODI ---------- -------------------------------------------------- --------- --------- badger SQL Advisor - sts_test_01 12-FEB-10 12-FEB-10
 ```
 
 
@@ -70,7 +70,7 @@ So now we know it's a stale SQL Tuning Advisor task that uses the SQL Tuning Set
 
 
 ```sql
-BEGIN DBMS\_SQLTUNE.DROP\_TUNING\_TASK(task\_name => 'RNM\_TT'); END;
+BEGIN DBMS_SQLTUNE.DROP_TUNING_TASK(task_name => 'RNM_TT'); END;
 ```
 
 
@@ -78,7 +78,7 @@ and then I can delete my original SQL Tuning Set:
 
 
 ```sql
-BEGIN DBMS\_SQLTUNE.DROP\_SQLSET(sqlset\_name => 'sts\_test\_01'); END;
+BEGIN DBMS_SQLTUNE.DROP_SQLSET(sqlset_name => 'sts_test_01'); END;
 ```
 
 

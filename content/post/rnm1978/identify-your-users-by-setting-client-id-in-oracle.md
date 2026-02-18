@@ -15,7 +15,7 @@ So how do you identify the originating report that spawned the SQL that broke th
 
 With a large hat-tip to [Mark Rittman](http://www.rittmanmead.com), here's one thing you can do to help matters. Within the Connection Pool object in the RPD you can add statements to execute at the beginning of each connection. In this case, we can set the Client ID for the user running the request. 
 ```
-call dbms\_session.set\_identifier('VALUEOF(NQ\_SESSION.USER)')
+call dbms_session.set_identifier('VALUEOF(NQ_SESSION.USER)')
 ```
 
 

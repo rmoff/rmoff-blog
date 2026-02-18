@@ -15,9 +15,9 @@ Here's a set of SQL statements to run against the ODI work repository tables to 
 
 First off is the most fancy - using hierarchical SQL, it returns all sessions and child sessions: 
 ```sql
--- odi\_04.sql -- -- ODI sessions and child sessions - runtimes -- -- https://rmoff.net --
+-- odi_04.sql -- -- ODI sessions and child sessions - runtimes -- -- https://rmoff.net --
 
-select --level, --, parent\_sess\_no sess\_no, --Following column can be included if you want to see the root parent session name --CONNECT\_BY\_ROOT sess\_name "Root session", -- -- Remove the lpad if you don't want child sessions indented in the results lpad('> ',3\*(level-1),'-') || sess\_name "Name", TO\_CHAR(SESS\_BEG,'yyyy-mm-dd hh24:mi:ss') as "Session Start", TO\_CHAR(SESS\_END,'yyyy-mm-dd hh24:mi:ss') as "Session End", SESS\_DUR, SESS\_STATUS from SNP\_SESSION -- You can determine how many levels to navigate: level 1 is the master sessions and no children, level 2 is the first layer of children, etc. --where level <= 3 start with parent\_sess\_no is null -- Use a mixture of the following predicates to identify your batch within the ODI Work Repository, and/or part of the batch of interest -- and sess\_name like '%LOAD%' -- and sess\_status = 'D' and sess\_beg between to\_date('1/11/2010 09:00','DD/MM/YYYY HH24:MI') and to\_date('4/11/2010 18:00','DD/MM/YYYY HH24:MI') connect by prior sess\_no = parent\_sess\_no /
+select --level, --, parent_sess_no sess_no, --Following column can be included if you want to see the root parent session name --CONNECT_BY_ROOT sess_name "Root session", -- -- Remove the lpad if you don't want child sessions indented in the results lpad('> ',3*(level-1),'-') || sess_name "Name", TO_CHAR(SESS_BEG,'yyyy-mm-dd hh24:mi:ss') as "Session Start", TO_CHAR(SESS_END,'yyyy-mm-dd hh24:mi:ss') as "Session End", SESS_DUR, SESS_STATUS from SNP_SESSION -- You can determine how many levels to navigate: level 1 is the master sessions and no children, level 2 is the first layer of children, etc. --where level <= 3 start with parent_sess_no is null -- Use a mixture of the following predicates to identify your batch within the ODI Work Repository, and/or part of the batch of interest -- and sess_name like '%LOAD%' -- and sess_status = 'D' and sess_beg between to_date('1/11/2010 09:00','DD/MM/YYYY HH24:MI') and to_date('4/11/2010 18:00','DD/MM/YYYY HH24:MI') connect by prior sess_no = parent_sess_no /
 ```
 
 
@@ -36,7 +36,7 @@ Using the session number determined by our analysis of the overall batch session
 
 
 ```sql
--- odi\_06.sql -- -- ODI session broken down by step, for a single session -- -- https://rmoff.net -- select s.sess\_no "Session #", sl.nno as "Step Number", sess\_name "Session Name", ss.step\_name "Step Name", to\_char(sl.step\_beg,'yyyy-mm-dd hh24:mi:ss') "Step Start", to\_char(sl.step\_end,'yyyy-mm-dd hh24:mi:ss') "Step End", sl.step\_dur "Step Dur (s)", from SNP\_SESSION S left outer join snp\_sess\_step ss on s.sess\_no = ss.sess\_no inner join SNP\_STEP\_LOG SL on ss.sess\_no = sl.sess\_no and ss.nno = sl.nno where s.sess\_no = 984170 ;
+-- odi_06.sql -- -- ODI session broken down by step, for a single session -- -- https://rmoff.net -- select s.sess_no "Session #", sl.nno as "Step Number", sess_name "Session Name", ss.step_name "Step Name", to_char(sl.step_beg,'yyyy-mm-dd hh24:mi:ss') "Step Start", to_char(sl.step_end,'yyyy-mm-dd hh24:mi:ss') "Step End", sl.step_dur "Step Dur (s)", from SNP_SESSION S left outer join snp_sess_step ss on s.sess_no = ss.sess_no inner join SNP_STEP_LOG SL on ss.sess_no = sl.sess_no and ss.nno = sl.nno where s.sess_no = 984170 ;
 ```
 
 
@@ -50,7 +50,7 @@ So now we can see that of a long-running load step, over 80% of the time is spen
 
 Using the same session number as before, and step number 3 as identified above, let's have a look at the individual tasks: 
 ```sql
--- odi\_07.sql -- -- ODI session broken down by task, for a given session and step -- -- https://rmoff.net -- select s.sess\_no as "Session #", sl.nno as "Step #", st.scen\_task\_no as "Task #", st.task\_name1 || ' - ' || st.task\_name2 || ' - ' || st.task\_name3 "Task", to\_char(stl.task\_beg,'yyyy-mm-dd hh24:mi:ss') "Task Start", stl.task\_dur, stl.nb\_row from SNP\_SESSION S left outer join snp\_sess\_step ss on s.sess\_no = ss.sess\_no inner join SNP\_STEP\_LOG SL on ss.sess\_no = sl.sess\_no and ss.nno = sl.nno inner join SNP\_SESS\_TASK ST on SS.sess\_no = st.sess\_no and ss.nno = st.nno inner join SNP\_SESS\_TASK\_LOG STL ON SL.SESS\_NO = STL.SESS\_NO and SL.nno = STL.nno and SL.nb\_run = STL.nb\_run and st.scen\_task\_no = stl.scen\_task\_no where s.sess\_no = 984170 and sl.nno = 3 ;
+-- odi_07.sql -- -- ODI session broken down by task, for a given session and step -- -- https://rmoff.net -- select s.sess_no as "Session #", sl.nno as "Step #", st.scen_task_no as "Task #", st.task_name1 || ' - ' || st.task_name2 || ' - ' || st.task_name3 "Task", to_char(stl.task_beg,'yyyy-mm-dd hh24:mi:ss') "Task Start", stl.task_dur, stl.nb_row from SNP_SESSION S left outer join snp_sess_step ss on s.sess_no = ss.sess_no inner join SNP_STEP_LOG SL on ss.sess_no = sl.sess_no and ss.nno = sl.nno inner join SNP_SESS_TASK ST on SS.sess_no = st.sess_no and ss.nno = st.nno inner join SNP_SESS_TASK_LOG STL ON SL.SESS_NO = STL.SESS_NO and SL.nno = STL.nno and SL.nb_run = STL.nb_run and st.scen_task_no = stl.scen_task_no where s.sess_no = 984170 and sl.nno = 3 ;
 ```
 
 
@@ -67,9 +67,9 @@ So from here I'd be focussing on two things:
 
 At first glance this is a quick-win for listing out the longest running tasks within a batch. And it is that. But, beware of taking a blinkered view of tasks in isolation. The advantage of using the queries above to drill down from overall batch runtime down through sessions, steps, and then to tasks, is that you have the context of the task. Still, this query that follows can be useful for a quick hit list of tasks to check that have been covered off by more detailed analysis. 
 ```sql
--- odi\_08.sql -- -- ODI task optimisation candidates -- -- https://rmoff.net --
+-- odi_08.sql -- -- ODI task optimisation candidates -- -- https://rmoff.net --
 
-select DISTINCT --level st.task\_name1 || ' - ' || st.task\_name2 || ' - ' || st.task\_name3 "Task", stl.task\_dur, stl.nb\_row, s.sess\_no || '/' || sl.nno || '/' || stl.scen\_task\_no as "Session/Step/Task #", SYS\_CONNECT\_BY\_PATH(s.sess\_name, ' / ') || ' / ' || ss.step\_name "Step Name" from SNP\_SESSION S left outer join snp\_sess\_step ss on s.sess\_no = ss.sess\_no inner join SNP\_STEP\_LOG SL on ss.sess\_no = sl.sess\_no and ss.nno = sl.nno inner join SNP\_SESS\_TASK ST on SS.sess\_no = st.sess\_no and ss.nno = st.nno inner join SNP\_SESS\_TASK\_LOG STL ON SL.SESS\_NO = STL.SESS\_NO and SL.nno = STL.nno and SL.nb\_run = STL.nb\_run and st.scen\_task\_no = stl.scen\_task\_no where stl.task\_dur > &&min\_duration\_secs and st.task\_name3 != 'Run\_Subscribed\_Process\_ID' -- Ignore parent tasks of child sessions start with parent\_sess\_no is null and sess\_beg between to\_date('1/11/2010 09:00','DD/MM/YYYY HH24:MI') and to\_date('1/11/2010 18:00','DD/MM/YYYY HH24:MI') connect by prior s.sess\_no = s.parent\_sess\_no order by stl.task\_dur desc /
+select DISTINCT --level st.task_name1 || ' - ' || st.task_name2 || ' - ' || st.task_name3 "Task", stl.task_dur, stl.nb_row, s.sess_no || '/' || sl.nno || '/' || stl.scen_task_no as "Session/Step/Task #", SYS_CONNECT_BY_PATH(s.sess_name, ' / ') || ' / ' || ss.step_name "Step Name" from SNP_SESSION S left outer join snp_sess_step ss on s.sess_no = ss.sess_no inner join SNP_STEP_LOG SL on ss.sess_no = sl.sess_no and ss.nno = sl.nno inner join SNP_SESS_TASK ST on SS.sess_no = st.sess_no and ss.nno = st.nno inner join SNP_SESS_TASK_LOG STL ON SL.SESS_NO = STL.SESS_NO and SL.nno = STL.nno and SL.nb_run = STL.nb_run and st.scen_task_no = stl.scen_task_no where stl.task_dur > &&min_duration_secs and st.task_name3 != 'Run_Subscribed_Process_ID' -- Ignore parent tasks of child sessions start with parent_sess_no is null and sess_beg between to_date('1/11/2010 09:00','DD/MM/YYYY HH24:MI') and to_date('1/11/2010 18:00','DD/MM/YYYY HH24:MI') connect by prior s.sess_no = s.parent_sess_no order by stl.task_dur desc /
 ```
 
 

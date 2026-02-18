@@ -22,9 +22,9 @@ Troubleshooting EBS-BI integrated authentication can be a tiresome activity, so 
 
 4. Use sqlplus to open a connection to the EBS database using the ID that BI connects as (eg EBS\_BI)
 ```
-$sqlplus EBS\_BI/password@EBSDATABASE
+$sqlplus EBS_BI/password@EBSDATABASE
     
-    SQL\*Plus: Release 11.1.0.6.0 - Production on Mon May 17 13:10:11 2010
+    SQL*Plus: Release 11.1.0.6.0 - Production on Mon May 17 13:10:11 2010
     
     Copyright (c) 1982, 2007, Oracle. All rights reserved.
     
@@ -36,7 +36,7 @@ $sqlplus EBS\_BI/password@EBSDATABASE
 5. Enter this statement, substituting values as appropriate  
     call /\* acf \*/ APP\_SESSION.validate\_icx\_session('cookie value'); eg: 
 ```
-SQL> call /\* 101507310 \*/ APP\_SESSION.validate\_icx\_session('\_ACpwGUoeCKUX7GilVh7ZZKR:S');
+SQL> call /* 101507310 */ APP_SESSION.validate_icx_session('_ACpwGUoeCKUX7GilVh7ZZKR:S');
 ```
 
 6. Expect to get:
@@ -48,7 +48,7 @@ Call completed.
 
 7. If the cookie ID is invalid you'll get 
 ```
-ERROR at line 1: ORA-06510: PL/SQL: unhandled user-defined exception ORA-06512: at "APPS.APP\_SESSION", line 315
+ERROR at line 1: ORA-06510: PL/SQL: unhandled user-defined exception ORA-06512: at "APPS.APP_SESSION", line 315
 ```
 
     

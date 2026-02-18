@@ -65,7 +65,7 @@ $ ps -ef|grep sawserver oracle 14827 1 0 09:58 pts/0 00:00:00 /bin/sh /app/oracl
 
 Assuming sawserver is running, now check that it is listening on the port specific in the analytics configuration file (see above). In this example, I'm checking for the default port, 9710: 
 ```
-$ netstat -a|grep 9710 tcp 0 0 \*:9710 \*:\* LISTEN
+$ netstat -a|grep 9710 tcp 0 0 *:9710 *:* LISTEN
 ```
  If there's no output from the command then it means that port 9710 is not in use, i.e. sawserver is not listening on it. N.B. at this point it is theoretically possible that another application is using port 9710 - all we're proving is that **something** is using it. But unless you've changed sawserver's port (in instanceconfig.xml) then the fact it's started up means that it is it using 9710 because it won't start if another application is using its port. In Windows you can use netstat -a but there's no grep by default so you need to scroll down the output to look for the port.
 
@@ -87,7 +87,7 @@ $ telnet localhost 9999 Trying 127.0.0.1... telnet: connect to address 127.0.0.1
 
 Recall what host and port we determined analytics was trying to connect to (from web.xml, see above), and run the test for it. In this example I'll check for the default - localhost and 9710. If we get something like this: 
 ```
-$ telnet localhost 9710 Trying 127.0.0.1... Connected to localhost. Escape character is '^\]'.
+$ telnet localhost 9710 Trying 127.0.0.1... Connected to localhost. Escape character is '^]'.
 ```
  then it shows the port and host is accepting connections. You can't do much more from here that I'm aware of, but it proves the port is open.
 
@@ -132,7 +132,7 @@ $sawping Server alive and well
 ```
 $ sawping Unable to connect to server. The server may be down or may be too busy to accept additional connections.
 
-$ sawping -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". Connection refused \[Socket:3\] Error Codes: ETI2U8FA
+$ sawping -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". Connection refused [Socket:3] Error Codes: ETI2U8FA
 ```
 
 
@@ -146,7 +146,7 @@ Note the message tells you what the problem is if there is an error (in this exa
 ```
 $ sawping -s bisandboxxxxx02 -v An error occured during process. Run in verbose mode to see error details. Unable to resolve the address for bisandboxxxxx02. Error Codes: AXSBMN8D:
 
-TRY\_AGAIN
+TRY_AGAIN
 ```
 
 
@@ -164,6 +164,6 @@ C:\\>c:\\OracleBI\\web\\bin\\sawping.exe Server alive and well
 
 C:\\>c:\\OracleBI\\web\\bin\\sawping.exe -s bisandbox02 Server alive and well
 
-C:\\>c:\\OracleBI\\web\\bin\\sawping.exe -p 9711 -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". No connection could be made because the target machine actively refused it. \[Socket:1808\] Error Codes: ETI2U8FA
+C:\\>c:\\OracleBI\\web\\bin\\sawping.exe -p 9711 -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". No connection could be made because the target machine actively refused it. [Socket:1808] Error Codes: ETI2U8FA
 ```
 

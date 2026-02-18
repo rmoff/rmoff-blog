@@ -17,7 +17,7 @@ To validate the replay, enable detailed sawserver logging in logconfig.xml:
 
 
 ```xml
-<Writers> \[...\] <Writer implementation="FileLogWriter" \[...\] fmtName="short" \[...\] /> \[...\] </Writers> \[...\] <Filters> \[...\] <FilterRecord writerClassGroup="File" path = "saw" information="31" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.charts.pop" information="100" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.odbc.statement.execute.sql" information="100" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.httpserver" information="100" warning="100" error="100" security="41"/> \[...\] </Filters>
+<Writers> [...] <Writer implementation="FileLogWriter" [...] fmtName="short" [...] /> [...] </Writers> [...] <Filters> [...] <FilterRecord writerClassGroup="File" path = "saw" information="31" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.charts.pop" information="100" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.odbc.statement.execute.sql" information="100" warning="100" error="100" security="41"/> <FilterRecord writerClassGroup="File" path = "saw.httpserver" information="100" warning="100" error="100" security="41"/> [...] </Filters>
 ```
 
 
@@ -29,7 +29,7 @@ Charts in OBIEE are Shockwave flash. They're requested from the sawserver with a
 
 
 ```html
-web\_url("saw.dll\_11", "URL=http://10.3.105.181:7777/analytics/saw.dll?DocPart&\_scid=9mEXbnHnTew&StateID=14036570", "Resource=1", "RecContentType=application/x-shockwave-flash", "Referer=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Snapshot=t140.inf", LAST);
+web_url("saw.dll_11", "URL=http://10.3.105.181:7777/analytics/saw.dll?DocPart&_scid=9mEXbnHnTew&StateID=14036570", "Resource=1", "RecContentType=application/x-shockwave-flash", "Referer=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Snapshot=t140.inf", LAST);
 ```
 
 
@@ -46,9 +46,9 @@ If you record your script in one go then you'll find LoadRunner does some automa
 
 
 ```xml
-/\* Registering parameter(s) from source task id 71 // {Siebel\_Analytic\_ViewState14} = "boo89b1camkd4ctutdb9qe33p6" // \*/
+/* Registering parameter(s) from source task id 71 // {Siebel_Analytic_ViewState14} = "boo89b1camkd4ctutdb9qe33p6" // */
 
-web\_reg\_save\_param("Siebel\_Analytic\_ViewState14", "LB/IC=ViewState\\" value=\\"", "RB/IC=\\"", "Ord=1", "Search=Body", "RelFrameId=1", LAST);
+web_reg_save_param("Siebel_Analytic_ViewState14", "LB/IC=ViewState\\" value=\\"", "RB/IC=\\"", "Ord=1", "Search=Body", "RelFrameId=1", LAST);
 ```
 
 
@@ -56,7 +56,7 @@ This populates a parameter which is used in a subsequent step:
 
 
 ```xml
-web\_submit\_data("saw.dll\_7", \[...\] "Name=ViewState", "Value={Siebel\_Analytic\_ViewState14}", ENDITEM, \[...\]
+web_submit_data("saw.dll_7", [...] "Name=ViewState", "Value={Siebel_Analytic_ViewState14}", ENDITEM, [...]
 ```
 
 
@@ -64,7 +64,7 @@ Without knowing properly how sawserver works, it still appears that the ViewStat
 
 
 ```xml
-web\_submit\_data("saw.dll\_7", "Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Method=POST", "RecContentType=text/html", "Referer=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Snapshot=t68.inf", "Mode=HTTP", ITEMDATA, "Name=\_scid", "Value=X0OQ7O8dJ0k", ENDITEM, "Name=PortalPath", "Value=/shared/Sample Sales/\_portal/02 History & Benching", ENDITEM, "Name=Page", "Value=22 Indexing", ENDITEM, /\* "Name=ViewState", "Value={Siebel\_Analytic\_ViewState14}", ENDITEM, \*/ "Name=StateAction", "Value=NewPage", ENDITEM, LAST);
+web_submit_data("saw.dll_7", "Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Method=POST", "RecContentType=text/html", "Referer=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Snapshot=t68.inf", "Mode=HTTP", ITEMDATA, "Name=_scid", "Value=X0OQ7O8dJ0k", ENDITEM, "Name=PortalPath", "Value=/shared/Sample Sales/_portal/02 History & Benching", ENDITEM, "Name=Page", "Value=22 Indexing", ENDITEM, /* "Name=ViewState", "Value={Siebel_Analytic_ViewState14}", ENDITEM, */ "Name=StateAction", "Value=NewPage", ENDITEM, LAST);
 ```
 
 
@@ -74,7 +74,7 @@ After replaying your recording you should scan for further correlations by press
 
 
 ```xml
-// \[WCSPARAM WCSParam\_Diff1 11 X0OQ7O8dJ0k\] Parameter {WCSParam\_Diff1} created by Correlation Studio web\_reg\_save\_param("WCSParam\_Diff1", "LB=\_scid=", "RB=\\"", "Ord=2", "RelFrameId=1", "Search=Body", "IgnoreRedirections=Yes", LAST);
+// [WCSPARAM WCSParam_Diff1 11 X0OQ7O8dJ0k] Parameter {WCSParam_Diff1} created by Correlation Studio web_reg_save_param("WCSParam_Diff1", "LB=_scid=", "RB=\\"", "Ord=2", "RelFrameId=1", "Search=Body", "IgnoreRedirections=Yes", LAST);
 ```
 
 

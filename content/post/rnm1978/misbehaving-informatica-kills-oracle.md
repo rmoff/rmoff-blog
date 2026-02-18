@@ -26,9 +26,9 @@ Our Informatica repository user expired on the day on which this happened (Aug 2
 
 
 ```
-select username, account\_status, expiry\_date from dba\_users
+select username, account_status, expiry_date from dba_users
 
-USERNAME ACCOUNT\_STATUS EXPIRY\_DATE ------------------------------ -------------------------------- --------- INF\_REPO EXPIRED 27-AUG-10
+USERNAME ACCOUNT_STATUS EXPIRY_DATE ------------------------------ -------------------------------- --------- INF_REPO EXPIRED 27-AUG-10
 ```
 
 
@@ -36,15 +36,15 @@ When a user ID expires an ORA-28001 is given at login:
 
 
 ```
-sqlplus INF\_REPO/password
+sqlplus INF_REPO/password
 
-SQL\*Plus: Release 11.1.0.7.0 - Production on Thu Sep 2 08:40:17 2010
+SQL*Plus: Release 11.1.0.7.0 - Production on Thu Sep 2 08:40:17 2010
 
 Copyright (c) 1982, 2008, Oracle. All rights reserved.
 
 ERROR: ORA-28001: the password has expired
 
-Changing password for INF\_REPO New password:
+Changing password for INF_REPO New password:
 ```
 
 
@@ -66,11 +66,11 @@ In the Informatica exceptions.log and node.log are the initial errors:
 
 
 ```
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]No more data available to read.
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row. java.sql.SQLException: [informatica][Oracle JDBC Driver]No more data available to read.
 
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-01034: ORACLE not available ORA-27101: shared memory realm does not exist HPUX-ia64 Error: 2: No such file or directory
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row. java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-01034: ORACLE not available ORA-27101: shared memory realm does not exist HPUX-ia64 Error: 2: No such file or directory
 
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-28001: the password has expired
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row. java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-28001: the password has expired
 ```
 
 
@@ -78,7 +78,7 @@ Followed by the repeated error approximately every ten seconds:
 
 
 ```
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-28001: the password has expired
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row. java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-28001: the password has expired
 ```
 
 
@@ -86,7 +86,7 @@ There are also final errors in the log, occuring once only just after midnight:
 
 
 ```
-FATAL \[Domain Monitor\] \[PCSF\_10374\] Failed to persist \[CpuUsageSummary\] with error \[\[informatica\]\[Oracle JDBC Driver\]No more data available to read.\]. FATAL \[Domain Monitor\] \[PCSF\_10374\] Failed to persist \[RepoUsageSummary\] with error \[\[informatica\]\[Oracle JDBC Driver\]No more data available to read.\].
+FATAL [Domain Monitor] [PCSF_10374] Failed to persist [CpuUsageSummary] with error [[informatica][Oracle JDBC Driver]No more data available to read.]. FATAL [Domain Monitor] [PCSF_10374] Failed to persist [RepoUsageSummary] with error [[informatica][Oracle JDBC Driver]No more data available to read.].
 ```
 
 

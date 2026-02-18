@@ -28,7 +28,7 @@ But... you cross the gods of OUI's inventory at your peril...
 
 When I tried to run the Upgrade Assistant, got an error: 
 ```
-/app/oracle/product/fmw\_home/Oracle\_BI1/bin $./ua Oracle Fusion Middleware Upgrade Assistant 11.1.1.5.0 Log file is located at: /app/oracle/product/fmw\_home/Oracle\_BI1/upgrade/logs/ua2011-10-05-08-53-26AM.log UPGAST-00055: error reading the Oracle Universal Installer inventory The inventory pointer location /etc/oraInst.loc is either not readable or does not exist
+/app/oracle/product/fmw_home/Oracle_BI1/bin $./ua Oracle Fusion Middleware Upgrade Assistant 11.1.1.5.0 Log file is located at: /app/oracle/product/fmw_home/Oracle_BI1/upgrade/logs/ua2011-10-05-08-53-26AM.log UPGAST-00055: error reading the Oracle Universal Installer inventory The inventory pointer location /etc/oraInst.loc is either not readable or does not exist
 ```
 
 
@@ -40,13 +40,13 @@ $ls -l /etc/oraInst.loc ls: /etc/oraInst.loc: No such file or directory
 
 Fortunately it appears you can make amends with OUI easily, by running as root the script which you were originally asked to run: 
 ```
-\[root@server\]/ $/app/oracle/product/oraInventory/createCentralInventory.sh Setting the inventory to /app/oracle/product/oraInventory Setting the group name to biadmin Creating the Oracle inventory pointer file (/etc/oraInst.loc) Changing permissions of /app/oracle/product/oraInventory to 770. Changing groupname of /app/oracle/product/oraInventory to biadmin. The execution of the script is complete
+[root@server]/ $/app/oracle/product/oraInventory/createCentralInventory.sh Setting the inventory to /app/oracle/product/oraInventory Setting the group name to biadmin Creating the Oracle inventory pointer file (/etc/oraInst.loc) Changing permissions of /app/oracle/product/oraInventory to 770. Changing groupname of /app/oracle/product/oraInventory to biadmin. The execution of the script is complete
 ```
 
 
 This creates /etc/oraInst.loc, which simply points to the original local inventory which was created: 
 ```
-$cat /etc/oraInst.loc inventory\_loc=/app/oracle/product/oraInventory inst\_group=biadmin
+$cat /etc/oraInst.loc inventory_loc=/app/oracle/product/oraInventory inst_group=biadmin
 ```
 
 

@@ -9,7 +9,7 @@ Trying to connect to a repository in ODI using OCI. Target database is Oracle 11
 
 Throws this error: 
 ```
-com.sunopsis.sql.l: Oracle Data Integrator Timeout: connection with URL jdbc:oracle:oci8:@ODIPRD and user ODI\_USER. at com.sunopsis.sql.SnpsConnection.a(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.t(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.connect(SnpsConnection.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.graphical.l.oi.a(oi.java) \[...\]
+com.sunopsis.sql.l: Oracle Data Integrator Timeout: connection with URL jdbc:oracle:oci8:@ODIPRD and user ODI_USER. at com.sunopsis.sql.SnpsConnection.a(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.t(SnpsConnection.java) at com.sunopsis.sql.SnpsConnection.connect(SnpsConnection.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.tools.connection.DwgRepositoryConnectionsCreator.a(DwgRepositoryConnectionsCreator.java) at com.sunopsis.graphical.l.oi.a(oi.java) [...]
 ```
 
 

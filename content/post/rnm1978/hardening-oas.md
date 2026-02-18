@@ -72,7 +72,7 @@ mv htdocs/ htdocs.old mkdir htdocs vi htdocs/index.html # enter: <HTML><HEAD><TI
 
 
 ```
-rm $OAS\_Home/Apache/Apache/icons/README rm $OAS\_Home/Apache/Apache/fcgi-bin/\*
+rm $OAS_Home/Apache/Apache/icons/README rm $OAS_Home/Apache/Apache/fcgi-bin/*
 ```
 
 
@@ -88,7 +88,7 @@ rm $OAS\_Home/Apache/Apache/icons/README rm $OAS\_Home/Apache/Apache/fcgi-bin/\*
 
 
 ```
-cd $OAS\_HOME/j2ee/home/default-web-app rm -r WEB-INF/classes rm -r examples/ echo "Nothing to see here" > index.html
+cd $OAS_HOME/j2ee/home/default-web-app rm -r WEB-INF/classes rm -r examples/ echo "Nothing to see here" > index.html
 ```
 
 

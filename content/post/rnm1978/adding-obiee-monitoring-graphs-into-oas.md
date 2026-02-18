@@ -47,7 +47,7 @@ Open httpd.conf in vi (or if you're not a real man then FTP the file to Windows 
 
 1. Search for 
 ```
-<IfModule mod\_alias.c>
+<IfModule mod_alias.c>
 ```
 
 2. Add the following beneath it:
@@ -59,7 +59,7 @@ Alias /obieejmx/ "/tmp/obieejmx/" <Directory "/obieejmx/"> AllowOverride None Op
 3. Save httpd.conf
 4. Restart Apache
 ```
-opmnctl restartproc ias-component=HTTP\_Server
+opmnctl restartproc ias-component=HTTP_Server
 ```
  or if that doesn't work restart OAS
 ```

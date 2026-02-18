@@ -16,7 +16,7 @@ Testing of the LDAP authentication worked fine, but when we moved to Production 
 
 
 ```
-\[nQSError: 13011\] Query for Initialization Block 'LDAP User Access Initialization Block' has failed. \[53003\] LDAP bind failure: Can't contact LDAP server.
+[nQSError: 13011] Query for Initialization Block 'LDAP User Access Initialization Block' has failed. [53003] LDAP bind failure: Can't contact LDAP server.
 ```
 
 
@@ -45,7 +45,7 @@ Next up we used **ldapsearch** to prove connectivity and valid LDAP credentials 
 
 
 ```
-$whereis ldapsearch ldapsearch: /opt/ldapux/bin/ldapsearch $/opt/ldapux/bin/ldapsearch -v -b "dc=mycompany, dc=co, dc=uk" -h adserver.co.uk -p 389 -D "cn=SVC\_OBIEE, ou=service accounts, ou=service management, dc=mycompany, dc=co, dc=uk" -w Password "(sAMAccountName=testuser)" sAMAccountName
+$whereis ldapsearch ldapsearch: /opt/ldapux/bin/ldapsearch $/opt/ldapux/bin/ldapsearch -v -b "dc=mycompany, dc=co, dc=uk" -h adserver.co.uk -p 389 -D "cn=SVC_OBIEE, ou=service accounts, ou=service management, dc=mycompany, dc=co, dc=uk" -w Password "(sAMAccountName=testuser)" sAMAccountName
 ```
 
 
@@ -55,7 +55,7 @@ This should return output from the LDAP server. You can fiddle with the latter p
 ```
 ldapsearch: started Thu Dec 2 12:33:18 2010
 
-ldap\_init( adserver.co.uk, 389 ) filter pattern: (sAMAccountName=testuser) returning: sAMAccountName filter is: (sAMAccountName=testuser) version: 1 dn: CN=Fred Bloggs,OU=Users,OU=MyCompany,OU=Data Management,DC=mycompany, DC=co,DC=uk sAMAccountName: TESTUSER 1 matches $
+ldap_init( adserver.co.uk, 389 ) filter pattern: (sAMAccountName=testuser) returning: sAMAccountName filter is: (sAMAccountName=testuser) version: 1 dn: CN=Fred Bloggs,OU=Users,OU=MyCompany,OU=Data Management,DC=mycompany, DC=co,DC=uk sAMAccountName: TESTUSER 1 matches $
 ```
 
 
@@ -69,7 +69,7 @@ First I created a file q1.lsql with some valid Logical SQL (what Presentation Pr
 
 
 ```
-SELECT Organisation."Store Name" saw\_0 FROM "Loss Prevention" ORDER BY saw\_0
+SELECT Organisation."Store Name" saw_0 FROM "Loss Prevention" ORDER BY saw_0
 ```
 
 
@@ -81,7 +81,7 @@ $nqcmd -d AnalyticsWeb64 -u Administrator -p adminPW -s q1.lsql -q
 
 \------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
 
-\[...\] Row count: 437 ---------------------------------------------------------------------------------------------------------\[...\] Processed: 1 queries
+[...] Row count: 437 ---------------------------------------------------------------------------------------------------------[...] Processed: 1 queries
 ```
 
 
@@ -93,9 +93,9 @@ $date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date Tue Nov 
 
 \------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
 
-\[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53003\] LDAP bind failure: Can't contact LDAP server. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connect open failed
 
-Connection open failed: \[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53003\] LDAP bind failure: Can't contact LDAP server. Connection open failed Tue Nov 23 08:43:51 GMT 2010
+Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connection open failed Tue Nov 23 08:43:51 GMT 2010
 ```
 
 
@@ -111,9 +111,9 @@ $date;nqcmd -d AnalyticsWeb64 -u myuserID -p wrongPW -s q1.lsql -q Tue Nov 23 08
 
 \------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
 
-date \[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53003\] LDAP bind failure: Can't contact LDAP server. Connect open failed
+date [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connect open failed
 
-Connection open failed: \[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53003\] LDAP bind failure: Can't contact LDAP server. Connection open failed $date Tue Nov 23 08:13:55 GMT 2010
+Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connection open failed $date Tue Nov 23 08:13:55 GMT 2010
 ```
 
 
@@ -123,7 +123,7 @@ My next attempt with the right password crashed the BI Server process, and on re
 ```
 $date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date Tue Nov 23 08:44:01 GMT 2010
 
-\[...\] Row count: 437 \[...\] Processed: 1 queries Tue Nov 23 08:44:03 GMT 2010
+[...] Row count: 437 [...] Processed: 1 queries Tue Nov 23 08:44:03 GMT 2010
 ```
 
 
@@ -135,9 +135,9 @@ $date;nqcmd -d AnalyticsWeb64 -u myuserID -p WrongPW -s q1.lsql -q;date Tue Nov 
 
 \------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
 
-\[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53012\] User authentication failure: myuserID. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: myuserID. Connect open failed
 
-Connection open failed: \[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53012\] User authentication failure: myuserID. Connection open failed Tue Nov 23 08:50:37 GMT 2010
+Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: myuserID. Connection open failed Tue Nov 23 08:50:37 GMT 2010
 ```
 
 
@@ -147,9 +147,9 @@ $date;nqcmd -d AnalyticsWeb64 -u badgerbadgermyuserID -p WrongPW -s q1.lsql -q;d
 
 \------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
 
-\[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53012\] User authentication failure: badgerbadgermyuserID. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: badgerbadgermyuserID. Connect open failed
 
-Connection open failed: \[10018\]\[State: 08004\] \[NQODBC\] \[SQL\_STATE: 08004\] \[nQSError: 10018\] Access for the requested connection is refused. \[53012\] User authentication failure: badgerbadgermyuserID. Connection open failed Tue Nov 23 08:51:20 GMT 2010
+Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: badgerbadgermyuserID. Connection open failed Tue Nov 23 08:51:20 GMT 2010
 ```
 
 

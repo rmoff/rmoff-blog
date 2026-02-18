@@ -31,7 +31,7 @@ Current value for Database Host is server.company.com. Press return to keep it o
 
 Current value for Database Port is 1521. Press return to keep it or enter a new value. > 1521
 
-Current value for Table owner name is DAC\_REPO\_795. Press return to keep it or enter a new value. > DAC\_REPO\_795
+Current value for Table owner name is DAC_REPO_795. Press return to keep it or enter a new value. > DAC_REPO_795
 
 Press return to keep current password, enter a new value otherwise. > HAS425Al
 
@@ -49,9 +49,9 @@ Validate connectivity with SQLPLUS:
 
 
 ```
-$sqlplus DAC\_REPO\_795/HAS425Al@MYDB
+$sqlplus DAC_REPO_795/HAS425Al@MYDB
 
-SQL\*Plus: Release 10.2.0.1.0 - Production on Thu May 6 16:08:44 2010
+SQL*Plus: Release 10.2.0.1.0 - Production on Thu May 6 16:08:44 2010
 
 Copyright (c) 1982, 2005, Oracle. All rights reserved.
 

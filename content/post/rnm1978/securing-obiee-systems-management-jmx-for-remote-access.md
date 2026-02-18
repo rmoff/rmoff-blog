@@ -45,13 +45,13 @@ To enable password authentication you need to edit three files. The first file t
 
 
 ```bash
-#!/bin/sh # this is a template of runagent.sh to be used on Unix. # The installer will fill in JAVA\_HOME, SAROOTDIR, and SATEMPDIR
+#!/bin/sh # this is a template of runagent.sh to be used on Unix. # The installer will fill in JAVA_HOME, SAROOTDIR, and SATEMPDIR
 
-export JAVA\_HOME=/usr/java/jdk1.6.0\_17 export SAROOTDIR=/app/oracle/product/obiee export SADATADIR=/data export SATEMPDIR=/data/tmp export UNIXPERFDIR=${SATEMPDIR}
+export JAVA_HOME=/usr/java/jdk1.6.0_17 export SAROOTDIR=/app/oracle/product/obiee export SADATADIR=/data export SATEMPDIR=/data/tmp export UNIXPERFDIR=${SATEMPDIR}
 
-java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
 
-${java\_cmd}
+${java_cmd}
 ```
 
 
@@ -59,7 +59,7 @@ To enable remote access to the JMX agent you change the java\_cmd to the followi
 
 
 ```bash
-java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false - classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false - classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
 ```
 
 
@@ -67,7 +67,7 @@ Note that jmxremote.authenticate is set to false. To secure the JMX agent you ch
 
 
 ```bash
-java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=true -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=true -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
 ```
 
 

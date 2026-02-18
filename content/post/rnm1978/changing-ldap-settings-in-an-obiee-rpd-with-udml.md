@@ -50,7 +50,7 @@ HOST NAME 'ldap.preprod.server.com'
 
 Back at the command line, and this time NQUDMLExec 
 ```
-c:\\OracleBI\\server\\Bin\\nQUDMLExec.exe -U Administrator -P Administrator -I c:\\scratch\\ldap\_preprod.udml -B c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\OracleBI\\server\\Repository\\samplesales.preprod.rpd
+c:\\OracleBI\\server\\Bin\\nQUDMLExec.exe -U Administrator -P Administrator -I c:\\scratch\\ldap_preprod.udml -B c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\OracleBI\\server\\Repository\\samplesales.preprod.rpd
 ```
 
 

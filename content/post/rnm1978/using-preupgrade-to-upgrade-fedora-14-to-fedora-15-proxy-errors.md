@@ -15,7 +15,7 @@ The box sits on a network behind a proxy out to the web.
 
 The resolution was to make sure that environment variables **http\_proxy** and **https\_proxy** are set: 
 ```bash
-export http\_proxy=http://user:password@proxyserver:port export https\_proxy=http://user:password@proxyserver:port
+export http_proxy=http://user:password@proxyserver:port export https_proxy=http://user:password@proxyserver:port
 ```
  Make sure you do this from the user from which you run preupgrade.
 

@@ -18,7 +18,7 @@ TNS Ping Utility for 32-bit Windows: Version 11.2.0.2.0 - Production on 26-SEP-2
 
 Copyright (c) 1997, 2010, Oracle. All rights reserved.
 
-Used parameter files: C:\\app\\userid\\product\\11.1.0\\client\_1\\network\\admin\\sqlnet.ora
+Used parameter files: C:\\app\\userid\\product\\11.1.0\\client_1\\network\\admin\\sqlnet.ora
 
 Used TNSNAMES adapter to resolve the alias Message 3513 not found; product=NETWORK; facility=TNS OK (20 msec)
 ```
@@ -31,7 +31,7 @@ Also got these errors from a previously-functioning ODBC query in Excel when I t
 
 Google drew a blank on "Message 3513 not found", but with a bit of guidance from [Ed Stevens'](http://edstevensdba.wordpress.com/2011/02/16/sqlnet_client_cfg/) and [Charles Hooper's](http://hoopercharles.wordpress.com/2010/08/30/finding-a-new-home-for-a-client-on-windows/) blogs I checked my PATH variable and found this: 
 ```
-C:\\Windows\\System32>set \[...\] ORACLE\_HOME=C:\\app\\userid\\product\\11.1.0\\client\_1\\ \[...\] Path=C:\\oraclexe\\app\\oracle\\product\\11.2.0\\server\\bin;C:\\app\\userid\\product\\11.1.0\\client\_1\\bin;C:\\Python27\\;C:\\Python27\\Scripts;C:\\OracleBI\\server\\Bin;C:\\OracleBI\\web\\bin;C:\\OracleBI\\web\\catalogmanager;C:\\Program Files\\Java\\jdk1.6.0\_26\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;\[...\] \[...\] TNS\_ADMIN=C:\\app\\userid\\product\\11.1.0\\client\_1\\network\\admin \[...\]
+C:\\Windows\\System32>set [...] ORACLE_HOME=C:\\app\\userid\\product\\11.1.0\\client_1\\ [...] Path=C:\\oraclexe\\app\\oracle\\product\\11.2.0\\server\\bin;C:\\app\\userid\\product\\11.1.0\\client_1\\bin;C:\\Python27\\;C:\\Python27\\Scripts;C:\\OracleBI\\server\\Bin;C:\\OracleBI\\web\\bin;C:\\OracleBI\\web\\catalogmanager;C:\\Program Files\\Java\\jdk1.6.0_26\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;[...] [...] TNS_ADMIN=C:\\app\\userid\\product\\11.1.0\\client_1\\network\\admin [...]
 ```
  PATH is evaluated in order, left to right. Note that the 11.2 XE binaries are now listed before the 11.1 client binaries.
 
