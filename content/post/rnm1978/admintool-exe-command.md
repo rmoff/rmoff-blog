@@ -21,4 +21,11 @@ Some good details in these blog posts, especially Erik's which has a good list o
 
 I'm intrigued to know how the original posters figured out the commands available, if it's undocumented... :)
 
-\[update\] Just discovered that CAF uses this functionality in order to Consistency Check the altered RPD that it can create: CAF uses commandline script: C:\\OracleBI\\server\\bin\\AdminTool /command C:\\CAF\_Training\\Target\\Consistency.config \[sourcecode language='bash'\] Open C:\\CAF\_Training\\Target\\paint.rpd Administrator Administrator Hide ConsistencyCheck C:\\CAF\_Training\\Target\\ConsistencyCheck.log Exit \[/sourcecode\] \[/update\]
+\[update\] Just discovered that CAF uses this functionality in order to Consistency Check the altered RPD that it can create: CAF uses commandline script: C:\\OracleBI\\server\\bin\\AdminTool /command C:\\CAF\_Training\\Target\\Consistency.config 
+```bash
+Open C:\CAF_Training\Target\paint.rpd Administrator Administrator
+Hide
+ConsistencyCheck C:\CAF_Training\Target\ConsistencyCheck.log
+Exit
+```
+ \[/update\]

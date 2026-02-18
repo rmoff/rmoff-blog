@@ -40,7 +40,7 @@ The latest version is a Release Candidate (RC) from 2007, and whilst the website
 6. Login at admin / 123456
 7. You should get a list of Managed Applications with one entry, jManage
     
-    ![Default jManage homepage](http://rnm1978.files.wordpress.com/2009/07/jmanage01.png?w=300 "jmanage01")
+    ![Default jManage homepage](/images/2009/07/jmanage01.webp "jmanage01")
 
 ## Adding OBIEE to jManage
 

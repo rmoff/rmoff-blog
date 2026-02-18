@@ -7,7 +7,7 @@ categories:
   - "quartz"
 ---
 
-Follow on from [setting up Publisher in a clustered environment](http://rnm1978.blogspot.com/2009/03/clustering-publisher-scheduler-and.html), I've found a nasty little bug in the scheduling element of Publisher, Quartz.  
+Follow on from [setting up Publisher in a clustered environment](/2009/03/24/clustering-publisher-scheduler-and-report-repository/), I've found a nasty little bug in the scheduling element of Publisher, Quartz.  
   
 Looking at the oc4j log file /opmn/logs/default\_group~home~default\_group~1.log I can see OC4J starting up, and then a whole load of repeated messages:  
   

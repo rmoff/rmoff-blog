@@ -47,8 +47,16 @@ To configure the j2ee plug-in, do the following:
 1. Locate web.xml found in $J2EE\_home/applications/analytics/analytics/WEB-INF
     - See note below regarding this path as it is contrary to that given in the [Deployment Guide](http://download.oracle.com/docs/cd/E10415_01/doc/bi.1013/b40058.pdf) on p35
 2. Create a backup of the web.xml file
-3. By default the file will have two sets of init-params. Remove these: \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawserver.Host</param-name> <param-value>localhost</param-value> </init-param> <init-param> <param-name>oracle.bi.presentation.sawserver.Port</param-name> <param-value>9710</param-value> </init-param> \[/sourcecode\]
-4. Add in a new init-param in place of the two you removed, specifying your Presentation Services hosts and ports (syntax is **host:port**) in a **semi-colon** delimited list \[sourcecode language="xml"\] <init-param> <param-name>oracle.bi.presentation.sawservers</param-name> <param-value>BISandbox01:9710;BISandbox02:9710</param-value> </init-param>\[/sourcecode\]
+3. By default the file will have two sets of init-params. Remove these: 
+```xml
+<init-param> <param-name>oracle.bi.presentation.sawserver.Host</param-name> <param-value>localhost</param-value> </init-param> <init-param> <param-name>oracle.bi.presentation.sawserver.Port</param-name> <param-value>9710</param-value> </init-param>
+```
+
+4. Add in a new init-param in place of the two you removed, specifying your Presentation Services hosts and ports (syntax is **host:port**) in a **semi-colon** delimited list 
+```xml
+<init-param> <param-name>oracle.bi.presentation.sawservers</param-name> <param-value>BISandbox01:9710;BISandbox02:9710</param-value> </init-param>
+```
+
 5. Save your modified web.xml file
 6. Restart your application server
     - In OAS you can use _opmnctl restartproc_

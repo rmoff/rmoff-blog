@@ -34,17 +34,39 @@ Initial suspicion was that EBS authentication was the cause of the delay, as thi
 
 ## Diagnosis
 
-Using nqcmd on one of the Presentation Services boxes it could be determined that failover of Cluster Controllers was occuring, but only after timing out on contacting the Primary Cluster Controller (BIServer01). ![2pub](/images/rnm1978/2pub2.png "2pub") \[sourcecode language="bash"\] \[biadm@PSServer01\]/app/oracle/product/obiee/setup $set +u \[biadm@PSServer01\]/app/oracle/product/obiee/setup $. ./sa-init64.sh \[biadm@PSServer01\]/app/oracle/product/obiee/setup $nqcmd
+Using nqcmd on one of the Presentation Services boxes it could be determined that failover of Cluster Controllers was occuring, but only after timing out on contacting the Primary Cluster Controller (BIServer01). ![2pub](/images/rnm1978/2pub2.png "2pub") 
+```bash
+[biadm@PSServer01]/app/oracle/product/obiee/setup $set +u
+[biadm@PSServer01]/app/oracle/product/obiee/setup $. ./sa-init64.sh
+[biadm@PSServer01]/app/oracle/product/obiee/setup $nqcmd
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2006 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Oracle BI Server
+Copyright (c) 1997-2006 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-Give data source name: Cluster64 Give user name: Administrator Give password: xxxxxxxxxxxxx \[60+ second wait here\] \[/sourcecode\] This conclusion was reached because after setting PrimaryCCS to BIServer02 there was no delay in connecting. I changed the odbc.ini entry for Cluster64 to switch the CCS server order around \[...\] PrimaryCCS=BIServer02 SecondaryCCS=BIServer01 \[...\]
+Give data source name: Cluster64
+Give user name: Administrator
+Give password: xxxxxxxxxxxxx
+[60+ second wait here]
+```
+ This conclusion was reached because after setting PrimaryCCS to BIServer02 there was no delay in connecting. I changed the odbc.ini entry for Cluster64 to switch the CCS server order around \[...\] PrimaryCCS=BIServer02 SecondaryCCS=BIServer01 \[...\]
 
-\[sourcecode language="bash"\] \[biadm@PSServer01\]/app/oracle/product/obiee/setup $nqcmd
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2006 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+```bash
+[biadm@PSServer01]/app/oracle/product/obiee/setup $nqcmd
 
-Give data source name: Cluster64 Give user name: Administrator Give password: xxxxxxxxxxxxx \[logs straight in\] \[/sourcecode\] Any changes to odbc.ini have to be followed by a bounce of sawserver.
+-------------------------------------------------------------------------------
+Oracle BI Server
+Copyright (c) 1997-2006 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
+
+Give data source name: Cluster64
+Give user name: Administrator
+Give password: xxxxxxxxxxxxx
+[logs straight in]
+```
+ Any changes to odbc.ini have to be followed by a bounce of sawserver.
 
 ## Resolution
 
