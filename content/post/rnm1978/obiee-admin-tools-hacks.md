@@ -1,6 +1,7 @@
 ---
 title: "OBIEE admin tools &amp; hacks"
 date: "2009-07-21"
+slug: "obiee-admin-tools-hacks"
 categories: 
   - "hack"
   - "mbeans"

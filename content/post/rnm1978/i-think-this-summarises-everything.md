@@ -1,6 +1,7 @@
 ---
 title: "I think this summarises everything."
 date: "2009-11-27"
+slug: "i-think-this-summarises-everything"
 categories: 
   - "obia"
   - "silly"

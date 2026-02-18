@@ -1,6 +1,7 @@
 ---
 title: "Metalink 3 - Do You Mean ... ?"
 date: "2009-07-24"
+slug: "metalink-3-do-you-mean"
 categories: 
   - "metalink"
   - "silly"
