@@ -11,11 +11,12 @@ categories:
 
 \[edit\] See [this post](/2009/07/21/jconsole-/-jmx-followup/) too \[/edit\] On an OBIEE server run 
 ```bash
-nohup obiee/systemsmanagement/runagent.sh &
+nohup obiee/systemsmanagement/runagent.sh &amp;
 ```
  and then run **jconsole** (make sure you've set the DISPLAY first if you're running it from UNIX). NB: if you don't have jconsole in your path you can search for it: 
 ```bash
-$whereis jconsole jconsole: /opt/java1.5/bin/jconsole /opt/java6/bin/jconsole</span>
+$whereis jconsole
+jconsole: /opt/java1.5/bin/jconsole /opt/java6/bin/jconsole&lt;/span&gt;
 ```
  You should find it under your java/bin directory
 

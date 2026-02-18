@@ -47,11 +47,51 @@ The next snippet will parse the end of the NQQuery.log and output query executio
 
 
 ```bash
-# get_nq_stats.sh # https://rmoff.net # # Outputs query details of the most recently executed query on BI Server # Make sure OBIEE_HOME environment variable is set, or update this script to hardcode its location # # Usage # get_nq_stats.sh <testref> # # Examples: # Append to file: # get_nq_stats.sh testrep01 >> nq_stats.csv # Output to screen: # get_nq_stats.sh testrep01 # tail -n12 $OBIEE_HOME/server/Log/NQQuery.log|awk -v ref=$1 'BEGIN {physical="" rows="" elapsed="" } { if ($8=="physical") {gsub(/,/,"",$10) ;physical= $10} if ($2=="Rows" ) {rows= $6} if ($2=="Logical") {gsub(/,/,"",$8) ; elapsed= $8} } END { # print "DB Queries,Rows,Elapsed sec" print ref "," physical "," rows "," elapsed } '
+# get_nq_stats.sh
+# https://rnm1978.wordpress.com
+#
+# Outputs query details of the most recently executed query on BI Server
+# Make sure OBIEE_HOME environment variable is set, or update this script to hardcode its location
+#
+# Usage 
+#     get_nq_stats.sh 
+#
+# Examples:
+#   Append to file: 
+#     get_nq_stats.sh testrep01 >> nq_stats.csv
+#   Output to screen:
+#     get_nq_stats.sh testrep01
+#
+tail -n12 $OBIEE_HOME/server/Log/NQQuery.log|awk -v ref=$1 'BEGIN {physical=""
+rows=""
+elapsed=""
+} {
+if ($8=="physical") {gsub(/,/,"",$10) ;physical= $10}
+if ($2=="Rows" ) {rows= $6}
+if ($2=="Logical") {gsub(/,/,"",$8) ; elapsed= $8}
+}
+END {
+# print "DB Queries,Rows,Elapsed sec"
+print ref "," physical "," rows "," elapsed
+}
+'
 ```
  The usage for this is on an isolated sequential test environment where you run one BI query, then run this against NQQuery.log, then another query, then this against NQQuery.log etc. Each time you call this script you use a reference (that of the BI Query you've just run), and this will be output along with the data from NQQuery.log. If you call this script and pipe the output to append to a CSV file you can build up a file that looks like this: 
 ```
-Report reference,DB Queries,Rows,Elapsed sec test_report_001,1,2171,165 test_report_002,1,12,143 test_report_003,2,10,6 test_report_004,1,1890,5 test_report_005,1,615,7 test_report_006,4,893,70 test_report_007,4,1407,77 test_report_008,1,148,126 test_report_009,1,4,48 test_report_011,1,3,152 test_report_012,1,15,430 test_report_013,8,452,141 test_report_014,1,21015,390
+Report reference,DB Queries,Rows,Elapsed sec
+test_report_001,1,2171,165
+test_report_002,1,12,143
+test_report_003,2,10,6
+test_report_004,1,1890,5
+test_report_005,1,615,7
+test_report_006,4,893,70
+test_report_007,4,1407,77
+test_report_008,1,148,126
+test_report_009,1,4,48
+test_report_011,1,3,152
+test_report_012,1,15,430
+test_report_013,8,452,141
+test_report_014,1,21015,390
 ```
 
 

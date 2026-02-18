@@ -20,7 +20,7 @@ This final article describes how to bolt on to OAS a simple web page hosting the
 
 This is just an old-school basic HTML page, with a meta-refresh tag (which note that Chrome doesn't work with) and img tags: 
 ```
-<html> <meta http-equiv="refresh" content="60"> <head> <title>OBIEE Servers</title> </head> <body> <img src="server01.png"></br> <img src="server02.png"></br> </body> </html> 
+OBIEE Servers
 ```
 
 I shan't patronise you nor embarrass myself with my rusty HTML skills any further - I'll leave you how to build your dashboard how you want it.
@@ -39,7 +39,9 @@ chmod -R o+rx /tmp/obieejmx
 
 Now go to your OAS folder, navigate to Apache/Apache/conf, and MAKE A BACKUP of httpd.conf 
 ```bash
-cd /your/path/to/OAS/here cd Apache/Apache/conf cp httpd.conf httpd.conf.bak
+cd /your/path/to/OAS/here
+cd Apache/Apache/conf
+cp httpd.conf httpd.conf.bak
 ```
 
 
@@ -47,12 +49,17 @@ Open httpd.conf in vi (or if you're not a real man then FTP the file to Windows 
 
 1. Search for 
 ```
-<IfModule mod_alias.c>
+
 ```
 
 2. Add the following beneath it:
 ```
-Alias /obieejmx/ "/tmp/obieejmx/" <Directory "/obieejmx/"> AllowOverride None Options None Order allow,deny Allow from all </Directory>
+Alias /obieejmx/ "/tmp/obieejmx/"
+    
+        AllowOverride None
+        Options None
+        Order allow,deny
+        Allow from all
 ```
 
     - Here's where you'd change the location of your graphs and HTML file if you needed to
@@ -63,7 +70,8 @@ opmnctl restartproc ias-component=HTTP_Server
 ```
  or if that doesn't work restart OAS
 ```
-opmnctl shutdown opmnctl startall
+opmnctl shutdown
+opmnctl startall
 ```
 
 

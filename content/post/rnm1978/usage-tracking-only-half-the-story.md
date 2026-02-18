@@ -17,7 +17,9 @@ Usage Tracking captures the logical SQL of queries in a column called QUERY\_TEX
 
 When it's truncated you may see this message in NQServer.log: 
 ```
-[59048] Usage Tracking encountered an insert statement execution error. This error has occurred 1 times and resulted in the loss of 1 insert statements since this message was last logged. [nQSError: 17001] Oracle Error code: 12899, message: ORA-12899: value too large for column "OBIEE_USAGE_TRACKING"."S_NQ_ACCT"."QUERY_TEXT" (actual: 1039, maximum: 1024
+[59048] Usage Tracking encountered an insert statement execution error.  This error has occurred 1 times and resulted in the loss of 1 insert statements
+ since this message was last logged.
+     [nQSError: 17001] Oracle Error code: 12899, message: ORA-12899: value too large for column "OBIEE_USAGE_TRACKING"."S_NQ_ACCT"."QUERY_TEXT" (actual: 1039, maximum: 1024
 ```
 
 
@@ -49,7 +51,7 @@ Load the RPD in the Administration Tool, and edit the properties of the QUERY\_T
 
 Copy this into a text file: 
 ```xml
-DECLARE COLUMN "Oracle Analytics Usage"."Catalog"."dbo"."S_NQ_ACCT"."QUERY_TEXT" AS "QUERY_TEXT" TYPE "VARCHAR" PRECISION 4000 SCALE 0 NULLABLE PRIVILEGES ( READ);
+DECLARE COLUMN "Oracle Analytics Usage"."Catalog"."dbo"."S_NQ_ACCT"."QUERY_TEXT" AS "QUERY_TEXT" TYPE "VARCHAR" PRECISION 4000 SCALE 0  NULLABLE PRIVILEGES ( READ);
 ```
 
 

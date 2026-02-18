@@ -24,7 +24,7 @@ Then save and close the RPD.
 
 Next open up a command prompt and run the following, which will export the UDML for the whole RPD: 
 ```
-c:\\oraclebi\\server\\bin\\NQUDMLGen.exe -U Administrator -P Administrator -R c:\\oraclebi\\server\\repository\\samplesales.rpd -O c:\\scratch\\udml.txt
+c:\oraclebi\server\bin\NQUDMLGen.exe -U Administrator -P Administrator -R c:\oraclebi\server\repository\samplesales.rpd -O c:\scratch\udml.txt
 ```
  ![](/images/rnm1978/snag-2011-02-23-07-53-23-0000.png "SNAG-2011-02-23-07.53.23-0000")
 
@@ -50,7 +50,7 @@ HOST NAME 'ldap.preprod.server.com'
 
 Back at the command line, and this time NQUDMLExec 
 ```
-c:\\OracleBI\\server\\Bin\\nQUDMLExec.exe -U Administrator -P Administrator -I c:\\scratch\\ldap_preprod.udml -B c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\OracleBI\\server\\Repository\\samplesales.preprod.rpd
+c:\OracleBI\server\Bin\nQUDMLExec.exe -U Administrator -P Administrator -I c:\scratch\ldap_preprod.udml -B c:\OracleBI\server\Repository\samplesales.rpd -O c:\OracleBI\server\Repository\samplesales.preprod.rpd
 ```
 
 

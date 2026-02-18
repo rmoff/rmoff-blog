@@ -15,33 +15,58 @@ Configuring DAC in OBIA 7.9.5.1:
 ```
 What can I do for you?
 
-1 - Enter repository connection information 2 - Test repository connection 3 - Enter email account information 4 - Send test email 5 - Save changes 6 - Exit
+1 - Enter repository connection information
+2 - Test repository connection
+3 - Enter email account information
+4 - Send test email
+5 - Save changes
+6 - Exit
 
 Please make your selection: 1
 
 These are your connection type choices:
 
-1 - MSSQL 2 - DB2 3 - Oracle (OCI8) 4 - Oracle (Thin) 5 - Keep current ( Oracle (Thin) )
+1 - MSSQL
+2 - DB2
+3 - Oracle (OCI8)
+4 - Oracle (Thin)
+5 - Keep current ( Oracle (Thin) )
 
 Please make your selection: 4
 
-Current value for Instance is MYDB. Press return to keep it or enter a new value. > MYDB
+Current value for Instance is MYDB.
+Press return to keep it or enter a new value.
+> MYDB
 
-Current value for Database Host is server.company.com. Press return to keep it or enter a new value. > server.company.com
+Current value for Database Host is server.company.com.
+Press return to keep it or enter a new value.
+> server.company.com
 
-Current value for Database Port is 1521. Press return to keep it or enter a new value. > 1521
+Current value for Database Port is 1521.
+Press return to keep it or enter a new value.
+> 1521
 
-Current value for Table owner name is DAC_REPO_795. Press return to keep it or enter a new value. > DAC_REPO_795
+Current value for Table owner name is DAC_REPO_795.
+Press return to keep it or enter a new value.
+> DAC_REPO_795
 
-Press return to keep current password, enter a new value otherwise. > HAS425Al
+Press return to keep current password, enter a new value otherwise.
+> HAS425Al
 
 What can I do for you?
 
-1 - Enter repository connection information 2 - Test repository connection 3 - Enter email account information 4 - Send test email 5 - Save changes 6 - Exit
+1 - Enter repository connection information
+2 - Test repository connection
+3 - Enter email account information
+4 - Send test email
+5 - Save changes
+6 - Exit
 
 Please make your selection: 2
 
-Connecting to repository... Can't connect to the database. ORA-01017: invalid username/password; logon denied
+Connecting to repository...
+Can't connect to the database.
+ORA-01017: invalid username/password; logon denied
 ```
 
 
@@ -53,9 +78,11 @@ $sqlplus DAC_REPO_795/HAS425Al@MYDB
 
 SQL*Plus: Release 10.2.0.1.0 - Production on Thu May 6 16:08:44 2010
 
-Copyright (c) 1982, 2005, Oracle. All rights reserved.
+Copyright (c) 1982, 2005, Oracle.  All rights reserved.
 
-Connected to: Oracle Database 11g Enterprise Edition Release 11.1.0.7.0 - 64bit Production With the Partitioning, OLAP, Data Mining and Real Application Testing options
+Connected to:
+Oracle Database 11g Enterprise Edition Release 11.1.0.7.0 - 64bit Production
+With the Partitioning, OLAP, Data Mining and Real Application Testing options
 
 SQL>
 ```

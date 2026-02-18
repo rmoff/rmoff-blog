@@ -16,7 +16,8 @@ Testing of the LDAP authentication worked fine, but when we moved to Production 
 
 
 ```
-[nQSError: 13011] Query for Initialization Block 'LDAP User Access Initialization Block' has failed. [53003] LDAP bind failure: Can't contact LDAP server.
+[nQSError: 13011] Query for Initialization Block 'LDAP User Access Initialization Block' has failed.
+     [53003] LDAP bind failure: Can't contact LDAP server.
 ```
 
 
@@ -45,7 +46,9 @@ Next up we used **ldapsearch** to prove connectivity and valid LDAP credentials 
 
 
 ```
-$whereis ldapsearch ldapsearch: /opt/ldapux/bin/ldapsearch $/opt/ldapux/bin/ldapsearch -v -b "dc=mycompany, dc=co, dc=uk" -h adserver.co.uk -p 389 -D "cn=SVC_OBIEE, ou=service accounts, ou=service management, dc=mycompany, dc=co, dc=uk" -w Password "(sAMAccountName=testuser)" sAMAccountName
+$whereis ldapsearch
+ldapsearch: /opt/ldapux/bin/ldapsearch
+$/opt/ldapux/bin/ldapsearch -v -b "dc=mycompany, dc=co, dc=uk" -h adserver.co.uk -p 389 -D "cn=SVC_OBIEE, ou=service accounts, ou=service management, dc=mycompany, dc=co, dc=uk" -w Password "(sAMAccountName=testuser)" sAMAccountName
 ```
 
 
@@ -53,9 +56,18 @@ This should return output from the LDAP server. You can fiddle with the latter p
 
 
 ```
-ldapsearch: started Thu Dec 2 12:33:18 2010
+ldapsearch: started Thu Dec  2 12:33:18 2010
 
-ldap_init( adserver.co.uk, 389 ) filter pattern: (sAMAccountName=testuser) returning: sAMAccountName filter is: (sAMAccountName=testuser) version: 1 dn: CN=Fred Bloggs,OU=Users,OU=MyCompany,OU=Data Management,DC=mycompany, DC=co,DC=uk sAMAccountName: TESTUSER 1 matches $
+ldap_init( adserver.co.uk, 389 )
+filter pattern: (sAMAccountName=testuser)
+returning: sAMAccountName
+filter is: (sAMAccountName=testuser)
+version: 1
+dn: CN=Fred Bloggs,OU=Users,OU=MyCompany,OU=Data Management,DC=mycompany,
+ DC=co,DC=uk
+sAMAccountName: TESTUSER
+1 matches
+$
 ```
 
 
@@ -79,9 +91,15 @@ Initially I ran nqcmd using Administrator login, to remove LDAP from considerati
 ```
 $nqcmd -d AnalyticsWeb64 -u Administrator -p adminPW -s q1.lsql -q
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+          Oracle BI Server
+          Copyright (c) 1997-2009 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-[...] Row count: 437 ---------------------------------------------------------------------------------------------------------[...] Processed: 1 queries
+[...]
+Row count: 437
+---------------------------------------------------------------------------------------------------------[...]
+Processed: 1 queries
 ```
 
 
@@ -89,13 +107,23 @@ Next I tried to use my user ID to test the LDAP connectivity.
 
 
 ```
-$date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date Tue Nov 23 08:42:33 GMT 2010
+$date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date
+Tue Nov 23 08:42:33 GMT 2010
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+          Oracle BI Server
+          Copyright (c) 1997-2009 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53003] LDAP bind failure: Can't contact LDAP server.
+Connect open failed
 
-Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connection open failed Tue Nov 23 08:43:51 GMT 2010
+Connection open failed:
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53003] LDAP bind failure: Can't contact LDAP server.
+Connection open failed
+Tue Nov 23 08:43:51 GMT 2010
 ```
 
 
@@ -107,13 +135,25 @@ To rule out an error in parsing what the LDAP server returned on a successful co
 
 
 ```
-$date;nqcmd -d AnalyticsWeb64 -u myuserID -p wrongPW -s q1.lsql -q Tue Nov 23 08:12:38 GMT 2010
+$date;nqcmd -d AnalyticsWeb64 -u myuserID -p wrongPW -s q1.lsql -q
+Tue Nov 23 08:12:38 GMT 2010
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+          Oracle BI Server
+          Copyright (c) 1997-2009 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-date [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connect open failed
+date
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53003] LDAP bind failure: Can't contact LDAP server.
+Connect open failed
 
-Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53003] LDAP bind failure: Can't contact LDAP server. Connection open failed $date Tue Nov 23 08:13:55 GMT 2010
+Connection open failed:
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53003] LDAP bind failure: Can't contact LDAP server.
+Connection open failed
+$date
+Tue Nov 23 08:13:55 GMT 2010
 ```
 
 
@@ -121,9 +161,14 @@ My next attempt with the right password crashed the BI Server process, and on re
 
 
 ```
-$date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date Tue Nov 23 08:44:01 GMT 2010
+$date;nqcmd -d AnalyticsWeb64 -u myuserID -p RightPW -s q1.lsql -q;date
+Tue Nov 23 08:44:01 GMT 2010
 
-[...] Row count: 437 [...] Processed: 1 queries Tue Nov 23 08:44:03 GMT 2010
+[...]
+Row count: 437
+[...]
+Processed: 1 queries
+Tue Nov 23 08:44:03 GMT 2010
 ```
 
 
@@ -131,25 +176,45 @@ I also saw the error messages I'd expect with an invalid password or username:
 
 
 ```
-$date;nqcmd -d AnalyticsWeb64 -u myuserID -p WrongPW -s q1.lsql -q;date Tue Nov 23 08:50:37 GMT 2010
+$date;nqcmd -d AnalyticsWeb64 -u myuserID -p WrongPW -s q1.lsql -q;date
+Tue Nov 23 08:50:37 GMT 2010
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+          Oracle BI Server
+          Copyright (c) 1997-2009 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: myuserID. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53012] User authentication failure: myuserID.
+Connect open failed
 
-Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: myuserID. Connection open failed Tue Nov 23 08:50:37 GMT 2010
+Connection open failed:
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53012] User authentication failure: myuserID.
+Connection open failed
+Tue Nov 23 08:50:37 GMT 2010
 ```
 
 
 
 ```
-$date;nqcmd -d AnalyticsWeb64 -u badgerbadgermyuserID -p WrongPW -s q1.lsql -q;date Tue Nov 23 08:51:20 GMT 2010
+$date;nqcmd -d AnalyticsWeb64 -u badgerbadgermyuserID -p WrongPW -s q1.lsql -q;date
+Tue Nov 23 08:51:20 GMT 2010
 
-\------------------------------------------------------------------------------- Oracle BI Server Copyright (c) 1997-2009 Oracle Corporation, All rights reserved -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+          Oracle BI Server
+          Copyright (c) 1997-2009 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
 
-[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: badgerbadgermyuserID. Connect open failed
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53012] User authentication failure: badgerbadgermyuserID.
+Connect open failed
 
-Connection open failed: [10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused. [53012] User authentication failure: badgerbadgermyuserID. Connection open failed Tue Nov 23 08:51:20 GMT 2010
+Connection open failed:
+[10018][State: 08004] [NQODBC] [SQL_STATE: 08004] [nQSError: 10018] Access for the requested connection is refused.
+[53012] User authentication failure: badgerbadgermyuserID.
+Connection open failed
+Tue Nov 23 08:51:20 GMT 2010
 ```
 
 
@@ -157,9 +222,11 @@ Having already run a ping from the BI Server to LDAP server, I had no reason to 
 
 
 ```
-$/usr/sbin/ping mycompany.co.uk -n 1 PING 10.3.5.0: 64 byte packets
+$/usr/sbin/ping mycompany.co.uk -n 1
+PING 10.3.5.0: 64 byte packets
 
-\----10.3.5.0 PING Statistics---- 1 packets transmitted, 0 packets received, 100% packet loss
+----10.3.5.0 PING Statistics----
+1 packets transmitted, 0 packets received, 100% packet loss
 ```
 
 
@@ -175,7 +242,9 @@ With that wonderful thing known as hindsight, I dug too deep too quickly, as I s
 
 
 ```bash
-# Determine the process ID of nqserver, and attach tusc to it echo "Starting tusc" ps -ef|grep nqsserver|grep -v grep|awk '{print $2}'|xargs tusc -aDeEfT "%F-%H:%M:%S" -Ao ~/tusc.\`hostname\`.out &
+# Determine the process ID of nqserver, and attach tusc to it
+echo "Starting tusc"
+ps -ef|grep nqsserver|grep -v grep|awk '{print $2}'|xargs tusc -aDeEfT "%F-%H:%M:%S" -Ao ~/tusc.`hostname`.out &
 ```
 
 
@@ -183,7 +252,21 @@ This writes acres of wonderful gobbledegook like this:
 
 
 ```
-time(0x1ffffffff3abf628) ............................... gettimeofday(0x1ffffffff3abf600, NULL) ................. write(6, "2 0 1 0 - 1 1 - 2 3 0 7 : 4 3 ".., 131) .... send(20, "~ \\0\\0\\002\\0\\0\\0\\0 \\0\\001\\0\\0\\0".., 134, 0) . gettimeofday(0x1ffffffff3ac0e10, NULL) ................. recv(20, "\\f\\0\\0\\0! ' \\0\\0", 8, 0) ..................... recv(20, "01\\0\\0\\0U 17h ) \\0\\0- q ", 12, 0) ............ gettimeofday(0x1ffffffff3ac0e10, NULL) ................. send(20, "\\b\\0\\0\\002\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0", 16, 0) .... gettimeofday(0x1ffffffff3ac0e10, NULL) ................. recv(20, "\\f\\0\\0\\011' \\0\\0", 8, 0) ..................... recv(20, "01\\0\\0\\0U 17h ) \\0\\0- q ", 12, 0) ............ gettimeofday(0x1ffffffff3ac0e10, NULL) ................. send(20, "04\\0\\0\\002\\0\\0\\0\\0\\0\\0\\0", 12, 0) ............ gettimeofday(0x1ffffffff3ac0e10, NULL) .................
+time(0x1ffffffff3abf628) ...............................
+gettimeofday(0x1ffffffff3abf600, NULL) .................
+write(6, "2 0 1 0 - 1 1 - 2 3   0 7 : 4 3 ".., 131) ....
+send(20, "~ \0\0\002\0\0\0\0  \0\001\0\0\0".., 134, 0) .
+gettimeofday(0x1ffffffff3ac0e10, NULL) .................
+recv(20, "\f\0\0\0! ' \0\0", 8, 0) .....................
+recv(20, "01\0\0\0U 17h ) \0\0- q ", 12, 0) ............
+gettimeofday(0x1ffffffff3ac0e10, NULL) .................
+send(20, "\b\0\0\002\0\0\0\0\0\0\0\0\0\0\0", 16, 0) ....
+gettimeofday(0x1ffffffff3ac0e10, NULL) .................
+recv(20, "\f\0\0\011' \0\0", 8, 0) .....................
+recv(20, "01\0\0\0U 17h ) \0\0- q ", 12, 0) ............
+gettimeofday(0x1ffffffff3ac0e10, NULL) .................
+send(20, "04\0\0\002\0\0\0\0\0\0\0", 12, 0) ............
+gettimeofday(0x1ffffffff3ac0e10, NULL) .................
 ```
 
 

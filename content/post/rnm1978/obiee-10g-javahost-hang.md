@@ -23,27 +23,43 @@ Set up is a OBIEE 10.1.3.4.1 two-server deployment with BI/PS/Javahost clustered
 
 Javahost was running, and listening, on both servers: 
 ```
-$ps -ef|grep javahost obieeadm 14076 1 0 Nov 25 ? 9:23 /app/oracle/product/OracleAS_1/jdk/bin/IA64N/java -server -classpath /app/oracle/product/obiee/web/javahost/lib/core/sautils.ja $netstat -a|grep 9810|grep LISTEN tcp 0 0 *.9810 *.* LISTEN
+$ps -ef|grep javahost
+obieeadm 14076     1  0  Nov 25  ?         9:23 /app/oracle/product/OracleAS_1/jdk/bin/IA64N/java -server -classpath /app/oracle/product/obiee/web/javahost/lib/core/sautils.ja
+$netstat -a|grep 9810|grep LISTEN
+tcp        0      0  *.9810                 *.*                     LISTEN
 ```
 
 
 In Javahost log file on both servers there were these errors reported, but since javahost had started over a week ago: 
 ```
-Nov 30, 2010 8:08:36 AM MessageProcessorImpl processMessage WARNING: Unexpected exception. Connection will be closed java.io.EOFException at com.siebel.analytics.web.sawconnect.sawprotocol.SAWProtocol.readInt(SAWProtocol.java:167) at com.siebel.analytics.javahost.MessageProcessorImpl.processMessage(MessageProcessorImpl.java:133) at com.siebel.analytics.javahost.Listener$Job.run(Listener.java:223) at com.siebel.analytics.javahost.standalone.SAJobManagerImpl.threadMain(SAJobManagerImpl.java:205) at com.siebel.analytics.javahost.standalone.SAJobManagerImpl$1.run(SAJobManagerImpl.java:153) at java.lang.Thread.run(Thread.java:595)
+Nov 30, 2010 8:08:36 AM MessageProcessorImpl processMessage
+WARNING: Unexpected exception. Connection will be closed
+java.io.EOFException
+        at com.siebel.analytics.web.sawconnect.sawprotocol.SAWProtocol.readInt(SAWProtocol.java:167)
+        at com.siebel.analytics.javahost.MessageProcessorImpl.processMessage(MessageProcessorImpl.java:133)
+        at com.siebel.analytics.javahost.Listener$Job.run(Listener.java:223)
+        at com.siebel.analytics.javahost.standalone.SAJobManagerImpl.threadMain(SAJobManagerImpl.java:205)
+        at com.siebel.analytics.javahost.standalone.SAJobManagerImpl$1.run(SAJobManagerImpl.java:153)
+        at java.lang.Thread.run(Thread.java:595)
 ```
 
 
 Charts are written to a temp folder, but none have been written since yesterday afternoon: 
 ```
-$ls -lrt /data/bi/tmp/sawcharts/ |tail -n 2 -rw-r----- 1 obieeadm biadmin 13611 Dec 2 16:30 saw4cee1a27-7.tmp -rw-r----- 1 obieeadm biadmin 0 Dec 2 16:31 saw4cee1a27-32.tmp
+$ls -lrt /data/bi/tmp/sawcharts/ |tail -n 2
+-rw-r-----   1 obieeadm   biadmin      13611 Dec  2 16:30 saw4cee1a27-7.tmp
+-rw-r-----   1 obieeadm   biadmin          0 Dec  2 16:31 saw4cee1a27-32.tmp
 
-$ls -lrt /data/bi/tmp/sawcharts/ |tail -n 2 -rw-r----- 1 obieeadm biadmin 7454 Dec 2 15:25 saw4cee219b-1.tmp -rw-r----- 1 obieeadm biadmin 0 Dec 2 15:28 saw4cee219b-6.tmp
+$ls -lrt /data/bi/tmp/sawcharts/ |tail -n 2
+-rw-r-----   1 obieeadm   biadmin       7454 Dec  2 15:25 saw4cee219b-1.tmp
+-rw-r-----   1 obieeadm   biadmin          0 Dec  2 15:28 saw4cee219b-6.tmp
 ```
 
 
 First time the error was seen: (from sawserver.out.log) 
 ```
-server01: Fri Dec 3 09:40:23 2010 server02: Thu Dec 2 15:44:38 2010
+server01: Fri Dec  3 09:40:23 2010
+server02: Thu Dec  2 15:44:38 2010
 ```
 
 
@@ -53,7 +69,10 @@ It looked like javahost was up, but not responding to requests -- which is prett
 
 Since the rest of the (production!) OBIEE service was up and in use, I didn't want to use the normal shutdown script run-saw.sh as this would also kill Presentation Services. Therefore I extracted the following from run-saw.sh and ran it manually on server01: 
 ```
-set +u ANA_INSTALL_DIR=/app/oracle/product/obiee . ${ANA_INSTALL_DIR}/setup/common.sh ./shutdown.sh -service
+set +u
+ANA_INSTALL_DIR=/app/oracle/product/obiee
+. ${ANA_INSTALL_DIR}/setup/common.sh
+./shutdown.sh -service
 ```
 
 

@@ -45,9 +45,15 @@ To enable password authentication you need to edit three files. The first file t
 
 
 ```bash
-#!/bin/sh # this is a template of runagent.sh to be used on Unix. # The installer will fill in JAVA_HOME, SAROOTDIR, and SATEMPDIR
+#!/bin/sh
+# this is a template of runagent.sh to be used on Unix.
+# The installer will fill in JAVA_HOME, SAROOTDIR, and SATEMPDIR
 
-export JAVA_HOME=/usr/java/jdk1.6.0_17 export SAROOTDIR=/app/oracle/product/obiee export SADATADIR=/data export SATEMPDIR=/data/tmp export UNIXPERFDIR=${SATEMPDIR}
+export JAVA_HOME=/usr/java/jdk1.6.0_17
+export SAROOTDIR=/app/oracle/product/obiee
+export SADATADIR=/data
+export SATEMPDIR=/data/tmp
+export UNIXPERFDIR=${SATEMPDIR}
 
 java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
 
@@ -59,7 +65,9 @@ To enable remote access to the JMX agent you change the java\_cmd to the followi
 
 
 ```bash
-java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false - classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man
+agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -
+classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
 ```
 
 
@@ -75,7 +83,10 @@ Now note what JAVA\_HOME is set to in the runagent.sh file (in the above example
 
 
 ```
-jmxremote.access jmxremote.password.template management.properties snmp.acl.template
+jmxremote.access
+jmxremote.password.template
+management.properties
+snmp.acl.template
 ```
 
 
@@ -83,13 +94,19 @@ Create a copy of jmxremote.password.template to a file called **jmxremote.passwo
 
 
 ```bash
-$cp jmxremote.password.template jmxremote.password $vi jmxremote.password
+$cp jmxremote.password.template jmxremote.password
+$vi jmxremote.password
 ```
 
 
 
 ```bash
-# # Following are two commented-out entries. The "measureRole" role has # password "QED". The "controlRole" role has password "R&D". # # monitorRole QED # controlRole R&D
+#
+# Following are two commented-out entries.  The "measureRole" role has
+# password "QED".  The "controlRole" role has password "R&D".
+#
+# monitorRole  QED
+# controlRole   R&D
 ```
 
 
@@ -97,7 +114,15 @@ We'll come back to this file in a moment. Now open **jmxremote.access** and you'
 
 
 ```
-# "readonly" grants access to read attributes of MBeans. # For monitoring, this means that a remote client in this # role can read measurements but cannot perform any action # that changes the environment of the running program. # "readwrite" grants access to read and write attributes of MBeans, # to invoke operations on them, and to create or remove them. # This access should be granted to only trusted clients, # since they can potentially interfere with the smooth # operation of a running program
+#       "readonly" grants access to read attributes of MBeans.
+#                   For monitoring, this means that a remote client in this
+#                   role can read measurements but cannot perform any action
+#                   that changes the environment of the running program.
+#       "readwrite" grants access to read and write attributes of MBeans,
+#                   to invoke operations on them, and to create or remove them.
+#                   This access should be granted to only trusted clients,
+#                   since they can potentially interfere with the smooth
+#                   operation of a running program
 ```
 
 
@@ -105,7 +130,7 @@ So, now decide how you want to regulate access. **I would strongly recommend tha
 
 
 ```bash
-jmxobiee S3cur3Passw0rd
+jmxobiee  S3cur3Passw0rd
 ```
 
 

@@ -48,7 +48,7 @@ Doc ID 735158.1 on Metalink details this problem, but doesn't have a solution. T
 
 
 ```html
-<DIV style="display:none" id="DashboardErrorDiv"></DIV>
+
 ```
 
 

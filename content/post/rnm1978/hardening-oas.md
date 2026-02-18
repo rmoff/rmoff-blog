@@ -60,7 +60,11 @@ Most web and application servers come with default content such as example pages
 
 In $OAS\_HOME/Apache/Apache: 
 ```
-mv htdocs/ htdocs.old mkdir htdocs vi htdocs/index.html # enter: <HTML><HEAD><TITLE>Nothing to see here</TITLE></HEAD><BODY>Nothing to see here, move along.</BODY></HTML>
+mv htdocs/ htdocs.old
+mkdir htdocs
+vi htdocs/index.html
+# enter:
+Nothing to see hereNothing to see here, move along.
 ```
 
 
@@ -72,7 +76,8 @@ mv htdocs/ htdocs.old mkdir htdocs vi htdocs/index.html # enter: <HTML><HEAD><TI
 
 
 ```
-rm $OAS_Home/Apache/Apache/icons/README rm $OAS_Home/Apache/Apache/fcgi-bin/*
+rm $OAS_Home/Apache/Apache/icons/README
+rm $OAS_Home/Apache/Apache/fcgi-bin/*
 ```
 
 
@@ -88,7 +93,10 @@ rm $OAS_Home/Apache/Apache/icons/README rm $OAS_Home/Apache/Apache/fcgi-bin/*
 
 
 ```
-cd $OAS_HOME/j2ee/home/default-web-app rm -r WEB-INF/classes rm -r examples/ echo "Nothing to see here" > index.html
+cd $OAS_HOME/j2ee/home/default-web-app
+rm -r WEB-INF/classes
+rm -r examples/
+echo "Nothing to see here" > index.html
 ```
 
 
@@ -110,7 +118,8 @@ Add to httpd.conf after the TraceEnable statement from above:
 
 
 ```
-SSLProtocol ALL -SSLv2 SSLCipherSuite HIGH:!SSLv2:!ADH:!aNULL:!eNULL:!NULL
+SSLProtocol ALL -SSLv2
+SSLCipherSuite HIGH:!SSLv2:!ADH:!aNULL:!eNULL:!NULL
 ```
  Ref: [http://httpd.apache.org/docs/2.0/mod/mod\_ssl.html#sslciphersuite](http://httpd.apache.org/docs/2.0/mod/mod_ssl.html#sslciphersuite)
 

@@ -58,7 +58,24 @@ Going back to the Click and Script (GUI Mode) and Fiddler2 I did a line-by-line 
 
 
 ```html
-web_submit_data("saw.dll_13", "Action=http://myserver:7777/analytics/saw.dll?ReloadDashboard&_scid={CSRule_1_UID2}", "Method=POST", "RecContentType=text/html", "Referer=http://myserver:7777/analytics/saw.dll?Dashboard&_scid={CSRule_1_UID2}&PortalPath=/shared/Financials/_portal/General%20Ledger&Page=Overview&Action=RefreshAll&ViewState={Siebel_Analytic_ViewState199}&StateAction=samePageState", "Snapshot=t96.inf", "Mode=HTTP", ITEMDATA, "Name=InFrameset", "Value=false", ENDITEM, "Name=Page", "Value=Overview", ENDITEM, "Name=_scid", "Value={CSRule_1_UID2}", ENDITEM, "Name=Embed", "Value=true", ENDITEM, "Name=PortalPath", "Value=/shared/Financials/_portal/General Ledger", ENDITEM, "Name=Caller", "Value=Dashboard", ENDITEM, "Name=ViewState", "Value=tvr45qs2u7d1glbfaopqlvvinu", ENDITEM, "Name=reloadTargets", "Value=d:dashboard~p:d127730sp2eqcj54~r:ojn7k4k6te44d9ag", ENDITEM, "Name=ajaxType", "Value=iframe", ENDITEM, LAST);
+web_submit_data("saw.dll_13",
+		"Action=http://myserver:7777/analytics/saw.dll?ReloadDashboard&_scid={CSRule_1_UID2}",
+		"Method=POST",
+		"RecContentType=text/html",
+		"Referer=http://myserver:7777/analytics/saw.dll?Dashboard&_scid={CSRule_1_UID2}&PortalPath=/shared/Financials/_portal/General%20Ledger&Page=Overview&Action=RefreshAll&ViewState={Siebel_Analytic_ViewState199}&StateAction=samePageState",
+		"Snapshot=t96.inf",
+		"Mode=HTTP",
+		ITEMDATA,
+		"Name=InFrameset", "Value=false", ENDITEM,
+		"Name=Page", "Value=Overview", ENDITEM,
+		"Name=_scid", "Value={CSRule_1_UID2}", ENDITEM,
+		"Name=Embed", "Value=true", ENDITEM,
+		"Name=PortalPath", "Value=/shared/Financials/_portal/General Ledger", ENDITEM,
+		"Name=Caller", "Value=Dashboard", ENDITEM,
+		"Name=ViewState", "Value=tvr45qs2u7d1glbfaopqlvvinu", ENDITEM,
+		"Name=reloadTargets", "Value=d:dashboard~p:d127730sp2eqcj54~r:ojn7k4k6te44d9ag", ENDITEM,
+		"Name=ajaxType", "Value=iframe", ENDITEM,
+		LAST);
 ```
 
 

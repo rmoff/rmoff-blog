@@ -12,19 +12,38 @@ I noticed on [Nico's wiki](http://gerardnico.com/wiki/dat/obiee/) (which is amaz
 
 These are the additional ones: 
 ```
--b<super batch file name> -w<# wait seconds> -c<# cancel interval seconds> -n<# number of loops> -r<# number of requests per shared session> -t<# number of threads> -T (a flag to turn on time statistics) -SmartDiff (a flag to enable SmartDiff tags in output) -P<the percent of statements to disable cache hit> -impersonate <the impersonate username> -runas <the runas username>
+-b
+-w
+-c
+-n
+-r
+-t
+-T (a flag to turn on time statistics)
+-SmartDiff (a flag to enable SmartDiff tags in output)
+-P
+-impersonate 
+-runas
 ```
 
 
 Most parameters don't appear to work in default call of nqcmd in 10g and 11g, throwing a **Argument error near:** error. 
 ```
--b<super batch file name> -w<# wait seconds> -c<# cancel interval seconds> -n<# number of loops> -r<# number of requests per shared session> -t<# number of threads> -P<the percent of statements to disable cache hit> -SmartDiff (a flag to enable SmartDiff tags in output)
+-b
+-w
+-c
+-n
+-r
+-t
+-P
+-SmartDiff (a flag to enable SmartDiff tags in output)
 ```
  I wonder if there's an [Open Sesame](http://www.phrases.org.uk/bulletin_board/42/messages/1049.html) type flag that needs to be used to enable these parameters by support. Or maybe they don't even exist.
 
 This leaves this handful of additional parameters which do work (/don't throw an error) in the default invocation of nqcmd: 
 ```
--T (a flag to turn on time statistics) -impersonate <the impersonate username> -runas <the runas username>
+-T (a flag to turn on time statistics)
+-impersonate 
+-runas
 ```
 
 
@@ -34,7 +53,9 @@ Oracle Support directed me to [the documentation](http://download.oracle.com/doc
 
 The -T flag looks very useful for [performance testing](/2010/05/24/performance-testing-and-obiee/) purposes, as it appends this information to the output from nqcmd: 
 ```
-Clock time: batch start: 15:44:32.000 Query from: 15:44:32.000 to: 15:44:59.000 Row count: 0 total: 27 prepare: 1 execute: 26 fetch: 0 Cumulative time(seconds): Batch elapsed: 26 Query total: 27 prepare: 1, execute: 26, fetch: 0, query count: 1, cumulative rows: 0
+Clock time: batch start: 15:44:32.000 Query from: 15:44:32.000 to: 15:44:59.000 Row count: 0
+ total: 27 prepare:  1 execute: 26 fetch:  0
+Cumulative time(seconds): Batch elapsed: 26 Query total: 27 prepare:  1, execute: 26, fetch:  0, query count:  1, cumulative rows:  0
 ```
 
 

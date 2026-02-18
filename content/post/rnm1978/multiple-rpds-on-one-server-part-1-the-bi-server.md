@@ -23,7 +23,8 @@ Set NQSConfig.ini to
 
 
 ```bash
-[ REPOSITORY ] Star = paint.rpd ;
+[ REPOSITORY ]
+Star    =       paint.rpd ;
 ```
 
 
@@ -47,7 +48,8 @@ Set NQSConfig.ini to
 
 
 ```bash
-[ REPOSITORY ] Star = samplesales.rpd ;
+[ REPOSITORY ]
+Star    =       samplesales.rpd ;
 ```
 
 
@@ -73,7 +75,9 @@ Edit the NQSConfig.ini file to :
 
 
 ```bash
-[ REPOSITORY ] samplesales = samplesales.rpd , DEFAULT; paint = paint.rpd ;
+[ REPOSITORY ]
+samplesales =       samplesales.rpd , DEFAULT;
+paint    =       paint.rpd ;
 ```
 
 
@@ -88,10 +92,16 @@ It's important to understand here how Presentation Services communicates with BI
 > 
 ```xml
 [...]
-> 
-> [AnalyticsWebPaint] [...] Repository=Paint [...]
-> 
-> [AnalyticsWebSampleSales] [...] Repository=SampleSales [...]
+
+[AnalyticsWebPaint]
+[...]
+Repository=Paint
+[...]
+
+[AnalyticsWebSampleSales]
+[...]
+Repository=SampleSales
+[...]
 ```
 
 

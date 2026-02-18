@@ -52,7 +52,7 @@ _Most of these are set from Tools -> Recording Options, or from the Options butt
     ![](/images/rnm1978/lr51.png "LR50")![LR51](/images/2009/09/lr51.webp "LR51")
 - Copy this to a file called obiee.cor: 
 ```xml
-<?xml version="1.0"?> <CorrelationSettings><Group Name="OBIEE" Enable="1" Icon="logo_bi.bmp"><Rule Name="scid" LeftBoundText="_scid=" LeftBoundType="1" LeftBoundInstance="0" RightBoundText=""" RightBoundType="1" AltRightBoundText="" AltRightBoundType="1" Flags="0" ParamPrefix="" Type="8" SaveOffset="0" SaveLen="-1" CallbackName="" CallbackDLLName="" FormField="" ReplaceLB="" ReplaceRB=""/></Group></CorrelationSettings>
+
 ```
 
     
@@ -70,9 +70,19 @@ Your code should now look something like this:
 
 
 ```html
-Navigate_to_dashboard() {
+Navigate_to_dashboard()
+{
 
-web_submit_data("saw.dll_2", "Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard", "Method=POST", [...] ITEMDATA, [...] "Name=PortalPath", "Value={Dashboard}", ENDITEM, LAST); return 0; }
+	web_submit_data("saw.dll_2",
+		"Action=http://10.3.105.181:7777/analytics/saw.dll?Dashboard",
+		"Method=POST",
+		[...]
+		ITEMDATA,
+		[...]
+		"Name=PortalPath", "Value={Dashboard}", ENDITEM,
+		LAST);
+	return 0;
+}
 ```
 
 
@@ -99,7 +109,8 @@ P0 is XML with backslash-escaped quotation marks (i.e. search and replace `\"` f
 
 
 ```xml
-[...] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 " "Product"."P01 Product"</sawx: [...]
+[...]   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 "
+	"Product"."P01  Product"</sawx:   [...]
 ```
 
 
@@ -107,7 +118,7 @@ becomes this:
 
 
 ```xml
-[...] xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 Product"."P01 Product"</sawx: [...]
+[...]   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">"D4 Product"."P01  Product"</sawx:   [...]
 ```
 
 
@@ -115,7 +126,12 @@ The resulting XML after formatting looks like this, and is fairly self-explanato
 
 
 ```xml
-<sawx:expr xsi:type="sawx:logical" op="and"> <sawx:expr xsi:type="sawx:comparison" op="equal"> <sawx:expr xsi:type="sawx:sqlExpression">"D4 Product"."P01 Product"</sawx:expr> <sawx:expr xsi:type="sawx:untypedLiteral">Product 04</sawx:expr> </sawx:expr> <sawx:expr xsi:type="sawx:comparison" op="equal"> <sawx:expr xsi:type="sawx:sqlExpression">"D2 Market"."M01 Market"</sawx:expr> <sawx:expr xsi:type="sawx:untypedLiteral">Market 5</sawx:expr> </sawx:expr> </sawx:expr>
+"D4 Product"."P01 Product"
+ Product 04
+ 
+
+ "D2 Market"."M01 Market"
+ Market 5
 ```
 
 
@@ -173,7 +189,11 @@ It makes sense to parametrise logins so that you simulate many users (rather tha
 
 
 ```bash
-[...] ITEMDATA, "Name=NQUser", "Value=Administrator", ENDITEM, "Name=NQPassword", "Value=Administrator", ENDITEM, [...]
+[...]
+		ITEMDATA,
+		"Name=NQUser", "Value=Administrator", ENDITEM,
+		"Name=NQPassword", "Value=Administrator", ENDITEM,
+[...]
 ```
 
 
@@ -181,7 +201,11 @@ to
 
 
 ```bash
-[...] ITEMDATA, "Name=NQUser", "Value={Username}", ENDITEM, "Name=NQPassword", "Value={Password}", ENDITEM, [...]
+[...]
+		ITEMDATA,
+		"Name=NQUser", "Value={Username}", ENDITEM,
+		"Name=NQPassword", "Value={Password}", ENDITEM,
+[...]
 ```
 
 
@@ -192,19 +216,24 @@ To add a set of many users to your repository you can use UDML. For more info on
 1. Add a single test user to your repository, with a known password.
 2. Use NQUdmlGen.exe to generate UDML of the repository 
 ```bash
-c:\\OracleBI\\server\\Bin\\nQUDMLGen.exe -U Administrator -P Administrator -R c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\scratch\\samplesales.udml.txt
+c:\OracleBI\server\Bin\nQUDMLGen.exe  -U Administrator -P Administrator -R c:\OracleBI\server\Repository\samplesales.rpd -O c:\scratch\samplesales.udml.txt
 ```
 
 3. Search the resulting UDML file for your new user, should look something like this: 
 ```xml
-DECLARE USER "PerfTestUser_01" AS "PerfTestUser_01" UPGRADE ID 2150312724 FULL NAME {Performance Testing user} PASSWORD 'D7EDED84BC624A917F5B462A4DCA05CDCE256EEEEEDC97D5FF150B512EE8ED94985E8734986D5553C8F3BEE6EAF9FC34' NEVER EXPIRES HAS ROLES ( "Administrators" ) NO STATISTICS DESCRIPTION {Pwd is y0rkshire} PRIVILEGES ( READ);
+DECLARE USER "PerfTestUser_01" AS "PerfTestUser_01" UPGRADE ID 2150312724 FULL NAME {Performance Testing user} PASSWORD 'D7EDED84BC624A917F5B462A4DCA05CDCE256EEEEEDC97D5FF150B512EE8ED94985E8734986D5553C8F3BEE6EAF9FC34' NEVER EXPIRES
+	HAS ROLES (
+		  "Administrators" )
+	NO STATISTICS
+	DESCRIPTION {Pwd is y0rkshire}
+	PRIVILEGES ( READ);
 ```
 
 4. Strip all the line breaks so that it's on a single line, and replace tabs with spaces
 5. Put it in an Excel file so that the username's repeated and the rest of the text static NB. If you replace "<username>" with \\t"<username>"\\t (where \\t is tab character) then when you paste it into Excel it'll sort the columning out automatically.[![LR54](/images/rnm1978/lr54.png "LR54")](/images/2009/09/lr54.webp) Copy the resulting UDML to a new file, eg. newusers.udml.txt
 6. Use nQUDMLExec.exe to merge in the new users. Make sure you work on a backup copy of the repository. Whilst you can specify to overwrite the existing RPD, it is prudent to write to a new one and then rename it once you've verified it's all ok. 
 ```bash
-c:\\OracleBI\\server\\Bin\\nQUDMLExec.exe -u Administrator -P Administrator -I c:\\scratch\\newusers.udml.txt -B c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\OracleBI\\server\\Repository\\samplesales.new.rpd
+c:\OracleBI\server\Bin\nQUDMLExec.exe -u Administrator -P Administrator -I c:\scratch\newusers.udml.txt -B c:\OracleBI\server\Repository\samplesales.rpd -O c:\OracleBI\server\Repository\samplesales.new.rpd
 ```
 
     

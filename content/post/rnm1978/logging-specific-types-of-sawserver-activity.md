@@ -22,11 +22,15 @@ To capture, for example, only inbound and outbound HTTP logs, you would amend yo
 
 If you want to write the information to a separate file, define a new **Writer**: 
 ```xml
-[...] [...]
+[...]
+
+[...]
 ```
  (use an unused writerClassId) and **WriterClassGroup**: 
 ```xml
-[...] 7 [...]
+[...]
+7
+[...]
 ```
  and use the newly defined WriterClassGroup in the Filter: 
 ```xml
@@ -38,6 +42,28 @@ All of the odbc logging will now be written to a file in /tmp called sawodbc0.lo
 
 To get a list of all possible path values, run sawserver with the -logsources commandline option 
 ```bash
-$ . ./common.sh $ . ./sa-init.sh $ sawserver -logsources saw saw.SOAP saw.SOAP.JobManagementService saw.answers saw.answers.search saw.authconfigmanager saw.authconfigmanager.initialize saw.cacheseeding saw.catalog saw.catalog.archive saw.catalog.archive.merge saw.catalog.archive.read saw.catalog.archive.write saw.catalog.archive.write.singleobject saw.catalog.file saw.catalog.filelock saw.catalog.impl saw.catalog.impl.cleanup saw.catalog.impl.explainPermissions [...etc etc...]
+$ . ./common.sh
+$ . ./sa-init.sh
+$ sawserver -logsources
+saw
+saw.SOAP
+saw.SOAP.JobManagementService
+saw.answers
+saw.answers.search
+saw.authconfigmanager
+saw.authconfigmanager.initialize
+saw.cacheseeding
+saw.catalog
+saw.catalog.archive
+saw.catalog.archive.merge
+saw.catalog.archive.read
+saw.catalog.archive.write
+saw.catalog.archive.write.singleobject
+saw.catalog.file
+saw.catalog.filelock
+saw.catalog.impl
+saw.catalog.impl.cleanup
+saw.catalog.impl.explainPermissions
+[...etc etc...]
 ```
 

@@ -26,111 +26,414 @@ Here's a script that demonstrates the two issues, written and commented based on
 ```sql
 /* copy_stats_1.sql
 
-Illustrate apparent problem with high_val on partition statistics when using partition to partition statistics copy * Table global stats do not update high_value for partitioning key * high_value of one partition overlaps with low_value of the next.
+Illustrate apparent problem with high_val on partition statistics when using partition to partition statistics copy
+  * Table global stats do not update high_value for partitioning key
+  * high_value of one partition overlaps with low_value of the next.
 
 Requires display_raw function by Greg Rahn, see here: http://tinyurl.com/display-raw
 
-https://rmoff.net
+https://rnm1978.wordpress.com/
 
 */
 
-set echo off set timing off set feedback off set linesize 156 set pagesize 57 col owner for a10 col table_name for a30 col column_name for a30 col partition_name for a20 col low_val for a10 col high_val for a10 col num_rows for 999,999,999,999 col "sum of num_rows" for 999,999,999,999 break on stats_update_time skip 1 duplicates
+set echo off
+set timing off
+set feedback off
+set linesize 156
+set pagesize 57
+col owner for a10
+col table_name for a30
+col column_name for a30
+col partition_name for a20
+col low_val for a10
+col high_val for a10
+col num_rows for 999,999,999,999
+col "sum of num_rows" for 999,999,999,999
+break on stats_update_time skip 1 duplicates
 
 clear screen
 
-prompt ===== This script uses the DISPLAY_RAW function ======= prompt prompt Available here: http://structureddata.org/2007/10/16/how-to-display-high_valuelow_value-columns-from-user_tab_col_statistics/ prompt prompt ======================================================== prompt prompt prompt prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= prompt 1. Set up an partitioned table with data and examine the statistics prompt prompt set echo on pause -- Create fact table drop table BASE_DATA; CREATE table BASE_DATA ( day_key integer, store_key INTEGER, item_key INTEGER, fact_001 NUMBER(15,0), fact_002 NUMBER(15,0), fact_003 NUMBER(18,2)) PARTITION BY RANGE (DAY_KEY) SUBPARTITION BY HASH (store_key) SUBPARTITION TEMPLATE ( SUBPARTITION "SP1" , SUBPARTITION "SP2" , SUBPARTITION "SP3" , SUBPARTITION "SP4") ( PARTITION "PART_20110401" VALUES LESS THAN (20110402)) PARALLEL;
+prompt ===== This script uses the DISPLAY_RAW function =======
+prompt
+prompt Available here: http://structureddata.org/2007/10/16/how-to-display-high_valuelow_value-columns-from-user_tab_col_statistics/
+prompt
+prompt ========================================================
+prompt
+prompt
+prompt
+prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+prompt 1. Set up an partitioned table with data and examine the statistics
+prompt
+prompt
+set echo on
+pause
+-- Create fact table
+drop table BASE_DATA;
+CREATE table BASE_DATA ( day_key integer, store_key INTEGER,  item_key  INTEGER, fact_001 NUMBER(15,0), fact_002 NUMBER(15,0), fact_003 NUMBER(18,2))
+ PARTITION BY RANGE (DAY_KEY)
+  SUBPARTITION BY HASH (store_key)
+  SUBPARTITION TEMPLATE ( SUBPARTITION "SP1" , SUBPARTITION "SP2" , SUBPARTITION "SP3" , SUBPARTITION "SP4")
+ ( PARTITION "PART_20110401"  VALUES LESS THAN (20110402))
+ PARALLEL;
 
-pause -- Create indexes CREATE UNIQUE INDEX BASE_DATA_PK ON BASE_DATA ("DAY_KEY", "STORE_KEY", "ITEM_KEY") LOCAL parallel; create bitmap index base_data_ix2 on base_data (store_key) local parallel; create bitmap index base_data_ix3 on base_data (item_key) local parallel;
+pause
+-- Create indexes
+CREATE UNIQUE INDEX BASE_DATA_PK ON BASE_DATA ("DAY_KEY", "STORE_KEY", "ITEM_KEY") LOCAL parallel;
+create bitmap index base_data_ix2 on base_data (store_key) local parallel;
+create bitmap index base_data_ix3 on base_data (item_key) local parallel;
+
+pause 
+
+-- Populate fact table
+exec DBMS_RANDOM.SEED('StraussCookPieterson');
+insert into BASE_DATA values (20110401,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) );
+insert into BASE_DATA values (20110401,102,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) );
+commit;
+
+pause 
+
+-- Gather full stats on table
+set feedback on
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_DATA', granularity=>'AUTO');
+set feedback off
+
+pause 
+
+select * from base_data order by day_key;
+pause
+-- Examine statistics
+
+set echo off
+prompt
+prompt DBA_PART_TABLES
+select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
+
+prompt
+prompt DBA_TAB_STATS_HISTORY
+SELECT table_name, partition_name, stats_update_time
+FROM   dba_tab_stats_history
+WHERE  owner = USER
+AND table_name = 'BASE_DATA'
+ORDER  BY stats_update_time asc;
+pause
+
+prompt
+prompt  DBA_TAB_STATISTICS (table level only):
+prompt  **************************************
+select table_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is null
+;
+
+pause 
+
+compute sum of num_rows on report
+prompt
+prompt DBA_TAB_STATISTICS (Partition level):
+prompt *************************************
+select table_name,partition_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is not null
+and subpartition_name is null
+order by table_name,partition_name
+;
+clear computes
+
+pause 
+
+prompt DBA_PART_COL_STATISTICS:
+prompt ************************
+select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_PART_COL_STATISTICS a
+inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null
+and a.column_name = 'DAY_KEY'
+;
+
+prompt
+prompt Observe: Partition high/low values for DAY_KEY - currently 1st April
+pause 
+
+prompt
+prompt DBA_TAB_COL_STATISTICS:
+prompt ***********************
+select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY'
+;
+prompt
+prompt Observe: Table high/low values for DAY_KEY - currently 1st April
+pause 
+
+prompt
+prompt
+prompt
+prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+prompt 2. Create new partition and use dbms_stats.copy_table_stats to set the stats for it. Leave data in the table unchanged.
+prompt
+prompt
+pause
+
+set feedback on
+set echo on
+alter table base_data add PARTITION "PART_20110402"  VALUES LESS THAN (20110403);
+exec dbms_stats.copy_table_stats(ownname=>USER, tabname=>'BASE_DATA',SRCPARTNAME=>'PART_20110401',DSTPARTNAME=>'PART_20110402');
+pause
+set feedback off
+
+select * from base_data order by day_key;
+pause
+-- Examine statistics
+
+set echo off
+prompt
+prompt DBA_PART_TABLES
+select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
+
+prompt
+prompt DBA_TAB_STATS_HISTORY
+SELECT table_name, partition_name, stats_update_time
+FROM   dba_tab_stats_history
+WHERE  owner = USER
+AND table_name = 'BASE_DATA'
+ORDER  BY stats_update_time asc;
+pause
+
+prompt  DBA_TAB_STATISTICS (table level only):
+prompt  **************************************
+select table_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is null
+;
+
+compute sum of num_rows on report
+prompt
+prompt DBA_TAB_STATISTICS (Partition level):
+prompt *************************************
+select table_name,partition_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is not null
+and subpartition_name is null
+order by table_name,partition_name
+;
+clear computes
+
+prompt
+prompt Side note: Oracle doesn't aggregate the partition num_rows statistic up to global when doing a copy stats, 
+prompt            so whilst the sum of partition num_rows is four, the global num_rows is still two.
+prompt            Of course, at this point, there are only actually two rows of data in the table.
+prompt   
+prompt (also, observe that LAST_ANALYZED for the new partition is that of the partition from where the stats were copied, and isn't
+prompt  the same as STATS_UPDATE_TIME for the partition on DBA_TAB_STATS_HISTORY - which makes sense when you think about it)
+pause
+
+prompt
+prompt DBA_TAB_PARTITIONS:
+prompt ********************
+select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER;
+prompt
+prompt DBA_PART_COL_STATISTICS:
+prompt ************************
+select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_PART_COL_STATISTICS a
+inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null
+and a.column_name = 'DAY_KEY'
+;
+prompt
+prompt See the Partition high/low values for DAY_KEY in the new partition (PART_20110402) into which we copied the stats:
+prompt --> low_value is correct
+prompt --> high_value is out of range for possible data in that partition
+prompt -----> high_value of the partition is USER, tabname=>'BASE_DATA',SRCPARTNAME=>'PART_20110401',DSTPARTNAME=>'PART_20110403');
+pause
+set feedback off
+
+select * from base_data order by day_key;
+pause
+-- Examine statistics
+
+set echo off
+prompt
+prompt DBA_PART_TABLES
+select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
+
+prompt
+prompt DBA_TAB_STATS_HISTORY
+SELECT table_name, partition_name, stats_update_time
+FROM   dba_tab_stats_history
+WHERE  owner = USER
+AND table_name = 'BASE_DATA'
+ORDER  BY stats_update_time asc;
+pause
+
+prompt  DBA_TAB_STATISTICS (table level only):
+prompt  **************************************
+select table_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is null
+;
+
+compute sum of num_rows on report
+prompt
+prompt DBA_TAB_STATISTICS (Partition level):
+prompt *************************************
+select table_name,partition_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is not null
+and subpartition_name is null
+order by table_name,partition_name
+;
+clear computes
 
 pause
 
-\-- Populate fact table exec DBMS_RANDOM.SEED('StraussCookPieterson'); insert into BASE_DATA values (20110401,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) ); insert into BASE_DATA values (20110401,102,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) ); commit;
+prompt
+prompt DBA_TAB_PARTITIONS:
+prompt ********************
+select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER;
+prompt
+prompt DBA_PART_COL_STATISTICS:
+prompt ************************
+select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_PART_COL_STATISTICS a
+inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null
+and a.column_name = 'DAY_KEY'
+;
+prompt
+prompt You can see that the high_value for the new partition is again too high for the possible values the partition could contain
+prompt
+prompt But this time we can also see the overlapping high_value of previous column with low_value of the next.
+prompt   PART_20110401 has real stats 
+prompt   PART_20110402 has copied stats, with a (wrong) high_value of 20110403
+prompt   PART_20110403 has copied stats, with a low_value of 20110403 - which is the same as the high_value of the previous partition
 
+prompt
+pause
+prompt
+prompt DBA_TAB_COL_STATISTICS:
+prompt ***********************
+select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY'
+;
+prompt
+prompt Table high/low values for DAY_KEY - still 1st April, even though the stats on individual partitions has a (wrong) high_val of 4th April.
+pause 
+
+prompt
+prompt
+prompt
+prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+prompt 4. Add data to the table, gather real statistics, examine them.
+prompt
+prompt
 pause
 
-\-- Gather full stats on table set feedback on exec dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_DATA', granularity=>'AUTO'); set feedback off
+set echo on
+-- Populate fact table
+insert into BASE_DATA values (20110402,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) );
+insert into BASE_DATA values (20110403,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) );
+commit;
 
+pause 
+
+-- gather full stats
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_DATA', granularity=>'AUTO');
 pause
 
-select * from base_data order by day_key; pause -- Examine statistics
+select * from base_data order by day_key;
+pause
+-- Examine statistics
 
-set echo off prompt prompt DBA_PART_TABLES select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
+set echo off
+prompt
+prompt DBA_PART_TABLES
+select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
 
-prompt prompt DBA_TAB_STATS_HISTORY SELECT table_name, partition_name, stats_update_time FROM dba_tab_stats_history WHERE owner = USER AND table_name = 'BASE_DATA' ORDER BY stats_update_time asc; pause
-
-prompt prompt DBA_TAB_STATISTICS (table level only): prompt ************************************** select table_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is null ;
-
+prompt
+prompt DBA_TAB_STATS_HISTORY
+SELECT table_name, partition_name, stats_update_time
+FROM   dba_tab_stats_history
+WHERE  owner = USER
+AND table_name = 'BASE_DATA'
+ORDER  BY stats_update_time asc;
 pause
 
-compute sum of num_rows on report prompt prompt DBA_TAB_STATISTICS (Partition level): prompt ************************************* select table_name,partition_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is not null and subpartition_name is null order by table_name,partition_name ; clear computes
-
+prompt  DBA_TAB_STATISTICS (table level only):
+prompt  **************************************
+select table_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is null
+;
 pause
 
-prompt DBA_PART_COL_STATISTICS: prompt ************************ select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_PART_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null and a.column_name = 'DAY_KEY' ;
+compute sum of num_rows on report
+prompt
+prompt DBA_TAB_STATISTICS (Partition level):
+prompt *************************************
+select table_name,partition_name,num_rows,
+to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED"
+from DBA_TAB_STATISTICS
+where table_name='BASE_DATA' and owner=USER
+and partition_name is not null
+and subpartition_name is null
+order by table_name,partition_name
+;
+clear computes
+prompt
+prompt Table num_rows is now accurate
+pause 
 
-prompt prompt Observe: Partition high/low values for DAY_KEY - currently 1st April pause
+prompt
+prompt DBA_TAB_PARTITIONS:
+prompt ********************
+select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER;
+prompt
+prompt DBA_PART_COL_STATISTICS:
+prompt ************************
+select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_PART_COL_STATISTICS a
+inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null
+and a.column_name = 'DAY_KEY'
+;
 
-prompt prompt DBA_TAB_COL_STATISTICS: prompt *********************** select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY' ; prompt prompt Observe: Table high/low values for DAY_KEY - currently 1st April pause
-
-prompt prompt prompt prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= prompt 2. Create new partition and use dbms_stats.copy_table_stats to set the stats for it. Leave data in the table unchanged. prompt prompt pause
-
-set feedback on set echo on alter table base_data add PARTITION "PART_20110402" VALUES LESS THAN (20110403); exec dbms_stats.copy_table_stats(ownname=>USER, tabname=>'BASE_DATA',SRCPARTNAME=>'PART_20110401',DSTPARTNAME=>'PART_20110402'); pause set feedback off
-
-select * from base_data order by day_key; pause -- Examine statistics
-
-set echo off prompt prompt DBA_PART_TABLES select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
-
-prompt prompt DBA_TAB_STATS_HISTORY SELECT table_name, partition_name, stats_update_time FROM dba_tab_stats_history WHERE owner = USER AND table_name = 'BASE_DATA' ORDER BY stats_update_time asc; pause
-
-prompt DBA_TAB_STATISTICS (table level only): prompt ************************************** select table_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is null ;
-
-compute sum of num_rows on report prompt prompt DBA_TAB_STATISTICS (Partition level): prompt ************************************* select table_name,partition_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is not null and subpartition_name is null order by table_name,partition_name ; clear computes
-
-prompt prompt Side note: Oracle doesn't aggregate the partition num_rows statistic up to global when doing a copy stats, prompt so whilst the sum of partition num_rows is four, the global num_rows is still two. prompt Of course, at this point, there are only actually two rows of data in the table. prompt prompt (also, observe that LAST_ANALYZED for the new partition is that of the partition from where the stats were copied, and isn't prompt the same as STATS_UPDATE_TIME for the partition on DBA_TAB_STATS_HISTORY - which makes sense when you think about it) pause
-
-prompt prompt DBA_TAB_PARTITIONS: prompt ******************** select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER; prompt prompt DBA_PART_COL_STATISTICS: prompt ************************ select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_PART_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null and a.column_name = 'DAY_KEY' ; prompt prompt See the Partition high/low values for DAY_KEY in the new partition (PART_20110402) into which we copied the stats: prompt --> low_value is correct prompt --> high_value is out of range for possible data in that partition prompt -----> high_value of the partition is < 20110403, ** not ** <= 20110403 prompt pause prompt prompt DBA_TAB_COL_STATISTICS: prompt *********************** select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY' ; prompt prompt See the Table high/low values for DAY_KEY - currently 1st April, even though the stats on individual partitions has a (wrong) high_val of 3rd April. pause prompt prompt prompt prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= prompt 3. Add another new partition and use dbms_stats.copy_table_stats to set the stats for it. Leave data in the table unchanged. prompt prompt pause
-
-set feedback on set echo on alter table base_data add PARTITION "PART_20110403" VALUES LESS THAN (20110404); exec dbms_stats.copy_table_stats(ownname=>USER, tabname=>'BASE_DATA',SRCPARTNAME=>'PART_20110401',DSTPARTNAME=>'PART_20110403'); pause set feedback off
-
-select * from base_data order by day_key; pause -- Examine statistics
-
-set echo off prompt prompt DBA_PART_TABLES select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
-
-prompt prompt DBA_TAB_STATS_HISTORY SELECT table_name, partition_name, stats_update_time FROM dba_tab_stats_history WHERE owner = USER AND table_name = 'BASE_DATA' ORDER BY stats_update_time asc; pause
-
-prompt DBA_TAB_STATISTICS (table level only): prompt ************************************** select table_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is null ;
-
-compute sum of num_rows on report prompt prompt DBA_TAB_STATISTICS (Partition level): prompt ************************************* select table_name,partition_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is not null and subpartition_name is null order by table_name,partition_name ; clear computes
-
+prompt
+prompt Partition high/low values for DAY_KEY in each partition is correct
 pause
 
-prompt prompt DBA_TAB_PARTITIONS: prompt ******************** select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER; prompt prompt DBA_PART_COL_STATISTICS: prompt ************************ select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_PART_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null and a.column_name = 'DAY_KEY' ; prompt prompt You can see that the high_value for the new partition is again too high for the possible values the partition could contain prompt prompt But this time we can also see the overlapping high_value of previous column with low_value of the next. prompt PART_20110401 has real stats prompt PART_20110402 has copied stats, with a (wrong) high_value of 20110403 prompt PART_20110403 has copied stats, with a low_value of 20110403 - which is the same as the high_value of the previous partition
-
-prompt pause prompt prompt DBA_TAB_COL_STATISTICS: prompt *********************** select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY' ; prompt prompt Table high/low values for DAY_KEY - still 1st April, even though the stats on individual partitions has a (wrong) high_val of 4th April. pause
-
-prompt prompt prompt prompt =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= prompt 4. Add data to the table, gather real statistics, examine them. prompt prompt pause
-
-set echo on -- Populate fact table insert into BASE_DATA values (20110402,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) ); insert into BASE_DATA values (20110403,101,2000, dbms_random.value(0,999) , dbms_random.value(0,999) , dbms_random.value(0,999) ); commit;
-
-pause
-
-\-- gather full stats exec dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_DATA', granularity=>'AUTO'); pause
-
-select * from base_data order by day_key; pause -- Examine statistics
-
-set echo off prompt prompt DBA_PART_TABLES select partitioning_type, subpartitioning_type, partition_count from dba_part_tables where table_name='BASE_DATA' and owner=USER;
-
-prompt prompt DBA_TAB_STATS_HISTORY SELECT table_name, partition_name, stats_update_time FROM dba_tab_stats_history WHERE owner = USER AND table_name = 'BASE_DATA' ORDER BY stats_update_time asc; pause
-
-prompt DBA_TAB_STATISTICS (table level only): prompt ************************************** select table_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is null ; pause
-
-compute sum of num_rows on report prompt prompt DBA_TAB_STATISTICS (Partition level): prompt ************************************* select table_name,partition_name,num_rows, to_char(LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED" from DBA_TAB_STATISTICS where table_name='BASE_DATA' and owner=USER and partition_name is not null and subpartition_name is null order by table_name,partition_name ; clear computes prompt prompt Table num_rows is now accurate pause
-
-prompt prompt DBA_TAB_PARTITIONS: prompt ******************** select partition_name, high_value from dba_tab_partitions where table_name='BASE_DATA' and table_owner=USER; prompt prompt DBA_PART_COL_STATISTICS: prompt ************************ select a.partition_name,a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_PART_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.partition_name is not null and a.column_name = 'DAY_KEY' ;
-
-prompt prompt Partition high/low values for DAY_KEY in each partition is correct pause
-
-prompt prompt DBA_TAB_COL_STATISTICS: prompt *********************** select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED", display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY' ; prompt prompt Table high/low values for DAY_KEY are now correct pause
+prompt
+prompt DBA_TAB_COL_STATISTICS:
+prompt ***********************
+select a.column_name,to_char(a.LAST_ANALYZED,'YYYY-MM-DD-HH24:MI:SS') "LAST_ANALYZED",
+display_raw(a.low_value,b.data_type) as low_val,display_raw(a.high_value,b.data_type) as high_val
+from DBA_TAB_COL_STATISTICS a inner join dba_tab_cols b on a.table_name=b.table_name and a.column_name=b.column_name and a.owner=b.owner
+where a.table_name='BASE_DATA' and a.owner=USER and a.column_name = 'DAY_KEY'
+;
+prompt
+prompt Table high/low values for DAY_KEY are now correct
+pause 
 
 /* #EOF */
 ```

@@ -193,7 +193,7 @@ One method would be to create a new startup script like this:
 ```bash
 #!/bin/sh # # Hacky script to run two versions of Presentation Services # # https://rmoff.net # # --------------------------------------------------- # start your default Presentation Services echo 'Starting default Presentation Services...' echo ' ' run-saw.sh start # The above should be "start64" if you're in 64 bit mode
 
-\# Now start the additional Presentation Services echo '----' echo ' ' echo 'Starting additional Presentation Services...' echo ' ' . ./common.sh . ./sa-init.sh logfile="${SADATADIR}/web/log/sawserverRNM.out.log" sawserver -c /data/web/config/instanceconfigRNM.xml >> ${logfile} 2>&1 & # The above should be "sawserver64" if you're in 64 bit mode echo 'See '${logfile}' for log'
+# Now start the additional Presentation Services echo '----' echo ' ' echo 'Starting additional Presentation Services...' echo ' ' . ./common.sh . ./sa-init.sh logfile="${SADATADIR}/web/log/sawserverRNM.out.log" sawserver -c /data/web/config/instanceconfigRNM.xml >> ${logfile} 2>&1 & # The above should be "sawserver64" if you're in 64 bit mode echo 'See '${logfile}' for log'
 ```
 
 

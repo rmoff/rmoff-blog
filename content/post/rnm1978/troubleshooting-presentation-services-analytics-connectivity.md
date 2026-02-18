@@ -47,11 +47,17 @@ The errors are often self-explanatory (so long as you understand the architectur
 
 To check where analytics is going to be looking for sawserver, examine the analytics configuration file **$J2EE\_home/applications/analytics/analytics/WEB-INF/web.xml** (different for ISAPI, see last paragraph [here](/2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)). There'll be configuration lines matching one of these two examples. The default is this: 
 ```xml
-<init-param> <param-name>oracle.bi.presentation.sawserver.Host</param-name> <param-value>localhost</param-value> </init-param> <init-param> <param-name>oracle.bi.presentation.sawserver.Port</param-name> <param-value>9710</param-value> </init-param>
+oracle.bi.presentation.sawserver.Host
+localhost
+
+
+oracle.bi.presentation.sawserver.Port
+9710
 ```
  A customised (e.g. for <a href="[clustered resilience](/2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/)) entry may look like this: 
 ```xml
-<init-param> <param-name>oracle.bi.presentation.sawservers</param-name> <param-value>BISandbox01:9710;BISandbox02:9710</param-value> </init-param>
+oracle.bi.presentation.sawservers
+BISandbox01:9710;BISandbox02:9710
 ```
 
 
@@ -59,13 +65,16 @@ To check where analytics is going to be looking for sawserver, examine the analy
 
 Let's check the connectivity from both sides. First off, is Presentation Services (sawserver) running on the server we're expecting it to be and listening on the correct port? In unix we can check this quite simply using the ps command and filtering it with the grep command. On the host that we're expecting sawserver to be, run this: 
 ```
-$ ps -ef|grep sawserver oracle 14827 1 0 09:58 pts/0 00:00:00 /bin/sh /app/oracle/product/obiee/setup/sawserver.sh oracle 14842 14827 35 09:58 pts/0 00:00:01 /app/oracle/product/obiee/web/bin/sawserver
+$ ps -ef|grep sawserver
+oracle   14827     1  0 09:58 pts/0    00:00:00 /bin/sh /app/oracle/product/obiee/setup/sawserver.sh
+oracle   14842 14827 35 09:58 pts/0    00:00:01 /app/oracle/product/obiee/web/bin/sawserver
 ```
  If there's no output from this (or only the grep itself) then sawserver's not running, and you need to fix that before proceeding. On Windows check the Services window (services.msc) and task manager for sawserver.exe.
 
 Assuming sawserver is running, now check that it is listening on the port specific in the analytics configuration file (see above). In this example, I'm checking for the default port, 9710: 
 ```
-$ netstat -a|grep 9710 tcp 0 0 *:9710 *:* LISTEN
+$ netstat -a|grep 9710
+tcp        0      0 *:9710                      *:*                         LISTEN
 ```
  If there's no output from the command then it means that port 9710 is not in use, i.e. sawserver is not listening on it. N.B. at this point it is theoretically possible that another application is using port 9710 - all we're proving is that **something** is using it. But unless you've changed sawserver's port (in instanceconfig.xml) then the fact it's started up means that it is it using 9710 because it won't start if another application is using its port. In Windows you can use netstat -a but there's no grep by default so you need to scroll down the output to look for the port.
 
@@ -77,29 +86,38 @@ Now let's examine connectivity from the point of view of the analytics plugin (w
 
 The following is on OEL 4, which is a based on RedHat so I'd expect that to behave the same. First get a "control" output for connecting to a port that most definitely is not open to traffic. Find a port on your sawserver host (which may or may not be local) that's unused: 
 ```
-$ netstat -a|grep 9999 $
+$ netstat -a|grep 9999
+$
 ```
  If you get output from the netstat then pick another port until you don't Now let's try connecting to it to see what happens when we connect to a closed port: 
 ```
-$ telnet localhost 9999 Trying 127.0.0.1... telnet: connect to address 127.0.0.1: Connection refused
+$ telnet localhost 9999
+Trying 127.0.0.1...
+telnet: connect to address 127.0.0.1: Connection refused
 ```
  So - our control output for a closed port is this _telnet: connect to address 127.0.0.1: Connection refused_.
 
 Recall what host and port we determined analytics was trying to connect to (from web.xml, see above), and run the test for it. In this example I'll check for the default - localhost and 9710. If we get something like this: 
 ```
-$ telnet localhost 9710 Trying 127.0.0.1... Connected to localhost. Escape character is '^]'.
+$ telnet localhost 9710
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
 ```
  then it shows the port and host is accepting connections. You can't do much more from here that I'm aware of, but it proves the port is open.
 
 However if we get this: 
 ```
-$ telnet localhost 9710 Trying 127.0.0.1... telnet: connect to address 127.0.0.1: Connection refused
+$ telnet localhost 9710
+Trying 127.0.0.1...
+telnet: connect to address 127.0.0.1: Connection refused
 ```
  then it would tell us that the port we're expecting to be open isn't - and you have a problem! See below for further suggestions.
 
 On Windows you'll get similar behaviour for a failed connection: 
 ```
-C:\\>telnet localhost 9999 Connecting To localhost...Could not open connection to the host, on port 9999: Connect failed
+C:\>telnet localhost 9999
+Connecting To localhost...Could not open connection to the host, on port 9999: Connect failed
 ```
  For a successful connection you will normally find the command window clears and you get a flashing cursor. Enter a few random characters or hit Ctrl-C to return to the command prompt.
 
@@ -122,29 +140,39 @@ Just after writing this article I remembered a utility called sawping that I fir
 
 To use it in unix you need to dot-source $OBIEE\_HOME/setup/sa-init.sh (or sa-init64.sh) first to set your environment variables and paths: 
 ```
-$ . ./sa-init.sh $
+$ . ./sa-init.sh
+$
 ```
  Test the default hostname and port (I don't think this parses analytics' web.xml): 
 ```bash
-$sawping Server alive and well
+$sawping
+Server alive and well
 ```
  Add the -v flag for more verbose output if you get an error: 
 ```
-$ sawping Unable to connect to server. The server may be down or may be too busy to accept additional connections.
+$ sawping
+Unable to connect to server. The server may be down or may be too busy to accept additional connections.
 
-$ sawping -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". Connection refused [Socket:3] Error Codes: ETI2U8FA
+$ sawping -v
+Unable to connect to server. The server may be down or may be too busy to accept additional connections.
+An error occurred during execution of "connect". Connection refused [Socket:3]
+Error Codes: ETI2U8FA
 ```
 
 
 Test for sawserver on a different host: 
 ```
-$ sawping -s bisandbox02 Server alive and well
+$ sawping -s bisandbox02
+Server alive and well
 ```
 
 
 Note the message tells you what the problem is if there is an error (in this example, "Unable to resolve address") 
 ```
-$ sawping -s bisandboxxxxx02 -v An error occured during process. Run in verbose mode to see error details. Unable to resolve the address for bisandboxxxxx02. Error Codes: AXSBMN8D:
+$ sawping -s bisandboxxxxx02 -v
+An error occured during process. Run in verbose mode to see error details.
+Unable to resolve the address for bisandboxxxxx02.
+Error Codes: AXSBMN8D:
 
 TRY_AGAIN
 ```
@@ -154,16 +182,23 @@ Test for sawserver on a different host and port:
 
 
 ```
-$ sawping -s bisandbox02 -p 9711 -v Server alive and well
+$ sawping -s bisandbox02 -p 9711 -v
+Server alive and well
 ```
 
 
 To use the utility in Windows either add $OBIEE\_Home/web/bin to your PATH environment variable, or reference it directly. The argument syntax remains the same: 
 ```
-C:\\>c:\\OracleBI\\web\\bin\\sawping.exe Server alive and well
+C:\>c:\OracleBI\web\bin\sawping.exe
+Server alive and well
 
-C:\\>c:\\OracleBI\\web\\bin\\sawping.exe -s bisandbox02 Server alive and well
+C:\>c:\OracleBI\web\bin\sawping.exe  -s bisandbox02
+Server alive and well
 
-C:\\>c:\\OracleBI\\web\\bin\\sawping.exe -p 9711 -v Unable to connect to server. The server may be down or may be too busy to accept additional connections. An error occurred during execution of "connect". No connection could be made because the target machine actively refused it. [Socket:1808] Error Codes: ETI2U8FA
+C:\>c:\OracleBI\web\bin\sawping.exe -p 9711 -v
+Unable to connect to server. The server may be down or may be too busy to accept additional connections.
+An error occurred during execution of "connect". No connection could be made because the target machine actively refused it.
+ [Socket:1808]
+Error Codes: ETI2U8FA
 ```
 

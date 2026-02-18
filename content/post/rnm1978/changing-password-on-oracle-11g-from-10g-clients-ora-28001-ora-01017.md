@@ -11,11 +11,18 @@ $sqlplus MYUSER/oldPW@oraDBServer
 
 SQL*Plus: Release 10.2.0.1.0 - Production on Wed Sep 23 07:57:41 2009
 
-Copyright (c) 1982, 2005, Oracle. All rights reserved.
+Copyright (c) 1982, 2005, Oracle.  All rights reserved.
 
-ERROR: ORA-28001: the password has expired
+ERROR:
+ORA-28001: the password has expired
 
-Changing password for MYUSER New password: Retype new password: ERROR: ORA-01017: invalid username/password; logon denied
+
+Changing password for MYUSER
+New password:
+Retype new password:
+ERROR:
+ORA-01017: invalid username/password; logon denied
+
 
 Password unchanged
 ```
@@ -25,17 +32,24 @@ After a bit of digging around I found [a post](http://www.experts-exchange.com/D
 
 
 ```bash
-C:\\Windows\\System32>C:\\instantclient_11_1\\sqlplus.exe MYUSER/oldPW@oraDBServer
+C:\Windows\System32>C:\instantclient_11_1\sqlplus.exe MYUSER/oldPW@oraDBServer
 
 SQL*Plus: Release 11.1.0.7.0 - Production on Wed Sep 23 08:34:39 2009
 
-Copyright (c) 1982, 2008, Oracle. All rights reserved.
+Copyright (c) 1982, 2008, Oracle.  All rights reserved.
 
-ERROR: ORA-28001: the password has expired
+ERROR:
+ORA-28001: the password has expired
 
-Changing password for MYUSER New password: Retype new password: Password changed
 
-Connected to: Oracle Database 11g Enterprise Edition Release 11.1.0.7.0 - 64bit Production With the Partitioning, OLAP, Data Mining and Real Application Testing options
+Changing password for MYUSER
+New password:
+Retype new password:
+Password changed
+
+Connected to:
+Oracle Database 11g Enterprise Edition Release 11.1.0.7.0 - 64bit Production
+With the Partitioning, OLAP, Data Mining and Real Application Testing options
 
 SQL>
 ```

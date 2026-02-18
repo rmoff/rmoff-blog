@@ -111,7 +111,9 @@ Add these three SQL statements to the "Execute before query" of "Connection Scri
 
 
 ```sql
-call dbms_application_info.set_client_info(client_info=>'VALUEOF(NQ_SESSION.DISPLAYNAME)') call dbms_session.set_identifier('VALUEOF(NQ_SESSION.USER)') call dbms_application_info.set_module(module_name=>'OBIEE: ' || case when length('VALUEOF(NQ_SESSION.SAW_DASHBOARD)')<40 then 'VALUEOF(NQ_SESSION.SAW_DASHBOARD)' else '...' || substr('VALUEOF(NQ_SESSION.SAW_DASHBOARD)',-37) end,action_name=>case when length('VALUEOF(NQ_SESSION.SAW_SRC_PATH)')<31 then 'VALUEOF(NQ_SESSION.SAW_SRC_PATH)' else '...' || substr('VALUEOF(NQ_SESSION.SAW_SRC_PATH)',-28) end);
+call dbms_application_info.set_client_info(client_info=>'VALUEOF(NQ_SESSION.DISPLAYNAME)')
+call dbms_session.set_identifier('VALUEOF(NQ_SESSION.USER)')
+call dbms_application_info.set_module(module_name=>'OBIEE: ' || case when length('VALUEOF(NQ_SESSION.SAW_DASHBOARD)')case when length('VALUEOF(NQ_SESSION.SAW_SRC_PATH)')<31 then 'VALUEOF(NQ_SESSION.SAW_SRC_PATH)' else '...' || substr('VALUEOF(NQ_SESSION.SAW_SRC_PATH)',-28) end);
 ```
 
 
@@ -127,7 +129,11 @@ NB CLIENT\_IDENTIFIER and CLIENT\_INFO have a larger capacity so could be used i
 
 
 ```
-V$SESSION column Max value length MODULE 47 ACTION 31 CLIENT_INFO 63 CLIENT_IDENTIFIER 63
+V$SESSION column      Max value length
+MODULE                47
+ACTION                31
+CLIENT_INFO           63
+CLIENT_IDENTIFIER     63
 ```
 
 
@@ -141,7 +147,12 @@ Run this sql\*plus SQL script below to look at any existing OBIEE queries runnin
 
 
 ```sql
-set linesize 170 col program for a30 col client_info for a20 col client_identifier for a18 col module for a47 col action for a31
+set linesize 170
+col program for a30
+col client_info for a20
+col client_identifier for a18
+col module for a47
+col action for a31
 
 SELECT SID,PROGRAM, CLIENT_IDENTIFIER, CLIENT_INFO, MODULE, ACTION FROM V$SESSION WHERE LOWER(PROGRAM) LIKE 'nqsserver%';
 ```

@@ -22,13 +22,19 @@ Horses for courses, but on a "fishing expedition" through a log I'd say the shor
 
 To implement it update $OracleBIData/web/config/logconfig.xml and change the Writer definition: 
 ```xml
-[...] [...]
+[...]
+	
+		
+[...]
 ```
 
 
 
 ```xml
-[...] [...]
+[...]
+	
+		
+[...]
 ```
 
 

@@ -20,7 +20,11 @@ To me, the error text is a bit unhelpful. Whilst the first statement is correct 
 
 The problem in this case was that my user didn't have privileges to create the tables: 
 ```sql
-SQL> create table test_table (col1 int); create table test_table (col1 int) * ERROR at line 1: ORA-01031: insufficient privileges
+SQL> create table test_table (col1 int);
+create table test_table (col1 int)
+*
+ERROR at line 1:
+ORA-01031: insufficient privileges
 ```
 
 
