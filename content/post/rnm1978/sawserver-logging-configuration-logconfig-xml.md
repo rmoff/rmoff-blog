@@ -2,6 +2,7 @@
 title: "sawserver logging configuration - logconfig.xml"
 date: "2009-07-23"
 slug: "sawserver-logging-configuration-logconfig-xml"
+url: "/2009/07/23/sawserver-logging-configuration-logconfig-xml/"
 categories: 
   - "config"
   - "hack"
