@@ -1,12 +1,14 @@
 ---
-title: "SQL Developer v2.1 Early Adopter released"
-date: "2009-09-25"
-categories: 
-  - "oracle"
+draft: false
+title: 'SQL Developer v2.1 Early Adopter released'
+date: "2009-09-25T06:59:57+0000"
+categories:
+- oracle
 ---
 
 SQL Developer v2.1 Early Adopter was released yesterday.
 
+<!--more-->
 [Download it here](http://www.oracle.com/technology/software/products/sql/index21_EA1.html)
 
 [New features list](http://www.oracle.com/technology/products/database/sql_developer/files/NewFeatureList21.htm)

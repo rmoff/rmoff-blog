@@ -1,13 +1,14 @@
 ---
-title: "Firefox add-ins - ones I find useful"
-date: "2009-03-24"
-categories: 
-  - "firefox"
+draft: false
+title: 'Firefox add-ins – ones I find useful'
+date: "2009-03-24T08:40:00+0000"
+categories:
+- firefox
 ---
 
-![](/images/rnm1978/image_lost.png)  
-  
+*(Image no longer available)*
 
+<!--more-->
 - Delicious Bookmarks
 - FireGestures
 - FoxyProxy
