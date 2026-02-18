@@ -8,7 +8,7 @@ categories:
   - "sawserver"
 ---
 
-[I posted a while ago](/2009/07/23/sawserver-logging-configuration-logconfig.xml/) about the sawserver (Presentation Services) log configuration file. Today I'm doing some work digging around why sawserver's throwing an error and so increased the log detail. This parameter is really helpful to use:
+[I posted a while ago](/2009/07/23/sawserver-logging-configuration-logconfig-xml/) about the sawserver (Presentation Services) log configuration file. Today I'm doing some work digging around why sawserver's throwing an error and so increased the log detail. This parameter is really helpful to use:
 
 **fmtName="short"**
 

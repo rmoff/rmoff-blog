@@ -7,7 +7,7 @@ categories:
   - "performance"
 ---
 
-Part of [looking at the various gubbins inside OBIEE](/2009/07/21/obiee-admin-tools-amp-hacks/) led me to realise that the Oracle BI Management application drives quite a few things. It exposes MBeans (Management Beans, a java term), accessible through [jmx](http://en.wikipedia.org/wiki/JMX). In the installation of OBIEE this component is referred to as "Systems Management".
+Part of [looking at the various gubbins inside OBIEE](/2009/07/21/obiee-admin-tools-hacks/) led me to realise that the Oracle BI Management application drives quite a few things. It exposes MBeans (Management Beans, a java term), accessible through [jmx](http://en.wikipedia.org/wiki/JMX). In the installation of OBIEE this component is referred to as "Systems Management".
 
 The MBeans give us real-time performance information, along with access to all the configuration options that are normally done through config files (instanceconfig.xml etc). Bear in mind if using it for updating configuration instead of through the files you don't get any backup created, so for that reason alone I would suggest it should only be used for reading current values.
 
