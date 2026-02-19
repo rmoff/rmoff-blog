@@ -1,10 +1,9 @@
 ---
 draft: false
 title: 'Building a data pipeline with dbt and DuckDB'
-date: "2026-02-18T12:28:13Z"
+date: "2026-02-19T12:28:13Z"
 image: "/images/2026/02/h_IMG_4249.webp"
 thumbnail: "/images/2026/02/t_IMG_4218.webp"
-credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - dbt
 - DuckDB
@@ -19,7 +18,7 @@ The pipeline was based around a set of SQL scripts, and whilst it used important
 
 <!--more-->
 
-dbt is a tool that arrived on the data engineering scene around 2020.
+dbt is a tool created in 2016 and that really exploded in popularity on the data engineering scene around 2020.
 This also coincided with my own journey away from hands-on data engineering and into Kafka and developer advocacy.
 As a result, dbt has always been one of those things I kept hearing about but never tried.
 
@@ -36,7 +35,7 @@ In this blog post I'm going to show off what I built with dbt, contrasting it to
 If you're new to dbt hopefully it'll be interesting and useful.
 If you're an old hand at dbt then you can let me know any glaring mistakes I've made :)
 
-First, a little sneak-peak:
+First, a little sneak peek:
 
 image:/images/2026/02/Global_Asset_Lineage.svg[]
 
@@ -124,7 +123,7 @@ So if we're not pulling from the API here, where are we doing it?
 This is where we remember exactly what dbt is—and isn't—for.
 Whilst DuckDB can pull data from an API directly, it doesn't map directly to capabilities in dbt for a good reason—dbt is for *transforming* data.
 
-That's not to say dbt is nothing but flexible, and its ability to run https://docs.getdbt.com/docs/build/jinja-macros[Jinja-based macros] gives it superpowers for bending to most wills.
+That said, dbt is nothing if not flexible, and its ability to run https://docs.getdbt.com/docs/build/jinja-macros[Jinja-based macros] gives it superpowers for bending to most wills.
 Here's how we'll pull in the readings API data:
 
 [source,sql]
@@ -148,14 +147,14 @@ Here's how we'll pull in the readings API data:
 {% endmacro %}
 ----
 <1> As it happens, we *are* using DuckDB's `read_json` to fetch the API data (contrary, much?)
-<2> Disassmble the REST payload to get the most recent timestamp of the data, store it as its own column for freshness tests later
+<2> Disassemble the REST payload to get the most recent timestamp of the data, store it as its own column for freshness tests later
 <3> Variables are defined in https://github.com/rmoff/env-agency-dbt/blob/master/dbt_project.yml#L38[`dbt_project.yml`]
 
 Even though we are using DuckDB for the extract phase of our pipeline, we're learning how to separate concerns.
 In a 'real' pipeline we'd use something like `curl` (or perhaps `requests` in Python) to load the data into DuckDB.
 We'd do it that way to give us more flexibility over things like retries, timeouts, and so on.
 
-The other two tables are ingested in a similar way, except use `CURRENT_TIMESTAMP` for `_latest_reading_at` since the measures and stations APIs don't return any timestamp information.
+The other two tables are ingested in a similar way, except they use `CURRENT_TIMESTAMP` for `_latest_reading_at` since the measures and stations APIs don't return any timestamp information.
 If you step away from APIs and think about data from upstream transactional systems being fed into dbt, there'll always be (or _should_ always be) a field that shows when the data last changed.
 Regardless of where it comes from, the purpose of the `_latest_reading_at` field is to give dbt a way to understand when the source data was last updated.
 
@@ -347,14 +346,14 @@ SELECT * FROM {{ ref('stg_readings_archive') }}
 In my link:/2025/03/20/building-a-data-pipeline-with-duckdb/[original version] I use SCD1 and throw away dimension history.
 Not for any sound business reason; just because it's the easiest thing to do; drop and recreate the dimension table from the latest version of the source dimension data.
 
-It's kinda a sucky way to do it though because you loose the ability to analyse how dimension data might have changed over time, as well as answer questions based on the state of a dimension at a given point in time.
+It's kinda a sucky way to do it though because you lose the ability to analyse how dimension data might have changed over time, as well as answer questions based on the state of a dimension at a given point in time.
 For example, "What was the total cumulative rainfall in Sheffield in December" could give you a different answer depending on whether you include measuring stations _that were open in December_ or _all those that are open in Sheffield today_.
 
 dbt makes SCD an absolute doddle through the idea of https://docs.getdbt.com/docs/build/snapshots[snapshots].
-In a (yet another) good example of how good a fit dbt is for this kind of work, it supports dimension data done 'right' and 'wrong'.
+In (yet another) good example of how good a fit dbt is for this kind of work, it supports dimension data done 'right' and 'wrong'.
 What do I mean by that, and how much heavy lifting are those 'quotation' 'marks' doing?
 
-In an ideal world, where the source data is designed with the data engineer in mind, any time an attribute of a  dimension changes, the data would indicate that with some kind of "last_updated" timestamp.
+In an ideal world, where the source data is designed with the data engineer in mind, any time an attribute of a dimension changes, the data would indicate that with some kind of "last_updated" timestamp.
 dbt calls this the https://docs.getdbt.com/docs/build/snapshots#timestamp-strategy-recommended[timestamp strategy] and is the recommended approach.
 It's clean, and it's efficient.
 This is what I mean by 'right'.
@@ -373,7 +372,7 @@ Regardless of the strategy, the flow for building dimension tables looks the sam
 * Raw is literally whatever the API serves us up, plus a timestamp to help us check freshness
 * Staging is where we clean up and shape the data (unnest)
 * Snapshot looks at staging and existing rows in snapshot for the particular dimension instance, and creates a new entry if it's changed (based on our strategy configuration)
-* Dimension is build from the snapshot table, taking the latest version of each instance of the dimension by checking using `WHERE dbt_valid_to IS NULL`.
+* Dimension is built from the snapshot table, taking the latest version of each instance of the dimension by checking using `WHERE dbt_valid_to IS NULL`.
 `dbt_valid_to` is added by dbt when it builds the snapshot table.
 
 Here's the snapshot configuration for station data:
@@ -503,7 +502,7 @@ The same measures also have more correct-looking `notation` values, so one suspe
 └──────────┴───────────────────────────────────────┴─────────────────────────────┘
 ----
 
-Whilst there might be upstream data issues, sometimes there's self-inflicted mistakes.
+Whilst there might be upstream data issues, sometimes there are self-inflicted mistakes.
 Here's one that I realised when I started digging into the data:
 
 [source,sql]
@@ -540,7 +539,7 @@ Arguably, the API's return doesn't match the documentation (what measures a stat
 But, we are the data engineers and our job is to provide a firebreak between whatever the source data provides, and something clean and consistent for the downstream consumers.
 
 So, perhaps we should update our snapshot configuration to specify the actual columns we want to track.
-Which is indeed what dbt https://docs.getdbt.com/docs/build/snapshots#check-strategy[explicitly recommend that you do]:
+Which is indeed what dbt https://docs.getdbt.com/docs/build/snapshots#check-strategy[explicitly recommends that you do]:
 
 > It is better to explicitly enumerate the columns that you want to check.
 
@@ -559,7 +558,7 @@ Sometimes it goes wrong from https://en.wikipedia.org/wiki/User_error[PEBKAC] wh
 
 == Date dimension
 
-Whilst the data about measuring stations and measurements comes from the API, it's always useful to have a dimension table the provides date information.
+Whilst the data about measuring stations and measurements comes from the API, it's always useful to have a dimension table that provides date information.
 Typically you want to be able to do things like analysis by date periods (year, month, etc) which may or may not be based on the standard calendar.
 Or you want to look at days of the week, or any other date-based things you can think of.
 
@@ -641,7 +640,7 @@ Run Time (s): real 0.003 user 0.001164 sys 0.000655
 == Duplication is ok, lean in
 
 One of the aspects of the dbt way of doing things that I instinctively recoiled from at first was the amount of data duplication.
-The source data is duplicated into staging is duplicated into the marts.
+The source data is duplicated into staging; staging is duplicated into the marts.
 There are two aspects to bear in mind here:
 
 1. Each layer serves a specific purpose.
@@ -665,7 +664,7 @@ But like we saw above with SCD and snapshots, there's a lot more to a successful
 Making sure that the tables we're building are actually _correct_, and proving so in a repeatable and automated manner, is crucial.
 
 Of course, "correct" is up to you, the data engineer, to define.
-dbt gives us a litany of tools which which to encode and enforce it.
+dbt gives us a litany of tools with which to encode and enforce it.
 
 There are some features that are about the validity of the _pipeline_ that we've built (does this transformation correctly result in the expected output), and others that validate the _data_ that's passing through it.
 
@@ -701,7 +700,7 @@ models:
 You'll notice the `contract` stanza in there.
 Constraints are part of the broader https://docs.getdbt.com/reference/resource-configs/contract[contracts] functionality in dbt.
 Contracts also include further encoding of the data model by requiring the specification of a name and data type for every column in a model.
-`SELECT *` might be fast and fun, but it's also dirty af in the long run for a building a pipeline that is stable and self-documenting (of which see below).
+`SELECT *` might be fast and fun, but it's also dirty af in the long run for building a pipeline that is stable and self-documenting (of which see below).
 
 https://docs.getdbt.com/docs/build/data-tests[Data tests] are similar to constraints, but whilst constraints are usually defined and enforced on the target database (although this varies on the actual database), tests are run by dbt as queries against the loaded data, separately from the actual build process (instead by the `dbt test` command).
 Tests can also be more flexible and include custom SQL to test whatever conditions you want to.
@@ -733,7 +732,7 @@ models:
 <3> Check that the `station` FK has a match…
 <4> …but only throw an error if this is the case with more than five percent of rows
 
-We looked at https://docs.getdbt.com/reference/resource-properties/freshness[freshness] of source data link:#ingest[above].
+We looked at https://docs.getdbt.com/reference/resource-properties/freshness[freshness] of source data link:#_ingest[above].
 This lets us signal to the operator if data has gone stale (the period beyond which data is determined as stale being up to us).
 Another angle to this is that we might have fresh data from the source (i.e. the API is still providing data) but the data being provided has gone stale (e.g. it's just feeding us readings data from a few days ago).
 For this we can actually https://github.com/rmoff/env-agency-dbt/blob/master/models/marts/station_freshness.sql[build a table (`station_freshness`)]:
@@ -817,7 +816,7 @@ We can also run the test in isolation and capture the row returned from the macr
 === Checking the pipeline
 
 Even data engineers make mistakes sometimes.
-https://docs.getdbt.com/docs/build/unit-tests[Unit tests] are a great way to encode what part of a pipeline is _supposed_ to do.
+https://docs.getdbt.com/docs/build/unit-tests[Unit tests] are a great way to encode what each part of a pipeline is _supposed_ to do.
 This is then very useful for identifying logical errors that you make in the pipeline's SQL, or changes made to it in the future.
 
 Here's a unit test defined to make sure that the readings fact table correctly unions data from the API with that from backfill:
@@ -852,7 +851,7 @@ unit_tests:
 
 == If you want them to RTFM, you gotta write the FM
 
-This is getting boring now isn't it.
+This is getting boring now, isn't it.
 No, not this article.
 But my constant praise for dbt.
 If you were to describe an ideal data pipeline you'd hit the obvious points—clean data, sensible granularity, efficient table design.
@@ -945,7 +944,7 @@ I'm sure there's a ton of functionality in Dagster that I've yet to explore, but
 
 All y'all out there sighing and rolling your eyes…yes yes.
 I know I'm not telling you anything new.
-You'll all known for years that dbt is _the_ way to build the transformations for data pipelines these days.
+You've all known for years that dbt is _the_ way to build the transformations for data pipelines these days.
 
 But hey, I'm catching up alright, and I'm loving the journey.
 This thing is _good_, and it gives me the warm fuzzy feeling that only a good piece of technology designed really well for a particular task can do.
