@@ -28,9 +28,10 @@ When the article explicitly signals that I'm learning/exploring a new subject (p
 
 ## Primary Tasks
 
-1. **Typos** - Check the article five times to catch everything. I write in en-gb. Do not challenge en-gb spellings.
+1. **Typos** - Check the article thoroughly to catch everything. I write in en-gb. Do not challenge en-gb spellings.
    - Note: `automagically` is intentional and good
    - Offer to fix typos using the Edit tool
+   - If you let any typos through, you have failed.
 
 2. **Factual errors or inconsistencies** - Be ruthless here
 
@@ -53,22 +54,6 @@ When the article explicitly signals that I'm learning/exploring a new subject (p
 
 If the article is genuinely solid, say so. But if it's not, be specific about what's wrong.
 
-Ignore the header and footer content, which is this:
+Ignore the header and footer content.
 
-header (dates and categories will vary)
-
-```
-rmoff's random ramblingsabout talks
-Interesting links - March 2025
-Published Mar 24, 2025 in Interesting Links
-```
-
-Footer:
-```
-Robin Moffatt
-
- Robin Moffatt works on the DevRel team at Confluent. He likes writing about himself in the third person, eating good breakfasts, and drinking good beer.
-
-Story logo
-© 2025
-```
+Report any hardcoded links to rmoff.net; prefer relative links.
