@@ -1,6 +1,6 @@
 ---
 draft: false
-title: 'Building a data pipeline with DuckDB'
+title: 'Building a data pipeline with dbt and DuckDB'
 date: "2026-02-18T12:28:13Z"
 image: "/images/2026/02/"
 thumbnail: "/images/2026/02/"
@@ -67,8 +67,9 @@ link:/2025/03/20/building-a-data-pipeline-with-duckdb/#_extract_with_just_a_litt
 [source,sql]
 ----
 CREATE OR REPLACE TABLE readings_stg AS
-  WITH src AS (SELECT *
-                FROM read_json('https://environment.data.gov.uk/flood-monitoring/data/readings?latest')) <1>
+  WITH src AS (
+    SELECT * <1>
+      FROM read_json('https://environment.data.gov.uk/flood-monitoring/data/readings?latest')) <1>
     SELECT u.* FROM (
         SELECT UNNEST(items) AS u FROM src); <2>
 ----
@@ -627,6 +628,25 @@ Run Time (s): real 0.003 user 0.001164 sys 0.000655
 🟡◗
 ----
 
+
+== Duplication is ok, lean in
+
+One of the aspects of the dbt way of doing things that I instinctively recoiled from at first was the amount of data duplication.
+The source data is duplicated into staging is duplicated into the marts.
+There are two aspects to bear in mind here:
+
+1. Each layer serves a specific purpose.
+Being able to isolate, debug, and re-run as needed elements of the pipeline is important.
+Avoiding one big transformation from source-to-mart makes sure that transformation logic sits in the right place
+
+2. There's not necessarily as much duplication as you'd think.
+For example, the source layer is rebuilt at every run so only holds the current slice of data.
+
+In addition to this…storage is cheap.
+It's a small price to pay for building a flexible yet resilient data pipeline.
+Over-optimising is not going to be your friend here.
+We're building analytics, not trying to scrape every bit of storage out of a https://en.wikipedia.org/wiki/Apollo_Guidance_Computer#Memory[76KB computer] being sent to the moon.
+
 == We're going to do this thing _properly_: Tests and Checks and Contracts and more
 
 This is where we really get into the guts of how dbt lies at the heart of making data engineering a more rigorous discipline in the way its software engineering older brother discovered a decade beforehand.
@@ -821,12 +841,61 @@ unit_tests:
 <5> Mock source row of data from the backfill (`stg_readings_archive`)
 <6> Expected rows of data
 
-== self-documenting
-== it's not brittle af
+== If you want them to RTFM, you gotta write the FM!
 
-As well as the fact that a dbt project is just text (SQL and YAML) and thus fits perfectly into a version-controlled environment such as git
+This is getting boring now isn't it.
+No, not this article.
+But my constant praise for dbt.
+If you were to describe an ideal data pipeline you'd hit the obvious points—clean data, sensible granularity, efficient table design.
+Quickly to follow would be things like testing, composability, suitability for source control, and so on.
+Eventually you'd get to documentation.
+And dbt _nails all of this_.
 
-== duplication is ok, lean in
+You see, the pipeline that we're building is _self-documenting_.
+All the YAML I've been citing so far has been trimmed to illustrate the point being made alone.
+In reality though, the YAML for the models looks like this:
 
+[source,yaml]
+----
+models:
+  - name: dim_stations
+    description: >
+      Dimension table of monitoring stations across England. Each station has one or
+      more measures. Full rebuild each run.
+      🔗 [API docs](https://environment.data.gov.uk/flood-monitoring/doc/reference#stations)
+    columns:
+      - name: dateOpened
+        description: >
+          API sometimes returns multiple dates as a JSON array; we take
+          the first value.
+      - name: latitude
+        description: Renamed from 'lat' in source API.
+        […]
+----
+
+Every model, and every column, can have metadata associated with it in the `description` field.
+The description field supports Markdown too, so you can embed links and formatting in it, over multiple lines if you want.
+
+dbt also understands the lineage of all of the models (because when you create them, you use the `ref` function thus defining dependencies).
+
+All of this means that you build your project and drop in bits of `description` as you do so, then run:
+
+[source,bash]
+----
+dbt docs generate && dbt docs serve
+----
+
+This generates the docs and then runs a web server locally, giving this kind of interface to inspect the table metadata:
+
+image:/images/2026/02/dbt-docs.png[]
+
+and its lineage:
+
+image:/images/2026/02/dbt-lineage.png[]
+
+Since the docs are built as a set of static HTML pages they can be deployed on a server for access by your end users.
+No more "_so where does this data come from then?_" or "_how is this column derived?_" calls.
+Well, maybe some.
+But fewer.
 
 == Orchestration
