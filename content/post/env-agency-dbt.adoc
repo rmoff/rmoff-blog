@@ -2,16 +2,17 @@
 draft: false
 title: 'Building a data pipeline with dbt and DuckDB'
 date: "2026-02-18T12:28:13Z"
-image: "/images/2026/02/"
-thumbnail: "/images/2026/02/"
+image: "/images/2026/02/h_IMG_4249.webp"
+thumbnail: "/images/2026/02/t_IMG_4218.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - dbt
 - DuckDB
 - Data Engineering
+- Dagster
 ---
 
-Apparently, you *can* teach an old dog new tricks.
+> Apparently, you *can* teach an old dog new tricks.
 
 Last year I wrote link:/2025/03/20/building-a-data-pipeline-with-duckdb/[a blog post] about building a data processing pipeline using DuckDB to ingest weather sensor data from the https://environment.data.gov.uk/flood-monitoring/doc/reference[UK's Environment Agency].
 The pipeline was based around a set of SQL scripts, and whilst it used important data engineering practices like data modelling, it sidestepped the elephant in the room for code-based pipelines: dbt.
@@ -22,9 +23,9 @@ dbt is a tool that arrived on the data engineering scene around 2020.
 This also coincided with my own journey away from hands-on data engineering and into Kafka and developer advocacy.
 As a result, dbt has always been one of those things I kept hearing about but never tried.
 
-In 2022 I made a link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[couple] of /2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[attempts] to learn dbt, but it never really 'clicked'.
+In 2022 I made a link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[couple] of link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[attempts] to learn dbt, but it never really 'clicked'.
 
-I'm pleased to say that as of today, dbt has definitely 'clicked'.
+*I'm pleased to say that as of today, dbt has definitely 'clicked'*.
 How do I know?
 Because not only can I explain what I've built, but I've even had the lightbulb-above-the-head moment seeing it in action and how elegant the code used to build pipelines with dbt can be.
 
@@ -35,9 +36,17 @@ In this blog post I'm going to show off what I built with dbt, contrasting it to
 If you're new to dbt hopefully it'll be interesting and useful.
 If you're an old hand at dbt then you can let me know any glaring mistakes I've made :)
 
+First, a little sneak-peak:
+
+image:/images/2026/02/Global_Asset_Lineage.svg[]
+
+image:/images/2026/02/dagster-dim-stations.webp[]
+
+Now, let's look at how I did it.
+
 == The Data
 
-[NOTE] I'm just going to copy and paste this from my previous article :)
+NOTE: I'm just going to copy and paste this from my previous article :)
 
 At the heart of the data are **readings**, providing information about **measures** such as rainfall and river levels.
 These are reported from a variety of **stations** around the UK.
@@ -422,7 +431,7 @@ This builds a snapshot table that looks like this
 
 So for example, here's a station that got renamed:
 
-image:/images/2026/02/1029TH.png[]
+image:/images/2026/02/1029TH.webp[]
 
 === The devil is in the +++<del>detail</del>+++ data
 
@@ -588,7 +597,7 @@ packages:
 
 The date dimension table then looks similar to the first, except the FROM clause is different:
 
-.https://github.com/rmoff/env-agency-dbt/blob/master/models/marts/dim_date_v2.sql[models/marts/dim_date_v2.sql]]
+.https://github.com/rmoff/env-agency-dbt/blob/master/models/marts/dim_date_v2.sql[models/marts/dim_date_v2.sql]
 [source,sql]
 ----
 
@@ -841,7 +850,7 @@ unit_tests:
 <5> Mock source row of data from the backfill (`stg_readings_archive`)
 <6> Expected rows of data
 
-== If you want them to RTFM, you gotta write the FM!
+== If you want them to RTFM, you gotta write the FM
 
 This is getting boring now isn't it.
 No, not this article.
@@ -887,15 +896,56 @@ dbt docs generate && dbt docs serve
 
 This generates the docs and then runs a web server locally, giving this kind of interface to inspect the table metadata:
 
-image:/images/2026/02/dbt-docs.png[]
+image:/images/2026/02/dbt-docs.webp[]
 
 and its lineage:
 
-image:/images/2026/02/dbt-lineage.png[]
+image:/images/2026/02/dbt-lineage.webp[]
 
 Since the docs are built as a set of static HTML pages they can be deployed on a server for access by your end users.
 No more "_so where does this data come from then?_" or "_how is this column derived?_" calls.
 Well, maybe some.
 But fewer.
 
+[TIP]
+====
+As a bonus, the same metadata is available in Dagster:
+
+image:/images/2026/02/dagster-docs.webp[]
+====
+
+So speaking of Dagster, let's conclude this article by looking at how we run this dbt pipeline that we've built.
+
 == Orchestration
+
+dbt does one thing—and one thing only—very well.
+It builds kick-ass transformation pipelines.
+
+We discussed briefly above the slight overstepping by using dbt and DuckDB to pull the API data into the source tables.
+In reality that should probably be another application doing the extraction, such as https://dlthub.com/[dlt], https://airbyte.com/[Airbyte], etc.
+
+When it comes to putting our pipeline live and having it run automagically, we also need to look outside of dbt for this.
+
+We _could_ use cron, like absolute savages.
+It'd run on a schedule, but with absolutely nothing else to help an operator or data engineer monitor and troubleshoot.
+
+I used https://github.com/dagster-io/dagster[Dagster], which integrates with dbt nicely (see the point above about how it automagically pulls in documentation).
+It understands the models and dependencies, and orchestrates everything nicely.
+It tracks executions and shows you runtimes.
+
+image:/images/2026/02/dagster-dim-stations.webp[]
+
+Dagster is configured using Python code, which I had Claude write for me.
+If I weren't using dbt to load the sources it'd have been even more straightforward, but to get visibility of them in the lineage graph it needed a little bit extra.
+It also needed configuring to not run them in parallel, since DuckDB is a single-user database.
+
+I'm sure there's a ton of functionality in Dagster that I've yet to explore, but it's definitely ticking a lot of the boxes that I'd be looking for in such a tool: ease of use, clarity of interface, functionality, etc.
+
+== Better late than never, right?
+
+All y'all out there sighing and rolling your eyes…yes yes.
+I know I'm not telling you anything new.
+You'll all known for years that dbt is _the_ way to build the transformations for data pipelines these days.
+
+But hey, I'm catching up alright, and I'm loving the journey.
+This thing is _good_, and it gives me the warm fuzzy feeling that only a good piece of technology designed really well for a particular task can do.
