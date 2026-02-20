@@ -1,6 +1,7 @@
 ---
 title: "sawserver won't start up - resolved"
 date: "2009-04-01"
+url: "/2009/04/01/sawserver-wont-start-up-resolved/"
 categories: 
   - "OBIEE"
   - "sawserver"

@@ -1,6 +1,7 @@
 ---
 title: "Unix script to report on OBIEE and OBIA processes state"
 date: "2009-08-14"
+url: "/2009/08/14/unix-script-to-report-on-obiee-and-obia-processes-state/"
 categories: 
   - "apache"
   - "cluster"

@@ -1,6 +1,7 @@
 ---
 title: "New releases"
 date: "2009-04-28"
+url: "/2009/04/28/new-releases/"
 categories: 
   - "obia"
   - "OBIEE"

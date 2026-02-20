@@ -1,6 +1,7 @@
 ---
 title: "BI Server hung - nQSError 14054 / 15001 / 23005"
 date: "2009-10-16"
+url: "/2009/10/16/bi-server-hung-nqserror-14054-15001-23005/"
 categories: 
   - "OBIEE"
 ---

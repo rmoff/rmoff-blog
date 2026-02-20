@@ -1,6 +1,7 @@
 ---
 title: "OBIA grumble"
 date: "2009-08-04"
+url: "/2009/08/04/obia-grumble/"
 categories: 
   - "obia"
   - "oracle"

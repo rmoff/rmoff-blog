@@ -1,6 +1,7 @@
 ---
 title: "Troubleshooting Presentation Services / analytics connectivity"
 date: "2009-12-09"
+url: "/2009/12/09/troubleshooting-presentation-services-analytics-connectivity/"
 categories: 
   - "OBIEE"
   - "sawping"

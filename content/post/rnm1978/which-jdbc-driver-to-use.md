@@ -1,6 +1,7 @@
 ---
 title: "Which jdbc driver to use"
 date: "2009-03-24"
+url: "/2009/03/24/which-jdbc-driver-to-use/"
 categories: 
   - "bi-publisher"
   - "jdbc"

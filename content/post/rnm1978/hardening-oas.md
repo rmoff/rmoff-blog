@@ -1,6 +1,7 @@
 ---
 title: "Hardening OAS"
 date: "2010-01-21"
+url: "/2010/01/21/hardening-oas/"
 categories: 
   - "apache"
   - "oas"

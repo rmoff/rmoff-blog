@@ -1,9 +1,12 @@
 ---
 title: "Syntax for AdminTool.exe command line script"
 date: "2009-09-09"
+url: "/2009/09/09/syntax-for-admintool-exe-command-line-script/"
 categories: 
   - "admintool"
   - "hack"
+aliases:
+- /2009/09/09/syntax-for-admintool.exe-command-line-script/
 ---
 
 Bringing together in one place all of the script syntax that I've found so far for using with OBIEE's **AdminTool.exe /command**

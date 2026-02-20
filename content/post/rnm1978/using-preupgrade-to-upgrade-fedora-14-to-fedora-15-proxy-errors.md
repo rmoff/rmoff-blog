@@ -1,6 +1,7 @@
 ---
 title: "Using preupgrade to upgrade Fedora 14 to Fedora 15 - proxy errors"
 date: "2011-09-12"
+url: "/2011/09/12/using-preupgrade-to-upgrade-fedora-14-to-fedora-15-proxy-errors/"
 categories: 
   - "fedora"
   - "linux"

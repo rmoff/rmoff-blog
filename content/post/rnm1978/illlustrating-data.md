@@ -1,6 +1,7 @@
 ---
 title: "Illustrating data"
 date: "2010-02-08"
+url: "/2010/02/08/illlustrating-data/"
 categories: 
   - "bi"
   - "visualisation"

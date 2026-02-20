@@ -1,10 +1,13 @@
 ---
 title: "Critical Patch Update - OBIEE vuln CVE-2009-1990"
 date: "2009-10-21"
+url: "/2009/10/21/obiee-vuln-cv-2009-1990/"
 categories: 
   - "bug"
   - "OBIEE"
   - "security"
+aliases:
+- /2009/10/21/critical-patch-update-obiee-vuln-cve-2009-1990/
 ---
 
 October's [Oracle Critical Patch Update Advisory](http://www.oracle.com/technology/deploy/security/critical-patch-updates/cpuoct2009.html) has been released. There are two vulnerabilities (CVE-2009-1999, CVE-2009-1990) listed under **Oracle Application Server** for "Component" **Business Intelligence Enterprise Edition** and one (CVE-2009-3407) for "component" **Portal**.

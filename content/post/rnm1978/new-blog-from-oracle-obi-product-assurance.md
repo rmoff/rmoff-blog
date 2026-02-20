@@ -1,6 +1,7 @@
 ---
 title: "New blog from Oracle - OBI Product Assurance"
 date: "2011-08-15"
+url: "/2011/08/15/new-blog-from-oracle-obi-product-assurance/"
 categories: 
   - "bi"
   - "OBIEE"

@@ -1,9 +1,12 @@
 ---
 title: "RSS feeds for OBIEE, including del.icio.us obiee tags"
 date: "2009-09-04"
+url: "/2009/09/04/rss-feeds-for-obiee-including-del-icio-us-obiee-tags/"
 categories: 
   - "OBIEE"
   - "rss"
+aliases:
+- /2009/09/04/rss-feeds-for-obiee-including-del.icio.us-obiee-tags/
 ---
 
 Another way of keeping up with what's going on in the obiee world, add [this RSS feed](http://feeds.delicious.com/v2/rss/tag/obiee?count=15) of del.icio.us obiee tags to your reader. It may be less "current" (because people might discover and bookmark 'old' pages), but it's another tool in the armoury :)

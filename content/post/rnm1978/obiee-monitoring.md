@@ -1,6 +1,7 @@
 ---
 title: "OBIEE monitoring"
 date: "2010-12-06"
+url: "/2010/12/06/obiee-monitoring/"
 categories: 
   - "hack"
   - "jmx"

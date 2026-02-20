@@ -1,6 +1,7 @@
 ---
 title: "Oracle BI Management / Systems Management MBeans"
 date: "2009-07-22"
+url: "/2009/07/22/oracle-bi-management-systems-management-mbeans/"
 categories: 
   - "jmx"
   - "mbeans"

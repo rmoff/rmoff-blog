@@ -1,6 +1,7 @@
 ---
 title: "My first presentation - afterthoughts"
 date: "2010-05-23"
+url: "/2010/05/23/my-first-presentation-afterthoughts/"
 categories: 
   - "biforum"
   - "presentation"

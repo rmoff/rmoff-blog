@@ -1,6 +1,7 @@
 ---
 title: "Google vs Bing"
 date: "2009-08-05"
+url: "/2009/08/05/google-vs-bing/"
 categories: 
   - "google"
 ---

@@ -1,6 +1,7 @@
 ---
 title: "Resolved: sawserver : Error loading security privilege /system/privs/catalog/ChangePermissionsPrivilege"
 date: "2009-11-17"
+url: "/2009/11/17/resolved-sawserver-error-loading-security-privilege-systemprivscatalogchangepermissionsprivilege/"
 categories: 
   - "config"
   - "sawserver"

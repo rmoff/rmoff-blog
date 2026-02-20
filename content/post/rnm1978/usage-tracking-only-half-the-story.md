@@ -1,10 +1,13 @@
 ---
 title: "Usage Tracking - only half the story ..."
 date: "2009-10-06"
+url: "/2009/10/06/usage-tracking-only-half-the-story/"
 categories: 
   - "OBIEE"
   - "systemsmanagement"
   - "usagetracking"
+aliases:
+- /2009/10/06/usage-tracking-only-half-the-story-.../
 ---
 
 OBIEE comes with a very useful usage tracking feature. For information about it and how to set it up see these links:

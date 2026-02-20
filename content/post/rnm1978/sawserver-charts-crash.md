@@ -1,6 +1,7 @@
 ---
 title: "sawserver charts crash"
 date: "2009-07-23"
+url: "/2009/07/23/sawserver-charts-crash/"
 categories: 
   - "bug"
   - "OBIEE"

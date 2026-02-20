@@ -1,6 +1,7 @@
 ---
 title: "What am I missing here??? ORA-01017: invalid username/password; logon denied"
 date: "2010-05-06"
+url: "/2010/05/06/what-am-i-missing-here-ora-01017-invalid-usernamepassword-logon-denied/"
 categories: 
   - "dac"
   - "ora-01017"

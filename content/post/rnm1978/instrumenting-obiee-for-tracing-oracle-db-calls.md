@@ -1,6 +1,7 @@
 ---
 title: "Instrumenting OBIEE for tracing Oracle DB calls"
 date: "2011-02-02"
+url: "/2011/02/02/instrumenting-obiee-for-tracing-oracle-db-calls/"
 categories: 
   - "log"
   - "monitoring"

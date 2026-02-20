@@ -1,6 +1,7 @@
 ---
 title: "A Poor Man's OBIEE EM/BI Management Pack"
 date: "2010-11-04"
+url: "/2010/11/04/a-poor-mans-obiee-embi-management-pack/"
 categories: 
   - "jmx"
   - "monitoring"

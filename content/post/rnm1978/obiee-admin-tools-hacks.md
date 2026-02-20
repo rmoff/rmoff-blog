@@ -1,5 +1,5 @@
 ---
-title: "OBIEE admin tools &amp; hacks"
+title: "OBIEE admin tools & hacks"
 date: "2009-07-21"
 slug: "obiee-admin-tools-hacks"
 url: "/2009/07/21/obiee-admin-tools-hacks/"

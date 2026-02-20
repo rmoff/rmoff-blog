@@ -1,6 +1,7 @@
 ---
 title: "OTN forum rant"
 date: "2009-07-21"
+url: "/2009/07/21/otn-forum-rant/"
 categories: 
   - "oracle"
   - "rant"

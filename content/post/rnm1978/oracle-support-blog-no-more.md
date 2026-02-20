@@ -1,6 +1,7 @@
 ---
 title: "Oracle Support blog no more"
 date: "2010-02-15"
+url: "/2010/02/15/oracle-support-blog-no-more/"
 categories: 
   - "OBIEE"
 ---

@@ -1,6 +1,7 @@
 ---
 title: "New OBIEE benchmark - 50,000 users"
 date: "2009-10-12"
+url: "/2009/10/12/new-obiee-benchmark-50000-users/"
 categories: 
   - "OBIEE"
   - "performance"

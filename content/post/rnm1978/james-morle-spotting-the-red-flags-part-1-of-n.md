@@ -1,6 +1,7 @@
 ---
 title: "James Morle : Spotting the Red Flags (Part 1 of n)"
 date: "2009-09-25"
+url: "/2009/09/25/james-morle-spotting-the-red-flags-part-1-of-n/"
 categories: 
   - "oracle"
   - "performance"

@@ -1,10 +1,13 @@
 ---
 title: "Shiny new geek toys -- rrdtool and screen"
 date: "2011-03-01"
+url: "/2011/03/01/shiny-new-geek-toys-rrdtool-and-screen/"
 categories: 
   - "jmx"
   - "unix"
   - "visualisation"
+aliases:
+- /2011/03/01/shiny-new-geek-toys--rrdtool-and-screen/
 ---
 
 I've added two new toys to my geek arsenal today. First is one with which I've dabbled before, but struggled to master. The second is a revelation to me and which I discovered courtesy of twitter.

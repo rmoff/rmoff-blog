@@ -1,6 +1,7 @@
 ---
 title: "Collated OBIEE benchmarks"
 date: "2009-09-18"
+url: "/2009/09/18/collated-obiee-benchmarks/"
 categories: 
   - "OBIEE"
   - "performance"

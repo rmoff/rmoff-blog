@@ -1,6 +1,7 @@
 ---
 title: "Brilliant performance articles by Cary Millsap"
 date: "2010-01-29"
+url: "/2010/01/29/brilliant-performance-articles-by-cary-millsap/"
 categories: 
   - "performance"
 ---

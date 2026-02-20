@@ -1,6 +1,7 @@
 ---
 title: "DBMS_STATS - GATHER AUTO"
 date: "2011-09-13"
+url: "/2011/09/13/dbms_stats-gather-auto/"
 categories: 
   - "dbms_stats"
   - "oracle"

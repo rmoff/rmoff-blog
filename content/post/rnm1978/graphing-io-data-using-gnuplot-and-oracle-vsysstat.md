@@ -1,6 +1,7 @@
 ---
 title: "Graphing I/O data using gnuplot and Oracle V$SYSSTAT"
 date: "2010-10-26"
+url: "/2010/10/26/graphing-io-data-using-gnuplot-and-oracle-vsysstat/"
 categories: 
   - "io"
   - "oracle"

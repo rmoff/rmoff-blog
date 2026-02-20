@@ -1,6 +1,7 @@
 ---
 title: "Materialised Views - PCT Partition Truncation"
 date: "2011-01-08"
+url: "/2011/01/08/materialised-views-pct-partition-truncation/"
 categories: 
   - "bug"
   - "dwh"

@@ -1,6 +1,7 @@
 ---
 title: "RTFAL!"
 date: "2010-04-24"
+url: "/2010/04/24/rtfal/"
 categories: 
   - "ora-00845"
   - "oracle"

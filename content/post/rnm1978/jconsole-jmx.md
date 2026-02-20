@@ -1,6 +1,7 @@
 ---
 title: "JConsole / JMX"
 date: "2009-07-16"
+url: "/2009/07/16/jconsole-jmx/"
 categories: 
   - "jmx"
   - "monitoring"

@@ -1,9 +1,12 @@
 ---
 title: "ORA-13757: \"SQL Tuning Set\" \"string\" owned by user \"string\" is active."
 date: "2010-03-09"
+url: "/2010/03/09/ora-13757-sql-tuning-set-string-owned-by-user-string-is-active/"
 categories: 
   - "oracle"
   - "performance"
+aliases:
+- /2010/03/09/ora-13757-sql-tuning-set-string-owned-by-user-string-is-active./
 ---
 
 I've been playing around with [SQL Tuning Sets](http://download.oracle.com/docs/cd/B28359_01/server.111/b28274/sql_tune.htm#i34915), and was trying to clear up my mess.

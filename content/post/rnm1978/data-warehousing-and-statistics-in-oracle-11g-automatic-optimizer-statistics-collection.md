@@ -1,6 +1,7 @@
 ---
 title: "Data Warehousing and Statistics in Oracle 11g - Automatic Optimizer Statistics Collection"
 date: "2011-05-26"
+url: "/2011/05/26/data-warehousing-and-statistics-in-oracle-11g-automatic-optimizer-statistics-collection/"
 categories: 
   - "dbms_stats"
   - "dwh"

@@ -1,6 +1,7 @@
 ---
 title: "Querying SQL Server from OBIEE running on Unix"
 date: "2009-08-21"
+url: "/2009/08/21/querying-sql-server-from-obiee-running-on-unix/"
 categories: 
   - "OBIEE"
   - "sqlserver"

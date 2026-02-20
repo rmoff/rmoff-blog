@@ -1,6 +1,7 @@
 ---
 title: "OBIEE and Load Runner - part 1"
 date: "2009-08-19"
+url: "/2009/08/19/obiee-and-load-runner-part-1/"
 categories: 
   - "loadrunner"
   - "OBIEE"

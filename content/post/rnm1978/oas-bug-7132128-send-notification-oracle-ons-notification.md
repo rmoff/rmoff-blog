@@ -1,8 +1,11 @@
 ---
 title: "OAS bug 7132128 - Send notification: oracle.ons.Notification"
 date: "2009-04-02"
+url: "/2009/04/02/oas-bug-7132128-send-notification-oracle-ons-notification/"
 categories: 
   - "oas"
+aliases:
+- /2009/04/02/oas-bug-7132128-send-notification-oracle.ons.notification/
 ---
 
 I noticed that the j2ee server.log file was filling up with these entries:  

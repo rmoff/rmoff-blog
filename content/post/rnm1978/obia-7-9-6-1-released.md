@@ -1,9 +1,12 @@
 ---
 title: "OBIA 7.9.6.1 released"
 date: "2009-10-12"
+url: "/2009/10/12/obia-7-9-6-1-released/"
 categories: 
   - "informatica"
   - "obia"
+aliases:
+- /2009/10/12/obia-7.9.6.1-released/
 ---
 
 The latest point release of Oracle Business Intelligence Applications, 7.9.6.1, has been released and is available for download [from here](http://www.oracle.com/technology/software/products/ias/htdocs/101320bi.html) ([direct link to download](http://download.oracle.com/otn/nt/bi/biapps_windows_7961.zip)).

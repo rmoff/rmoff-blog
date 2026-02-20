@@ -1,6 +1,7 @@
 ---
 title: "OBIEE performance monitoring and alerting with jManage"
 date: "2009-07-29"
+url: "/2009/07/29/oracle-bi-management-jmanage/"
 categories: 
   - "jmanage"
   - "jmx"

@@ -1,6 +1,7 @@
 ---
 title: "Maker's Schedule, Manager's Schedule"
 date: "2009-07-28"
+url: "/2009/07/28/makers-schedule-managers-schedule/"
 categories: 
   - "timemanagement"
 ---

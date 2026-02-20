@@ -1,6 +1,7 @@
 ---
 title: "ODI 10g connectivity problem with OCI"
 date: "2011-08-04"
+url: "/2011/08/04/odi-10g-connectivity-problem-with-oci/"
 categories: 
   - "odi"
 ---

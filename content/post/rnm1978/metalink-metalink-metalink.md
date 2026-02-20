@@ -1,6 +1,7 @@
 ---
 title: "Metalink Metalink Metalink"
 date: "2009-03-24"
+url: "/2009/03/24/metalink-metalink-metalink/"
 categories: 
   - "metalink"
   - "oracle"

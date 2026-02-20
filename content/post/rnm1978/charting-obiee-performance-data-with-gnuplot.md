@@ -1,6 +1,7 @@
 ---
 title: "Charting OBIEE performance data with gnuplot"
 date: "2010-12-06"
+url: "/2010/12/06/charting-obiee-performance-data-with-gnuplot/"
 categories: 
   - "gnuplot"
   - "jmx"

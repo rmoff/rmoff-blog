@@ -1,6 +1,7 @@
 ---
 title: "Metalink 3 followup"
 date: "2009-09-04"
+url: "/2009/09/04/metalink-3-followup/"
 categories: 
   - "metalink"
 ---

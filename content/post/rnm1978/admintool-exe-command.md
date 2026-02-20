@@ -1,6 +1,7 @@
 ---
 title: "AdminTool.exe /command"
 date: "2009-09-08"
+url: "/2009/09/08/admintool-exe-command/"
 categories: 
   - "admintool"
   - "hack"

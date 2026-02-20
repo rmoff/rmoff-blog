@@ -1,6 +1,7 @@
 ---
 title: "OBI 11g : UPGAST-00055: error reading the Oracle Universal Installer inventory"
 date: "2011-10-05"
+url: "/2011/10/05/obi-11g-upgast-00055-error-reading-the-oracle-universal-installer-inventory/"
 categories: 
   - "inventory"
   - "obiee-11g"

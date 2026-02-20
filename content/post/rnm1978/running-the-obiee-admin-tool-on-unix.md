@@ -1,6 +1,7 @@
 ---
 title: "Running the OBIEE admin tool on Unix"
 date: "2009-12-14"
+url: "/2009/12/14/running-the-obiee-admin-tool-on-unix/"
 categories: 
   - "OBIEE"
 ---

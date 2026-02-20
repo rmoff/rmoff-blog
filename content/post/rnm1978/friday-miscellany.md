@@ -1,6 +1,7 @@
 ---
 title: "Friday miscellany"
 date: "2011-09-16"
+url: "/2011/09/16/friday-miscellany/"
 categories: 
   - "OBIEE"
 ---

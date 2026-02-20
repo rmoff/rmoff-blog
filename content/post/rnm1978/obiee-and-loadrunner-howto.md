@@ -1,10 +1,13 @@
 ---
 title: "Performance testing OBIEE using HP Performance Center (a.k.a. LoadRunner)"
 date: "2009-10-01"
+url: "/2009/10/01/obiee-and-loadrunner-howto/"
 categories: 
   - "loadrunner"
   - "OBIEE"
   - "performance"
+aliases:
+- /2009/10/01/obiee-and-hp-performance-center-a.k.a.-loadrunner-notes/
 ---
 
 My two earlier posts ([here](/2009/08/19/obiee-and-load-runner-part-1/) and [here](/2009/08/21/obiee-and-load-runner-part-2/)) detail the difficulties I had with LoadRunner (now called HP Performance Center). After a bit of a break along with encouragement from knowing that it must be possible because it's how Oracle generates their [OBIEE benchmarks](/2009/09/18/collated-obiee-benchmarks/) I've now got something working. I also got a useful doc from Oracle support which outlines pretty much what I've done here too.

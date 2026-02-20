@@ -1,6 +1,7 @@
 ---
 title: "Finding config files in unix"
 date: "2009-03-23"
+url: "/2009/03/23/finding-config-files-in-unix/"
 categories: 
   - "bi-publisher"
   - "unix"

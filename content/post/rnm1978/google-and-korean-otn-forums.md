@@ -1,6 +1,7 @@
 ---
 title: "Google and Korean OTN forums"
 date: "2009-04-02"
+url: "/2009/04/02/google-and-korean-otn-forums/"
 categories: 
   - "google"
   - "otn"

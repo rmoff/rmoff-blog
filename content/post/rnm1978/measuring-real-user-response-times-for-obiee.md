@@ -1,6 +1,7 @@
 ---
 title: "Measuring real user response times for OBIEE"
 date: "2010-06-14"
+url: "/2010/06/14/measuring-real-user-response-times-for-obiee/"
 categories: 
   - "OBIEE"
   - "performance"

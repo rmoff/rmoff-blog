@@ -1,6 +1,7 @@
 ---
 title: "Comparing methods for recording I/O - V$SYSSTAT vs HP Measureware"
 date: "2011-03-09"
+url: "/2011/03/09/comparing-methods-for-recording-io-vsysstat-vs-hp-measureware/"
 categories: 
   - "io"
   - "oracle"

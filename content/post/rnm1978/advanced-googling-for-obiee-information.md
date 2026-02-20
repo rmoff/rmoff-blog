@@ -1,6 +1,7 @@
 ---
 title: "Advanced Googling for OBIEE information"
 date: "2009-11-03"
+url: "/2009/11/03/advanced-googling-for-obiee-information/"
 categories: 
   - "google"
   - "OBIEE"

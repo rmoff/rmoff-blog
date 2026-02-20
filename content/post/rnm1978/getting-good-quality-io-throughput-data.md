@@ -1,6 +1,7 @@
 ---
 title: "Getting good quality I/O throughput data"
 date: "2011-03-11"
+url: "/2011/03/11/getting-good-quality-io-throughput-data/"
 categories: 
   - "awr"
   - "io"

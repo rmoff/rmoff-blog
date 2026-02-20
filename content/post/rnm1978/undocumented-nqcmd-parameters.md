@@ -1,6 +1,7 @@
 ---
 title: "Undocumented nqcmd parameters"
 date: "2011-07-13"
+url: "/2011/07/13/undocumented-nqcmd-parameters/"
 categories: 
   - "documentation"
   - "hack"

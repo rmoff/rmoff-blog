@@ -1,6 +1,7 @@
 ---
 title: "OBIEE 11g tidbit - XUDML support"
 date: "2010-03-18"
+url: "/2010/03/18/obiee-11g-tidbit-xudml-support/"
 categories: 
   - "OBIEE"
   - "obiee-11g"

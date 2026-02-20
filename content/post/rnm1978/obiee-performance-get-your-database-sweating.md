@@ -1,6 +1,7 @@
 ---
 title: "OBIEE performance - get your database sweating"
 date: "2011-05-19"
+url: "/2011/05/19/obiee-performance-get-your-database-sweating/"
 categories: 
   - "bi"
   - "dwh"

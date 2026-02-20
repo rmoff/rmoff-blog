@@ -1,6 +1,7 @@
 ---
 title: "Clean install of OAS - Enterprise Manager not available"
 date: "2009-08-06"
+url: "/2009/08/06/clean-install-of-oas-enterprise-manager-not-available/"
 categories: 
   - "oas"
 ---

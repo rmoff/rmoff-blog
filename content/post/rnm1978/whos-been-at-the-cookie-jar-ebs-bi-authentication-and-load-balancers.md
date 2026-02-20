@@ -1,6 +1,7 @@
 ---
 title: "Who's been at the cookie jar? EBS-BI authentication and Load Balancers"
 date: "2010-03-05"
+url: "/2010/03/05/whos-been-at-the-cookie-jar-ebs-bi-authentication-and-load-balancers/"
 categories: 
   - "cluster"
   - "load-balancing"

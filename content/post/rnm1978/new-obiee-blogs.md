@@ -1,6 +1,7 @@
 ---
 title: "New OBIEE blogs"
 date: "2009-10-19"
+url: "/2009/10/19/new-obiee-blogs/"
 categories: 
   - "OBIEE"
 ---

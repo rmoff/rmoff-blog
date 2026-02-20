@@ -1,6 +1,7 @@
 ---
 title: "OBIEE Windows PerfMon counters"
 date: "2009-07-24"
+url: "/2009/07/24/obiee-windows-perfmon-counters/"
 categories: 
   - "hack"
   - "OBIEE"

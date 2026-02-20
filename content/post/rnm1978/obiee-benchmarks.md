@@ -1,6 +1,7 @@
 ---
 title: "OBIEE benchmarks"
 date: "2009-09-17"
+url: "/2009/09/17/obiee-benchmarks/"
 categories: 
   - "OBIEE"
   - "performance"

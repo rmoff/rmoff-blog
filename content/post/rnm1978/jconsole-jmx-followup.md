@@ -1,6 +1,7 @@
 ---
 title: "JConsole / JMX - followup"
 date: "2009-07-21"
+url: "/2009/07/21/jconsole-jmx-followup/"
 categories: 
   - "jmx"
   - "OBIEE"

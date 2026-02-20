@@ -1,6 +1,7 @@
 ---
 title: "How to find out what web application server is in use"
 date: "2009-07-28"
+url: "/2009/07/28/how-to-find-out-what-web-application-server-is-in-use/"
 categories: 
   - "oas"
   - "OBIEE"

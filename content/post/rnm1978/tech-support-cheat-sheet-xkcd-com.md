@@ -1,8 +1,11 @@
 ---
 title: "Tech Support Cheat Sheet [xkcd.com]"
 date: "2009-08-24"
+url: "/2009/08/24/tech-support-cheat-sheet-xkcd-com/"
 categories: 
   - "silly"
+aliases:
+- /2009/08/24/tech-support-cheat-sheet-xkcd.com/
 ---
 
 [xkcd.com](http://www.xkcd.com) is one of my favourite comics on the web. It strikes just the right balance of geeky witty humour without being too smart-ass.

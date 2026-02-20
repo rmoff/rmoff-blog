@@ -1,8 +1,11 @@
 ---
 title: "OBIEE 10.1.3.4.2 released"
 date: "2011-08-08"
+url: "/2011/08/08/obiee-10-1-3-4-2-released/"
 categories: 
   - "OBIEE"
+aliases:
+- /2011/08/08/obiee-10.1.3.4.2-released/
 ---
 
 A new version of OBI 10g (remember that?) has just been released, the Oracle twitter machine announced: ![](/images/rnm1978/2011-08-08_0737_-0000.png "2011-08-08_0737_ 0000")

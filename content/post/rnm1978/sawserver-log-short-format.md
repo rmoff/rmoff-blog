@@ -1,6 +1,7 @@
 ---
 title: "sawserver log - short format"
 date: "2009-08-19"
+url: "/2009/08/19/sawserver-log-short-format/"
 categories: 
   - "config"
   - "hack"

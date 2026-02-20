@@ -1,6 +1,7 @@
 ---
 title: "UKOUG TEBS 2009"
 date: "2009-12-03"
+url: "/2009/12/03/ukoug-tebs-2009/"
 categories: 
   - "OBIEE"
 ---

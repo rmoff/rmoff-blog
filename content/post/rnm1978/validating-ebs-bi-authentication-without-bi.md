@@ -1,6 +1,7 @@
 ---
 title: "Validating EBS-BI authentication, without BI"
 date: "2010-05-17"
+url: "/2010/05/17/validating-ebs-bi-authentication-without-bi/"
 categories: 
   - "obia"
   - "OBIEE"

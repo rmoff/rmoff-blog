@@ -1,6 +1,7 @@
 ---
 title: "Instrumenting OBIEE - the final chapter"
 date: "2011-10-10"
+url: "/2011/10/10/instrumenting-obiee-the-final-chapter/"
 categories: 
   - "dbms_application_info"
   - "dbms_session"

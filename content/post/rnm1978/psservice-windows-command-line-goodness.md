@@ -1,6 +1,7 @@
 ---
 title: "psservice - Windows command line goodness!"
 date: "2009-07-23"
+url: "/2009/07/23/psservice-windows-command-line-goodness/"
 categories: 
   - "hack"
   - "OBIEE"

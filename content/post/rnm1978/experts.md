@@ -1,6 +1,7 @@
 ---
 title: "Experts"
 date: "2009-11-02"
+url: "/2009/11/02/experts/"
 categories: 
   - "timemanagement"
 ---

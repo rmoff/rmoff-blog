@@ -1,6 +1,7 @@
 ---
 title: "When is a bug not a bug? When it's a \"design decision\""
 date: "2010-10-18"
+url: "/2010/10/18/when-is-a-bug-not-a-bug-when-its-a-design-decision/"
 categories: 
   - "informatica"
   - "obia"

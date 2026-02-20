@@ -1,6 +1,7 @@
 ---
 title: "Mark Rittman's OBIEE repository for DAC"
 date: "2009-07-23"
+url: "/2009/07/23/mark-rittmans-obiee-repository-for-dac/"
 categories: 
   - "dac"
   - "etl"

@@ -1,6 +1,7 @@
 ---
 title: "Collecting OBIEE systems management data with jmx"
 date: "2010-12-06"
+url: "/2010/12/06/collecting-obiee-systems-management-data-with-jmx/"
 categories: 
   - "jmx"
   - "mbeans"

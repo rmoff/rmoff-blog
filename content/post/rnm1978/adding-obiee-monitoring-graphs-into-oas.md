@@ -1,6 +1,7 @@
 ---
 title: "Adding OBIEE monitoring graphs into OAS"
 date: "2010-12-06"
+url: "/2010/12/06/adding-obiee-monitoring-graphs-into-oas/"
 categories: 
   - "hack"
   - "jmx"

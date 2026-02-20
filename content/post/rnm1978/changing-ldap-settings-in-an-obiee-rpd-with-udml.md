@@ -1,6 +1,7 @@
 ---
 title: "Changing LDAP settings in an OBIEE RPD with UDML"
 date: "2011-02-23"
+url: "/2011/02/23/changing-ldap-settings-in-an-obiee-rpd-with-udml/"
 categories: 
   - "hack"
   - "ldap"

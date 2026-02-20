@@ -1,6 +1,7 @@
 ---
 title: "OTN forums - different URL to get prompted to login less often"
 date: "2009-08-18"
+url: "/2009/08/18/otn-forums-different-url-to-get-prompted-to-login-less-often/"
 categories: 
   - "otn"
 ---

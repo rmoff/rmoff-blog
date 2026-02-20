@@ -1,6 +1,7 @@
 ---
 title: "Bug in Clustered Publisher Scheduler - ClusterManager: detected 1 failed or restarted instances"
 date: "2009-03-30"
+url: "/2009/03/30/bug-in-clustered-publisher-scheduler-clustermanager-detected-1-failed-or-restarted-instances/"
 categories: 
   - "bi-publisher"
   - "cluster"

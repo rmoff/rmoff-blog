@@ -1,9 +1,12 @@
 ---
 title: "Opera + Oracle EM = true love"
 date: "2010-04-22"
+url: "/2010/04/22/opera-oracle-em-true-love/"
 categories: 
   - "em"
   - "opera"
+aliases:
+- /2010/04/22/opera--oracle-em-true-love/
 ---
 
 A faithful FireFox user for many users, I've been having a rather delightful rekindling of my old love for [Opera](http://www.opera.com/) recently. Back in the days, when I was a beardless bairn, I even paid for Opera I liked it so much. Then [Firefox](http://www.mozilla-europe.org/en/firefox/) came along and Opera got dropped by the wayside like a teenage crush.

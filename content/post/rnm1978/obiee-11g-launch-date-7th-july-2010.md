@@ -1,6 +1,7 @@
 ---
 title: "OBIEE 11g launch date - 7th July 2010"
 date: "2010-06-03"
+url: "/2010/06/03/obiee-11g-launch-date-7th-july-2010/"
 categories: 
   - "OBIEE"
   - "obiee-11g"

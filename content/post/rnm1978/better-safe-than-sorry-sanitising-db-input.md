@@ -1,10 +1,13 @@
 ---
 title: "Better safe than sorry...sanitising DB input"
 date: "2010-09-22"
+url: "/2010/09/22/better-safe-than-sorry-sanitising-db-input/"
 categories: 
   - "metalink"
   - "silly"
   - "support"
+aliases:
+- /2010/09/22/better-safe-than-sorry...sanitising-db-input/
 ---
 
 As [Twitter learnt yesterday](http://www.f-secure.com/weblog/archives/00002034.html), you should always sanitise user input. I was amused to see My Oracle Support doing so....[recursively](http://www.google.co.uk/search?q=recursion) :)
