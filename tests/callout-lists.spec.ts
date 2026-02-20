@@ -73,6 +73,46 @@ test.describe('AsciiDoc code callout lists', () => {
     }
   });
 
+  test('listing blocks without callouts have visual spacing from body text', async ({ page }) => {
+    await page.goto(articleUrl, { waitUntil: 'networkidle' });
+
+    // Find a listingblock that is NOT followed by a colist
+    const listingWithoutColist = page.locator('.listingblock:not(:has(+ .colist))').first();
+    await expect(listingWithoutColist).toBeVisible();
+
+    await listingWithoutColist.scrollIntoViewIfNeeded();
+    await listingWithoutColist.screenshot({
+      path: path.join(screenshotDir, 'listingblock-no-colist.png'),
+    });
+
+    // Should have visual gap to the next element (via pre margin collapsing)
+    const gap = await listingWithoutColist.evaluate((el) => {
+      const next = el.nextElementSibling;
+      return next ? next.getBoundingClientRect().top - el.getBoundingClientRect().bottom : 0;
+    });
+    expect(gap, 'listingblock without colist should have visual gap > 0 to next element').toBeGreaterThan(0);
+  });
+
+  test('listing blocks with callouts sit flush against colist', async ({ page }) => {
+    await page.goto(articleUrl, { waitUntil: 'networkidle' });
+
+    // Find a listingblock that IS followed by a colist
+    const listingWithColist = page.locator('.listingblock:has(+ .colist)').first();
+    await expect(listingWithColist).toBeVisible();
+
+    await listingWithColist.scrollIntoViewIfNeeded();
+    await listingWithColist.screenshot({
+      path: path.join(screenshotDir, 'listingblock-with-colist.png'),
+    });
+
+    // Should sit flush against the colist (zero visual gap)
+    const gap = await listingWithColist.evaluate((el) => {
+      const next = el.nextElementSibling;
+      return next ? next.getBoundingClientRect().top - el.getBoundingClientRect().bottom : -1;
+    });
+    expect(gap, 'listingblock with colist should have zero gap to colist').toBe(0);
+  });
+
   test('admonition blocks still render correctly', async ({ page }) => {
     await page.goto(
       '/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/',
