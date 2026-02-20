@@ -18,26 +18,26 @@ The pipeline was based around a set of SQL scripts, and whilst it used important
 
 <!--more-->
 
-dbt is a tool created in 2016 and that really exploded in popularity on the data engineering scene around 2020.
+dbt is a tool created in 2016 that really exploded in popularity on the data engineering scene around 2020.
 This also coincided with my own journey away from hands-on data engineering and into Kafka and developer advocacy.
 As a result, dbt has always been one of those things I kept hearing about but never tried.
 
 In 2022 I made a link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[couple] of link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[attempts] to learn dbt, but it never really 'clicked'.
 
-*I'm pleased to say that as of today, dbt has definitely 'clicked'*.
+*I'm rather delighted to say that as of today, dbt has definitely 'clicked'*.
 How do I know?
-Because not only can I explain what I've built, but I've even had the lightbulb-above-the-head moment seeing it in action and how elegant the code used to build pipelines with dbt can be.
-
-You can find the full project on https://github.com/rmoff/env-agency-dbt/[GitHub here].
+Because not only can I explain what I've built, but I've even had the 💡 lightbulb-above-the-head moment seeing it in action and how elegant the code used to build pipelines with dbt can be.
 
 In this blog post I'm going to show off what I built with dbt, contrasting it to my previous hand-built method.
+
+TIP: You can find the full dbt project on https://github.com/rmoff/env-agency-dbt/[GitHub here].
 
 If you're new to dbt hopefully it'll be interesting and useful.
 If you're an old hand at dbt then you can let me know any glaring mistakes I've made :)
 
 First, a little sneak peek:
 
-image:/images/2026/02/Global_Asset_Lineage.svg[]
+image:/images/2026/02/Global_Asset_Lineage.svg[Do you like DAGs?]
 
 image:/images/2026/02/dagster-dim-stations.webp[]
 
@@ -54,15 +54,18 @@ image:/images/2025/03/data-model.excalidraw.svg[]
 
 The data is available on https://environment.data.gov.uk/flood-monitoring/doc/reference#availability[a public REST API] (try it out https://environment.data.gov.uk/flood-monitoring/id/stations/L0607[here] to see the current river level at one of the stations in Sheffield).
 
-I've used this same set of data many times before, because it provides just the right balance of real-world imperfections, interesting stories to discover, data modelling potential, and enough volume to be useful but not too much to overwhelm.
+[NOTE]
+====
+I've used this same set of environment sensor data many times before, because it provides just the right balance of real-world imperfections, interesting stories to discover, data modelling potential, and enough volume to be useful but not too much to overwhelm.
 
-* link:/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/[exploring it with DuckDB and Rill]
-* link:/2025/03/14/kicking-the-tyres-on-the-new-duckdb-ui/[trying out the new DuckDB UI]
-* link:/2025/03/13/creating-an-http-source-connector-on-confluent-cloud-from-the-cli/[loading it into Kafka]
-* link:/2025/03/10/data-wrangling-with-flink-sql/[working with it in Flink SQL]
-* link:/2025/03/20/building-a-data-pipeline-with-duckdb/[hand-coding a processing pipeline with DuckDB]
-* https://www.confluent.io/blog/building-streaming-data-pipelines-part-1/[analysing it in Iceberg]
-* https://www.confluent.io/blog/streaming-etl-flink-tableflow/[building a streaming ETL pipeline with Flink SQL]
+* link:/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/[Exploring it with DuckDB and Rill]
+* link:/2025/03/14/kicking-the-tyres-on-the-new-duckdb-ui/[Trying out the new DuckDB UI]
+* link:/2025/03/13/creating-an-http-source-connector-on-confluent-cloud-from-the-cli/[Loading it into Kafka]
+* link:/2025/03/10/data-wrangling-with-flink-sql/[Working with it in Flink SQL]
+* link:/2025/03/20/building-a-data-pipeline-with-duckdb/[Hand-coding a processing pipeline with DuckDB]
+* https://www.confluent.io/blog/building-streaming-data-pipelines-part-1/[Analysing it in Iceberg]
+* https://www.confluent.io/blog/streaming-etl-flink-tableflow/[Building a streaming ETL pipeline with Flink SQL]
+====
 
 == Ingest
 
@@ -129,7 +132,7 @@ Here's how we'll pull in the readings API data:
 [source,sql]
 ----
 {% macro load_raw_readings() %}
-{% set endpoint = var('api_base_url') ~ '/data/readings?latest' %} <3>
+{% set endpoint = var('api_base_url') ~ '/data/readings?latest' %} <1>
 
 {% do log("raw_readings ~ reading from " ~ endpoint, info=true) %}
 
@@ -138,7 +141,7 @@ Here's how we'll pull in the readings API data:
     SELECT *,
             list_max(list_transform(items, x -> x.dateTime)) <2>
             AS _latest_reading_at                            <2>
-    FROM read_json('{{ endpoint }}') <1>
+    FROM read_json('{{ endpoint }}') <3>
 {% endset %}
 {% do run_query(sql) %}
 
@@ -146,17 +149,17 @@ Here's how we'll pull in the readings API data:
 
 {% endmacro %}
 ----
-<1> As it happens, we *are* using DuckDB's `read_json` to fetch the API data (contrary, much?)
+<1> Variables are defined in https://github.com/rmoff/env-agency-dbt/blob/master/dbt_project.yml#L38[`dbt_project.yml`]
 <2> Disassemble the REST payload to get the most recent timestamp of the data, store it as its own column for freshness tests later
-<3> Variables are defined in https://github.com/rmoff/env-agency-dbt/blob/master/dbt_project.yml#L38[`dbt_project.yml`]
+<3> As it happens, we *are* using DuckDB's `read_json` to fetch the API data (contrary, much?)
 
 Even though we are using DuckDB for the extract phase of our pipeline, we're learning how to separate concerns.
-In a 'real' pipeline we'd use something like `curl` (or perhaps `requests` in Python) to load the data into DuckDB.
+In a 'real' pipeline we'd use a separate tool to load the data into DuckDB (I discuss this a bit further later on).
 We'd do it that way to give us more flexibility over things like retries, timeouts, and so on.
 
-The other two tables are ingested in a similar way, except they use `CURRENT_TIMESTAMP` for `_latest_reading_at` since the measures and stations APIs don't return any timestamp information.
+The other two tables are ingested in a similar way, except they use `CURRENT_TIMESTAMP` for `+_latest_reading_at+` since the measures and stations APIs don't return any timestamp information.
 If you step away from APIs and think about data from upstream transactional systems being fed into dbt, there'll always be (or _should_ always be) a field that shows when the data last changed.
-Regardless of where it comes from, the purpose of the `_latest_reading_at` field is to give dbt a way to understand when the source data was last updated.
+Regardless of where it comes from, the purpose of the `+_latest_reading_at+` field is to give dbt a way to understand when the source data was last updated.
 
 In the https://github.com/rmoff/env-agency-dbt/blob/master/models/staging/sources.yml[`staging/sources.yml`] the metadata for the source can include a freshness configuration:
 
@@ -176,13 +179,13 @@ In the https://github.com/rmoff/env-agency-dbt/blob/master/models/staging/source
 This is the kind of thing where the light started to dawn on me that dbt is popular with data engineers for a good reason; all of the stuff that bites you in the ass on day 2, they've thought of and elegantly incorporated into the tool.
 Yes I *could* write yet another SQL query and bung it in my pipeline somewhere that checks for this kind of thing, but in reality if the data is stale do we even want to continue the pipeline?
 
-With dbt we can configure different levels of freshness check—"hold up, this thing's getting stale, just letting you know" (warning), and "woah, this data source is so old it stinks worse than a student's dorm room, I ain't touching either of those things" (error).
+With dbt we can configure different levels of freshness check—"_hold up, this thing's getting stale, just letting you know_" (warning), and "_woah, this data source is so old it stinks worse than a student's dorm room, I ain't touching either of those things_" (error).
 
 == Thinking clearly
 
 When I wrote my link:/2025/03/20/building-a-data-pipeline-with-duckdb/[previous blog post] I did my best to structure the processing logically, but still ended up mixing pre-processing/cleansing with logical transformations.
 
-dbt's approach to source/staging/marts helped a lot in terms of nailing this down and reasoning through what processing should go where.
+dbt's https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview[approach] to source / https://docs.getdbt.com/best-practices/how-we-structure/2-staging[staging] / https://docs.getdbt.com/best-practices/how-we-structure/4-marts[marts] helped a lot in terms of nailing this down and reasoning through what processing should go where.
 
 For example, the readings data is touched three times, each with its own transformations:
 
@@ -252,7 +255,7 @@ Sure, we could combine some of these (as I did in my link:/2025/03/20/building-a
 
 This really is where dbt comes into its own as a tool for grown-up data engineers with better things to do than babysit brittle data pipelines.
 
-Unlike my link:/2025/03/20/building-a-data-pipeline-with-duckdb/#_joining_the_data[hand-crafted version] for loading the fact table—which required manual steps including pre-creating the table, adding constraints, and so on—dbt comes equipped with a syntax for declaring the _intent_ (just like SQL itself), and at runtime dbt makes it so.
+Unlike my link:/2025/03/20/building-a-data-pipeline-with-duckdb/#pass:[_joining_the_data][hand-crafted version] for loading the fact table—which required manual steps including pre-creating the table, adding constraints, and so on—dbt comes equipped with a syntax for declaring the _intent_ (just like SQL itself), and at runtime dbt makes it so.
 
 First we set the configuration, defining it as a table to load incrementally, and specify the unique key:
 
@@ -288,15 +291,16 @@ WHERE dateTime > (SELECT MAX(dateTime) FROM {{ this }})
 ----
 
 This is more Jinja, and after a while you'll start to see curly braces (with different permutations of other characters) in your sleep.
-What this block does is use a conditional, expressed with `if`/`endif`, wrapped in Jinja code markers `{% %}`, to determine if it's an incremental load.
+What this block does is use a conditional, expressed with `if`/`endif` (and wrapped in Jinja code markers `{% %}`), to determine if it's an incremental load.
 If it is then the SQL `WHERE` clause gets added.
-This is a straightforward predicate, the only difference from vanilla SQL being the `{{ this }}` reference, which compiles into the reference for the table being built, i.e. `fct_readings`.
+This is a straightforward predicate, the only difference from vanilla SQL being the `{{ this }}` reference, which compiles into the reference for the table being built, i.e. `fct_readings`. With this predicate, dbt knows where to look for the current high-water mark.
 
 == Backfill
 
 I told you we'd get here eventually :)
 Because we've built the pipeline logically with delineated responsibilities between stages, it's easy to compartmentalise the process of ingesting the https://environment.data.gov.uk/flood-monitoring/archive[historical data from its daily CSV files] and handling any quirks with its data from that of the rest of the pipeline.
 
+The backfill is written as a macro.
 First we pull in each CSV file using DuckDB's list comprehension to rather neatly iterate over each date in the range:
 
 .https://github.com/rmoff/env-agency-dbt/blob/master/macros/ingestion/backfill_readings.sql[macros/ingestion/backfill_readings.sql]
@@ -312,6 +316,14 @@ SELECT * FROM read_csv(
 […]
 ----
 <1> I guess this should be using the `api_base_url` variable that I mentioned above, oops!
+
+The macro is invoked manually like this:
+
+[source,bash]
+----
+dbt run-operation backfill_readings \
+    --args '{"start_date": "2026-02-10", "end_date": "2026-02-11"}'
+----
 
 Then we take the raw data (remember, no changes at ingest time) and cleanse it for staging.
 This is the same processing we do for the API (except `value` is _sometimes_ pipe-delimited pairs instead of JSON arrays).
@@ -343,17 +355,17 @@ SELECT * FROM {{ ref('stg_readings_archive') }}
 
 == Handling Slowly Changing Dimensions (SCD) the easy (but proper) way
 
-In my link:/2025/03/20/building-a-data-pipeline-with-duckdb/[original version] I use SCD1 and throw away dimension history.
-Not for any sound business reason; just because it's the easiest thing to do; drop and recreate the dimension table from the latest version of the source dimension data.
+In my link:/2025/03/20/building-a-data-pipeline-with-duckdb/[original version] I use SCD type 1 and throw away dimension history.
+Not for any sound business reason but just because it's the easiest thing to do; drop and recreate the dimension table from the latest version of the source dimension data.
 
 It's kinda a sucky way to do it though because you lose the ability to analyse how dimension data might have changed over time, as well as answer questions based on the state of a dimension at a given point in time.
-For example, "What was the total cumulative rainfall in Sheffield in December" could give you a different answer depending on whether you include measuring stations _that were open in December_ or _all those that are open in Sheffield today_.
+For example, "What was the total cumulative rainfall in Sheffield in December" could give you a different answer depending on whether you include measuring stations _that *were* open in December_ or _all those that *are* open in Sheffield today when I run the query_.
 
 dbt makes SCD an absolute doddle through the idea of https://docs.getdbt.com/docs/build/snapshots[snapshots].
-In (yet another) good example of how good a fit dbt is for this kind of work, it supports dimension data done 'right' and 'wrong'.
+Also, in (yet another) good example of how good a fit dbt is for this kind of work, it supports dimension source data done 'right' and 'wrong'.
 What do I mean by that, and how much heavy lifting are those 'quotation' 'marks' doing?
 
-In an ideal world, where the source data is designed with the data engineer in mind, any time an attribute of a dimension changes, the data would indicate that with some kind of "last_updated" timestamp.
+In an ideal world—where the source data is designed with the data engineer in mind—any time an attribute of a dimension changes, the data would indicate that with some kind of "last_updated" timestamp.
 dbt calls this the https://docs.getdbt.com/docs/build/snapshots#timestamp-strategy-recommended[timestamp strategy] and is the recommended approach.
 It's clean, and it's efficient.
 This is what I mean by 'right'.
@@ -369,7 +381,7 @@ Regardless of the strategy, the flow for building dimension tables looks the sam
 (external data) raw -> staging -> snapshot -> dimension
 ----
 
-* Raw is literally whatever the API serves us up, plus a timestamp to help us check freshness
+* Raw is literally whatever the API serves us up (plus, optionally, a timestamp to help us check freshness)
 * Staging is where we clean up and shape the data (unnest)
 * Snapshot looks at staging and existing rows in snapshot for the particular dimension instance, and creates a new entry if it's changed (based on our strategy configuration)
 * Dimension is built from the snapshot table, taking the latest version of each instance of the dimension by checking using `WHERE dbt_valid_to IS NULL`.
@@ -403,7 +415,11 @@ This builds a snapshot table that looks like this
 
 [source,sql]
 ----
-🟡◗ DESCRIBE snap_stations;
+DESCRIBE snap_stations;
+----
+
+[source,text,role="results"]
+----
 ┌──────────────────┐
 │   column_name    |
 │     varchar      |
@@ -440,8 +456,14 @@ Here's why we always use keys instead of labels—the latter can be imprecise an
 
 [source,sql]
 ----
-🟡◗ select notation,label,dbt_valid_from, dbt_valid_to from snap_stations where notation = 'E6619'
-    order by dbt_valid_to;
+SELECT notation, label, dbt_valid_from, dbt_valid_to
+  FROM snap_stations
+ WHERE notation = 'E6619'
+ ORDER BY dbt_valid_to;
+----
+
+[source,text,role="results"]
+----
 ┌──────────┬──────────────────┬────────────────────────────┬────────────────────────────┐
 │ notation │      label       │       dbt_valid_from       │        dbt_valid_to        │
 │ varchar  │       json       │         timestamp          │         timestamp          │
@@ -462,10 +484,14 @@ Another example of upstream data being imperfect is this:
 
 [source,sql]
 ----
-🟡◗ select notation,label,measures[1].parameterName,dbt_valid_from, dbt_valid_to
-    from snap_stations
-    where notation = '0'
-    order by dbt_valid_to;
+SELECT notation, label, measures[1].parameterName, dbt_valid_from, dbt_valid_to
+  FROM snap_stations
+ WHERE notation = '0'
+ ORDER BY dbt_valid_to;
+----
+
+[source,text,role="results"]
+----
 ┌──────────┬───────────────────────────┬─────────────────────────────┬────────────────────────────┬────────────────────────────┐
 │ notation │           label           │ (measures[1]).parameterName │       dbt_valid_from       │        dbt_valid_to        │
 │ varchar  │           json            │           varchar           │         timestamp          │         timestamp          │
@@ -484,10 +510,15 @@ The same measures also have more correct-looking `notation` values, so one suspe
 
 [source,sql]
 ----
-🟡◗ select distinct notation,label,measures[1].parameterName
-    from snap_stations
-    where lcase(label) like '%helebridge%' or lcase(label) like '%mevagissey%'
-    order by 2,3;
+SELECT DISTINCT notation, label, measures[1].parameterName
+  FROM snap_stations
+ WHERE lcase(label) LIKE '%helebridge%'
+    OR lcase(label) LIKE '%mevagissey%'
+ ORDER BY 2, 3;
+----
+
+[source,text,role="results"]
+----
 ┌──────────┬───────────────────────────────────────┬─────────────────────────────┐
 │ notation │                 label                 │ (measures[1]).parameterName │
 │ varchar  │                 json                  │           varchar           │
@@ -507,12 +538,19 @@ Here's one that I realised when I started digging into the data:
 
 [source,sql]
 ----
-🟡◗ SELECT s.notation, s.label, array_length(s.measures) AS measure_count, string_agg(DISTINCT m.parameterName, ', ' ORDER BY m.parameterName) AS parameter_names, s.dbt_valid_from, s.dbt_valid_to
-    FROM snap_stations AS s
-    CROSS JOIN UNNEST(s.measures) AS u(m)
-    WHERE s.notation = '3275'
-    GROUP BY s.notation, s.label, s.measures, s.dbt_valid_from, s.dbt_valid_to
-    ORDER BY s.dbt_valid_to;
+SELECT s.notation, s.label,
+       array_length(s.measures) AS measure_count,
+       string_agg(DISTINCT m.parameterName, ', ' ORDER BY m.parameterName) AS parameter_names,
+       s.dbt_valid_from, s.dbt_valid_to
+  FROM snap_stations AS s
+  CROSS JOIN UNNEST(s.measures) AS u(m)
+ WHERE s.notation = '3275'
+ GROUP BY s.notation, s.label, s.measures, s.dbt_valid_from, s.dbt_valid_to
+ ORDER BY s.dbt_valid_to;
+----
+
+[source,text,role="results"]
+----
 ┌──────────┬────────────────────┬───────────────┬───────────────────────┬────────────────────────────┬────────────────────────────┐
 │ notation │       label        │ measure_count │    parameter_names    │       dbt_valid_from       │        dbt_valid_to        │
 │ varchar  │        json        │     int64     │        varchar        │         timestamp          │         timestamp          │
@@ -541,14 +579,14 @@ But, we are the data engineers and our job is to provide a firebreak between wha
 So, perhaps we should update our snapshot configuration to specify the actual columns we want to track.
 Which is indeed what dbt https://docs.getdbt.com/docs/build/snapshots#check-strategy[explicitly recommends that you do]:
 
-> It is better to explicitly enumerate the columns that you want to check.
+> It is better to *explicitly enumerate* the columns that you want to check.
 
 == The tool that fits like a glove
 
-image:https://media.tenor.com/4o8P4yG5WBsAAAAC/like-a-glove-ace-ventura.gif[]
+image:/images/2026/02/ace-ventura-pet-detective.gif[]
 
 The above section is a beautiful illustration of _just how much sense the dbt approach makes_.
-I spent link:/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/[several hours analysing the source data] before trying to build a pipeline.
+I'd already spent link:/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/[several hours analysing the source data] before trying to build a pipeline.
 Even then, I missed some of the nuances described above.
 
 With my link:/2025/03/20/building-a-data-pipeline-with-duckdb/[clumsy self-built approach previously] I would have lost a lot of the detail that makes it possible to dive into and troubleshoot the data like I just did.
@@ -617,23 +655,32 @@ The resulting tables are identical; just different ways to build them.
 
 [source,sql]
 ----
-🟡◗ select * from dim_date LIMIT 1;
+SELECT * FROM dim_date LIMIT 1;
+----
+
+[source,text,role="results"]
+----
 ┌────────────┬───────────┬────────────┬────────────────┬─────────────────┬────────────────┬─────────────────┬──────────────┬────────────────┬─────────────────┬──────────────┐
 │  date_day  │ date_year │ date_month │ date_monthname │ date_dayofmonth │ date_dayofweek │ date_is_weekend │ date_dayname │ date_dayofyear │ date_weekofyear │ date_quarter │
 │    date    │   int64   │   int64    │    varchar     │      int64      │     int64      │     boolean     │   varchar    │     int64      │      int64      │    int64     │
 ├────────────┼───────────┼────────────┼────────────────┼─────────────────┼────────────────┼─────────────────┼──────────────┼────────────────┼─────────────────┼──────────────┤
 │ 2020-01-01 │   2020    │     1      │ January        │        1        │       3        │ false           │ Wednesday    │       1        │        1        │      1       │
 └────────────┴───────────┴────────────┴────────────────┴─────────────────┴────────────────┴─────────────────┴──────────────┴────────────────┴─────────────────┴──────────────┘
-Run Time (s): real 0.006 user 0.001761 sys 0.001160
-🟡◗ select * from dim_date_v2 LIMIT 1;
+----
+
+[source,sql]
+----
+SELECT * FROM dim_date_v2 LIMIT 1;
+----
+
+[source,text,role="results"]
+----
 ┌────────────┬───────────┬────────────┬────────────────┬─────────────────┬────────────────┬─────────────────┬──────────────┬────────────────┬─────────────────┬──────────────┐
 │  date_day  │ date_year │ date_month │ date_monthname │ date_dayofmonth │ date_dayofweek │ date_is_weekend │ date_dayname │ date_dayofyear │ date_weekofyear │ date_quarter │
 │    date    │   int64   │   int64    │    varchar     │      int64      │     int64      │     boolean     │   varchar    │     int64      │      int64      │    int64     │
 ├────────────┼───────────┼────────────┼────────────────┼─────────────────┼────────────────┼─────────────────┼──────────────┼────────────────┼─────────────────┼──────────────┤
 │ 2020-01-01 │   2020    │     1      │ January        │        1        │       3        │ false           │ Wednesday    │       1        │        1        │      1       │
 └────────────┴───────────┴────────────┴────────────────┴─────────────────┴────────────────┴─────────────────┴──────────────┴────────────────┴─────────────────┴──────────────┘
-Run Time (s): real 0.003 user 0.001164 sys 0.000655
-🟡◗
 ----
 
 
@@ -739,7 +786,12 @@ For this we can actually https://github.com/rmoff/env-agency-dbt/blob/master/mod
 
 [source,sql]
 ----
-🟡◗ SELECT notation, freshness_status, last_reading_at, time_since_last_reading, "label" from station_freshness;
+SELECT notation, freshness_status, last_reading_at, time_since_last_reading, "label"
+  FROM station_freshness;
+----
+
+[source,text,role="results"]
+----
 ┌──────────┬──────────────────┬──────────────────────────┬─────────────────────────┬──────────────────────────────────────────────┐
 │ notation │ freshness_status │     last_reading_at      │ time_since_last_reading │                    label                     │
 │ varchar  │     varchar      │ timestamp with time zone │        interval         │                   varchar                    │
@@ -804,7 +856,11 @@ We can also run the test in isolation and capture the row returned from the macr
 
 [source,sql]
 ----
-🟡◗ select * from "env-agency-dev"."main_dbt_test__audit"."max_pct_failing_station_freshn_113478f1da33b78c269ac56f22cbec9d";
+SELECT * FROM "env-agency-dev"."main_dbt_test__audit"."max_pct_failing_station_freshn_113478f1da33b78c269ac56f22cbec9d";
+----
+
+[source,text,role="results"]
+----
 ┌───────┬─────────┬─────────────┬───────────────┬────────────────────────────────────────┐
 │ total │ failing │ failing_pct │ threshold_pct │             failure_reason             │
 │ int64 │  int64  │   double    │     int32     │                varchar                 │
