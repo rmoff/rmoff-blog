@@ -20,7 +20,7 @@ This final article describes how to bolt on to OAS a simple web page hosting the
 
 This is just an old-school basic HTML page, with a meta-refresh tag (which note that Chrome doesn't work with) and img tags: 
 ```
-<html> <meta http-equiv="refresh" content="60"> <head> <title>OBIEE Servers</title> </head> <body> <img src="server01.png"></br> <img src="server02.png"></br> </body> </html> 
+OBIEE Servers
 ```
 
 I shan't patronise you nor embarrass myself with my rusty HTML skills any further - I'll leave you how to build your dashboard how you want it.
@@ -31,17 +31,49 @@ I shan't patronise you nor embarrass myself with my rusty HTML skills any furthe
 
 If you've got OAS installed for your OBIEE installation, you can tweak it to serve up your new graphs too. If you're using OC4J, IIS, or another webserver, then you'll have to figure this bit out yourself.
 
-Assuming that your OBIEE JMX graphs and HTML files are in /tmp/obieejmx, make sure that they're readable by all: \[sourcecode language="bash"\] chmod -R o+rx /tmp/obieejmx \[/sourcecode\]
+Assuming that your OBIEE JMX graphs and HTML files are in /tmp/obieejmx, make sure that they're readable by all: 
+```bash
+chmod -R o+rx /tmp/obieejmx
+```
 
-Now go to your OAS folder, navigate to Apache/Apache/conf, and MAKE A BACKUP of httpd.conf \[sourcecode language="bash"\] cd /your/path/to/OAS/here cd Apache/Apache/conf cp httpd.conf httpd.conf.bak \[/sourcecode\]
+
+Now go to your OAS folder, navigate to Apache/Apache/conf, and MAKE A BACKUP of httpd.conf 
+```bash
+cd /your/path/to/OAS/here
+cd Apache/Apache/conf
+cp httpd.conf httpd.conf.bak
+```
+
 
 Open httpd.conf in vi (or if you're not a real man then FTP the file to Windows and open it in Notepad ;-) )
 
-1. Search for \[sourcecode\]<IfModule mod\_alias.c>\[/sourcecode\]
-2. Add the following beneath it:\[sourcecode\] Alias /obieejmx/ "/tmp/obieejmx/" <Directory "/obieejmx/"> AllowOverride None Options None Order allow,deny Allow from all </Directory> \[/sourcecode\]
+1. Search for 
+```
+
+```
+
+2. Add the following beneath it:
+```
+Alias /obieejmx/ "/tmp/obieejmx/"
+    
+        AllowOverride None
+        Options None
+        Order allow,deny
+        Allow from all
+```
+
     - Here's where you'd change the location of your graphs and HTML file if you needed to
 3. Save httpd.conf
-4. Restart Apache\[sourcecode\]opmnctl restartproc ias-component=HTTP\_Server\[/sourcecode\] or if that doesn't work restart OAS\[sourcecode\]opmnctl shutdown opmnctl startall\[/sourcecode\]
+4. Restart Apache
+```
+opmnctl restartproc ias-component=HTTP_Server
+```
+ or if that doesn't work restart OAS
+```
+opmnctl shutdown
+opmnctl startall
+```
+
 
 Assuming you normally access OBIEE through http://myserver:7777/analytics/ then you should now be able to go to http://myserver:7777/**obieejmx/** and view the fruits of your hard-earned work. ![](/images/rnm1978/snag-2010-12-06-21-08-33-0000.png "SNAG-2010-12-06-21.08.33-0000")
 

@@ -1,6 +1,8 @@
 ---
 title: "Oracle Support Blog back online, kinda."
 date: "2010-02-23"
+slug: "oracle-support-blog-back-online-kinda"
+url: "/2010/02/23/oracle-support-blog-back-online-kinda/"
 categories: 
   - "oracle"
   - "rant"

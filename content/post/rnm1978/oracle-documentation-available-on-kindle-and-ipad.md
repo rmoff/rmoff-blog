@@ -21,4 +21,4 @@ It looks like the availability of mobi/epub files isn't universal. For example, 
 
 I'm looking forward to having access to the documentation on my Kindle. It's nicer to read from than a computer screen. It's also got an awful lot of very good information that's worth reading when not just looking something up. I'm not talking about reading the column definition of DBA\_TABLES at bedtime, but for background education and learning. Never mind swanky OOW presentations, simply reading chapters such as [Managing Optimizer Statistics](http://download.oracle.com/docs/cd/B28359_01/server.111/b28274/stats.htm#i13546) would benefit a lot of people. RTFM, as they say, because they're not just reference, they're also the how and the why of what to do.
 
-![](http://rnm1978.files.wordpress.com/2011/04/20110407-144330.jpg?w=768 "20110407-144330.jpg")
+![](/images/2011/04/20110407-144330.webp "20110407-144330.jpg")

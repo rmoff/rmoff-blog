@@ -19,7 +19,24 @@ So, anyway, back to the point of this post:
 
 Kevin Closson's written a neat script [here](http://kevinclosson.wordpress.com/2009/04/28/how-to-produce-raw-spreadsheet-ready-physical-io-data-with-plsql-good-for-exadata-good-for-traditional-storage/) which will write out IO metrics from gv$sysstat to a flat file on the Oracle host. It looks like this:
 
-\[sourcecode\] 2010-10-26-09:09:58|1|1|0| 2010-10-26-09:10:03|0|0|0| 2010-10-26-09:10:08|51|51|0| 2010-10-26-09:10:13|87|87|0| 2010-10-26-09:10:19|108|108|0| 2010-10-26-09:10:24|118|118|0| 2010-10-26-09:10:29|116|117|0| 2010-10-26-09:10:34|451|454|0| 2010-10-26-09:10:39|692|694|0| 2010-10-26-09:10:44|894|895|2| 2010-10-26-09:10:49|875|879|1| 2010-10-26-09:10:54|990|990|2| 2010-10-26-09:10:59|922|920|1| 2010-10-26-09:11:04|768|765|2| \[/sourcecode\]
+
+```
+2010-10-26-09:09:58|1|1|0|
+2010-10-26-09:10:03|0|0|0|
+2010-10-26-09:10:08|51|51|0|
+2010-10-26-09:10:13|87|87|0|
+2010-10-26-09:10:19|108|108|0|
+2010-10-26-09:10:24|118|118|0|
+2010-10-26-09:10:29|116|117|0|
+2010-10-26-09:10:34|451|454|0|
+2010-10-26-09:10:39|692|694|0|
+2010-10-26-09:10:44|894|895|2|
+2010-10-26-09:10:49|875|879|1|
+2010-10-26-09:10:54|990|990|2|
+2010-10-26-09:10:59|922|920|1|
+2010-10-26-09:11:04|768|765|2|
+```
+
 
 I wanted a quick way to visualise the data, and also to plot it out once it was over the number of rows that Excel will chart at once (32k I think). gnuplot was the answer, but it's a bit of a sod to get running as a fire-and-forget so here's a help. Here's how it works:
 
@@ -28,7 +45,32 @@ I wanted a quick way to visualise the data, and also to plot it out once it was 
 - It uses an inline input to gnuplot, but you could move this to a separate config file if you wanted
 - It plots the graph on screen (assuming you have configured X), and also writes it to a png file
 
-\[sourcecode language="bash"\] # Download the file from a remote server # Prompts for password, or use ssh key authentication to make it seamless scp user@remotehost:/tmp/io.DBINSTANCE.log . # Convert bar (|) to Space ( ) sed -e 's/|/ /g' io.DBINSTANCE.log > io.log # Plot a graph (remove --persist if you don't want the window displayed) gnuplot --persist <<EOF set title "Read I/O MB/s\\nSampled every 5 seconds" set xdata time set timefmt "%Y-%m-%d-%H:%M:%S" set format x "%d %b\\n%H:%M" set ylabel "MB/s" # You can set the y range to a specific constant based on your IO capacity set yrange \[0:3000\] set xlabel "Date/Time" unset key set grid plot "io.log" using 1:3 with boxes fs set terminal png font "courier, 10" size 1200,800 set output "io.png" replot EOF \[/sourcecode\]
+
+```bash
+# Download the file from a remote server
+# Prompts for password, or use ssh key authentication to make it seamless
+scp user@remotehost:/tmp/io.DBINSTANCE.log .
+# Convert bar (|) to Space ( )
+sed -e 's/|/ /g' io.DBINSTANCE.log > io.log
+# Plot a graph (remove --persist if you don't want the window displayed)
+gnuplot --persist <<EOF
+set title "Read I/O MB/s\nSampled every 5 seconds"
+set xdata time
+set timefmt "%Y-%m-%d-%H:%M:%S"
+set format x "%d %b\n%H:%M"
+set ylabel "MB/s"
+# You can set the y range to a specific constant based on your IO capacity
+set yrange [0:3000]
+set xlabel "Date/Time"
+unset key
+set grid
+plot "io.log" using 1:3 with boxes fs
+set terminal png font "courier, 10" size 1200,800
+set output "io.png"
+replot
+EOF
+```
+
 
 This was written on cygwin, and presumably should work on any 'nix system.
 

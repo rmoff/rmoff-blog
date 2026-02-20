@@ -13,7 +13,11 @@ So you turn to Usage Tracking and discover that when that particular SQL ran the
 
 So how do you identify the originating report that spawned the SQL that broke the database that upset the DBA that phoned you? ...
 
-With a large hat-tip to [Mark Rittman](http://www.rittmanmead.com), here's one thing you can do to help matters. Within the Connection Pool object in the RPD you can add statements to execute at the beginning of each connection. In this case, we can set the Client ID for the user running the request. \[sourcecode\] call dbms\_session.set\_identifier('VALUEOF(NQ\_SESSION.USER)') \[/sourcecode\]
+With a large hat-tip to [Mark Rittman](http://www.rittmanmead.com), here's one thing you can do to help matters. Within the Connection Pool object in the RPD you can add statements to execute at the beginning of each connection. In this case, we can set the Client ID for the user running the request. 
+```
+call dbms_session.set_identifier('VALUEOF(NQ_SESSION.USER)')
+```
+
 
 ![](/images/rnm1978/2010-01-25_150200.png "2010-01-25_150200") ![](/images/rnm1978/2010-01-25_150232.png "2010-01-25_150232") ![](/images/rnm1978/2010-01-25_150305.png "2010-01-25_150305")![](/images/rnm1978/2010-01-25_150721.png "2010-01-25_150721")
 

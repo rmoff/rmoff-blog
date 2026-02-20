@@ -49,15 +49,51 @@ select dbms_stats.get_prefs(ownname=>'HR',pname=>'INCREMENTAL', tabname=>'BASE_T
 Alternatively, to list all tables in the database that have INCREMENTAL set, use this:
 
 ```sql
-select u.name "OWNER" ,o.name "TABLE_NAME" ,p.valchar from sys.OPTSTAT_USER_PREFS$ p inner join sys.obj$ o on p.obj#=o.obj# inner join sys.user$ u on o.owner#=u.user# where p.PNAME = 'INCREMENTAL'
-
+select u.name "OWNER" ,o.name "TABLE_NAME" ,p.valchar
+from  sys.OPTSTAT_USER_PREFS$ p 
+inner join sys.obj$ o on p.obj#=o.obj# 
+inner join sys.user$ u on o.owner#=u.user#
+where p.PNAME = 'INCREMENTAL'
 ```
 
 To look at the synopses (synopsii?), use this query:
 
 ```sql
-SELECT u.NAME "owner", o.NAME "table_name", p.subname "partition_name", c.NAME "column_name", to_char(h.analyzetime, 'YYYY-MM-DD-HH24:MI:SS') "analyse_Time", COUNT(*) "hash entries" FROM sys.wri$_optstat_synopsis_head$ h left join sys.`WRI$_OPTSTAT_SYNOPSIS$` s ON h.synopsis# = s.synopsis# left join sys.obj$ o ON h.bo# = o.obj# left join sys.user$ u ON o.owner# = u.user# left join sys.col$ c ON h.bo# = c.obj# AND h.intcol# = c.intcol# left join (SELECT bo#, obj# FROM sys.tabpart$ UNION ALL SELECT bo#, obj# FROM sys.tabcompart$) tp ON h.bo# = tp.bo# AND h.group# = tp.obj# * 2 left join sys.obj$ p ON tp.obj# = p.obj# GROUP BY u.NAME, o.NAME, p.subname, c.NAME, h.analyzetime ORDER BY u.NAME, o.NAME, c.NAME;
-
+SELECT u.NAME                                          "owner",
+       o.NAME                                          "table_name",
+       p.subname                                       "partition_name",
+       c.NAME                                          "column_name",
+       to_char(h.analyzetime, 'YYYY-MM-DD-HH24:MI:SS') "analyse_Time",
+       COUNT(*)                                        "hash entries"
+FROM   sys.wri$_optstat_synopsis_head$ h
+       left join sys.wri$_optstat_synopsis$ s
+         ON h.synopsis# = s.synopsis#
+       left join sys.obj$ o
+         ON h.bo# = o.obj#
+       left join sys.user$ u
+         ON o.owner# = u.user#
+       left join sys.col$ c
+         ON h.bo# = c.obj#
+            AND h.intcol# = c.intcol#
+       left join (SELECT bo#,
+                         obj#
+                  FROM   sys.tabpart$
+                  UNION ALL
+                  SELECT bo#,
+                         obj#
+                  FROM   sys.tabcompart$) tp
+         ON h.bo# = tp.bo#
+            AND h.group# = tp.obj# * 2
+       left join sys.obj$ p
+         ON tp.obj# = p.obj#
+GROUP  BY u.NAME,
+          o.NAME,
+          p.subname,
+          c.NAME,
+          h.analyzetime
+ORDER  BY u.NAME,
+          o.NAME,
+          c.NAME;
 ```
 
 ## Test case
@@ -67,78 +103,113 @@ This is the test case I've been using to investigate the issue. It is hopefully 
 I've written a set of queries that examine the statistics in the data dictionary so that I can see how they get built up. USER_TAB_STATS_HISTORY is good for seeing a chronological record of the stats gathers.
 
 ```sql
-/* http://rnm1978.wordpress.com/ */
+/* https://rnm1978.wordpress.com/ */
 
-\-- -- ***************************** -- test_incr_stats.sql -- -- Test incremental statistic gathering -- ***************************** --
+--
+-- *****************************
+--  test_incr_stats.sql
+--
+--  Test incremental statistic gathering
+-- *****************************
+--
 
 set echo off
 set timing off
 set feedback on
 
+
 prompt
 prompt ************
-prompt Check the current size of the synopsis table `WRI$_OPTSTAT_SYNOPSIS$`
+prompt Check the current size of the synopsis table WRI$_OPTSTAT_SYNOPSIS$
 
 select table_name, num_rows from dba_tables where table_name like 'WRI$_OPTSTAT_SYNOPSIS%';
 
-select to_char(min(h.analyzetime),'YYYY-MM-DD-HH24:MI:SS') "Earliest Synopsis" FROM SYS.WRI$_OPTSTAT_SYNOPSIS_HEAD$ h;
+select to_char(min(h.analyzetime),'YYYY-MM-DD-HH24:MI:SS') "Earliest Synopsis"
+FROM    SYS.WRI$_OPTSTAT_SYNOPSIS_HEAD$ h;
+
 
 prompt
 prompt ************
 prompt Create a simple test table
 
 drop table BASE_T1;
-CREATE TABLE BASE_T1 ( day_key INTEGER, store_num INTEGER, fact_01 NUMBER(38,4) DEFAULT 0) PARTITION BY RANGE ( "DAY_KEY") ( PARTITION PART_1 VALUES LESS THAN (2) NOCOMPRESS, PARTITION PART_2 VALUES LESS THAN (3) NOCOMPRESS) PARALLEL;
+CREATE TABLE BASE_T1 ( day_key   INTEGER, store_num INTEGER, fact_01   NUMBER(38,4) DEFAULT 0)
+PARTITION BY RANGE ( "DAY_KEY") ( PARTITION PART_1 VALUES LESS THAN (2) NOCOMPRESS,
+                            PARTITION PART_2 VALUES LESS THAN (3) NOCOMPRESS)
+PARALLEL;
 
 prompt
 prompt ************
 prompt Set the table to INCREMENTAL stats
 exec dbms_stats.set_table_prefs(pname=>'INCREMENTAL',ownname=>USER,tabname=>'BASE_T1',pvalue=>'TRUE');
 
+
 prompt
 prompt ************
 prompt Gather initial stats
 set timing on
-exec dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
 set timing off
+
+
 
 prompt
 prompt ************
 prompt Add one row of data to partition 1
 insert into base_t1 (day_key,store_num,fact_01) values (1, 1,10);
 
+
 prompt
 prompt ************
 prompt Gather stats
 set timing on
-exec dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
 set timing off
+
+
 
 prompt
 prompt ************
 prompt Add one row of data to partition 2
 insert into base_t1 (day_key,store_num,fact_01) values (2, 1,10);
 
+
 prompt
 prompt ************
 prompt Gather stats
 set timing on
-exec dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
 set timing off
+
+
+
 
 prompt
 prompt ************
 prompt Add another row of data to partition 1, with a new store_num value
 insert into base_t1 (day_key,store_num,fact_01) values (1, 2,10);
 
+
+
+
 prompt
 prompt ************
 prompt Gather stats
-set timing on exec
-dbms_stats.gather_table_stats( ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
+set timing on
+exec dbms_stats.gather_table_stats(     ownname=>USER, tabname=>'BASE_T1', granularity=>'AUTO');
 set timing off
 
-set linesize 156 col table_name for a12 col partition_name for a14 col column_name for a12 col high_value for a8 col low_value for a8 col global_stats head "Global|Stats" for a7 col stale_stats head "Stale|Stats" for a5
+
+
+
+set linesize 156
+col table_name for a12
+col partition_name for a14
+col column_name for a12
+col high_value for a8
+col low_value for a8
+col global_stats head "Global|Stats" for a7
+col stale_stats head "Stale|Stats" for a5
 
 prompt
 prompt Incremental stats setting:
@@ -150,23 +221,45 @@ select day_key,count(*) from BASE_T1 group by day_key order by day_key asc;
 
 prompt
 prompt USER_TAB_STATISTICS:
-select table_name,partition_name,num_rows,sample_size, to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed",global_stats,stale_stats from user_tab_statistics where table_name='BASE_T1';
+select table_name,partition_name,num_rows,sample_size,
+to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed",global_stats,stale_stats
+from user_tab_statistics where table_name='BASE_T1';
 
 prompt
 prompt USER_TAB_STATS_HISTORY:
-select table_name,partition_name,stats_update_time from user_tab_stats_history where table_name='BASE_T1' order by stats_update_time asc ;
+select table_name,partition_name,stats_update_time from user_tab_stats_history where table_name='BASE_T1'
+order by stats_update_time asc
+;
 
 prompt
 prompt USER_TAB_COL_STATISTICS:
-select table_name,column_name,sample_size,to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed", global_stats,num_distinct,low_value,high_value from USER_TAB_COL_STATISTICS where table_name='BASE_T1';
+select table_name,column_name,sample_size,to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed",
+global_stats,num_distinct,low_value,high_value
+from USER_TAB_COL_STATISTICS where table_name='BASE_T1';
 
 prompt
 prompt USER_PART_COL_STATISTICS:
-select table_name,partition_name,column_name,sample_size,to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed", global_stats,num_distinct,low_value,high_value from USER_PART_COL_STATISTICS where table_name='BASE_T1';
+select table_name,partition_name,column_name,sample_size,to_char(last_analyzed,'YYYY-MM-DD-HH24:MI:SS') "Last Analyzed",
+global_stats,num_distinct,low_value,high_value
+from USER_PART_COL_STATISTICS where table_name='BASE_T1';
 
 prompt
 prompt Synopsis data:
-SELECT o.name "TABLE_NAME" ,p.subname "Part" ,c.name "Column" ,to_char(h.analyzetime,'YYYY-MM-DD-HH24:MI:SS') "Analyse Time" ,count(*) "Hash count" FROM SYS.WRI$_OPTSTAT_SYNOPSIS_HEAD$ h left join sys.`WRI$_OPTSTAT_SYNOPSIS$` s on h.synopsis# = s.synopsis# left join sys.obj$ o on h.bo#=o.obj# left join sys.user$ u on o.owner#=u.user# left join sys.col$ c on h.bo#=c.obj# and h.intcol# = c.intcol# left join (select bo#,obj# from sys.tabpart$ union all select bo#,obj# from sys.tabcompart$) tp on h.bo#=tp.bo# and h.group#=tp.obj#*2 left join sys.obj$ p on tp.obj#=p.obj# where u.name = USER and o.name = 'BASE_T1' group by u.name,o.name ,p.subname,c.name,h.analyzetime order by u.name,o.name;
+SELECT o.name "TABLE_NAME"
+        ,p.subname "Part"
+        ,c.name "Column"
+        ,to_char(h.analyzetime,'YYYY-MM-DD-HH24:MI:SS') "Analyse Time"
+        ,count(*) "Hash count"
+FROM    SYS.WRI$_OPTSTAT_SYNOPSIS_HEAD$ h
+left join sys.wri$_optstat_synopsis$ s on h.synopsis# = s.synopsis#
+left join sys.obj$ o on h.bo#=o.obj#
+left join sys.user$ u on o.owner#=u.user#
+left join sys.col$ c on h.bo#=c.obj# and h.intcol# = c.intcol#
+left join (select bo#,obj# from sys.tabpart$ union all select bo#,obj# from sys.tabcompart$) tp on h.bo#=tp.bo# and h.group#=tp.obj#*2
+left join sys.obj$ p on tp.obj#=p.obj#
+where  u.name = USER and o.name = 'BASE_T1'
+group by u.name,o.name ,p.subname,c.name,h.analyzetime
+order by u.name,o.name;
 ```
 
 
@@ -177,25 +270,35 @@ This was run on Oracle 11.1.0.7, on several different databases. I've edited the
 Where SYS.WRI$_OPTSTAT_SYNOPSIS is small, it can be seen that the stats gather is fast - as would be expected for a table so small:
 
 ```
-************ Check the current size of the synopsis table `WRI$_OPTSTAT_SYNOPSIS$`
+************
+Check the current size of the synopsis table WRI$_OPTSTAT_SYNOPSIS$
 
-TABLE_NAME   NUM_ROWS
+TABLE_NAME     NUM_ROWS
 ------------ ----------
-WRI$_OPTSTAT 0
-WRI$_OPTSTAT 1940
-WRI$_OPTSTAT 287236
+WRI$_OPTSTAT          0
+WRI$_OPTSTAT       1940
+WRI$_OPTSTAT     287236
 
-Gather initial stats PL/SQL procedure successfully completed.
+Gather initial stats
+PL/SQL procedure successfully completed.
 Elapsed: 00:00:00.16
-
-************ Add one row of data to partition 1
-************ Gather stats PL/SQL procedure successfully completed.
+************
+Add one row of data to partition 1
+************
+Gather stats
+PL/SQL procedure successfully completed.
 Elapsed: 00:00:00.27
-************ Add one row of data to partition 2
-************ Gather stats PL/SQL procedure successfully completed.
+************
+Add one row of data to partition 2
+************
+Gather stats
+PL/SQL procedure successfully completed.
 Elapsed: 00:00:00.27
-************ Add another row of data to partition 1, with a new store_num value
-************ Gather stats PL/SQL procedure successfully completed.
+************
+Add another row of data to partition 1, with a new store_num value
+************
+Gather stats
+PL/SQL procedure successfully completed.
 Elapsed: 00:00:00.34
 
 Incremental stats setting:
@@ -205,43 +308,82 @@ TRUE
 
 Actual data in the table:
 
-DAY_KEY     COUNT(*)
-----------  ----------
-1           2
-2           1
+   DAY_KEY   COUNT(*)
+---------- ----------
+         1          2
+         2          1
 
 2 rows selected.
 
+
 USER_TAB_STATISTICS:
 
-Global Stale TABLE_NAME PARTITION_NAME NUM_ROWS SAMPLE_SIZE Last Analyzed Stats Stats ------------ -------------- ---------- ----------- ------------------- ------- ----- BASE_T1 3 3 2010-12-30-18:04:56 YES NO BASE_T1 PART_1 2 2 2010-12-30-18:04:56 YES NO BASE_T1 PART_2 1 1 2010-12-30-18:04:56 YES NO
+                                                                       Global  Stale
+TABLE_NAME   PARTITION_NAME   NUM_ROWS SAMPLE_SIZE Last Analyzed       Stats   Stats
+------------ -------------- ---------- ----------- ------------------- ------- -----
+BASE_T1                              3           3 2010-12-30-18:04:56 YES     NO
+BASE_T1      PART_1                  2           2 2010-12-30-18:04:56 YES     NO
+BASE_T1      PART_2                  1           1 2010-12-30-18:04:56 YES     NO
 
 3 rows selected.
+
 
 USER_TAB_STATS_HISTORY:
 
-TABLE_NAME PARTITION_NAME STATS_UPDATE_TIME ------------ -------------- --------------------------------------------------------------------------- BASE_T1 PART_1 30-DEC-10 18.04.55.633710 +00:00 BASE_T1 PART_2 30-DEC-10 18.04.55.633710 +00:00 BASE_T1 30-DEC-10 18.04.55.645162 +00:00 BASE_T1 PART_1 30-DEC-10 18.04.55.856920 +00:00 BASE_T1 30-DEC-10 18.04.55.910722 +00:00 BASE_T1 PART_2 30-DEC-10 18.04.56.126645 +00:00 BASE_T1 30-DEC-10 18.04.56.181336 +00:00 BASE_T1 PART_1 30-DEC-10 18.04.56.442624 +00:00 BASE_T1 30-DEC-10 18.04.56.527702 +00:00
+TABLE_NAME   PARTITION_NAME STATS_UPDATE_TIME
+------------ -------------- ---------------------------------------------------------------------------
+BASE_T1      PART_1         30-DEC-10 18.04.55.633710 +00:00
+BASE_T1      PART_2         30-DEC-10 18.04.55.633710 +00:00
+BASE_T1                     30-DEC-10 18.04.55.645162 +00:00
+BASE_T1      PART_1         30-DEC-10 18.04.55.856920 +00:00
+BASE_T1                     30-DEC-10 18.04.55.910722 +00:00
+BASE_T1      PART_2         30-DEC-10 18.04.56.126645 +00:00
+BASE_T1                     30-DEC-10 18.04.56.181336 +00:00
+BASE_T1      PART_1         30-DEC-10 18.04.56.442624 +00:00
+BASE_T1                     30-DEC-10 18.04.56.527702 +00:00
 
 9 rows selected.
 
+
 USER_TAB_COL_STATISTICS:
 
-Global TABLE_NAME COLUMN_NAME SAMPLE_SIZE Last Analyzed Stats NUM_DISTINCT LOW_VALU HIGH_VAL ------------ ------------ ----------- ------------------- ------- ------------ -------- -------- BASE_T1 DAY_KEY 3 2010-12-30-18:04:56 YES 2 C102 C103 BASE_T1 STORE_NUM 3 2010-12-30-18:04:56 YES 2 C102 C103 BASE_T1 FACT_01 3 2010-12-30-18:04:56 YES 1 C10B C10B
+                                                          Global
+TABLE_NAME   COLUMN_NAME  SAMPLE_SIZE Last Analyzed       Stats   NUM_DISTINCT LOW_VALU HIGH_VAL
+------------ ------------ ----------- ------------------- ------- ------------ -------- --------
+BASE_T1      DAY_KEY                3 2010-12-30-18:04:56 YES                2 C102     C103
+BASE_T1      STORE_NUM              3 2010-12-30-18:04:56 YES                2 C102     C103
+BASE_T1      FACT_01                3 2010-12-30-18:04:56 YES                1 C10B     C10B
 
 3 rows selected.
 
+
 USER_PART_COL_STATISTICS:
 
-Global TABLE_NAME PARTITION_NAME COLUMN_NAME SAMPLE_SIZE Last Analyzed Stats NUM_DISTINCT LOW_VALU HIGH_VAL ------------ -------------- ------------ ----------- ------------------- ------- ------------ -------- -------- BASE_T1 PART_1 DAY_KEY 2 2010-12-30-18:04:56 YES 1 C102 C102 BASE_T1 PART_1 STORE_NUM 2 2010-12-30-18:04:56 YES 2 C102 C103 BASE_T1 PART_1 FACT_01 2 2010-12-30-18:04:56 YES 1 C10B C10B BASE_T1 PART_2 DAY_KEY 1 2010-12-30-18:04:56 YES 1 C103 C103 BASE_T1 PART_2 STORE_NUM 1 2010-12-30-18:04:56 YES 1 C102 C102 BASE_T1 PART_2 FACT_01 1 2010-12-30-18:04:56 YES 1 C10B C10B
+                                                                         Global
+TABLE_NAME   PARTITION_NAME COLUMN_NAME  SAMPLE_SIZE Last Analyzed       Stats   NUM_DISTINCT LOW_VALU HIGH_VAL
+------------ -------------- ------------ ----------- ------------------- ------- ------------ -------- --------
+BASE_T1      PART_1         DAY_KEY                2 2010-12-30-18:04:56 YES                1 C102     C102
+BASE_T1      PART_1         STORE_NUM              2 2010-12-30-18:04:56 YES                2 C102     C103
+BASE_T1      PART_1         FACT_01                2 2010-12-30-18:04:56 YES                1 C10B     C10B
+BASE_T1      PART_2         DAY_KEY                1 2010-12-30-18:04:56 YES                1 C103     C103
+BASE_T1      PART_2         STORE_NUM              1 2010-12-30-18:04:56 YES                1 C102     C102
+BASE_T1      PART_2         FACT_01                1 2010-12-30-18:04:56 YES                1 C10B     C10B
 
 6 rows selected.
+
 
 Synopsis data:
 
-TABLE_NAME Part Column Analyse Time Hash count ------------ ------------------------------ ------------------------------ ------------------- ---------- BASE_T1 PART_2 DAY_KEY 2010-12-30-18:04:56 1 BASE_T1 PART_2 FACT_01 2010-12-30-18:04:56 1 BASE_T1 PART_1 STORE_NUM 2010-12-30-18:04:56 2 BASE_T1 PART_1 DAY_KEY 2010-12-30-18:04:56 1 BASE_T1 PART_2 STORE_NUM 2010-12-30-18:04:56 1 BASE_T1 PART_1 FACT_01 2010-12-30-18:04:56 1
+TABLE_NAME   Part                           Column                         Analyse Time        Hash count
+------------ ------------------------------ ------------------------------ ------------------- ----------
+BASE_T1      PART_2                         DAY_KEY                        2010-12-30-18:04:56          1
+BASE_T1      PART_2                         FACT_01                        2010-12-30-18:04:56          1
+BASE_T1      PART_1                         STORE_NUM                      2010-12-30-18:04:56          2
+BASE_T1      PART_1                         DAY_KEY                        2010-12-30-18:04:56          1
+BASE_T1      PART_2                         STORE_NUM                      2010-12-30-18:04:56          1
+BASE_T1      PART_1                         FACT_01                        2010-12-30-18:04:56          1
 
 6 rows selected.
-
 ```
 
 
@@ -257,36 +399,95 @@ Where SYS.WRI$_OPTSTAT_SYNOPSIS is large, stats gather is much slower:
 
 
 ```
-Check the current size of the synopsis table `WRI$_OPTSTAT_SYNOPSIS$`
+Check the current size of the synopsis table WRI$_OPTSTAT_SYNOPSIS$
 
-TABLE_NAME NUM_ROWS ------------------------------ ---------- WRI$_OPTSTAT_SYNOPSIS_PARTGRP 0 WRI$_OPTSTAT_SYNOPSIS_HEAD$ 64259 `WRI$_OPTSTAT_SYNOPSIS$` 216854569
+TABLE_NAME                       NUM_ROWS
+------------------------------ ----------
+WRI$_OPTSTAT_SYNOPSIS_PARTGRP           0
+WRI$_OPTSTAT_SYNOPSIS_HEAD$         64259
+WRI$_OPTSTAT_SYNOPSIS$          216854569
 
-************ Gather initial stats Elapsed: 00:00:00.57 ************ Add one row of data to partition 1 ************ Gather stats Elapsed: 00:03:04.58 ************ Add one row of data to partition 2 ************ Gather stats Elapsed: 00:02:25.20 ************ Add another row of data to partition 1, with a new store_num value ************ Gather stats Elapsed: 00:02:25.76 ************
+************
+Gather initial stats
+Elapsed: 00:00:00.57
+************
+Add one row of data to partition 1
+************
+Gather stats
+Elapsed: 00:03:04.58
+************
+Add one row of data to partition 2
+************
+Gather stats
+Elapsed: 00:02:25.20
+************
+Add another row of data to partition 1, with a new store_num value
+************
+Gather stats
+Elapsed: 00:02:25.76
+************
 
 Actual data in the table:
 
-DAY_KEY COUNT(*) ---------- ---------- 1 2 2 1
+   DAY_KEY   COUNT(*)
+---------- ----------
+         1          2
+         2          1
 
 USER_TAB_STATISTICS:
 
-Global Stale TABLE_NAME PARTITION_NAME NUM_ROWS SAMPLE_SIZE Last Analyzed Stats Stats ------------ -------------- ---------- ----------- ------------------- ------- ----- BASE_T1 3 3 2010-12-30-17:51:34 YES NO BASE_T1 PART_1 2 2 2010-12-30-17:50:53 YES NO BASE_T1 PART_2 1 1 2010-12-30-17:48:27 YES NO
+                                                                       Global  Stale
+TABLE_NAME   PARTITION_NAME   NUM_ROWS SAMPLE_SIZE Last Analyzed       Stats   Stats
+------------ -------------- ---------- ----------- ------------------- ------- -----
+BASE_T1                              3           3 2010-12-30-17:51:34 YES     NO
+BASE_T1      PART_1                  2           2 2010-12-30-17:50:53 YES     NO
+BASE_T1      PART_2                  1           1 2010-12-30-17:48:27 YES     NO
 
 USER_TAB_STATS_HISTORY:
 
-TABLE_NAME PARTITION_NAME STATS_UPDATE_TIME ------------ -------------- --------------------------------------------------------------------------- BASE_T1 PART_1 30-DEC-10 17.43.39.320426 +00:00 BASE_T1 PART_2 30-DEC-10 17.43.39.320426 +00:00 BASE_T1 30-DEC-10 17.43.39.360753 +00:00 BASE_T1 PART_1 30-DEC-10 17.46.02.331166 +00:00 BASE_T1 30-DEC-10 17.46.43.939090 +00:00 BASE_T1 PART_2 30-DEC-10 17.48.27.926559 +00:00 BASE_T1 30-DEC-10 17.49.09.144722 +00:00 BASE_T1 PART_1 30-DEC-10 17.50.53.818049 +00:00 BASE_T1 30-DEC-10 17.51.34.915096 +00:00
+TABLE_NAME   PARTITION_NAME STATS_UPDATE_TIME
+------------ -------------- ---------------------------------------------------------------------------
+BASE_T1      PART_1         30-DEC-10 17.43.39.320426 +00:00
+BASE_T1      PART_2         30-DEC-10 17.43.39.320426 +00:00
+BASE_T1                     30-DEC-10 17.43.39.360753 +00:00
+BASE_T1      PART_1         30-DEC-10 17.46.02.331166 +00:00
+BASE_T1                     30-DEC-10 17.46.43.939090 +00:00
+BASE_T1      PART_2         30-DEC-10 17.48.27.926559 +00:00
+BASE_T1                     30-DEC-10 17.49.09.144722 +00:00
+BASE_T1      PART_1         30-DEC-10 17.50.53.818049 +00:00
+BASE_T1                     30-DEC-10 17.51.34.915096 +00:00
 
 USER_TAB_COL_STATISTICS:
 
-Global TABLE_NAME COLUMN_NAME SAMPLE_SIZE Last Analyzed Stats NUM_DISTINCT LOW_VALU HIGH_VAL ------------ ------------ ----------- ------------------- ------- ------------ -------- -------- BASE_T1 DAY_KEY 3 2010-12-30-17:51:34 YES 2 C102 C103 BASE_T1 STORE_NUM 3 2010-12-30-17:51:34 YES 2 C102 C103 BASE_T1 FACT_01 3 2010-12-30-17:51:34 YES 1 C10B C10B
+                                                          Global
+TABLE_NAME   COLUMN_NAME  SAMPLE_SIZE Last Analyzed       Stats   NUM_DISTINCT LOW_VALU HIGH_VAL
+------------ ------------ ----------- ------------------- ------- ------------ -------- --------
+BASE_T1      DAY_KEY                3 2010-12-30-17:51:34 YES                2 C102     C103
+BASE_T1      STORE_NUM              3 2010-12-30-17:51:34 YES                2 C102     C103
+BASE_T1      FACT_01                3 2010-12-30-17:51:34 YES                1 C10B     C10B
 
 USER_PART_COL_STATISTICS:
 
-Global TABLE_NAME PARTITION_NAME COLUMN_NAME SAMPLE_SIZE Last Analyzed Stats NUM_DISTINCT LOW_VALU HIGH_VAL ------------ -------------- ------------ ----------- ------------------- ------- ------------ -------- -------- BASE_T1 PART_1 DAY_KEY 2 2010-12-30-17:50:53 YES 1 C102 C102 BASE_T1 PART_1 STORE_NUM 2 2010-12-30-17:50:53 YES 2 C102 C103 BASE_T1 PART_1 FACT_01 2 2010-12-30-17:50:53 YES 1 C10B C10B BASE_T1 PART_2 DAY_KEY 1 2010-12-30-17:48:27 YES 1 C103 C103 BASE_T1 PART_2 STORE_NUM 1 2010-12-30-17:48:27 YES 1 C102 C102 BASE_T1 PART_2 FACT_01 1 2010-12-30-17:48:27 YES 1 C10B C10B
+                                                                         Global
+TABLE_NAME   PARTITION_NAME COLUMN_NAME  SAMPLE_SIZE Last Analyzed       Stats   NUM_DISTINCT LOW_VALU HIGH_VAL
+------------ -------------- ------------ ----------- ------------------- ------- ------------ -------- --------
+BASE_T1      PART_1         DAY_KEY                2 2010-12-30-17:50:53 YES                1 C102     C102
+BASE_T1      PART_1         STORE_NUM              2 2010-12-30-17:50:53 YES                2 C102     C103
+BASE_T1      PART_1         FACT_01                2 2010-12-30-17:50:53 YES                1 C10B     C10B
+BASE_T1      PART_2         DAY_KEY                1 2010-12-30-17:48:27 YES                1 C103     C103
+BASE_T1      PART_2         STORE_NUM              1 2010-12-30-17:48:27 YES                1 C102     C102
+BASE_T1      PART_2         FACT_01                1 2010-12-30-17:48:27 YES                1 C10B     C10B
 
 Synopsis data:
 
-TABLE_NAME Part Column Analyse Time Hash count ------------ ------------------------------ ------------------------------ ------------------- ---------- BASE_T1 PART_1 FACT_01 2010-12-30-17:50:53 1 BASE_T1 PART_2 DAY_KEY 2010-12-30-17:48:27 1 BASE_T1 PART_1 STORE_NUM 2010-12-30-17:50:53 2 BASE_T1 PART_2 FACT_01 2010-12-30-17:48:27 1 BASE_T1 PART_2 STORE_NUM 2010-12-30-17:48:27 1 BASE_T1 PART_1 DAY_KEY 2010-12-30-17:50:53 1
-
+TABLE_NAME   Part                           Column                         Analyse Time        Hash count
+------------ ------------------------------ ------------------------------ ------------------- ----------
+BASE_T1      PART_1                         FACT_01                        2010-12-30-17:50:53          1
+BASE_T1      PART_2                         DAY_KEY                        2010-12-30-17:48:27          1
+BASE_T1      PART_1                         STORE_NUM                      2010-12-30-17:50:53          2
+BASE_T1      PART_2                         FACT_01                        2010-12-30-17:48:27          1
+BASE_T1      PART_2                         STORE_NUM                      2010-12-30-17:48:27          1
+BASE_T1      PART_1                         DAY_KEY                        2010-12-30-17:50:53          1
 ```
 
 

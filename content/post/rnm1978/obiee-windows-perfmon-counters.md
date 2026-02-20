@@ -8,7 +8,7 @@ categories:
   - "windows"
 ---
 
-Yet another way to access the BI Management data discussed [here](http://rnm1978.blogspot.com/2009/07/21/obiee-admin-tools-amp-hacks/) - through Windows' PerfMon tool.  
+Yet another way to access the BI Management data discussed [here](/2009/07/21/obiee-admin-tools-hacks/) - through Windows' PerfMon tool.  
   
 This will only work for installations where your OBIEE server is running on Windows. You should be able to run PerfMon locally or remotely. Standard practise would be not to run it locally on a Production machine :-)  
   

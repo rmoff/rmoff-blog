@@ -58,7 +58,15 @@ Most web and application servers come with default content such as example pages
 
 ![](/images/rnm1978/2010-01-08_150007.png)
 
-In $OAS\_HOME/Apache/Apache: \[sourcecode\] mv htdocs/ htdocs.old mkdir htdocs vi htdocs/index.html # enter: <HTML><HEAD><TITLE>Nothing to see here</TITLE></HEAD><BODY>Nothing to see here, move along.</BODY></HTML> \[/sourcecode\]
+In $OAS\_HOME/Apache/Apache: 
+```
+mv htdocs/ htdocs.old
+mkdir htdocs
+vi htdocs/index.html
+# enter:
+Nothing to see hereNothing to see here, move along.
+```
+
 
 ![](/images/rnm1978/2010-01-08_150158.png)
 
@@ -66,7 +74,12 @@ In $OAS\_HOME/Apache/Apache: \[sourcecode\] mv htdocs/ htdocs.old mkdir htdocs v
 
 ![](/images/rnm1978/2010-01-18_134955.png)
 
-\[sourcecode\] rm $OAS\_Home/Apache/Apache/icons/README rm $OAS\_Home/Apache/Apache/fcgi-bin/\* \[/sourcecode\]
+
+```
+rm $OAS_Home/Apache/Apache/icons/README
+rm $OAS_Home/Apache/Apache/fcgi-bin/*
+```
+
 
 ![](/images/rnm1978/2010-01-18_135124.png)
 
@@ -78,7 +91,14 @@ In $OAS\_HOME/Apache/Apache: \[sourcecode\] mv htdocs/ htdocs.old mkdir htdocs v
 
 ![](/images/rnm1978/2010-01-18_142342.png)  
 
-\[sourcecode\] cd $OAS\_HOME/j2ee/home/default-web-app rm -r WEB-INF/classes rm -r examples/ echo "Nothing to see here" > index.html \[/sourcecode\]
+
+```
+cd $OAS_HOME/j2ee/home/default-web-app
+rm -r WEB-INF/classes
+rm -r examples/
+echo "Nothing to see here" > index.html
+```
+
 
 ![](/images/rnm1978/2010-01-18_133909.png)  
 
@@ -96,7 +116,12 @@ Disable the weak SSL ciphers & disable version 2 of the protocol
 
 Add to httpd.conf after the TraceEnable statement from above:
 
-\[sourcecode\] SSLProtocol ALL -SSLv2 SSLCipherSuite HIGH:!SSLv2:!ADH:!aNULL:!eNULL:!NULL \[/sourcecode\] Ref: [http://httpd.apache.org/docs/2.0/mod/mod\_ssl.html#sslciphersuite](http://httpd.apache.org/docs/2.0/mod/mod_ssl.html#sslciphersuite)
+
+```
+SSLProtocol ALL -SSLv2
+SSLCipherSuite HIGH:!SSLv2:!ADH:!aNULL:!eNULL:!NULL
+```
+ Ref: [http://httpd.apache.org/docs/2.0/mod/mod\_ssl.html#sslciphersuite](http://httpd.apache.org/docs/2.0/mod/mod_ssl.html#sslciphersuite)
 
 Ref: [http://adamyoung.net/Disable-SSLv2-System-Wide](http://adamyoung.net/Disable-SSLv2-System-Wide)
 

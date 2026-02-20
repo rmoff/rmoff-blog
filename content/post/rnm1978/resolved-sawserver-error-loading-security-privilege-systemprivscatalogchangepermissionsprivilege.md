@@ -16,11 +16,35 @@ Since I'd got this webcat fresh out of the box I was puzzled how it could be cor
 
 I did a bit more tinkering (including [nosying around in the sawserver log](/categories/log/)), before realising it was indeed corrupt, and that I was indeed a muppet.
 
-Here's what happened after copying EnterpriseBusinessAnalytics.zip to my (unix) Presentation Services box: \[sourcecode language="bash"\]
+Here's what happened after copying EnterpriseBusinessAnalytics.zip to my (unix) Presentation Services box: 
+```bash
+$unzip EnterpriseBusinessAnalytics.zip 
+Archive:  EnterpriseBusinessAnalytics.zip
+   creating: root/
+   creating: root/
+   creating: root/shared/
+   creating: root/shared/automotive/
+   creating: root/shared/automotive/prompts/
+  inflating: root/shared/automotive/prompts/gf_model+model+year+trim  
+  inflating: root/shared/automotive/prompts/gf_model+model+year+trim.atr  
+  inflating: root/shared/automotive/prompts.atr  
+[...]
+[ lots of files here ]
+[...]
+  inflating: root.atr                
 
-$unzip EnterpriseBusinessAnalytics.zip Archive: EnterpriseBusinessAnalytics.zip creating: root/ creating: root/ creating: root/shared/ creating: root/shared/automotive/ creating: root/shared/automotive/prompts/ inflating: root/shared/automotive/prompts/gf\_model+model+year+trim inflating: root/shared/automotive/prompts/gf\_model+model+year+trim.atr inflating: root/shared/automotive/prompts.atr \[...\] \[ lots of files here \] \[...\] inflating: root.atr
+$ls -l
+total 110494
+-rw-------   1 user   group    37655058 Oct  7 03:44 EnterpriseBusinessAnalytics.zip
+drwx------   5 user   group       1024 Sep 18 01:06 root
+-rw-------   1 user   group         60 Dec  6  2006 root.atr
+```
+ Huh? What gives? Where's my EnterpriseBusinessAnalytics web cat folder? Well, quite obviously it's unpacked it without a parent directory name. That's easily solved: 
+```bash
+$mkdir EnterpriseBusinessAnalytics
+$mv root EnterpriseBusinessAnalytics
+```
 
-$ls -l total 110494 -rw------- 1 user group 37655058 Oct 7 03:44 EnterpriseBusinessAnalytics.zip drwx------ 5 user group 1024 Sep 18 01:06 root -rw------- 1 user group 60 Dec 6 2006 root.atr \[/sourcecode\] Huh? What gives? Where's my EnterpriseBusinessAnalytics web cat folder? Well, quite obviously it's unpacked it without a parent directory name. That's easily solved: \[sourcecode language="bash"\] $mkdir EnterpriseBusinessAnalytics $mv root EnterpriseBusinessAnalytics \[/sourcecode\]
 
 Then I started up Presentation Services and got the error "Error loading security privilege /system/privs/catalog/ChangePermissionsPrivilege."
 

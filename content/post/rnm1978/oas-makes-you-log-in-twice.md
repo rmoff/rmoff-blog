@@ -23,4 +23,8 @@ Per the [Apache FAQ](http://httpd.apache.org/docs/1.3/misc/FAQ.html#prompted-twi
   
 Ref: [Apache UseCanonicalName documentation](http://httpd.apache.org/docs/2.2/mod/core.html#usecanonicalname)
 
-After changing httpd.conf, don't forget to bounce Apache: \[sourcecode\] opmnctl restartproc ias-component=HTTP\_Server \[/sourcecode\]
+After changing httpd.conf, don't forget to bounce Apache: 
+```
+opmnctl restartproc ias-component=HTTP_Server
+```
+

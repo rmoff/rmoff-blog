@@ -31,7 +31,7 @@ Slides & Recordings: http://talks.rmoff.net
 * [Bluesky](https://bsky.app/profile/rmoff.net)
 * [Email](mailto:robin@rmoff.net)
 * [LinkedIn](https://www.linkedin.com/in/robinmoffatt)
-* [SpeakerDeck](https://speakerdeck.com/rmoff)
+* [SpeakerDeck](https://talks.rmoff.net/)
 * [GitHub](https://github.com/rmoff)
 * [Dev.to](https://dev.to/rmoff/)
 * [Telegram](https://t.me/rmoff)

@@ -24,6 +24,6 @@ You can use [Google's Advanced Search page](http://www.google.co.uk/advanced_sea
 
 You can also use [Google Alerts](http://alerts.google.com) so that any time a new entry matching your search criteria is added in Google's index you get notified of it either by email or on an RSS feed:
 
-![Google Alerts_1257258029069](http://rnm1978.files.wordpress.com/2009/11/google-alerts_1257258029069.png?w=1024 "Google Alerts_1257258029069")
+![Google Alerts_1257258029069](/images/2009/11/google-alerts_1257258029069.webp "Google Alerts_1257258029069")
 
 Google Is Your Friend, and powerful ally :-D

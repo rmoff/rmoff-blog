@@ -46,7 +46,11 @@ Going to View -> Test Results and examining the full-size screenshots showed the
 
 Doc ID 735158.1 on Metalink details this problem, but doesn't have a solution. The error message is apparently not from OBI but the webserver. I don't know enough about the web technology to trace this through to source. In the HTML there is always a placeholder for a message :
 
-\[sourcecode language="html"\]<DIV style="display:none" id="DashboardErrorDiv"></DIV>\[/sourcecode\]
+
+```html
+
+```
+
 
 I did a detailed examination of the sawserver log (using detailed logging level) but couldn't find any errors. I checked the analytics web app log too, and the oc4j and apache logs. All turned up nothing. Using [Fiddler2](http://www.fiddlertool.com/) I set up a trace of the network traffic from LoadRunner to OBIEE (define Fiddler2 as a proxy in LoadRunner) - and the blasted thing worked! No error! So then I removed the proxy setting and again it worked, no problem. How frustrating.
 
