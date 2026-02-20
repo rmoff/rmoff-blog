@@ -14,7 +14,7 @@ categories:
 
 This is the first part of three detailed articles making up a mini-series about [OBIEE monitoring](/2010/12/06/obiee-monitoring/). It demonstrates how to capture OBIEE performance information, and optionally graph it out and serve it through an auto-updating webpage.
 
-For some background on OBIEE's Systems Management component, along with JMX and MBeans, [see here](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/) and [here](/categories/jmx/). The following assumes you know your mbeans from coffee beans and jmx from a bmx.
+For some background on OBIEE's Systems Management component, along with JMX and MBeans, [see here](/2009/07/22/oracle-bi-management-systems-management-mbeans/) and [here](/categories/jmx/). The following assumes you know your mbeans from coffee beans and jmx from a bmx.
 
 The metric collection is built around the [jmxsh](http://code.google.com/p/jmxsh/) tool. This is similar to [jmxterm](http://wiki.cyclopsgroup.org/jmxterm) and both provide command-line access to jmx. Once it's commandline, it's scriptable :)
 
@@ -141,7 +141,7 @@ kill 14695
 
 ## Defining the counters
 
-You'll have noticed in my script that I define an array of counter names. You can get a list of all the counters in various ways including through [Presentation Services (saw.dll?perfmon)](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html), [OAS/OC4J](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html), or [JConsole](/2009/07/16/jconsole-/-jmx/). My personal preference is using [Presentation Services (saw.dll?perfmon)](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html) as it gives the list nice and neatly and with an explanation of each counter. Once you've decided which you want to collect, you need to use jmxsh again to get the correct format. Counters are defined as Attributes (eg **Current Open Connections**) within MBeans (eg **Oracle BI Management:Oracle BI=Performance,AppName=Oracle BI Presentation Server,name=Oracle BI PS Connection Pool**). Different jmx interfaces seem to label the MBean in a different format, for example: 
+You'll have noticed in my script that I define an array of counter names. You can get a list of all the counters in various ways including through [Presentation Services (saw.dll?perfmon)](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html), [OAS/OC4J](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html), or [JConsole](/2009/07/16/jconsole-jmx/). My personal preference is using [Presentation Services (saw.dll?perfmon)](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html) as it gives the list nice and neatly and with an explanation of each counter. Once you've decided which you want to collect, you need to use jmxsh again to get the correct format. Counters are defined as Attributes (eg **Current Open Connections**) within MBeans (eg **Oracle BI Management:Oracle BI=Performance,AppName=Oracle BI Presentation Server,name=Oracle BI PS Connection Pool**). Different jmx interfaces seem to label the MBean in a different format, for example: 
 ```
 jmxsh:  Oracle BI Management:Oracle BI=Performance,AppName=Oracle BI Presentation Server,name=Oracle BI PS Sessions
 jmxterm:Oracle BI Management:AppName=Oracle BI Presentation Server,Oracle BI=Performance,name=Oracle BI PS Sessions

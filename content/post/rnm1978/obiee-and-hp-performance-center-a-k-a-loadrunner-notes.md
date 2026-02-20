@@ -10,7 +10,7 @@ aliases:
 - /2009/10/01/obiee-and-hp-performance-center-a.k.a.-loadrunner-notes/
 ---
 
-This is a supplemental post to [this one describing how to set up a VUser in LoadRunner to test OBIEE](/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/). It's various notes that I made during the development but which aren't directly part of the step-by-step tutorial. They're not necessarily vital for recording scripts, but observations and explanations that should be helpful when working with LoadRunner and OBIEE.
+This is a supplemental post to [this one describing how to set up a VUser in LoadRunner to test OBIEE](/2009/10/01/obiee-and-loadrunner-howto/). It's various notes that I made during the development but which aren't directly part of the step-by-step tutorial. They're not necessarily vital for recording scripts, but observations and explanations that should be helpful when working with LoadRunner and OBIEE.
 
 ## Validation using sawserver logs
 

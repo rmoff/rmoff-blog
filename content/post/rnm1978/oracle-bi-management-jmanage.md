@@ -11,9 +11,9 @@ categories:
   - "systemsmanagement"
 ---
 
-[OBIEE's Systems Management](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/) component exposes configuration and performance data through [Java MBeans](http://java.sun.com/j2se/1.5.0/docs/guide/management/overview.html#mbeans). As discussed in other posts these can be be accessed through several different ways:
+[OBIEE's Systems Management](/2009/07/22/oracle-bi-management-systems-management-mbeans/) component exposes configuration and performance data through [Java MBeans](http://java.sun.com/j2se/1.5.0/docs/guide/management/overview.html#mbeans). As discussed in other posts these can be be accessed through several different ways:
 
-- [JConsole](/2009/07/16/jconsole-/-jmx/) (see also [here](/2009/07/21/jconsole-/-jmx-followup/))
+- [JConsole](/2009/07/16/jconsole-jmx/) (see also [here](/2009/07/21/jconsole-jmx-followup/))
 - [oc4j](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html)
 - [Windows PerfMon](/2009/07/24/obiee-windows-perfmon-counters/) (although I guess this isn't actually using MBeans/JMX?)
 - [saw.dll?perfmon](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html)
@@ -65,7 +65,7 @@ NB: If you have separate BI and PS servers you'll need to monitor both, as the p
     29-Jul-2009 09:01:32 oracle.bi.analytics.management.monitoring.AppPerfMon refresh
     INFO: Oracle BI Server has started. Perfcounter data is collected.
     
-4. If you want to be sure it's working, use jconsole to connect and examine the MBeans exposed. [See here for more information](/2009/07/16/jconsole-/-jmx/)
+4. If you want to be sure it's working, use jconsole to connect and examine the MBeans exposed. [See here for more information](/2009/07/16/jconsole-jmx/)
 5. In jManage click on Add Application (if you can't see this make sure you're on the http://localhost:9090/config/managedApplications.do page)
 6. Choose JSR160 as Application Type
 7. Enter a description name for your server, and then for the URL this:

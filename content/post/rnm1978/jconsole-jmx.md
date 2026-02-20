@@ -10,7 +10,7 @@ categories:
   - "unix"
 ---
 
-\[edit\] See [this post](/2009/07/21/jconsole-/-jmx-followup/) too \[/edit\] On an OBIEE server run 
+\[edit\] See [this post](/2009/07/21/jconsole-jmx-followup/) too \[/edit\] On an OBIEE server run 
 ```bash
 nohup obiee/systemsmanagement/runagent.sh &amp;
 ```

@@ -15,12 +15,12 @@ OBIEE's Systems Management functionality exposes performance counters and the ap
 
 It's extremely useful, and is documented pretty widely :
 
-- [JConsole / JMX](/2009/07/16/jconsole-/-jmx/)
-- [JConsole / JMX – followup](/2009/07/21/jconsole-/-jmx-followup/)
-- [Oracle BI Management / Systems Management MBeans](/2009/07/22/oracle-bi-management-/-systems-management-mbeans/)
+- [JConsole / JMX](/2009/07/16/jconsole-jmx/)
+- [JConsole / JMX – followup](/2009/07/21/jconsole-jmx-followup/)
+- [Oracle BI Management / Systems Management MBeans](/2009/07/22/oracle-bi-management-systems-management-mbeans/)
 - [PerfMon](http://obiee101.blogspot.com/2009/07/obiee-perfmon-performance-monitor.html)
 - [OBIEE MBeans and OC4J](http://blogs.oracle.com/siebelessentials/2008/11/oracle_bi_ee_and_mbeans.html)
-- [OBIEE performance monitoring and alerting with jManage](/2009/07/29/obiee-performance-monitoring-and-alerting-with-jmanage/)
+- [OBIEE performance monitoring and alerting with jManage](/2009/07/29/oracle-bi-management-jmanage/)
 
 In this article I'm going to discuss the use of JMX to access these counters remotely, and a possible security issue that's present in the [BI Management Pack](http://docs.google.com/viewer?a=v&q=cache:cBH-0QJHbTEJ:download.oracle.com/docs/cd/B16240_01/doc/apirefs.102/e12639.pdf+com.sun.management.jmxremote.authenticate%3Dfalse&hl=en&gl=uk&pid=bl&srcid=ADGEESiWEE9yb6LNERALgxwRhxGkUPC_8VzSZcYiyFUbV2MMMcP0RniO8EcSgT8Y2VsihL8JwLtTQHBuEDAQhS0FOOGfRKt9AxGdnbZEBalywMSEQoyzrktNU1ppcvLgB-F2Hjcr6gLI&sig=AHIEtbTc_xYSdrrFG4k-rsCaJrd4ZJjodQ) manual. The BI Management Pack is an add-on to Oracle's Enterprise Manager / Grid Control for managing OBIEE, see [Mark Rittman's excellent guide on Oracle's website](http://www.oracle.com/technology/pub/articles/rittman-oem-bipack.html).
 
@@ -189,4 +189,4 @@ I find the possibilities of the JMX interface to BI counters very interesting, a
 
 The counters in particular that BI Server exposes gives a peek under the covers of an application that has no detailing logging other than NQQuery.log. Using these counters through JMX we can look at things such as the current state of a connection pool, or the BI Server Cache.
 
-Does anyone know of a freeware tool for collecting data from JMX? I know I could use the BI Management Pack but we don't have it. JConsole or [JManage](/2009/07/29/obiee-performance-monitoring-and-alerting-with-jmanage/) give visualisation of the data realtime, but the latter is very rough around the edges.
+Does anyone know of a freeware tool for collecting data from JMX? I know I could use the BI Management Pack but we don't have it. JConsole or [JManage](/2009/07/29/oracle-bi-management-jmanage/) give visualisation of the data realtime, but the latter is very rough around the edges.
