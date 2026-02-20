@@ -1,11 +1,14 @@
 ---
-title: "RTFM? But where TF is the FM?  &gt;&gt; Offline searchable OBIEE 11g documentation"
+title: "RTFM? But where TF is the FM?  >> Offline searchable OBIEE 11g documentation"
 date: "2010-09-13"
+url: "/2010/09/13/rtfm-but-where-tf-is-the-fm-offline-searchable-obiee-11g-documentation/"
 categories: 
   - "documentation"
   - "OBIEE"
   - "oracle"
   - "rant"
+aliases:
+- /2010/09/13/rtfm-but-where-tf-is-the-fm-gtgt-offline-searchable-obiee-11g-documentation/
 ---
 
 I'm a geek. I like understanding things in their absolute entirety. It frustrates me to have to make presumptions or assumptions about something. I like to get down 'n dirty and find out what makes things tick.

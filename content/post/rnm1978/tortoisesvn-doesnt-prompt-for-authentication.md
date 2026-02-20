@@ -1,6 +1,7 @@
 ---
 title: "TortoiseSVN doesn't prompt for authentication"
 date: "2010-09-21"
+url: "/2010/09/21/tortoisesvn-doesnt-prompt-for-authentication/"
 categories: 
   - "svn"
 ---

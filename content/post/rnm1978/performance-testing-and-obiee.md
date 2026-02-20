@@ -1,6 +1,7 @@
 ---
 title: "Performance Testing and OBIEE"
 date: "2010-05-24"
+url: "/2010/05/24/performance-testing-and-obiee/"
 categories: 
   - "biforum"
   - "OBIEE"

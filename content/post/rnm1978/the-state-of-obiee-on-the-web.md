@@ -1,6 +1,7 @@
 ---
 title: "The state of OBIEE on the web"
 date: "2009-10-30"
+url: "/2009/10/30/the-state-of-obiee-on-the-web/"
 categories: 
   - "OBIEE"
   - "rant"

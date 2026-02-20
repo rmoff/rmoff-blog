@@ -1,10 +1,13 @@
 ---
 title: "Identify your OBIEE users by setting Client ID in Oracle connection"
 date: "2010-01-26"
+url: "/2010/01/26/identify-your-users-by-setting-client-id-in-oracle/"
 categories: 
   - "OBIEE"
   - "oracle"
   - "support"
+aliases:
+- /2010/01/26/identify-your-obiee-users-by-setting-client-id-in-oracle-connection/
 ---
 
 You get a call from your friendly DBA. He says the production database is up the spout, and it's "that bee eye thingumy causing it". What do you do now? All you've got to go on is a program name in the Oracle session tables of "nqsserver@MYSERVER (TNS V1-V3)" and the SQL the DBA sent you that if you're lucky will look as presentable as this: ![](/images/rnm1978/2010-01-25_145658.png "2010-01-25_145658") The username against the SQL is the generic User ID that you had created for connections to the database from OBIEE.

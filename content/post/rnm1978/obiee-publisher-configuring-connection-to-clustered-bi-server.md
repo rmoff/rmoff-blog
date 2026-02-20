@@ -1,6 +1,7 @@
 ---
 title: "OBIEE Publisher - configuring connection to clustered BI Server"
 date: "2009-03-23"
+url: "/2009/03/23/obiee-publisher-configuring-connection-to-clustered-bi-server/"
 categories: 
   - "bi-publisher"
   - "cluster"

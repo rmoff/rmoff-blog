@@ -1,6 +1,7 @@
 ---
 title: "Multiple RPDs on one server - Part 1 - the BI Server"
 date: "2009-08-25"
+url: "/2009/08/25/multiple-rpds-on-one-server-part-1-the-bi-server/"
 categories: 
   - "OBIEE"
   - "sawserver"

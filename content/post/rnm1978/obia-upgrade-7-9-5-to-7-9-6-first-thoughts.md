@@ -1,11 +1,14 @@
 ---
 title: "OBIA upgrade 7.9.5 to 7.9.6 - first thoughts"
 date: "2009-08-13"
+url: "/2009/08/13/obia-upgrade-7-9-5-to-7-9-6-first-thoughts/"
 categories: 
   - "bug"
   - "dac"
   - "obia"
   - "oracle"
+aliases:
+- /2009/08/13/obia-upgrade-7.9.5-to-7.9.6-first-thoughts/
 ---
 
 We're upgrading from OBIA 7.9.5 (Financials - GL) to OBIA 7.9.6. Our reasons are for support (7.9.5 does not support Oracle 11g) and minor functionality additions.

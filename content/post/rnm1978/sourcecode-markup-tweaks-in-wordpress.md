@@ -1,6 +1,7 @@
 ---
 title: "Sourcecode markup tweaks in Wordpress"
 date: "2011-09-26"
+url: "/2011/09/26/sourcecode-markup-tweaks-in-wordpress/"
 categories: 
   - "wordpress"
 ---

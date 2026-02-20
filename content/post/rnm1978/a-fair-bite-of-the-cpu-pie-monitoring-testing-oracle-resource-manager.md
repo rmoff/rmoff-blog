@@ -1,11 +1,14 @@
 ---
 title: "A fair bite of the CPU pie? Monitoring & Testing Oracle Resource Manager"
 date: "2010-09-10"
+url: "/2010/09/10/a-fair-bite-of-the-cpu-pie-monitoring-testing-oracle-resource-manager/"
 categories: 
   - "oracle"
   - "performance"
   - "resource-manager"
   - "unix"
+aliases:
+- /2010/09/10/a-fair-bite-of-the-cpu-pie-monitoring-amp-testing-oracle-resource-manager/
 ---
 
 ## Introduction

@@ -1,6 +1,7 @@
 ---
 title: "Multiple RPDs on one server - Part 2 - Presentation Services"
 date: "2009-08-25"
+url: "/2009/08/25/multiple-rpds-on-one-server-part-2-presentation-services/"
 categories: 
   - "hack"
   - "OBIEE"

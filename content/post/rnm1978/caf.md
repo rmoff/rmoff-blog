@@ -1,6 +1,7 @@
 ---
 title: "CAF"
 date: "2009-12-11"
+url: "/2009/12/11/caf/"
 categories: 
   - "caf"
   - "OBIEE"

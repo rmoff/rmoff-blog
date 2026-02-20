@@ -1,8 +1,11 @@
 ---
 title: "SQL Developer v2.1 Early Adopter released"
 date: "2009-09-25"
+url: "/2009/09/25/sql-developer-v2-1-early-adopter-released/"
 categories: 
   - "oracle"
+aliases:
+- /2009/09/25/sql-developer-v2.1-early-adopter-released/
 ---
 
 SQL Developer v2.1 Early Adopter was released yesterday.

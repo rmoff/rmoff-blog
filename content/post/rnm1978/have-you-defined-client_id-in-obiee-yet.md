@@ -1,6 +1,7 @@
 ---
 title: "Have you defined CLIENT_ID in OBIEE yet?"
 date: "2011-08-08"
+url: "/2011/08/08/have-you-defined-client_id-in-obiee-yet/"
 categories: 
   - "OBIEE"
   - "oracle"

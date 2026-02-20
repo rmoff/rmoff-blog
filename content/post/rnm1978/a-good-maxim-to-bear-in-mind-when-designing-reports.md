@@ -1,6 +1,7 @@
 ---
 title: "A good maxim to bear in mind when designing reports"
 date: "2010-09-23"
+url: "/2010/09/23/a-good-maxim-to-bear-in-mind-when-designing-reports/"
 categories: 
   - "bi"
   - "visualisation"

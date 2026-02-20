@@ -1,6 +1,7 @@
 ---
 title: "Blogging v2"
 date: "2018-05-09"
+url: "/2018/05/09/blogging-v2/"
 categories: 
   - "blogging"
 ---

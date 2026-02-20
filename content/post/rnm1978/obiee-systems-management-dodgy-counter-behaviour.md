@@ -1,6 +1,7 @@
 ---
 title: "OBIEE Systems Management - dodgy counter behaviour"
 date: "2011-03-08"
+url: "/2011/03/08/obiee-systems-management-dodgy-counter-behaviour/"
 categories: 
   - "bi"
   - "bug"

@@ -1,6 +1,7 @@
 ---
 title: "Troubleshooting OBIEE and ORA-12154: TNS:could not resolve the connect identifier"
 date: "2009-10-22"
+url: "/2009/10/22/troubleshooting-obiee-and-ora-12154-tnscould-not-resolve-the-connect-identifier/"
 categories: 
   - "OBIEE"
   - "oracle"

@@ -1,6 +1,7 @@
 ---
 title: "ORA-00922: missing or invalid option"
 date: "2009-07-27"
+url: "/2009/07/27/ora-00922-missing-or-invalid-option/"
 categories: 
   - "ora-00922"
   - "oracle"

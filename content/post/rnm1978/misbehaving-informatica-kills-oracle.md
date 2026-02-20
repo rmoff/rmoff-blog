@@ -1,6 +1,7 @@
 ---
 title: "Misbehaving Informatica kills Oracle"
 date: "2010-09-02"
+url: "/2010/09/02/misbehaving-informatica-kills-oracle/"
 categories: 
   - "bug"
   - "informatica"

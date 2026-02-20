@@ -1,8 +1,11 @@
 ---
-title: "Changing password on Oracle 11g from 10g clients (ORA-28001 -&gt; ORA-01017)"
+title: "Changing password on Oracle 11g from 10g clients (ORA-28001 -> ORA-01017)"
 date: "2009-09-23"
+url: "/2009/09/23/changing-password-on-oracle-11g-from-10g-clients-ora-28001-ora-01017/"
 categories: 
   - "oracle"
+aliases:
+- /2009/09/23/changing-password-on-oracle-11g-from-10g-clients-ora-28001-gt-ora-01017/
 ---
 
 Bit of an odd one this. Oracle 11g database, a user's password has expired. But when I try to change it, I can't: 

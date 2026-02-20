@@ -1,6 +1,7 @@
 ---
 title: "OTN forum - \"Pro\""
 date: "2009-10-21"
+url: "/2009/10/21/otn-forum-pro/"
 categories: 
   - "otn"
 ---

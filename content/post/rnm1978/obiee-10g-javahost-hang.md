@@ -1,6 +1,7 @@
 ---
 title: "OBIEE 10g - javahost hang"
 date: "2010-12-03"
+url: "/2010/12/03/obiee-10g-javahost-hang/"
 categories: 
   - "javahost"
   - "OBIEE"

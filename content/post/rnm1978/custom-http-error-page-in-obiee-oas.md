@@ -1,6 +1,7 @@
 ---
 title: "Custom HTTP error page in OBIEE / OAS"
 date: "2009-05-18"
+url: "/2009/05/18/custom-http-error-page-in-obiee-oas/"
 categories: 
   - "apache"
   - "oas"

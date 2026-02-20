@@ -1,6 +1,7 @@
 ---
 title: "OAS makes you log in twice"
 date: "2009-04-02"
+url: "/2009/04/02/oas-makes-you-log-in-twice/"
 categories: 
   - "apache"
   - "oas"

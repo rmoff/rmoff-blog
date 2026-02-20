@@ -1,6 +1,7 @@
 ---
 title: "OBIEE application servers, now and future"
 date: "2009-11-25"
+url: "/2009/11/25/obiee-application-servers-now-and-future/"
 categories: 
   - "oas"
   - "OBIEE"

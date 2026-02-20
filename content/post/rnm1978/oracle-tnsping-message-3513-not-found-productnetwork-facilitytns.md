@@ -1,6 +1,7 @@
 ---
 title: "Oracle - tnsping - Message 3513 not found;  product=NETWORK; facility=TNS"
 date: "2011-09-26"
+url: "/2011/09/26/oracle-tnsping-message-3513-not-found-productnetwork-facilitytns/"
 categories: 
   - "windows"
   - "xe-11gr2"

@@ -1,6 +1,7 @@
 ---
 title: "Logging specific types of sawserver activity"
 date: "2009-08-20"
+url: "/2009/08/20/logging-specific-types-of-sawserver-activity/"
 categories: 
   - "config"
   - "log"

@@ -1,6 +1,7 @@
 ---
 title: "JConsole / JMX - followup"
 date: "2009-07-21"
+url: "/2009/07/21/jconsole-jmx-followup/"
 categories: 
   - "jmx"
   - "OBIEE"
@@ -8,7 +9,7 @@ categories:
   - "sawserver"
 ---
 
-A few points to add to my [previous posting on JConsole](/2009/07/16/jconsole-/-jmx/):  
+A few points to add to my [previous posting on JConsole](/2009/07/16/jconsole-jmx/):  
 
 - As well as performance data, you have access to configuration data. Be aware that it is read-write! So whilst it might be a nice alternative to digging around for your instanceconfig.xml etc, you should be careful
 - If you have your BI Server and Presentation Services deployed on separate servers then you will only get MBeans for the relevant service:

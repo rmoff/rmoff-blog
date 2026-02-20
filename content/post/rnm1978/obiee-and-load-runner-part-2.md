@@ -1,6 +1,7 @@
 ---
 title: "OBIEE and Load Runner - part 2"
 date: "2009-08-21"
+url: "/2009/08/21/obiee-and-load-runner-part-2/"
 categories: 
   - "loadrunner"
   - "OBIEE"
@@ -8,7 +9,7 @@ categories:
   - "sawserver"
 ---
 
-**UPDATED: See a HOWTO for OBIEE and LoadRunner here: [/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/](/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/)**
+**UPDATED: See a HOWTO for OBIEE and LoadRunner here: [/2009/10/01/obiee-and-loadrunner-howto/](/2009/10/01/obiee-and-loadrunner-howto/)**
 
 * * *
 

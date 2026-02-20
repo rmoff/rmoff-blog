@@ -1,6 +1,7 @@
 ---
 title: "Oracle 11g - How to force a sql_id to use a plan_hash_value using SQL Baselines"
 date: "2011-06-28"
+url: "/2011/06/28/oracle-11g-how-to-force-a-sql_id-to-use-a-plan_hash_value-using-sql-baselines/"
 categories: 
   - "etl"
   - "oracle"

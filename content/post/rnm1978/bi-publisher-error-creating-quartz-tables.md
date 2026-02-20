@@ -1,6 +1,7 @@
 ---
 title: "BI Publisher - error creating Quartz tables"
 date: "2010-08-25"
+url: "/2010/08/25/bi-publisher-error-creating-quartz-tables/"
 categories: 
   - "bi-publisher"
   - "quartz"

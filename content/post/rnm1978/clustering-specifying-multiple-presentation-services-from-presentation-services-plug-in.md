@@ -1,12 +1,15 @@
 ---
 title: "OBIEE clustering - specifying multiple Presentation Services from Presentation Services Plug-in"
 date: "2009-11-06"
+url: "/2009/11/06/clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/"
 categories: 
   - "load-balancing"
   - "oas"
   - "OBIEE"
   - "sawserver"
   - "unix"
+aliases:
+- /2009/11/06/obiee-clustering-specifying-multiple-presentation-services-from-presentation-services-plug-in/
 ---
 
 # Introduction

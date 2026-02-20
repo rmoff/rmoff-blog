@@ -1,6 +1,7 @@
 ---
 title: "Global statistics high/low values when using DBMS_STATS.COPY_TABLE_STATS"
 date: "2011-06-15"
+url: "/2011/06/15/global-statistics-highlow-values-when-using-dbms_stats-copy_table_stats/"
 categories: 
   - "copy_table_stats"
   - "dbms_stats"

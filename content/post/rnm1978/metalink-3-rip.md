@@ -1,6 +1,7 @@
 ---
 title: "Metalink 3 RIP"
 date: "2009-09-02"
+url: "/2009/09/02/metalink-3-rip/"
 categories: 
   - "OBIEE"
 ---

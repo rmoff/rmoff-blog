@@ -1,6 +1,7 @@
 ---
 title: "Data Warehousing and Statistics in Oracle 11g - incremental global statistics"
 date: "2010-12-30"
+url: "/2010/12/30/data-warehousing-and-statistics-in-oracle-11g-incremental-global-statistics/"
 categories:
   - "etl"
   - "oracle"

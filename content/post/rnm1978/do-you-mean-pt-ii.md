@@ -1,6 +1,7 @@
 ---
 title: "Do you mean (pt II)"
 date: "2009-08-20"
+url: "/2009/08/20/do-you-mean-pt-ii/"
 categories: 
   - "metalink"
   - "silly"

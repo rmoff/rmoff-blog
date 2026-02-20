@@ -1,6 +1,7 @@
 ---
 title: "Getting good quality I/O throughput data"
 date: "2011-03-11"
+url: "/2011/03/11/getting-good-quality-io-throughput-data/"
 categories: 
   - "awr"
   - "io"
@@ -9,7 +10,7 @@ categories:
   - "visualisation"
 ---
 
-This post expands on one I made last year [here](/2010/09/14/the-danger-of-averages-measuring-i/o-throughput/) about sampling frequency (of I/O throughput, but it's a generic concept). The background to this is my analysis of the performance and capacity of our data warehouse on Oracle 11g.
+This post expands on one I made last year [here](/2010/09/14/the-danger-of-averages-measuring-io-throughput/) about sampling frequency (of I/O throughput, but it's a generic concept). The background to this is my analysis of the performance and capacity of our data warehouse on Oracle 11g.
 
 Before I get too boring, here's the fun bit:
 
@@ -52,7 +53,7 @@ System metrics for Oracle are available through AWR, which typically samples eve
 
 The following illustrates the effect of averaging I/O throughput figures.
 
-The data is the average I/O throughput, sampled every five seconds ([through this method](/2011/03/09/comparing-methods-for-recording-i/o-vsysstat-vs-hp-measureware/)). Note that already this is an average, but in the context of hourly samples (for example) we will have to live with five seconds as the starting point.
+The data is the average I/O throughput, sampled every five seconds ([through this method](/2011/03/09/comparing-methods-for-recording-io-vsysstat-vs-hp-measureware/)). Note that already this is an average, but in the context of hourly samples (for example) we will have to live with five seconds as the starting point.
 
 ![](/images/rnm1978/io_compare_sampling_periods_01.png "io_compare_sampling_periods_01")
 

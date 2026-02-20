@@ -1,10 +1,13 @@
 ---
 title: "Security issue on OBIEE 10.1.3.4.1, 11.1.1.3"
 date: "2011-08-04"
+url: "/2011/08/04/security-issue-on-obiee-10-1-3-4-1-11-1-1-3/"
 categories: 
   - "bug"
   - "OBIEE"
   - "security"
+aliases:
+- /2011/08/04/security-issue-on-obiee-10.1.3.4.1-11.1.1.3/
 ---
 
 July's [Critical Patch Update](http://www.oracle.com/technetwork/topics/security/cpujuly2011-313328.html) from Oracle includes [CVE-2011-2241](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-2241), which affects OBIEE versions 10.1.3.4.1 and 11.1.1.3. No details of the exploit other than it "allows remote attackers to affect availability via unknown vectors related to Analytics Server."

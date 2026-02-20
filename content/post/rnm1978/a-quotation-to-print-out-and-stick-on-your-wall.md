@@ -1,6 +1,7 @@
 ---
 title: "A quotation to print out and stick on your wall"
 date: "2011-08-18"
+url: "/2011/08/18/a-quotation-to-print-out-and-stick-on-your-wall/"
 categories: 
   - "performance"
   - "quotation"

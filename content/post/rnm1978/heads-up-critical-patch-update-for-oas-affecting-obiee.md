@@ -1,11 +1,14 @@
 ---
 title: "Heads up - Critical Patch Update affecting OBIEE"
 date: "2009-10-16"
+url: "/2009/10/16/heads-up-critical-patch-update-for-oas-affecting-obiee/"
 categories: 
   - "bug"
   - "oas"
   - "OBIEE"
   - "security"
+aliases:
+- /2009/10/16/heads-up-critical-patch-update-affecting-obiee/
 ---
 
 The [Critical Patch Update Pre-Release Announcement](http://www.oracle.com/technology/deploy/security/critical-patch-updates/cpuoct2009.html) for October has been published. The pre-release is advance notice of the affected software prior to release of the quarterly Critical Patch Update. It is published on the Thursday prior to the patch releases (which was postponed by a week because of OOW).

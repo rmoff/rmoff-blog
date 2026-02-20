@@ -1,8 +1,11 @@
 ---
 title: "The mind boggles..."
 date: "2009-10-26"
+url: "/2009/10/26/the-mind-boggles/"
 categories: 
   - "silly"
+aliases:
+- /2009/10/26/the-mind-boggles.../
 ---
 
 I honestly don't dare click the "Did you mean" link ;-)

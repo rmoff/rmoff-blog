@@ -1,6 +1,7 @@
 ---
 title: "Labelling Time axes in Excel"
 date: "2011-09-08"
+url: "/2011/09/08/labelling-time-axes-in-excel/"
 categories: 
   - "excel"
   - "hack"

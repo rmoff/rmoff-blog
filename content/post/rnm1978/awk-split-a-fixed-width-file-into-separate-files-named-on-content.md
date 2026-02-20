@@ -1,6 +1,7 @@
 ---
 title: "awk - split a fixed width file into separate files named on content"
 date: "2010-10-19"
+url: "/2010/10/19/awk-split-a-fixed-width-file-into-separate-files-named-on-content/"
 categories: 
   - "OBIEE"
 ---

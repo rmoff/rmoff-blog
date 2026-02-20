@@ -1,6 +1,7 @@
 ---
 title: "Troubleshooting an HPUX program"
 date: "2009-04-01"
+url: "/2009/04/01/troubleshooting-an-hpux-program/"
 categories: 
   - "unix"
 ---

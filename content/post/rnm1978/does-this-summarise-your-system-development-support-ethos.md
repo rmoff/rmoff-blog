@@ -1,9 +1,12 @@
 ---
-title: "Does this summarise your system development &amp; support ethos?"
+title: "Does this summarise your system development & support ethos?"
 date: "2010-10-27"
+url: "/2010/10/27/does-this-summarise-your-system-development-support-ethos/"
 categories: 
   - "support"
   - "thoughts"
+aliases:
+- /2010/10/27/does-this-summarise-your-system-development-amp-support-ethos/
 ---
 
 I heard this on [Thinking Allowed](http://www.bbc.co.uk/programmes/b00v1qrz) and thought how applicable it was to the attitudes that you can sometimes encounter in both systems development, and the support of production systems:

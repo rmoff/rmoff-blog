@@ -1,10 +1,13 @@
 ---
 title: "#Fail: My Oracle Support"
 date: "2009-11-11"
+url: "/2009/11/11/fail-my-oracle-support/"
 categories: 
   - "oracle"
   - "rant"
   - "support"
+aliases:
+- /2009/11/11/#fail-my-oracle-support/
 ---
 
 Metalink was retired this weekend and made way for the new My Oracle Support system. It didn't go as smoothly as it could have done.

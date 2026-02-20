@@ -1,6 +1,7 @@
 ---
 title: "RittmanMead BI Forum 2010"
 date: "2010-05-21"
+url: "/2010/05/21/rittmanmead-bi-forum-2010/"
 categories: 
   - "OBIEE"
   - "presentation"

@@ -1,6 +1,7 @@
 ---
 title: "Oracle documentation - available on Kindle and iPad"
 date: "2011-04-07"
+url: "/2011/04/07/oracle-documentation-available-on-kindle-and-ipad/"
 categories: 
   - "documentation"
   - "kindle"

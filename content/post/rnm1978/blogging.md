@@ -1,6 +1,7 @@
 ---
 title: "Blogging"
 date: "2011-11-28"
+url: "/2011/11/28/blogging/"
 categories: 
   - "OBIEE"
 ---

@@ -1,6 +1,7 @@
 ---
 title: "Oracle XE 11gR2 installation - \"OracleXEService should not be installed already\""
 date: "2011-04-04"
+url: "/2011/04/04/oracle-xe-11gr2-installation-oraclexeservice-should-not-be-installed-already/"
 categories: 
   - "oracle"
   - "windows"

@@ -1,6 +1,7 @@
 ---
 title: "ORA-12537 / ORA-12518 [Informatica DAC error CMN_1022]"
 date: "2009-03-25"
+url: "/2009/03/25/ora-12537-ora-12518-informatica-dac-error-cmn_1022/"
 categories: 
   - "dac"
   - "informatica"

@@ -1,6 +1,7 @@
 ---
 title: "CAF installation video"
 date: "2009-11-03"
+url: "/2009/11/03/caf-installation-video/"
 categories: 
   - "caf"
   - "catalogmanager"

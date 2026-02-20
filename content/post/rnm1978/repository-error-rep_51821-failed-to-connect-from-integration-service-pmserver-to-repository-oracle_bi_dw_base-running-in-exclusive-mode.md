@@ -1,8 +1,11 @@
 ---
 title: "Repository Error ([REP_51821] Failed to connect from Integration Service (pmserver) to repository Oracle_BI_DW_Base running in exclusive mode.)"
 date: "2009-08-10"
+url: "/2009/08/10/repository-error-rep_51821-failed-to-connect-from-integration-service-pmserver-to-repository-oracle_bi_dw_base-running-in-exclusive-mode/"
 categories: 
   - "obia"
+aliases:
+- /2009/08/10/repository-error-rep_51821-failed-to-connect-from-integration-service-pmserver-to-repository-oracle_bi_dw_base-running-in-exclusive-mode./
 ---
 
 I keep hitting this error when setting up OBIA. I suppose it's what it says on the tin, but Googling it didn't match so I'm posting this so next time I hit it I remember :-)

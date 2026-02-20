@@ -1,6 +1,7 @@
 ---
 title: "nqcmd and [nQSError: 27005] Unresolved column"
 date: "2009-05-28"
+url: "/2009/05/28/nqcmd-and-nqserror-27005-unresolved-column/"
 categories: 
   - "OBIEE"
 ---

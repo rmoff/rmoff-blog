@@ -1,10 +1,13 @@
 ---
 title: "ODI Server install - missing odiparams.sh file"
 date: "2009-03-27"
+url: "/2009/03/27/odi-server-install-missing-odiparams-sh-file/"
 categories: 
   - "odi"
   - "oui"
   - "unix"
+aliases:
+- /2009/03/27/odi-server-install-missing-odiparams.sh-file/
 ---
 
 I'm installing ODI agent on our database server using OUI. I selected the "Server" option at install time to get the Agent only, but looking in oracledi/bin odiparams.sh is missing:  

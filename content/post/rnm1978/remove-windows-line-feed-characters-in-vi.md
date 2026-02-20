@@ -1,6 +1,7 @@
 ---
 title: "Remove windows line feed characters in vi"
 date: "2009-03-27"
+url: "/2009/03/27/remove-windows-line-feed-characters-in-vi/"
 categories: 
   - "unix"
 ---

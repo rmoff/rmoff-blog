@@ -1,6 +1,7 @@
 ---
 title: "My first presentation - help!"
 date: "2010-04-21"
+url: "/2010/04/21/my-first-presentation-help/"
 categories: 
   - "OBIEE"
   - "presentation"

@@ -1,6 +1,7 @@
 ---
 title: "OBIEE error/message code reference"
 date: "2009-08-24"
+url: "/2009/08/24/obiee-errormessage-code-reference/"
 categories: 
   - "OBIEE"
   - "oracle"

@@ -1,6 +1,7 @@
 ---
 title: "Did you hear that thunk? That was me falling off my chair in shock"
 date: "2011-08-08"
+url: "/2011/08/08/did-you-hear-that-thunk-that-was-me-falling-off-my-chair-in-shock/"
 categories: 
   - "hp"
   - "itanium"

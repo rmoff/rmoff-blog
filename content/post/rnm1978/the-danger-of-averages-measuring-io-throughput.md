@@ -1,6 +1,7 @@
 ---
 title: "The danger of averages - Measuring I/O throughput"
 date: "2010-09-14"
+url: "/2010/09/14/the-danger-of-averages-measuring-io-throughput/"
 categories: 
   - "io"
   - "oracle"

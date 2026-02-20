@@ -1,9 +1,12 @@
 ---
 title: "libnnz10.so: cannot restore segment prot after reloc: Permission denied"
 date: "2009-12-18"
+url: "/2009/12/18/libnnz10-so-cannot-restore-segment-prot-after-reloc-permission-denied/"
 categories: 
   - "OBIEE"
   - "oel"
+aliases:
+- /2009/12/18/libnnz10.so-cannot-restore-segment-prot-after-reloc-permission-denied/
 ---
 
 Quick post as the snow's coming down and I wanna go home ...

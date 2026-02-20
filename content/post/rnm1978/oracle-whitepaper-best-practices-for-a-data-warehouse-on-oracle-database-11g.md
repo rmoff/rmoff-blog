@@ -1,6 +1,7 @@
 ---
 title: "Oracle Whitepaper - \"Best Practices for a Data Warehouse on Oracle Database 11g\""
 date: "2011-01-05"
+url: "/2011/01/05/oracle-whitepaper-best-practices-for-a-data-warehouse-on-oracle-database-11g/"
 categories: 
   - "dwh"
   - "oracle"

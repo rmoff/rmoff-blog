@@ -1,11 +1,14 @@
 ---
 title: "Scripts to extract information from OBIEE NQQuery.log"
 date: "2010-06-11"
+url: "/2010/06/11/scripts-obiee-nqquery-log/"
 categories: 
   - "hack"
   - "nqcmd"
   - "OBIEE"
   - "unix"
+aliases:
+- /2010/06/11/scripts-to-extract-information-from-obiee-nqquery.log/
 ---
 
 Here are a couple of little unix scripts that I wrote whilst developing my [performance testing OBIEE method](/2010/05/24/performance-testing-and-obiee/).

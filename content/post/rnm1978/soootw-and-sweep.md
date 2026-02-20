@@ -1,6 +1,7 @@
 ---
 title: "SoOotW and sweep"
 date: "2009-11-25"
+url: "/2009/11/25/soootw-and-sweep/"
 categories: 
   - "OBIEE"
 ---

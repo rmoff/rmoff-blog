@@ -1,6 +1,7 @@
 ---
 title: "How to resolve \"[nQSError: 12002] Socket communication error at call=: (Number=-1) Unknown\""
 date: "2010-01-22"
+url: "/2010/01/22/how-to-resolve-nqserror-12002-socket-communication-error-at-call-number-1-unknown/"
 categories: 
   - "config"
   - "OBIEE"

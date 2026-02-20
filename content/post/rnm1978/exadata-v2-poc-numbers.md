@@ -1,6 +1,7 @@
 ---
 title: "Exadata V2 POC numbers"
 date: "2010-02-10"
+url: "/2010/02/10/exadata-v2-poc-numbers/"
 categories: 
   - "OBIEE"
 ---

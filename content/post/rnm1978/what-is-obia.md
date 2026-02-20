@@ -1,9 +1,12 @@
 ---
 title: "What is OBIA..."
 date: "2009-07-30"
+url: "/2009/07/30/what-is-obia/"
 categories: 
   - "obia"
   - "OBIEE"
+aliases:
+- /2009/07/30/what-is-obia.../
 ---
 
 Very good post by @lex giving a nice clear explanation of what OBIA (Oracle Business Intelligence Applications) **is**

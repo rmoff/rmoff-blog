@@ -1,6 +1,7 @@
 ---
 title: "Clustering Publisher - Scheduler and Report Repository"
 date: "2009-03-24"
+url: "/2009/03/24/clustering-publisher-scheduler-and-report-repository/"
 categories: 
   - "bi-publisher"
   - "cluster"

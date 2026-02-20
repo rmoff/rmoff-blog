@@ -1,6 +1,7 @@
 ---
 title: "Two excellent OBI presentations from Jeff McQuigg"
 date: "2010-10-27"
+url: "/2010/10/27/two-excellent-obi-presentations-from-jeff-mcquigg/"
 categories: 
   - "OBIEE"
   - "performance"

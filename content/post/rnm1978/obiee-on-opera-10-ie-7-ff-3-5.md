@@ -1,6 +1,7 @@
 ---
 title: "OBIEE on Opera 10 / IE 7 / FF 3.5 / Chrome 4"
 date: "2009-09-10"
+url: "/2009/09/10/obiee-on-opera-10-ie-7-ff-3-5/"
 categories: 
   - "firefox"
   - "OBIEE"

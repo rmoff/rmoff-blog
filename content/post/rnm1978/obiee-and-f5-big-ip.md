@@ -1,6 +1,7 @@
 ---
 title: "OBIEE and F5 BIG-IP"
 date: "2009-04-15"
+url: "/2009/04/15/obiee-and-f5-big-ip/"
 categories: 
   - "apache"
   - "load-balancing"

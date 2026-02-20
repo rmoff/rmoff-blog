@@ -1,6 +1,7 @@
 ---
 title: "Analysing ODI batch performance"
 date: "2010-11-03"
+url: "/2010/11/03/analysing-odi-batch-performance/"
 categories: 
   - "etl"
   - "odi"

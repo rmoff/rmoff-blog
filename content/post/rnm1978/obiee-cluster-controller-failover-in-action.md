@@ -1,6 +1,7 @@
 ---
 title: "OBIEE cluster controller failover in action"
 date: "2009-09-15"
+url: "/2009/09/15/obiee-cluster-controller-failover-in-action/"
 categories: 
   - "cluster"
   - "load-balancing"

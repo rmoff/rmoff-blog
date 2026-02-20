@@ -1,13 +1,14 @@
 ---
 title: "OBIEE and Load Runner - part 1"
 date: "2009-08-19"
+url: "/2009/08/19/obiee-and-load-runner-part-1/"
 categories: 
   - "loadrunner"
   - "OBIEE"
   - "performance"
 ---
 
-**UPDATED: See a HOWTO for OBIEE and LoadRunner [here](/2009/10/01/performance-testing-obiee-using-hp-performance-center-a.k.a.-loadrunner/)**
+**UPDATED: See a HOWTO for OBIEE and LoadRunner [here](/2009/10/01/obiee-and-loadrunner-howto/)**
 
 * * *
 

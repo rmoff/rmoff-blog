@@ -1,6 +1,7 @@
 ---
 title: "Entertaining Exadata FUD from HP"
 date: "2011-04-11"
+url: "/2011/04/11/entertaining-exadata-fud-from-hp/"
 categories: 
   - "dwh"
   - "exadata"
