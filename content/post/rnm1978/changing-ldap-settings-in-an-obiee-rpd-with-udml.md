@@ -22,21 +22,37 @@ Then save and close the RPD.
 
 ## Export the RPD to UDML format, and isolate the LDAP server UDML definition
 
-Next open up a command prompt and run the following, which will export the UDML for the whole RPD: \[sourcecode\] c:\\oraclebi\\server\\bin\\NQUDMLGen.exe -U Administrator -P Administrator -R c:\\oraclebi\\server\\repository\\samplesales.rpd -O c:\\scratch\\udml.txt \[/sourcecode\] ![](/images/rnm1978/snag-2011-02-23-07-53-23-0000.png "SNAG-2011-02-23-07.53.23-0000")
+Next open up a command prompt and run the following, which will export the UDML for the whole RPD: 
+```
+c:\oraclebi\server\bin\NQUDMLGen.exe -U Administrator -P Administrator -R c:\oraclebi\server\repository\samplesales.rpd -O c:\scratch\udml.txt
+```
+ ![](/images/rnm1978/snag-2011-02-23-07-53-23-0000.png "SNAG-2011-02-23-07.53.23-0000")
 
 Open up the generated UDML in your favourite text editor. In the above example, it will have been written to c:\\scratch\\udml.txt.
 
-Do a search for the name of your LDAP server, and you should hopefully find a line like this: \[sourcecode\] DECLARE LDAP SERVER "My LDAP server" AS "My LDAP server" UPGRADE ID 80295 \[/sourcecode\]
+Do a search for the name of your LDAP server, and you should hopefully find a line like this: 
+```
+DECLARE LDAP SERVER "My LDAP server" AS "My LDAP server" UPGRADE ID 80295
+```
+
 
 What you do now is remove all the rest of the RPD UDML, so cut from the beginning of the file up to the DECLARE LDAP SERVER, through to the next DECLARE statement. You should end up with something like this: ![](/images/rnm1978/snag-2011-02-23-07-56-52-0000.png "SNAG-2011-02-23-07.56.52-0000")
 
 ## Make the required LDAP server change in the UDML
 
-On a copy of the UDML extracted above, make the required changes to the LDAP server definition. For this example, let's imagine we're moving the RPD to use a pre-production LDAP server. In a copy of the original udml.txt file, now called ldap\_preprod.udml, I've simply amended the HOST NAME field: \[sourcecode\] HOST NAME 'ldap.preprod.server.com' \[/sourcecode\] Save the changed file (ldap\_preprod.udml in my example).
+On a copy of the UDML extracted above, make the required changes to the LDAP server definition. For this example, let's imagine we're moving the RPD to use a pre-production LDAP server. In a copy of the original udml.txt file, now called ldap\_preprod.udml, I've simply amended the HOST NAME field: 
+```
+HOST NAME 'ldap.preprod.server.com'
+```
+ Save the changed file (ldap\_preprod.udml in my example).
 
 ## Apply the LDAP server change to the RPD
 
-Back at the command line, and this time NQUDMLExec \[sourcecode\] c:\\OracleBI\\server\\Bin\\nQUDMLExec.exe -U Administrator -P Administrator -I c:\\scratch\\ldap\_preprod.udml -B c:\\OracleBI\\server\\Repository\\samplesales.rpd -O c:\\OracleBI\\server\\Repository\\samplesales.preprod.rpd \[/sourcecode\]
+Back at the command line, and this time NQUDMLExec 
+```
+c:\OracleBI\server\Bin\nQUDMLExec.exe -U Administrator -P Administrator -I c:\scratch\ldap_preprod.udml -B c:\OracleBI\server\Repository\samplesales.rpd -O c:\OracleBI\server\Repository\samplesales.preprod.rpd
+```
+
 
 This applies the UDML in the file specified by "-I" (c:\\scratch\\ldap\_preprod.udml) to be applied to "-B" base repository file (c:\\OracleBI\\server\\Repository\\samplesales.rpd) and write the output to "-O", a new repository file (c:\\OracleBI\\server\\Repository\\samplesales.preprod.rpd). ![](/images/rnm1978/snag-2011-02-23-16-26-25-0000.png "SNAG-2011-02-23-16.26.25-0000")
 

@@ -30,7 +30,11 @@ The previous owner of the machine had installed Oracle XE 10, but I'd removed th
 
 Or so I thought: ![](/images/rnm1978/snag-2011-04-04-08-57-25-0000.png "SNAG-2011-04-04-08.57.25-0000")
 
-To remove the service entry, use the [sc command](http://technet.microsoft.com/en-us/library/cc742045(WS.10).aspx): \[sourcecode\] sc delete OracleServiceXE \[/sourcecode\]
+To remove the service entry, use the [sc command](http://technet.microsoft.com/en-us/library/cc742045(WS.10).aspx): 
+```
+sc delete OracleServiceXE
+```
+
 
 For good measure I did the same for OracleJobSchedulerXE. ![](/images/rnm1978/snag-2011-04-04-09-00-47-0000.png "SNAG-2011-04-04-09.00.47-0000")
 

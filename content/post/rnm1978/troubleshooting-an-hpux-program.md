@@ -5,7 +5,7 @@ categories:
   - "unix"
 ---
 
-In investigating the [problems with sawserver](http://rnm1978.blogspot.com/2009/03/sawserver-wont-start-analytics-servlet.html) I was pointed towards a tool called [tusc](http://hpux.connect.org.uk/hppd/hpux/Sysadmin/tusc-7.9/) (which appears to be an HP version of truss).  
+In investigating the [problems with sawserver](/2009/03/30/sawserver-wont-start-analytics-servlet-error-java-net-connectexception-connection-refused-errno239/) I was pointed towards a tool called [tusc](http://hpux.connect.org.uk/hppd/hpux/Sysadmin/tusc-7.9/) (which appears to be an HP version of truss).  
   
 You can use it to invoke a program, and get out a bunch of debug information including system calls.  
   

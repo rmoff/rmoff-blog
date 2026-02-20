@@ -43,51 +43,120 @@ Please note - the following covers how to password-protect the JMX agent. It isn
 
 To enable password authentication you need to edit three files. The first file to edit is the agent script, runagent.sh. You'll find this in $ORACLEBI\_HOME/systemsmanagement. By default, the file looks like this:
 
-\[sourcecode language="bash"\] #!/bin/sh # this is a template of runagent.sh to be used on Unix. # The installer will fill in JAVA\_HOME, SAROOTDIR, and SATEMPDIR
 
-export JAVA\_HOME=/usr/java/jdk1.6.0\_17 export SAROOTDIR=/app/oracle/product/obiee export SADATADIR=/data export SATEMPDIR=/data/tmp export UNIXPERFDIR=${SATEMPDIR}
+```bash
+#!/bin/sh
+# this is a template of runagent.sh to be used on Unix.
+# The installer will fill in JAVA_HOME, SAROOTDIR, and SATEMPDIR
 
-java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+export JAVA_HOME=/usr/java/jdk1.6.0_17
+export SAROOTDIR=/app/oracle/product/obiee
+export SADATADIR=/data
+export SATEMPDIR=/data/tmp
+export UNIXPERFDIR=${SATEMPDIR}
 
-${java\_cmd} \[/sourcecode\]
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+
+${java_cmd}
+```
+
 
 To enable remote access to the JMX agent you change the java\_cmd to the following:
 
-\[sourcecode language="bash"\] java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false - classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent" \[/sourcecode\]
+
+```bash
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.man
+agement.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -
+classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+```
+
 
 Note that jmxremote.authenticate is set to false. To secure the JMX agent you change it to true:
 
-\[sourcecode language="bash"\] java\_cmd="${JAVA\_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=true -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent" \[/sourcecode\]
+
+```bash
+java_cmd="${JAVA_HOME}/bin/java -Djava.library.path=${SAROOTDIR}/server/Bin -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9980 -Dcom.sun.management.jmxremote.authenticate=true -classpath analytics-jmx.jar:lib/xmlparserv2.jar oracle.bi.analytics.management.StandardConsoleAgent"
+```
+
 
 Now note what JAVA\_HOME is set to in the runagent.sh file (in the above example it's /usr/java/jdk1.6.0\_17). Navigate to this directory, and then to **jre/lib/management**. You should see these four files:
 
-\[sourcecode\] jmxremote.access jmxremote.password.template management.properties snmp.acl.template \[/sourcecode\]
+
+```
+jmxremote.access
+jmxremote.password.template
+management.properties
+snmp.acl.template
+```
+
 
 Create a copy of jmxremote.password.template to a file called **jmxremote.password**. Open the file and you'll see two default users (or "roles") as the documentation calls them.
 
-\[sourcecode language="bash"\] $cp jmxremote.password.template jmxremote.password $vi jmxremote.password \[/sourcecode\]
 
-\[sourcecode language="bash"\] # # Following are two commented-out entries. The "measureRole" role has # password "QED". The "controlRole" role has password "R&D". # # monitorRole QED # controlRole R&D \[/sourcecode\]
+```bash
+$cp jmxremote.password.template jmxremote.password
+$vi jmxremote.password
+```
+
+
+
+```bash
+#
+# Following are two commented-out entries.  The "measureRole" role has
+# password "QED".  The "controlRole" role has password "R&D".
+#
+# monitorRole  QED
+# controlRole   R&D
+```
+
 
 We'll come back to this file in a moment. Now open **jmxremote.access** and you'll see the access rights for the users ("roles") in the password file are defined here:
 
-\[sourcecode\] # "readonly" grants access to read attributes of MBeans. # For monitoring, this means that a remote client in this # role can read measurements but cannot perform any action # that changes the environment of the running program. # "readwrite" grants access to read and write attributes of MBeans, # to invoke operations on them, and to create or remove them. # This access should be granted to only trusted clients, # since they can potentially interfere with the smooth # operation of a running program \[/sourcecode\]
+
+```
+#       "readonly" grants access to read attributes of MBeans.
+#                   For monitoring, this means that a remote client in this
+#                   role can read measurements but cannot perform any action
+#                   that changes the environment of the running program.
+#       "readwrite" grants access to read and write attributes of MBeans,
+#                   to invoke operations on them, and to create or remove them.
+#                   This access should be granted to only trusted clients,
+#                   since they can potentially interfere with the smooth
+#                   operation of a running program
+```
+
 
 So, now decide how you want to regulate access. **I would strongly recommend that the only access available through remote JMX is readonly**. Read/Write access to configuration needs to be through one auditable route, and I'd suggest this isn't the best one. If that's how we're going to configure it, we set the files up like this: (delete or comment out everything in the files first, having taken a backup first) **jmxremote.password:**
 
-\[sourcecode language="bash"\] jmxobiee S3cur3Passw0rd \[/sourcecode\]
+
+```bash
+jmxobiee  S3cur3Passw0rd
+```
+
 
 **jmxremote.access**
 
-\[sourcecode language="bash"\] jmxobiee readonly \[/sourcecode\]
+
+```bash
+jmxobiee readonly
+```
+
 
 Finally, secure access to the password file so that it's only readable by the application owner ID:
 
-\[sourcecode language="bash"\] chmod 600 jmxremote.password \[/sourcecode\]
+
+```bash
+chmod 600 jmxremote.password
+```
+
 
 Now, go back to $ORACLEBI\_HOME/systemsmanagement, and start the JMX agent:
 
-\[sourcecode language="bash"\] nohup ./runagent & \[/sourcecode\]
+
+```bash
+nohup ./runagent &
+```
+
 
 (the nohup and & make it run in the background so it doesn't quit when you exit your session)
 

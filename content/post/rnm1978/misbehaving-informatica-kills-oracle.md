@@ -24,23 +24,35 @@ Then our monitoring showed swap space usage on our Oracle 11g database server in
 
 Our Informatica repository user expired on the day on which this happened (Aug 27th):
 
-\[sourcecode\] select username, account\_status, expiry\_date from dba\_users
 
-USERNAME ACCOUNT\_STATUS EXPIRY\_DATE ------------------------------ -------------------------------- --------- INF\_REPO EXPIRED 27-AUG-10 \[/sourcecode\]
+```
+select username, account_status, expiry_date from dba_users
+
+USERNAME                       ACCOUNT_STATUS                   EXPIRY_DATE
+------------------------------ -------------------------------- ---------
+INF_REPO                       EXPIRED                          27-AUG-10
+```
+
 
 When a user ID expires an ORA-28001 is given at login:
 
-\[sourcecode\] sqlplus INF\_REPO/password
 
-SQL\*Plus: Release 11.1.0.7.0 - Production on Thu Sep 2 08:40:17 2010
+```
+sqlplus INF_REPO/password
 
-Copyright (c) 1982, 2008, Oracle. All rights reserved.
+SQL*Plus: Release 11.1.0.7.0 - Production on Thu Sep 2 08:40:17 2010
 
-ERROR: ORA-28001: the password has expired
+Copyright (c) 1982, 2008, Oracle.  All rights reserved.
 
-Changing password for INF\_REPO New password: \[/sourcecode\]
+ERROR:
+ORA-28001: the password has expired
 
-This is the throughput figures for Oracle from Enterprise Manager, note the Logons rate starting to increase at c.13:30 (The rate at 03:00AM is representative of the usual logon load on the database): ![](http://rnm1978.files.wordpress.com/2010/09/inf_repo_exp_03.png?w=1024 "inf_repo_exp_03")
+Changing password for INF_REPO
+New password:
+```
+
+
+This is the throughput figures for Oracle from Enterprise Manager, note the Logons rate starting to increase at c.13:30 (The rate at 03:00AM is representative of the usual logon load on the database): ![](/images/2010/09/inf_repo_exp_03.webp "inf_repo_exp_03")
 
 ### Server
 
@@ -56,19 +68,38 @@ Note number of Alive Oracle processes (faint yellow line!):
 
 In the Informatica exceptions.log and node.log are the initial errors:
 
-\[sourcecode\] ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]No more data available to read.
 
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-01034: ORACLE not available ORA-27101: shared memory realm does not exist HPUX-ia64 Error: 2: No such file or directory
+```
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row.
+java.sql.SQLException: [informatica][Oracle JDBC Driver]No more data available to read.
 
-ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-28001: the password has expired \[/sourcecode\]
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row.
+java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-01034: ORACLE not available
+ORA-27101: shared memory realm does not exist
+HPUX-ia64 Error: 2: No such file or directory
+
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row.
+java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-28001: the password has expired
+```
+
 
 Followed by the repeated error approximately every ten seconds:
 
-\[sourcecode\] ERROR \[Master Elect Data Writer\] \[DOM\_10162\] An exception occurred while updating the master election row. java.sql.SQLException: \[informatica\]\[Oracle JDBC Driver\]\[Oracle\]ORA-28001: the password has expired \[/sourcecode\]
+
+```
+ERROR [Master Elect Data Writer] [DOM_10162] An exception occurred while updating the master election row.
+java.sql.SQLException: [informatica][Oracle JDBC Driver][Oracle]ORA-28001: the password has expired
+```
+
 
 There are also final errors in the log, occuring once only just after midnight:
 
-\[sourcecode\] FATAL \[Domain Monitor\] \[PCSF\_10374\] Failed to persist \[CpuUsageSummary\] with error \[\[informatica\]\[Oracle JDBC Driver\]No more data available to read.\]. FATAL \[Domain Monitor\] \[PCSF\_10374\] Failed to persist \[RepoUsageSummary\] with error \[\[informatica\]\[Oracle JDBC Driver\]No more data available to read.\]. \[/sourcecode\]
+
+```
+FATAL [Domain Monitor] [PCSF_10374] Failed to persist [CpuUsageSummary] with error [[informatica][Oracle JDBC Driver]No more data available to read.].
+FATAL [Domain Monitor] [PCSF_10374] Failed to persist [RepoUsageSummary] with error [[informatica][Oracle JDBC Driver]No more data available to read.].
+```
+
 
 After these Informatica shut down.
 

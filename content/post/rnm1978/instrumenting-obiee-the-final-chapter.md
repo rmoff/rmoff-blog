@@ -83,7 +83,11 @@ Call the init block Dummy\_SawSrcPath\_InitBlock, and then click on "Edit Data S
 
 Set the Data Source Type to Database, and the init string to
 
-\[sourcecode language="sql" light="true"\] select '\[unsaved request\]' from dual \[/sourcecode\]
+
+```sql
+select '[unsaved request]' from dual
+```
+
 
 Click on Browse to set the Connection Pool used. The connection pool should be one exclusively for init blocks (not the same you use for queries). If you try to use the same connection pool as for queries, you'll most likely get an error when you logon.
 
@@ -105,7 +109,13 @@ When you've finished, you should have two init block/variables pairs set up like
 
 Add these three SQL statements to the "Execute before query" of "Connection Scripts" of each Connection Pool which is used for queries. Do not add them to ones which are used for init blocks / authentication etc.
 
-\[sourcecode language="sql"\] call dbms\_application\_info.set\_client\_info(client\_info=>'VALUEOF(NQ\_SESSION.DISPLAYNAME)') call dbms\_session.set\_identifier('VALUEOF(NQ\_SESSION.USER)') call dbms\_application\_info.set\_module(module\_name=>'OBIEE: ' || case when length('VALUEOF(NQ\_SESSION.SAW\_DASHBOARD)')<40 then 'VALUEOF(NQ\_SESSION.SAW\_DASHBOARD)' else '...' || substr('VALUEOF(NQ\_SESSION.SAW\_DASHBOARD)',-37) end,action\_name=>case when length('VALUEOF(NQ\_SESSION.SAW\_SRC\_PATH)')<31 then 'VALUEOF(NQ\_SESSION.SAW\_SRC\_PATH)' else '...' || substr('VALUEOF(NQ\_SESSION.SAW\_SRC\_PATH)',-28) end); \[/sourcecode\]
+
+```sql
+call dbms_application_info.set_client_info(client_info=>'VALUEOF(NQ_SESSION.DISPLAYNAME)')
+call dbms_session.set_identifier('VALUEOF(NQ_SESSION.USER)')
+call dbms_application_info.set_module(module_name=>'OBIEE: ' || case when length('VALUEOF(NQ_SESSION.SAW_DASHBOARD)')case when length('VALUEOF(NQ_SESSION.SAW_SRC_PATH)')<31 then 'VALUEOF(NQ_SESSION.SAW_SRC_PATH)' else '...' || substr('VALUEOF(NQ_SESSION.SAW_SRC_PATH)',-28) end);
+```
+
 
 ![](/images/rnm1978/2011-10-10_1156_-0000.png "2011-10-10_1156_ 0000")
 
@@ -117,7 +127,15 @@ This sets values as follows:
 
 NB CLIENT\_IDENTIFIER and CLIENT\_INFO have a larger capacity so could be used if you want to view more of the report/dashboard detail:
 
-\[sourcecode light="true" highlight="1"\] V$SESSION column Max value length MODULE 47 ACTION 31 CLIENT\_INFO 63 CLIENT\_IDENTIFIER 63 \[/sourcecode\]
+
+```
+V$SESSION column      Max value length
+MODULE                47
+ACTION                31
+CLIENT_INFO           63
+CLIENT_IDENTIFIER     63
+```
+
 
 Reference: [DBMS\_APPLICATION\_INFO](http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28419/d_appinf.htm#i999290) [DBMS\_SESSION](http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28419/d_sessio.htm#ARPLS054)
 
@@ -127,11 +145,18 @@ If you're currently logged into Answers, logout and log back in. This is necessa
 
 Run this sql\*plus SQL script below to look at any existing OBIEE queries running on the database.
 
-\[sourcecode language="sql"\]
 
-set linesize 170 col program for a30 col client\_info for a20 col client\_identifier for a18 col module for a47 col action for a31
+```sql
+set linesize 170
+col program for a30
+col client_info for a20
+col client_identifier for a18
+col module for a47
+col action for a31
 
-SELECT SID,PROGRAM, CLIENT\_IDENTIFIER, CLIENT\_INFO, MODULE, ACTION FROM V$SESSION WHERE LOWER(PROGRAM) LIKE 'nqsserver%'; \[/sourcecode\]
+SELECT SID,PROGRAM, CLIENT_IDENTIFIER, CLIENT_INFO, MODULE, ACTION FROM V$SESSION WHERE LOWER(PROGRAM) LIKE 'nqsserver%';
+```
+
 
 Now login to Answers, and run an existing report, or create a new one. When you re-run the SQL script you should see your session now listed: ![](/images/rnm1978/2011-10-10_1206_-0000.png "2011-10-10_1206_ 0000")
 
@@ -151,7 +176,11 @@ It is another good reason to make sure that you're using a DB account solely cre
 
 - Make sure you **don't**suffix the database calls with semi-colons (statement terminators). If you do you'll probably get an error like this:
     
-    \[sourcecode light="true"\] \[nQSError: 17001\] Oracle Error code: 911, message: ORA-00911: invalid character at OCI call OCIStmtExecute \[/sourcecode\]
+    
+```
+[nQSError: 17001] Oracle Error code: 911, message: ORA-00911: invalid character at OCI call OCIStmtExecute
+```
+
     
 - If you're having problems implementing this, or doing further playing around with it, you can see the exact SQL that's executed on connection by bumping up LOGLEVEL and checking NQQuery.log.
 - Don't use the same connection pool for the init blocks as you do for queries. If you try this, then the init blocks will fire and try to submit a command on the database which requires the variables that the very init blocks are trying to populate. Confused? OBIEE certainly will be too.

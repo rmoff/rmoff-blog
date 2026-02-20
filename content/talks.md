@@ -8,7 +8,7 @@ classes:
 - feature-math
 ---
 
-You can find all my recent talks on Notist at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://speakerdeck.com/rmoff/). 
+You can find all my recent talks on Notist at https://talks.rmoff.net/. Older ones are on [Speaker Deck](https://talks.rmoff.net/). 
 
 ---
 

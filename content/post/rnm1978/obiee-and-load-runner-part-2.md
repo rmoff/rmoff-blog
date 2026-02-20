@@ -56,7 +56,28 @@ Going back to the Click and Script (GUI Mode) and Fiddler2 I did a line-by-line 
 
 **So**, web\_text\_link is great for navigating but is the case that LR's replay engine doesn't honour the ajax sufficiently, and/or I'm misunderstanding the principle of the tool? Using "URL mode" captures the ajax behaviour, eg:
 
-\[sourcecode language="html"\] web\_submit\_data("saw.dll\_13", "Action=http://myserver:7777/analytics/saw.dll?ReloadDashboard&\_scid={CSRule\_1\_UID2}", "Method=POST", "RecContentType=text/html", "Referer=http://myserver:7777/analytics/saw.dll?Dashboard&\_scid={CSRule\_1\_UID2}&PortalPath=/shared/Financials/\_portal/General%20Ledger&Page=Overview&Action=RefreshAll&ViewState={Siebel\_Analytic\_ViewState199}&StateAction=samePageState", "Snapshot=t96.inf", "Mode=HTTP", ITEMDATA, "Name=InFrameset", "Value=false", ENDITEM, "Name=Page", "Value=Overview", ENDITEM, "Name=\_scid", "Value={CSRule\_1\_UID2}", ENDITEM, "Name=Embed", "Value=true", ENDITEM, "Name=PortalPath", "Value=/shared/Financials/\_portal/General Ledger", ENDITEM, "Name=Caller", "Value=Dashboard", ENDITEM, "Name=ViewState", "Value=tvr45qs2u7d1glbfaopqlvvinu", ENDITEM, "Name=reloadTargets", "Value=d:dashboard~p:d127730sp2eqcj54~r:ojn7k4k6te44d9ag", ENDITEM, "Name=ajaxType", "Value=iframe", ENDITEM, LAST); \[/sourcecode\]
+
+```html
+web_submit_data("saw.dll_13",
+		"Action=http://myserver:7777/analytics/saw.dll?ReloadDashboard&_scid={CSRule_1_UID2}",
+		"Method=POST",
+		"RecContentType=text/html",
+		"Referer=http://myserver:7777/analytics/saw.dll?Dashboard&_scid={CSRule_1_UID2}&PortalPath=/shared/Financials/_portal/General%20Ledger&Page=Overview&Action=RefreshAll&ViewState={Siebel_Analytic_ViewState199}&StateAction=samePageState",
+		"Snapshot=t96.inf",
+		"Mode=HTTP",
+		ITEMDATA,
+		"Name=InFrameset", "Value=false", ENDITEM,
+		"Name=Page", "Value=Overview", ENDITEM,
+		"Name=_scid", "Value={CSRule_1_UID2}", ENDITEM,
+		"Name=Embed", "Value=true", ENDITEM,
+		"Name=PortalPath", "Value=/shared/Financials/_portal/General Ledger", ENDITEM,
+		"Name=Caller", "Value=Dashboard", ENDITEM,
+		"Name=ViewState", "Value=tvr45qs2u7d1glbfaopqlvvinu", ENDITEM,
+		"Name=reloadTargets", "Value=d:dashboard~p:d127730sp2eqcj54~r:ojn7k4k6te44d9ag", ENDITEM,
+		"Name=ajaxType", "Value=iframe", ENDITEM,
+		LAST);
+```
+
 
 but as you can see the POSTed data is full of IDs that I assume must correlate with the dashboard HTML. Given enough time and enough monkeys I'm sure it would be possible to write a LR script that did this - but that would be with the net result of a _single_ dashboard being replayable.
 

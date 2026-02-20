@@ -14,7 +14,7 @@ I think it was Doug Burns at UKOUG TEBS last year who mentioned Opera and EM wen
 
 Using Opera with EM also lets you take advantage of Opera's window/tab management to create a rather nice display of multiple EM pages like this - **all within one self-contained browser window**
 
-![](http://rnm1978.files.wordpress.com/2010/04/opera_em_2010-04-22_1037221.png?w=1024 "opera_EM_2010-04-22_103722")
+![](/images/2010/04/opera_em_2010-04-22_1037221.webp "opera_EM_2010-04-22_103722")
 
 Even better, you can can use Opera's **Save Session** functionality to save the position of each window, and then load it up on demand: ![](/images/rnm1978/2010-04-22_111759.png "2010-04-22_111759")
 

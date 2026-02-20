@@ -21,33 +21,51 @@ Check that both paint and samplesales both work independently before we start tr
 
 Set NQSConfig.ini to
 
-\[sourcecode language='shell'\] \[ REPOSITORY \] Star = paint.rpd ; \[/sourcecode\]
+
+```bash
+[ REPOSITORY ]
+Star    =       paint.rpd ;
+```
+
 
 and instanceconfig.xml to
 
-\[sourcecode language='xml'\] /data/web/catalog/paint \[/sourcecode\]
+
+```xml
+/data/web/catalog/paint
+```
+
 
 (assuming $OracleBIData is /data/web)
 
 Restart BI Server and Presentation Services. Login and check you get something like this:
 
-![Oracle BI Interactive Dashboards_1251110032149](http://rnm1978.files.wordpress.com/2009/08/oracle-bi-interactive-dashboards_1251110032149.png?w=300 "Oracle BI Interactive Dashboards_1251110032149")
+![Oracle BI Interactive Dashboards_1251110032149](/images/2009/08/oracle-bi-interactive-dashboards_1251110032149.webp "Oracle BI Interactive Dashboards_1251110032149")
 
 #### samplesales.rpd
 
 Set NQSConfig.ini to
 
-\[sourcecode language='shell'\] \[ REPOSITORY \] Star = samplesales.rpd ; \[/sourcecode\]
+
+```bash
+[ REPOSITORY ]
+Star    =       samplesales.rpd ;
+```
+
 
 and instanceconfig.xml to
 
-\[sourcecode language='xml'\] /data/web/catalog/samplesales \[/sourcecode\]
+
+```xml
+/data/web/catalog/samplesales
+```
+
 
 (assuming $OracleBIData is /data/web)
 
 Restart BI Server and Presentation Services. Login and check you get something like this:
 
-![Oracle BI Interactive Dashboards_1251110222626](http://rnm1978.files.wordpress.com/2009/08/oracle-bi-interactive-dashboards_1251110222626.png?w=300 "Oracle BI Interactive Dashboards_1251110222626")
+![Oracle BI Interactive Dashboards_1251110222626](/images/2009/08/oracle-bi-interactive-dashboards_1251110222626.webp "Oracle BI Interactive Dashboards_1251110222626")
 
 If you don't get these working then you need to before continuing. See [here](http://myobieeworld.blogspot.com/2009/02/how-to-use-samplesales-repository.html) for information on setting up samplesales
 
@@ -55,7 +73,13 @@ If you don't get these working then you need to before continuing. See [here](ht
 
 Edit the NQSConfig.ini file to :
 
-\[sourcecode language='shell'\] \[ REPOSITORY \] samplesales = samplesales.rpd , DEFAULT; paint = paint.rpd ; \[/sourcecode\]
+
+```bash
+[ REPOSITORY ]
+samplesales =       samplesales.rpd , DEFAULT;
+paint    =       paint.rpd ;
+```
+
 
 See page 201 of the [Installation and Configuratino guide](http://download.oracle.com/docs/cd/E10415_01/doc/bi.1013/b31765.pdf) for the syntax, which is basically: <logical name> = <filename>.rpd; The default logical name is Star, but it doesn't have to be this. If just one repository is loaded in BI Server then it will be connected to for all incoming connections, assuming you have left the Repository= statement as default in the odbc.ini configuration file.
 
@@ -65,11 +89,21 @@ It's important to understand here how Presentation Services communicates with BI
 
 > The DSN is defined in $OracleBI/setup/odbc.ini. To test that BI Server is running both RPDs, add two new entries to your odbc.ini file, copying the existing AnalyticsWeb, and specifying the Repository in each:
 > 
-> \[sourcecode language='xml'\] \[...\]
 > 
-> \[AnalyticsWebPaint\] \[...\] Repository=Paint \[...\]
-> 
-> \[AnalyticsWebSampleSales\] \[...\] Repository=SampleSales \[...\] \[/sourcecode\]
+```xml
+[...]
+
+[AnalyticsWebPaint]
+[...]
+Repository=Paint
+[...]
+
+[AnalyticsWebSampleSales]
+[...]
+Repository=SampleSales
+[...]
+```
+
 
 #### ODBC config - Windows
 
@@ -87,7 +121,7 @@ Do the same for Paint (update instanceconfig.xml to use AnalyticsWebPaint, and C
 
 ## Next steps
 
-You've now got a single BI server hosting two repositories. See [Part 2 - Presentation Services](/2009/08/25/multiple-rpds-on-one-server-part-2-presentation-services) for setting up multiple Presentation Services to work with these repositories.
+You've now got a single BI server hosting two repositories. See [Part 2 - Presentation Services](/2009/08/25/multiple-rpds-on-one-server-part-2-presentation-services/) for setting up multiple Presentation Services to work with these repositories.
 
 ## References / sources
 

@@ -67,7 +67,11 @@ In $OracleBIData/web/config create a copy of instanceconfig.xml for your new ins
 
 Your modified file should look something like this:
 
-\[sourcecode language="xml"\] <?xml version="1.0" encoding="utf-8"?> <WebConfig> <ServerInstance> <Listener port="9711"/> <DSN>AnalyticsWebSampleSales</DSN> <CatalogPath>/data/web/catalog/samplesales</CatalogPath> \[...\] \[/sourcecode\]
+
+```xml
+<?xml version="1.0" encoding="utf-8"?> <WebConfig> <ServerInstance> <Listener port="9711"/> <DSN>AnalyticsWebSampleSales</DSN> <CatalogPath>/data/web/catalog/samplesales</CatalogPath> [...]
+```
+
 
 (**NB**: following the instructions in _"Changing the BI Presentation Services Listener Port" in the [deployment guide](http://download.oracle.com/docs/cd/E10415_01/doc/bi.1013/b40058.pdf) p.141_, I got an error when I tried to embed the Listener tag within RPC: "The configuration entry 'RPC/Listener' is deprecated. Please refer to the admin guide for more information." followed by an Assertion failure. Putting it just within ServerIntance worked fine)
 
@@ -85,7 +89,11 @@ From the commandline go to $OracleBI\\web\\bin (eg. C:\\OracleBI\\web\\bin) and 
 
 From the shell prompt go to $OracleBI/setup and run
 
-\[sourcecode language="bash"\] . ./sa-init.sh sawserver -c /data/web/config/instanceconfigRNM.xml \[/sourcecode\]
+
+```bash
+. ./sa-init.sh sawserver -c /data/web/config/instanceconfigRNM.xml
+```
+
 
 Points to note:
 
@@ -181,9 +189,13 @@ Be aware that run-saw.sh checks for an running instance of "sawserver" so you'll
 
 One method would be to create a new startup script like this:
 
-\[sourcecode language="bash"\] #!/bin/sh # # Hacky script to run two versions of Presentation Services # # http://rnm1978.wordpress.com/ # # --------------------------------------------------- # start your default Presentation Services echo 'Starting default Presentation Services...' echo ' ' run-saw.sh start # The above should be "start64" if you're in 64 bit mode
 
-\# Now start the additional Presentation Services echo '----' echo ' ' echo 'Starting additional Presentation Services...' echo ' ' . ./common.sh . ./sa-init.sh logfile="${SADATADIR}/web/log/sawserverRNM.out.log" sawserver -c /data/web/config/instanceconfigRNM.xml >> ${logfile} 2>&1 & # The above should be "sawserver64" if you're in 64 bit mode echo 'See '${logfile}' for log' \[/sourcecode\]
+```bash
+#!/bin/sh # # Hacky script to run two versions of Presentation Services # # https://rmoff.net # # --------------------------------------------------- # start your default Presentation Services echo 'Starting default Presentation Services...' echo ' ' run-saw.sh start # The above should be "start64" if you're in 64 bit mode
+
+# Now start the additional Presentation Services echo '----' echo ' ' echo 'Starting additional Presentation Services...' echo ' ' . ./common.sh . ./sa-init.sh logfile="${SADATADIR}/web/log/sawserverRNM.out.log" sawserver -c /data/web/config/instanceconfigRNM.xml >> ${logfile} 2>&1 & # The above should be "sawserver64" if you're in 64 bit mode echo 'See '${logfile}' for log'
+```
+
 
 Stopping Presentation Services is easier, as run-saw.sh is ruthless in its approach and kills all instances of sawserver. If you don't want this and want to target a specific instance you'll need to use ps -ef|grep sawserver and kill the required process.
 
@@ -191,7 +203,11 @@ Stopping Presentation Services is easier, as run-saw.sh is ruthless in its appro
 
 To add your new Presentation Services as a service in its own right using Microsoft's [sc](http://support.microsoft.com/kb/251192), follow these steps. **This involves editing the registry! Do so at your own risk!**
 
-1. From the commandline enter: \[sourcecode language="bash"\] sc create sawsvc2 binpath= SEARCHFORMEPLEASE displayname= "Oracle BI Presentation Server 2" \[/sourcecode\]
+1. From the commandline enter: 
+```bash
+sc create sawsvc2 binpath= SEARCHFORMEPLEASE displayname= "Oracle BI Presentation Server 2"
+```
+
     
     (note the spaces after the equals character)
 2. Run regedt32 and search for SEARCHFORMEPLEASE
@@ -203,7 +219,11 @@ To add your new Presentation Services as a service in its own right using Micros
 
 If you don't want to muck around with services something like this simple script should suffice. It uses PsExec (from the excellent [PsTools](http://technet.microsoft.com/en-us/sysinternals/bb896649.aspx) suite of utilities) to start multiple sawserver instances in the background.
 
-\[sourcecode language="bash"\] REM runMultiplePS.bat REM REM REM Hacky script to run two versions of Presentation Services REM REM http://rnm1978.wordpress.com/ REM REM Uses psExec, download it from http://technet.microsoft.com/en-us/sysinternals/bb896649.aspx REM and put it somewhere in your PATH like c:\\windows\\system32 REM --------------------------------------------------- REM Default instance. Comment this line out if you're running it from Services instead. REM (you could include -c c:\\OracleBIData\\web\\config\\instanceconfig.xml if you wanted, same difference) psexec -d C:\\OracleBI\\web\\bin\\sawserver.exe REM Additional instance: psexec -d C:\\OracleBI\\web\\bin\\sawserver.exe -c c:\\OracleBIData\\web\\config\\instanceconfigRNM.xml REM --------------------------------------------------- REM paths will be something like C:\\OracleBI\\web\\bin64\\sawserver64.exe for 64-bit \[/sourcecode\]
+
+```bash
+REM runMultiplePS.bat REM REM REM Hacky script to run two versions of Presentation Services REM REM https://rmoff.net REM REM Uses psExec, download it from http://technet.microsoft.com/en-us/sysinternals/bb896649.aspx REM and put it somewhere in your PATH like c:\\windows\\system32 REM --------------------------------------------------- REM Default instance. Comment this line out if you're running it from Services instead. REM (you could include -c c:\\OracleBIData\\web\\config\\instanceconfig.xml if you wanted, same difference) psexec -d C:\\OracleBI\\web\\bin\\sawserver.exe REM Additional instance: psexec -d C:\\OracleBI\\web\\bin\\sawserver.exe -c c:\\OracleBIData\\web\\config\\instanceconfigRNM.xml REM --------------------------------------------------- REM paths will be something like C:\\OracleBI\\web\\bin64\\sawserver64.exe for 64-bit
+```
+
 
 ## Conclusion
 

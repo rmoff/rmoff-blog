@@ -21,7 +21,7 @@ A [suggestion here](http://forums.oracle.com/forums/thread.jspa?messageID=318207
 
 \[update\] I've been able to reproduce this error. It's on a report with a table and chart. It works fine with the original dataset of 97 rows returned, but when I remove a filter and 22,000 rows are returned sawserver barfs when rendering it.
 
-I've [increased the logging level in sawserver](http://rnm1978.blogspot.com/2009/07/sawserver-logging-configuration.html), but still can't see anything helpful in the log.
+I've [increased the logging level in sawserver](/2009/07/23/sawserver-logging-configuration-logconfig-xml/), but still can't see anything helpful in the log.
 
 It's definitely something to do with the chart, because I've now whittled the report down to just the chart and the large dataset query, and it crashes PS every time it's run.
 

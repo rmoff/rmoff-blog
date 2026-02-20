@@ -10,15 +10,15 @@ A new version of the web browser [Opera](http://www.opera.com/) was released rec
 
 I could start being rude about each browser's strengths and weaknesses, but I'll simply leave it at this for now:
 
-[![OBIEE Paint RPD on Opera 10 ](http://rnm1978.files.wordpress.com/2009/09/opera.png?w=300 "Opera 10")](http://rnm1978.files.wordpress.com/2009/09/opera.png)
+[![OBIEE Paint RPD on Opera 10 ](/images/2009/09/opera.webp "Opera 10")](/images/2009/09/opera.webp)
 
-[![OBIEE Paint RPD on IE7](http://rnm1978.files.wordpress.com/2009/09/ie7.png?w=300 "IE7")](http://rnm1978.files.wordpress.com/2009/09/ie7.png)
+[![OBIEE Paint RPD on IE7](/images/2009/09/ie7.webp "IE7")](/images/2009/09/ie7.webp)
 
-[![OBIEE Paint RPD on Firefox 3.5](http://rnm1978.files.wordpress.com/2009/09/ff35.png?w=300 "Firefox 3.5")](http://rnm1978.files.wordpress.com/2009/09/ff35.png)
+[![OBIEE Paint RPD on Firefox 3.5](/images/2009/09/ff35.webp "Firefox 3.5")](/images/2009/09/ff35.webp)
 
-[![chrome4](http://rnm1978.files.wordpress.com/2009/09/chrome4.png?w=300 "chrome4")](http://rnm1978.files.wordpress.com/2009/09/chrome4.png)
+[![chrome4](/images/2009/09/chrome4.webp "chrome4")](/images/2009/09/chrome4.webp)
 
-[![ie8](http://rnm1978.files.wordpress.com/2009/09/ie8.png?w=300 "ie8")](http://rnm1978.files.wordpress.com/2009/09/ie8.png)
+[![ie8](/images/2009/09/ie8.webp "ie8")](/images/2009/09/ie8.webp)
 
 OBIEE Paint RPD on IE8
 

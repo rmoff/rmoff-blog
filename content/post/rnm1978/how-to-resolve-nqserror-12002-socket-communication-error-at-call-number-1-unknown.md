@@ -17,7 +17,12 @@ The error I got when trying to define a DSN on the Windows box was:
 
 This error means that the ODBC Driver for BI Server can't communicate with the BI Server on port 9703. 99% of the time this question comes up on the forums it's because the BI Server isn't running, or the host is incorrect.
 
-I validated the BI Server **was** running and listening on port 9703: \[sourcecode\] \[oracle@RNMVM03 setup\]$ netstat -a|grep 9703 tcp 0 0 \*:9703 \*:\* LISTEN \[/sourcecode\]
+I validated the BI Server **was** running and listening on port 9703: 
+```
+[oracle@RNMVM03 setup]$ netstat -a|grep 9703
+tcp        0      0 *:9703                      *:*                         LISTEN
+```
+
 
 And I fired up Presentation Services and OC4J and successfully logged into Answers. So why couldn't my Windows box connect?
 
