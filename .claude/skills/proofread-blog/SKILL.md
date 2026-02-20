@@ -57,3 +57,8 @@ If the article is genuinely solid, say so. But if it's not, be specific about wh
 Ignore the header and footer content.
 
 Report any hardcoded links to rmoff.net; prefer relative links.
+
+6. **AsciiDoc markup pitfalls** - Check for common AsciiDoc rendering issues:
+   - **Underscore mangling in link anchors**: `link:/path/#_some_anchor[text]` — AsciiDoc interprets `_word_` sequences as italic markup, turning anchors like `#_joining_the_data` into `#<em>joining_the_data`. Fix with `pass:[]`: `link:/path/#pass:[_some_anchor][text]`
+   - **Underscore mangling in inline content**: Backtick-quoted identifiers containing underscores (e.g., `` `_fieldName` ``) can get italic-mangled if not properly escaped. Watch for any `_text_` patterns inside or adjacent to inline code that might be misinterpreted as emphasis.
+   - **SQL query + results in code blocks**: When a code block contains both a SQL statement and its tabular output, they should be split into two consecutive blocks: `[source,sql]` for the query and `[source,text]` for the results. The CSS will visually join them with a dashed separator. Never combine a SQL statement and its table output in a single `[source,sql]` block — the syntax highlighting mangles the box-drawing characters. Remove any `> ` shell prompts from the SQL when splitting.
