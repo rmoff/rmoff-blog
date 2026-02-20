@@ -1,0 +1,420 @@
+---
+draft: false
+title: 'Claude the Instructor'
+date: "2026-02-20T15:21:07Z"
+image: "/images/2026/02/"
+thumbnail: "/images/2026/02/"
+categories:
+- Claude
+- AI
+- Stumbling into AI
+---
+
+How do you use your LLM coding agent?
+
+Mine is usually Claude the webdev, Claude the proofreader, Claude the bash monkey.
+
+<!--more-->
+All these things are about tasks completed.
+Read this, write that code, fix that web page.
+
+This week I gave Claude a new job.
+I had an existing data pipeline that I'd written manually in SQL last year.
+It worked, kinda, but I knew that it would be much better done in dbt.
+One option would be to spin up Claude the Data Engineer (or is Analytics Engineer? I lose track), and have Claude simply migrate the SQL and crap out a dbt project at the other end.
+If this were my day-to-day job, then probably I'd have had it do that and it would have saved me a ton of time.
+
+But my purpose was different; I wanted to _learn how to do something_.
+I'd been wanting to properly learn dbt for years now, and even tried to do so but never quite cracked it.
+So, I recruited Claude the Instructor.
+
+This blog post is about how that went (spoiler: it was great).
+I've spent the last 10+ years helping people learn technologies, and I'm fascinated by how this has the potential to change how that in the future.
+
+TIP: If you want to read about the actual dbt project, then check out my other recent blog post: link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/[Ten years late to the dbt party (DuckDB edition)].
+
+== Ways to learn
+
+image:/images//2026/02/vb2005.jpg[]
+
+Prior to 2026, the way devs could learn something by themselves had remained mostly the same.
+
+Books.
+Manuals.
+Online guides.
+Tutorials.
+Quickstarts.
+
+YouTube brought the era of video, ranging from 60-second dopamine hits through to multi-hour lectures and coding to camera.
+
+For all of these, if you got stuck you relied on asking a colleague, or online discussion forums.
+
+image:/images/2026/02/db2.jpeg[]
+
+In-person training courses combined both of these (self-learning plus support).
+
+> Claude is basically all of these, but better
+
+Imagine an online tutorial in which you can ask _but why_ questions.
+Or an in-person course where you can take the tutor on a tangent without the rest of the class sighing loudly and rolling their eyeballs.
+Or a quickstart guide that can look at the code you've written and tell you _what_ to fix when it's broken.
+
+== Setting the Scene
+
+Because LLMs have limited "memory" (context windows), I needed to get Claude to understand enough about the task and then write it out as a brief in its `CLAUDE.md`.
+This file gets read every time the agent starts, and it was important to encapsulate in it the principles of what I was doing as well as progress made.
+
+I started by giving it the starting point—link:/2025/03/20/building-a-data-pipeline-with-duckdb/[my original blog post], and the SQL scripts that I'd already published as https://gist.github.com/rmoff/461fd169843063fc1b9b3113759ff5b6[gists on GitHub].
+
+[.human]
+****
+your job is to tutor me on dbt, which I've only used once before. I want to use this project and migrate it to dbt, using the process as a learning experience. You must not just translate it into dbt, but use it as the basis for teaching and instructing me
+
+https://rmoff.net/2025/03/20/building-a-data-pipeline-with-duckdb/
+https://gist.github.com/rmoff/461fd169843063fc1b9b3113759ff5b6
+
+Is this enough context for claude.md for now?
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Now I have a thorough understanding of the project. Let me create the CLAUDE.md file. This is a tutorial/learning project where:
+
+1. The user has an existing DuckDB-based data pipeline for UK Environment Agency flood monitoring data
+2. They want to migrate it to dbt as a learning exercise
+3. They want to be tutored, not just have code translated
+
+The source pipeline:
+- Data source: UK Environment Agency flood monitoring REST API
+- Dimensions: stations, measures (SCD Type 1 - full rebuild each run)
+- Fact: readings (incremental append with deduplication via INSERT OR IGNORE)
+- Final output: readings_enriched (denormalized join of fact + dimensions)
+
+
+- Keys and relationships: measures.notation and stations.notation as primary identifiers, with readings linked via dateTime and measure, plus some data quality issues like URL prefixes in foreign keys, pipe-delimited values in CSVs, and occasional mismatches between stationReference and station fields.
+====
+
+[.assistant]
+****
+Good, I now have a thorough understanding of the existing pipeline. That's plenty of context for a CLAUDE.md. Let me create it.
+****
+
+_Claude writes CLAUDE.md_
+
+
+[.assistant]
+****
+CLAUDE.md is created. It captures:
+
+- **The tutorial intent** -- future Claude instances will know to teach, not just write code
+- **The source pipeline** being migrated (data source, model, transformations, quirks)
+- **Key relationships and gotchas** (the `station` vs `stationReference` trap, pipe-delimited values, URL prefix stripping)
+- **Links** to the original blog post and SQL gist for reference
+
+It deliberately avoids dbt-specific commands or project structure since those don't exist yet -- they'll be added as you build the project.
+
+Ready to start the dbt tutorial whenever you are. The natural first step would be initializing a dbt project (`dbt init`) and talking through what it creates.
+****
+
+You can see the https://github.com/rmoff/env-agency-dbt/blob/master/CLAUDE.md[CLAUDE.md] that got created, although the published version is its state at the end of the project
+
+== Hold your Horses
+
+The knack through a lot of this project was to get Claude to go against its instincts to JFDI (just f'in do it…).
+After all, most of the time Claude is being whipped to code faster, generate more.
+Here, though, I wanted it to tell _me_ what to do so that I could _learn_.
+
+As soon as I'd confirmed the plan we'd come up with in the `CLAUDE.md`, Claude was off to the races:
+
+[.assistant]
+****
+Now let's get dbt set up. First, let me check if it's already installed in your venv.
+****
+
+_Claude runs `/Users/rmoff/git/env-agency-dbt/.venv/bin/pip list 2>/dev/nu...`_
+
+[.human]
+****
+woah, stop right there! You're supposed to be my tutor!
+****
+
+[.assistant]
+****
+Fair point -- I'm getting ahead of myself. Before we touch anything, let me explain what we're about to do and why.
+****
+
+== Claude the Tutor
+
+Once brought into line, Claude really got the knack of teaching.
+
+[.assistant]
+****
+Before we do that though -- have you used dbt before at all, even briefly? And do you want me to explain what dbt actually *is* at a conceptual level before we start, or are you comfortable with the general idea (models as SELECT statements, DAG of transformations, etc.) and want to jump into the hands-on part?
+****
+
+[.human]
+****
+it's a few years since I used it, and I never quite grokked it properly then either.
+****
+
+[.assistant]
+****
+OK, let's build up from fundamentals then.
+
+## What is dbt, really?
+
+At its core, dbt does one thing: **it runs SELECT statements and materializes the results**. That's it. You write a SQL SELECT, dbt wraps it in a `CREATE TABLE AS` or `CREATE VIEW AS` (or an `INSERT INTO` for incremental), and runs it against your database.
+
+Each SELECT statement lives in its own `.sql` file. dbt calls these **models**. If model B references model A, dbt knows to run A first. It builds a DAG (directed acyclic graph) of dependencies automatically.
+****
+
+…and so on.
+
+It's this splicing of straight-up instructional text with stream-of-conciousness learning that makes this method so powerful.
+As explanations prompt further thoughts, you don't need to write a pile of post-it note reminders to look at something later; Claude can track it all for you.
+
+[.assistant]
+****
+Does that framing make sense? Any questions before we set up the project?
+****
+
+[.human]
+****
+perfect. can you add to your notes that I want to chat about the orchestration bit later too.
+****
+
+_Claude reads CLAUDE.md, edits CLAUDE.md_
+
+== Build your own Tutorial
+
+Online tutorials and quickstarts range from the sublime to the downright shitty.
+But even the absolute best ones have to tread a line between a concise clarity, and comprehensive explanations that might distract or overwhelm the reader.
+
+Claude, on the other hand, is as malleable as you would like.
+Left to its own devices, given a strong enough prompt, you can just follow along and learn—pretty much as you would a static online tutorial.
+But how often have you followed a tutorial or quickstart and wondered "but…what about <x>"?
+
+[.assistant]
+****
+Done. Ready to set up the project -- shall we install dbt-duckdb and run `dbt init`?
+****
+
+[.human]
+****
+yes let's do it. also what's `uv`, I keep seeing it in relation to python. should we be using it?
+****
+
+In the context of an online tutorial, once you open the Google (or hey, it's 2026, you open up an LLM prompt) and start asking about `uv`, you're doing so in isolation.
+To really make the most of your learning you want to know about `uv` _in the context of learning dbt`.
+Did I just say context?
+Yes I did.
+Because context is literally what Claude lives and dies by.
+And here, it has the context that (a) you're learning, and (b) you're using dbt.
+
+[.assistant]
+****
+`uv` is a Python package/project manager written in Rust by the Astral team (same folks behind the `ruff` linter). It's a drop-in replacement for `pip`, `venv`, and `pyenv` that's become popular because it's dramatically faster and handles dependency resolution better. Think of it as "what pip should have been."
+
+For our purposes the practical differences are:
+
+| | pip | uv |
+|---|---|---|
+| Create venv | `python -m venv .venv` | `uv venv` |
+| Install package | `pip install dbt-duckdb` | `uv pip install dbt-duckdb` |
+| Lock dependencies | manual `pip freeze > requirements.txt` | `uv lock` (automatic lockfile) |
+| Speed | slow | very fast |
+
+You already have a `.venv` created. Either tool works fine with it. Since you're already seeing `uv` in the wild and this is a learning project, I'd say use it -- it's the direction Python tooling is heading and it's one less thing to be confused by later.
+****
+
+== Hands off? Hands on
+
+Whilst I rebuked Claude above for trying to set up dbt for me (instead of teaching me how), there are plenty of times it was useful for it to do the fiddly bits of installations.
+
+[.assistant]
+****
+You already have a `.venv` created. Either tool works fine with it. Since you're already seeing `uv` in the wild and this is a learning project, I'd say use it -- it's the direction Python tooling is heading and it's one less thing to be confused by later.
+
+Let's check if you have it installed.
+****
+
+_Claude runs `which uv && uv --version 2>/dev/null || echo "uv not install...`_
+
+My whole intent is to *learn dbt*, not learn about Python tools and virtual environments.
+Maybe I'll learn that another time.
+For now, I just know there's this `uv` I keep seeing, and I want to use it—but I really don't care about installing and checking it.
+Do you know who does care?
+Claude.
+
+Claude understands what an environment needs to look like, and can _make it so_.
+
+Here's another real winner for the _Claude the Instructor_ approach.
+How often have you tried an online quickstart or tutorial, only to fight with getting it to work?
+Either its fallen out of date, or your machine doesn't have the right versions installed, or your in dependency-hell with Python, or ports are conflicting, or whatever the dozen other reasons could be.
+Do any of those things help you learn _the thing you set out to learn_?
+No, none of them.
+(They might help you learn useful troubleshooting skills along the way that will prove useful in life, but that's not my point here).
+
+If you're learning with Claude, Claude can simply make stuff work (or, completely screw it up in ways unimaginable, but at least it'll tell you it's a _Great Idea_ and _Insightful Analysis_ first).
+As well as fixing things or doing boring install work, Claude can also run things and troubleshoot them.
+Whilst it's useful practice to run a failing dbt pipeline once and debug it manually, being able to say to dbt "figure out why this is broken and teach me how to diagnose it" is a way more powerful learning experience.
+
+[.human]
+****
+I want you to look at what's going on, i saw an error
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user saw an error in Dagster and wants me to investigate. Let me check the Dagster logs or recent runs to see what's happening.
+====
+
+_Claude runs `source .venv/bin/activate && dagster job list -f orchestrati...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The CLI access works. Now let me check for recent run failures. I can look at the Dagster storage directory for logs or use the GraphQL API. Let me first check if there's a local storage directory with run logs.
+====
+
+_Claude runs `ls -la ~/.dagster/ 2>/dev/null || ls -la .dagster/ 2>/dev/nu...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me check the Dagster logs directory and also query the GraphQL API to get recent run statuses.
+====
+
+_Claude runs `find ~/.dagster/logs -type f -name "*.log" 2>/dev/null | hea...`, runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me check the recent event log entries and fix the GraphQL query.
+====
+
+_Claude runs `tail -100 ~/.dagster/logs/event.log | grep -E "(FAILURE|ERRO...`, runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Wow - there are a LOT of failures. Looking at the run history, there's a long string of consecutive FAILUREs starting from the most recent run. The last SUCCESS runs appear to be way down the list. Let me get the error details from the most recent failure.
+====
+
+[.assistant]
+****
+That's a lot of consecutive failures. Let me get the error details from the most recent failed run.
+****
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me query for the run logs/events to see what the actual error was.
+====
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me simplify and just get the error message from the run failure event.
+====
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me try a different approach - just dump all the log messages and look for the issue.
+====
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me just dump the raw response to see what's going on.
+====
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me try a simpler query to get the events.
+====
+
+_Claude runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The GraphQL API is being tricky. Let me try using the Dagster event log file directly - that should have the actual logs.
+====
+
+_Claude runs `tail -500 ~/.dagster/logs/event.log | grep -E "(error|Error|...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The telemetry logs confirm step failures but don't show the actual error. Let me check the Dagster run storage or try running dbt manually to see the actual error message.
+====
+
+[.assistant]
+****
+The telemetry log shows repeated `step_failure_event` every 15 minutes, but doesn't include the actual error message. Let me try running dbt directly to see the error.
+****
+
+_Claude runs `source .venv/bin/activate && dbt run-operation load_raw_data...`_
+
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+There's the problem. DuckDB has a lock on the database file, held by another Python process (PID 42990). This is a known DuckDB limitation - it's a single-writer database. The Dagster process must be trying to run while another process has the database locked.
+
+Let me check what process is holding the lock.
+====
