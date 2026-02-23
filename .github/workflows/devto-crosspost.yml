@@ -1,0 +1,38 @@
+name: Cross-post new articles to dev.to
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'content/post/**'
+
+jobs:
+  crosspost:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history so we can diff HEAD~1..HEAD
+          fetch-depth: 2
+
+      - name: Install pandoc
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y pandoc
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install requests pyyaml
+
+      - name: Cross-post new articles to dev.to
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+        run: python scripts/devto_post.py --new-in-commit
