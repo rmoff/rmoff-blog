@@ -1,0 +1,647 @@
+---
+draft: false
+title: 'Claude the Instructor'
+date: "2026-02-20T15:21:07Z"
+image: "/images/2026/02/h_IMG_4290.webp"
+thumbnail: "/images/2026/02/t_IMG_4284.webp"
+categories:
+- Claude
+- AI
+- Stumbling into AI
+- dbt
+---
+
+How do you use your LLM coding agent?
+Mine is usually Claude the proofreader, Claude the bash monkey, Claude the webdev.
+All these things are about tasks _completed_.
+Read this, write that code, fix that web page.
+
+This week I gave Claude a new job.
+<!--more-->
+I had an link:/2025/03/20/building-a-data-pipeline-with-duckdb/[existing data pipeline] that I'd written manually in SQL last year.
+It worked, kinda, but I knew that it would be much better done in dbt.
+One option would be to spin up Claude the Data Engineer (or is it Analytics Engineer? I lose track), and have Claude simply migrate the SQL and crap out a dbt project at the other end.
+If this were my day-to-day job, then probably I'd have had it do that and it would have saved me a ton of time.
+
+But my purpose was different; I wanted to _learn how to do something_.
+I'd been wanting to properly learn dbt for years now, and even link:/2022/10/24/data-engineering-in-2022-wrangling-the-feedback-data-from-current-22-with-dbt/[tried to do so] but link:/2022/10/20/data-engineering-in-2022-exploring-dbt-with-duckdb/[never quite cracked it].
+So, I recruited *Claude the Instructor*.
+
+This blog post is about how that went (spoiler: it was great).
+I've spent the last 10+ years helping people learn technologies, and I'm fascinated by how this has the potential to change this process in the future.
+
+TIP: If you want to read about the actual dbt project, then check out my other recent blog post: link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/[Ten years late to the dbt party (DuckDB edition)].
+
+== Ways to learn
+
+image:/images/2026/02/vb2005.webp[]
+
+Prior to 2026, the ways that devs could learn something by themselves remained mostly unchanged.
+
+Books.
+Manuals.
+Online guides.
+Tutorials.
+Quickstarts.
+
+YouTube brought the era of video, ranging from 60-second dopamine hits through to multi-hour lectures and coding to camera.
+
+For all of these, if you got stuck you relied on asking a colleague, online discussion forums, or StackOverflow (RIP).
+
+In-person training courses combined both of these (self-learning plus support).
+
+NOTE: *Claude is basically all of these, but better.*
+
+Imagine:
+
+* an online tutorial in which you can ask _but why_ questions.
+* an in-person course where you can take the tutor on a tangent without the rest of the class sighing loudly and rolling their eyes.
+* a quickstart guide that can look at the code _you've written_ and tell you _what_ to fix when it's broken.
+* a tutorial that doesn't need you to play hunt-the-port-conflict, and can just provision a functioning learning environment on your machine regardless
+
+LLMs have been around for the last few years and have been useful for limited learning interactions.
+Usually variations on a theme of "explain this like I'm five" (_or "explain this in the style of a pirate/Eminem/Shakespeare" if it's 2023 and you've discovered ChatGPT for the first time_).
+
+What Claude brings to the party is the notion of _Agentic_ tutoring; not only can it explain a concept, it can interact with your learning environment too.
+
+TIP: I'm using Claude in this example because it's what I have experience with.
+If you are using a similarly-capable agentic LLM then I'm sure the same broad points apply to that one too.
+
+== Setting the Scene
+
+Because LLMs have limited "memory" (context windows), I needed to get Claude to understand enough about the task and then write it out as a brief in its `CLAUDE.md`.
+This file gets read every time the agent starts, and it was important to encapsulate in it the principles of what I was doing as well as progress made.
+
+I started by giving it the starting point—link:/2025/03/20/building-a-data-pipeline-with-duckdb/[my original blog post] (in which I write SQL by hand like some kind of animal), and the SQL scripts that I'd already published as https://gist.github.com/rmoff/461fd169843063fc1b9b3113759ff5b6[gists on GitHub].
+
+[.human]
+****
+your job is to tutor me on dbt, which I've only used once before. I want to use this project and migrate it to dbt, using the process as a learning experience. You must not just translate it into dbt, but use it as the basis for teaching and instructing me
+
+https://rmoff.net/2025/03/20/building-a-data-pipeline-with-duckdb/
+https://gist.github.com/rmoff/461fd169843063fc1b9b3113759ff5b6
+
+Is this enough context for claude.md for now?
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Now I have a thorough understanding of the project. Let me create the CLAUDE.md file. This is a tutorial/learning project where:
+
+1. The user has an existing DuckDB-based data pipeline for UK Environment Agency flood monitoring data
+2. They want to migrate it to dbt as a learning exercise
+3. They want to be tutored, not just have code translated
+
+The source pipeline:
+- Data source: UK Environment Agency flood monitoring REST API
+- Dimensions: stations, measures (SCD Type 1 - full rebuild each run)
+- Fact: readings (incremental append with deduplication via INSERT OR IGNORE)
+- Final output: readings_enriched (denormalized join of fact + dimensions)
+
+
+- Keys and relationships: measures.notation and stations.notation as primary identifiers, with readings linked via dateTime and measure, plus some data quality issues like URL prefixes in foreign keys, pipe-delimited values in CSVs, and occasional mismatches between stationReference and station fields.
+====
+
+[.assistant]
+****
+Good, I now have a thorough understanding of the existing pipeline. That's plenty of context for a CLAUDE.md. Let me create it.
+****
+
+_Claude writes CLAUDE.md_
+
+
+[.assistant]
+****
+CLAUDE.md is created. It captures:
+
+- **The tutorial intent** -- future Claude instances will know to teach, not just write code
+- **The source pipeline** being migrated (data source, model, transformations, quirks)
+- **Key relationships and gotchas** (the `station` vs `stationReference` trap, pipe-delimited values, URL prefix stripping)
+- **Links** to the original blog post and SQL gist for reference
+
+It deliberately avoids dbt-specific commands or project structure since those don't exist yet -- they'll be added as you build the project.
+
+Ready to start the dbt tutorial whenever you are. The natural first step would be initializing a dbt project (`dbt init`) and talking through what it creates.
+****
+
+I've included the https://github.com/rmoff/env-agency-dbt/blob/master/CLAUDE.md[CLAUDE.md] that got created with the finished project on GitHub.
+Note that it's the version of the file as it was at the end of the project, so evolved with various progress and prompt edits.
+
+== Hold your Horses
+
+The knack through a lot of this project was to get Claude to go against its instincts to JFDI (just f'in do it…).
+After all, most of the time Claude is being whipped to code faster, generate more.
+Here, though, I wanted it to tell _me_ what to do so that I could _learn_.
+
+As soon as I'd confirmed the plan we'd come up with in the `CLAUDE.md`, Claude was off to the races:
+
+[.assistant]
+****
+Now let's get dbt set up. First, let me check if it's already installed in your venv.
+****
+
+_Claude runs `/Users/rmoff/git/env-agency-dbt/.venv/bin/pip list 2>/dev/nu...`_
+
+[.human]
+****
+woah, stop right there! You're supposed to be my tutor!
+****
+
+[.assistant]
+****
+Fair point -- I'm getting ahead of myself. Before we touch anything, let me explain what we're about to do and why.
+****
+
+=== "The user is rightfully frustrated"
+
+This was a repeated challenge; Claude didn't always distinguish between "let's do it" to mean "go build that thing" vs "start teaching me how to build the next thing".
+
+[.human]
+****
+`[Request interrupted by user]`
+
+wtf. you are supposed to be my tutor. why are you merrily changing everything? You teach me concepts, explain them, guide me what to do, and I implement. I learn by doing.
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user is rightfully frustrated. The CLAUDE.md file explicitly says:
+
+- "User drives decisions; Claude explains concepts and writes the boilerplate SQL."
+- "Claude's role is to tutor and teach, not just translate SQL."
+- "Explain dbt concepts as they arise, ask the user questions to check understanding, and let them drive decisions."
+
+I just steamrolled through everything without stopping to teach or let them do anything. I need to reset, apologize, and switch to tutoring mode. Let me undo what I did or at least acknowledge it, and start over properly.
+
+Actually, I should not undo anything without asking -- the files are already changed. Let me acknowledge my mistake and ask how they want to proceed. Maybe they want to revert and do it themselves, or maybe they want to keep what's there and I explain it.
+====
+
+[.assistant]
+****
+You're right, and I'm sorry. The CLAUDE.md is clear -- you learn by doing, I explain and guide. I just bulldozed through all five steps without pausing once to teach you anything or let you write a single line.
+****
+
+=== Sneaky Shortcuts
+
+Claude ploughing through and trying to write code is pretty easy to spot, and to try and prompt defensively against.
+Another misbehaviour which I observed is a little more understandable (as it can be subjective) but potentially more problematic for its impact on your learning: Claude loves a quick 'n dirty fix.
+
+If I'm learning something I want to understand the _proper_ way to do something, before taking any shortcuts.
+But Claude had me using a `SELECT *` in a pipeline:
+
+[.assistant]
+****
+[…]
+For a learning project with you as the only consumer, `SELECT *` is perfectly fine.
+****
+
+[.human]
+****
+don't guide me to lazy options just because I'm learning.
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user is right. They want to learn proper practices, not shortcuts. I should recommend the explicit column list since that's the better practice for a dimension table.
+====
+
+[.assistant]
+****
+Fair point. Make the SELECT explicit in `dim_measures`. It's the right practice for a dimension table, and you'll thank yourself when the API schema changes unexpectedly.
+****
+
+
+
+== Claude the Tutor
+
+Once brought into line, Claude really got the knack of teaching.
+
+[.assistant]
+****
+Before we do that though -- have you used dbt before at all, even briefly? And do you want me to explain what dbt actually *is* at a conceptual level before we start, or are you comfortable with the general idea (models as SELECT statements, DAG of transformations, etc.) and want to jump into the hands-on part?
+****
+
+[.human]
+****
+it's a few years since I used it, and I never quite grokked it properly then either.
+****
+
+[.assistant]
+****
+OK, let's build up from fundamentals then.
+
+## What is dbt, really?
+
+At its core, dbt does one thing: **it runs SELECT statements and materializes the results**. That's it. You write a SQL SELECT, dbt wraps it in a `CREATE TABLE AS` or `CREATE VIEW AS` (or an `INSERT INTO` for incremental), and runs it against your database.
+
+Each SELECT statement lives in its own `.sql` file. dbt calls these **models**. If model B references model A, dbt knows to run A first. It builds a DAG (directed acyclic graph) of dependencies automatically.
+****
+
+…and so on.
+
+It's this splicing of straight-up instructional text with stream-of-consciousness learning that makes this method so powerful.
+As explanations prompt further thoughts, you don't need to write a pile of post-it note reminders to look at something later; Claude can track it all for you.
+
+[.assistant]
+****
+Does that framing make sense? Any questions before we set up the project?
+****
+
+[.human]
+****
+perfect. can you add to your notes that I want to chat about the orchestration bit later too.
+****
+
+_Claude reads CLAUDE.md, edits CLAUDE.md_
+
+=== March to the scaffold
+
+One of the great things with this approach was that I could customise the level of teaching any time.
+I'd told Claude I didn't want it to build everything for me, but sometimes it'd go too far the other way and leave me in a bit of an owl situation
+
+[.assistant]
+****
+Create a new file: `snapshots/snap_stations.sql`.
+
+Have a go at writing it -- the syntax wraps everything in `{% snapshot snap_stations %}` / `{% endsnapshot %}` tags, with a `{{ config(...) }}` block at the top.
+****
+
+image:/images/2026/02/owl.webp[]
+
+[.human]
+****
+i'm stuck
+****
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user is stuck trying to write the snapshot. Let me help them without writing it for them. I should ask what they have so far, or give them a bit more scaffolding to work with.
+====
+
+[.assistant]
+****
+What have you got so far? Show me what you've written (even if it's just a skeleton or you're unsure about parts) and I'll help you through the stuck bit.
+****
+
+[.human]
+****
+i don't know where to start with it
+****
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user is stuck at the very beginning. Let me give them the skeleton/scaffolding without filling in the actual values. I'll give them the structure and let them fill in the blanks.
+====
+
+Claude then nails it, providing the 'scaffold'—not the answer, but a steer on the right lines, with hints to the correct values.
+Perfect learning experience.
+
+[.assistant]
+****
+Fair enough. Here's the skeleton -- you fill in the blanks:
+
+```sql
+{% snapshot snap_stations %}
+
+{{
+    config(
+        target_schema='main',
+        unique_key='______',
+        strategy='______',
+        check_cols='______',
+    )
+}}
+
+SELECT * FROM {{ ref('______') }}
+
+{% endsnapshot %}
+```
+
+- `target_schema='main'` -- that's DuckDB's default schema, just leave it
+- `unique_key` -- the business key that identifies a station. Look at your `stg_stations` -- which column is that?
+- `strategy` -- `'timestamp'` or `'check'`?
+- `check_cols` -- if using check strategy, `'all'` watches every column for changes
+- The `ref()` -- which model are you snapshotting?
+****
+
+== Build your own Tutorial
+
+Online tutorials and quickstarts range from the sublime to the downright shitty.
+But even the absolute best ones have to tread a line between a concise clarity, and comprehensive explanations that might distract or overwhelm the reader.
+
+Claude, on the other hand, is as malleable as you would like.
+Left to its own devices, given a strong enough prompt, you can just follow along and learn—pretty much as you would a static online tutorial.
+But how often have you followed a tutorial or quickstart and wondered "_but…what about +<x+>_"?
+
+[.assistant]
+****
+Done. Ready to set up the project -- shall we install dbt-duckdb and run `dbt init`?
+****
+
+[.human]
+****
+yes let's do it. also what's `uv`, I keep seeing it in relation to python. should we be using it?
+****
+
+If you consider this in the context of a static online tutorial, once you open the Google (or hey, it's 2026, you open up an LLM prompt) and start asking about `uv`, you're doing so in isolation.
+You're flying solo.
+To really make the most of your learning you want to know about `uv` _in the context of learning dbt_.
+
+Did I just say context?
+Yes I did.
+Because context is literally what Claude lives and dies by.
+And here, it has the context that (a) you're learning, and (b) you're using dbt.
+
+[.assistant]
+****
+`uv` is a Python package/project manager written in Rust by the Astral team (same folks behind the `ruff` linter). It's a drop-in replacement for `pip`, `venv`, and `pyenv` that's become popular because it's dramatically faster and handles dependency resolution better. Think of it as "what pip should have been."
+
+For our purposes the practical differences are:
+
+|===
+| | pip | uv
+
+| Create venv
+| `python -m venv .venv`
+| `uv venv`
+
+| Install package
+| `pip install dbt-duckdb`
+| `uv pip install dbt-duckdb`
+
+| Lock dependencies
+| manual `pip freeze > requirements.txt`
+| `uv lock` (automatic lockfile)
+
+| Speed
+| slow
+| very fast
+|===
+****
+
+Here's the point though: Claude is _opinionated_ and guides me:
+
+[.assistant]
+****
+You already have a `.venv` created. Either tool works fine with it. Since you're already seeing `uv` in the wild and this is a learning project, I'd say use it -- it's the direction Python tooling is heading and it's one less thing to be confused by later.
+****
+
+Am I curious about `uv`?
+Yes.
+Do I care _that much_ about the nuances of it?
+Not really.
+I just wanted to understand it in the context of learning dbt, pick a sensible path, and move on.
+
+== Teachers talk BS too sometimes (but this one isn't too proud to admit it)
+
+Here's another example of being able to discuss, and argue, with my bespoke teacher.
+
+[.human]
+****
+hang on, in schema.yml you've put full descriptions, e.g.
+
+      - name: status
+        description: Operational status (e.g. "Active", "Suspended", "Closed")
+
+but above we agreed linking to the API docs was better. discuss.
+****
+
+LLMs are rightly infamous for https://www.bbc.co.uk/news/articles/cd11gzejgz4o[confidently asserting complete nonsense], and whilst it's got a _lot_ better in recent months, Claude is still not perfect, as I found when I challenged another aspect of its implementation ideas:
+
+[.assistant]
+****
+[…]
+- **Columns like `status`** -- I added a description with example values because "status" is ambiguous on its own. But I made up those example values. I don't actually know if the API returns "Active", "Suspended", "Closed". That's worse than no description -- it's potentially misleading.
+
+So the honest answer: I should have either verified the actual values or left it out. The API docs link at the model level is the canonical reference. Column descriptions should only exist when they add information the API docs don't provide -- transformations, quirks, or warnings about how we've changed the data.
+
+Want me to strip out the descriptions I can't verify and keep only the ones that document our transformations?
+****
+
+[.human]
+****
+ffs. this is classic LLM slop. I thought you were better than this.
+****
+
+[.assistant]
+****
+You're right. I invented example values instead of checking. That's worse than leaving the field empty.
+****
+
+But then…Claude saves itself by owning its error, and then _going to check what the actual values of the field are for itself_…nice!
+
+[.assistant]
+****
+Let me fix it properly -- verify the actual values from the data, strip out anything I can't back up, and keep only descriptions that document our transformations or warn about things the API docs don't cover.
+****
+
+_Claude runs `duckdb /Users/rmoff/work/env-agency-dev.duckdb -c "SELECT DI...`, runs `duckdb /Users/rmoff/work/env-agency-dev.duckdb -c "SELECT DI...`, runs `duckdb /Users/rmoff/work/env-agency-dev.duckdb -c "SELECT DI...`, runs `duckdb /Users/rmoff/work/env-agency-dev.duckdb -c "SELECT DI...`._
+
+
+== Hands off? Hands on!
+
+Whilst I rebuked Claude above for trying to set up dbt for me (instead of teaching me how), there are plenty of times it was useful for it to do the fiddly bits of installations.
+
+[.assistant]
+****
+Let's check if you have `uv` installed.
+****
+
+_Claude runs `which uv && uv --version 2>/dev/null || echo "uv not install...`_
+
+My whole intent is to *learn dbt*, not learn about Python tools and virtual environments.
+Maybe I'll learn that another time.
+For now, I just know there's this `uv` I keep seeing, and I want to use it—but I really don't care about installing and checking it.
+Do you know who does care?
+Claude.
+
+Claude understands what an environment needs to look like, and can _make it so_.
+
+Here's another real winner for the _Claude the Instructor_ approach.
+How often have you tried an online quickstart or tutorial, only to fight with getting it to work?
+Either it's fallen out of date, or your machine doesn't have the right versions installed, or you're in dependency-hell with Python, or ports are conflicting, or whatever the dozen other reasons could be.
+Do any of those things help you learn _the thing you set out to learn_?
+No, none of them.
+(They might help you learn useful troubleshooting skills along the way that will prove useful in life, but that's not my point here).
+
+If you're learning with Claude, Claude can simply make stuff work (or, completely screw it up in ways unimaginable, but at least it'll tell you it's a _Great Idea_ and _Insightful Analysis_ first).
+As well as fixing things or doing boring install work, Claude can also run things and troubleshoot them.
+
+Whilst it's useful practice to run a failing dbt pipeline once and debug it manually, being able to say to Claude "figure out why this is broken and teach me how to diagnose it" is a way more powerful learning experience.
+
+[.human]
+****
+I want you to look at what's going on, i saw an error
+****
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+Let me check the Dagster logs directory and also query the GraphQL API to get recent run statuses.
+====
+
+_Claude runs `find ~/.dagster/logs -type f -name "*.log" 2>/dev/null | hea...`, runs `curl -s http://localhost:3000/graphql -H "Content-Type: appl...`_
+
+
+[.assistant]
+****
+The telemetry log shows repeated `step_failure_event` every 15 minutes, but doesn't include the actual error message. Let me try running dbt directly to see the error.
+****
+
+_Claude runs `source .venv/bin/activate && dbt run-operation load_raw_data...`_
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+There's the problem. DuckDB has a lock on the database file, held by another Python process (PID 42990). This is a known DuckDB limitation - it's a single-writer database. The Dagster process must be trying to run while another process has the database locked.
+
+Let me check what process is holding the lock.
+====
+
+[.assistant]
+****
+Found it. **DuckDB lock conflict**:
+
+```
+IO Error: Could not set lock on file "/Users/rmoff/work/env-agency-dev.duckdb":
+Conflicting lock is held in python3.13 (PID 42990)
+```
+
+DuckDB is single-writer.
+****
+
+But then, as before…Claude tries to be just too damn helpful:
+
+[.assistant]
+****
+Something else has the database locked. Let me check what's holding it.
+****
+
+And so I need to step in again and curtail its JFDI instincts:
+[.human]
+****
+you're supposed to be my tutor. Let's troubleshoot this idiomatically. Start from the screen of red failures in dagster.
+****
+
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user wants me to guide them through troubleshooting this as a tutor, not just solve it for them. They want to start from what they saw - the Dagster UI with red failures - and work through the diagnostic process systematically.
+
+Let me teach them how to approach this.
+====
+
+[.assistant]
+****
+You're right, let me switch gears.
+
+**Troubleshooting Dagster failures - the systematic approach:**
+
+You saw red failures in the Dagster UI. Here's how to investigate:
+[…]
+****
+
+To be fair to Claude, its master is a fickle one; one moment I want instructing, the next I want it to just fix it.
+After all, how much or little should it be doing based on the prompt that I gave it above, which distills down to:
+
+> what's going on
+
+== Claude will always be my Code Monkey
+
+Another good illustration of the flexibility of the learning approach here is that I could tell Claude to teach me all about dbt—but when it got to Dagster and needing to write Python code, I tapped out and let Claude take over.
+
+It's another example of the 'build your own tutorial' concept.
+I'm sure there are dozens of Dagster tutorials out there, and I bet many of them are very good.
+I can almost guarantee that none of them are working with the dbt pipeline that I just built though.
+The 'old' method would have been to go learn enough Dagster from generic tutorials, and then work out how to get that to work with _my_ dbt pipeline.
+That's a great learning experience, but one that takes a lot longer.
+If you have the time then great.
+A lot of the time though, you don't.
+And that's where Claude steps in, and craps out lumps of Python that just get the job done :)
+
+== AI haters, Come throw your Stones
+
+I can hear the grinding teeth through my computer screen here even though I've not even published this post yet.
+
+> AI is dumbing us down
+
+> If Claude writes the Python code you don't learn how to do it yourself
+
+> How can you fix things if you don't know how to build them
+
+> I had to learn things the hard way it's not fair other people don't
+
+OK, perhaps the last one is me taking a snarky shot ;)
+
+All of the above arguments, and more, are true.
+They are also completely irrelevant.
+Well, not _entirely_ irrelevant.
+But they don't make untrue the benefits that AI coding tools can bring to a learning experience, never mind overall software development.
+
+There are some things that will continue to be important for humans to be able to do.
+As an example, for the moment, I'm putting data modelling into this camp.
+Unless you have got the tightest, most badass, set of data definitions and documentation, _nailed down and in sync_ with your business users, you need a human here.
+An LLM will add value and will be useful for exploring and stress-testing a model and its assumptions and implications, but I wouldn't trust one to build it.
+(neat idea for my next blog post though 😁).
+
+Code generation, on the other hand, is what LLMs are very good at, and at which they're _rapidly_ getting even better.
+Do I understand the Dagster Python code that Claude wrote?
+Nope.
+Could I troubleshoot it?
+Not on my own.
+But with Claude—yes.
+And that's the point.
+Claude, and LLMs in general, are _tools_.
+
+Could I edit a file by hand by figuring out the ASCII byte values to write to disk with `dd`?
+Umm, I guess?
+Does that mean I don't use a text editor?
+Of course not.
+
+It's about understanding the abstraction, the capability of the tools, and making an _active, conscious, and educated decision_ about how to use them.
+
+Just as you should recognise that typing 6+7 into a calculator should yield 13 and not 42, the same goes for the use of AI.
+As I noted above, for example: AI link:#pass:[_teachers_talk_bs_too_sometimes_but_this_one_isnt_too_proud_to_admit_it][hallucinates].
+That doesn't mean you shouldn't use it, but rather that you shouldn't trust blindly what it's saying.
+Just like a calculator.
+
+== The future of learning? Perhaps.
+
+Some people prefer to learn through highly structured content.
+I think for them this agentic approach might work if the core path is curated for them and deployed with much stricter guardrails.
+The kind of thing you might get on a website's chatbot currently; despite your best `Forget previous instructions` prompt hacking, it sticks very strictly to its sole direction.
+I think this strategy also works better for cohorts of users who need more discipline in their learning (for example, a schoolkid who has a curriculum to follow).
+
+For others—and I'd include myself in this group—I can see a huge benefit in learning this way.
+For the last 35+ years I've learnt things by basically taking them apart (literally or figuratively), poking and prodding them, and generally getting hands on to see what makes it tick.
+Combine this natural +++<del>destructive</del>+++curious instinct with something that has almost boundless depths of patience and broadness of knowledge to be able to answer questions and guide explanations and I think you have a very powerful learning companion.
+
+The risks?
+Plenty.
+Getting distracted and taking Claude on a flight of fantasy that may be fun but ultimately a waste of time.
+Working with technology which is at the edges (or beyond) Claude's training dataset.
+Not having enough context for the area and trusting blindly what Claude tells you.
+
+As with all of the AI developments at the moment, this has the _potential_ to be fantastically useful.
+But only if used carefully and mindfully.
+
+---
+
+_Let me know in the comments below if you use Claude (or similar) for learning something, and how it went._
