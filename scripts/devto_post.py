@@ -385,7 +385,7 @@ def update_devto_article(article_id: int, body_markdown: str, api_key: str = "")
     return resp.json()
 
 
-def process_file(filepath: Path, dry_run: bool = False, api_key: str = "", update_id: int | None = None) -> bool:
+def process_file(filepath: Path, dry_run: bool = False, api_key: str = "", update_id: int | None = None, published: bool = True) -> bool:
     """Process one blog post file. Returns True on success."""
     print(f"\n→ {filepath}")
 
@@ -443,7 +443,10 @@ def process_file(filepath: Path, dry_run: bool = False, api_key: str = "", updat
         print(f"  Image:     {main_image}")
 
     if dry_run:
-        action = f"UPDATE draft {update_id}" if update_id else "POST as new draft"
+        if update_id:
+            action = f"UPDATE draft {update_id}"
+        else:
+            action = "PUBLISH" if published else "POST as new draft"
         print(f"  [dry-run] Would {action} on dev.to")
         return True
 
@@ -459,12 +462,13 @@ def process_file(filepath: Path, dry_run: bool = False, api_key: str = "", updat
                 tags=tags,
                 description=description,
                 main_image=main_image,
-                published=False,
+                published=published,
                 api_key=api_key,
             )
             devto_url = result.get("url", "?")
             devto_id = result.get("id", "?")
-            print(f"  Created draft: {devto_url} (id={devto_id})")
+            state = "Published" if published else "Created draft"
+            print(f"  {state}: {devto_url} (id={devto_id})")
         return True
     except requests.HTTPError as e:
         print(f"  Error: HTTP {e.response.status_code}: {e.response.text[:200]}")
@@ -496,6 +500,7 @@ def main():
         help="Auto-detect files newly added in the most recent git commit",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print what would happen, no API calls")
+    parser.add_argument("--draft", action="store_true", help="Create as draft instead of publishing")
     parser.add_argument("--update-draft", type=int, metavar="ARTICLE_ID",
                         help="Update an existing dev.to draft by ID instead of creating a new one")
     args = parser.parse_args()
@@ -528,7 +533,8 @@ def main():
             err += 1
             continue
         result = process_file(f, dry_run=args.dry_run, api_key=api_key,
-                              update_id=args.update_draft)
+                              update_id=args.update_draft,
+                              published=not args.draft)
         if result is True:
             ok += 1
         elif result is False:
