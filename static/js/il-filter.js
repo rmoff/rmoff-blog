@@ -1,12 +1,11 @@
 /**
- * Interesting Links — interactive filter & collapse
+ * Interesting Links — interactive filter
  *
  * Features:
- *   1. Each h2 section is collapsible (click the heading)
- *   2. "Show top picks only" toggle hides non-🔥 list items
+ *   1. "Show top picks only" toggle hides non-🔥 list items
  *      (links to rmoff.net are always kept visible)
- *   3. Collapse-all / Expand-all buttons
- *   4. Section count badges update when filter is active
+ *   2. Section count badges update when filter is active
+ *   3. Per-section "show all" link to disable filter
  */
 (function () {
   'use strict';
@@ -55,17 +54,11 @@
   // Insert toolbar right before the first link section
   linkSections[0].parentNode.insertBefore(toolbar, linkSections[0]);
 
-  // ── Make sections collapsible ───────────────────────────────────────
+  // ── Add section badges ─────────────────────────────────────────────
   linkSections.forEach(function (section) {
     var h2 = section.querySelector('h2');
     var body = section.querySelector('.sectionbody');
     if (!h2 || !body) return;
-
-    // Add collapse chevron
-    var chevron = document.createElement('span');
-    chevron.className = 'il-chevron';
-    chevron.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>';
-    h2.insertBefore(chevron, h2.firstChild);
 
     // Count badge + show-all wrapper
     var meta = document.createElement('span');
@@ -91,14 +84,6 @@
     h2.appendChild(meta);
 
     section.dataset.ilSection = 'true';
-
-    h2.style.cursor = 'pointer';
-    h2.addEventListener('click', function (e) {
-      // Don't toggle if they clicked the anchor link or section meta
-      if (e.target.closest('.headline-hash')) return;
-      if (e.target.closest('.il-section-meta')) return;
-      section.classList.toggle('il-collapsed');
-    });
 
     updateSectionBadge(section);
   });
@@ -184,11 +169,6 @@
         section.classList.add('il-section-empty');
       } else {
         section.classList.remove('il-section-empty');
-      }
-
-      // Auto-expand sections that have visible items when filtering
-      if (fireOnly && sectionVisible > 0) {
-        section.classList.remove('il-collapsed');
       }
 
       updateSectionBadge(section);

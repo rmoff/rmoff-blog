@@ -9,7 +9,7 @@ async function toggleFireFilter(page) {
   await page.waitForTimeout(100);
 }
 
-test.describe('IL Filter & Collapse', () => {
+test.describe('IL Filter', () => {
 
   test('toolbar is rendered on IL page', async ({ page }) => {
     await page.goto(IL_URL);
@@ -18,10 +18,8 @@ test.describe('IL Filter & Collapse', () => {
     await expect(page.locator('#il-fire-cb')).toBeAttached();
   });
 
-  test('sections have chevrons and count badges', async ({ page }) => {
+  test('section badges hidden when unfiltered, visible when filtered', async ({ page }) => {
     await page.goto(IL_URL);
-    const chevrons = page.locator('.il-chevron');
-    expect(await chevrons.count()).toBeGreaterThan(5);
 
     // Badges exist but are hidden when filter is off
     const badges = page.locator('.il-section-count');
@@ -31,22 +29,6 @@ test.describe('IL Filter & Collapse', () => {
     // Badges become visible when filter is on
     await toggleFireFilter(page);
     await expect(badges.first()).toBeVisible();
-  });
-
-  test('clicking h2 collapses and expands section', async ({ page }) => {
-    await page.goto(IL_URL);
-
-    const kafkaSection = page.locator('#_kafka_and_event_streaming').locator('..');
-    const kafkaH2 = kafkaSection.locator('h2');
-    const kafkaBody = kafkaSection.locator('.sectionbody');
-
-    await expect(kafkaBody).toBeVisible();
-
-    await kafkaH2.click();
-    await expect(kafkaSection).toHaveClass(/il-collapsed/);
-
-    await kafkaH2.click();
-    await expect(kafkaSection).not.toHaveClass(/il-collapsed/);
   });
 
   test('fire filter hides non-fire non-rmoff items', async ({ page }) => {
