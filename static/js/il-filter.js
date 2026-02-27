@@ -67,17 +67,36 @@
     chevron.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>';
     h2.insertBefore(chevron, h2.firstChild);
 
-    // Count badge
+    // Count badge + show-all wrapper
+    var meta = document.createElement('span');
+    meta.className = 'il-section-meta';
+
     var badge = document.createElement('span');
     badge.className = 'il-section-count';
-    h2.appendChild(badge);
+
+    var showAll = document.createElement('a');
+    showAll.className = 'il-show-all';
+    showAll.textContent = 'show all';
+    showAll.href = '#';
+    showAll.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      fireCheckbox.checked = false;
+      try { sessionStorage.setItem('il-fire-only', 'false'); } catch (ex) {}
+      applyFilter();
+    });
+
+    meta.appendChild(badge);
+    meta.appendChild(showAll);
+    h2.appendChild(meta);
 
     section.dataset.ilSection = 'true';
 
     h2.style.cursor = 'pointer';
     h2.addEventListener('click', function (e) {
-      // Don't toggle if they clicked the anchor link
+      // Don't toggle if they clicked the anchor link or section meta
       if (e.target.closest('.headline-hash')) return;
+      if (e.target.closest('.il-section-meta')) return;
       section.classList.toggle('il-collapsed');
     });
 
@@ -86,6 +105,7 @@
 
   function updateSectionBadge(section) {
     var badge = section.querySelector('.il-section-count');
+    var showAll = section.querySelector('.il-show-all');
     if (!badge) return;
 
     var allItems = section.querySelectorAll('.sectionbody li');
@@ -97,13 +117,18 @@
     });
 
     var totalItems = allItems.length;
+    var isFiltered = document.getElementById('il-fire-cb').checked;
 
-    if (document.getElementById('il-fire-cb').checked && visibleItems < totalItems) {
+    if (isFiltered) {
       badge.textContent = visibleItems + '/' + totalItems;
       badge.classList.add('il-filtered');
+      badge.style.display = '';
+      if (showAll) showAll.style.display = '';
     } else {
-      badge.textContent = totalItems;
+      badge.textContent = '';
       badge.classList.remove('il-filtered');
+      badge.style.display = 'none';
+      if (showAll) showAll.style.display = 'none';
     }
   }
 

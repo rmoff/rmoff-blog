@@ -23,8 +23,14 @@ test.describe('IL Filter & Collapse', () => {
     const chevrons = page.locator('.il-chevron');
     expect(await chevrons.count()).toBeGreaterThan(5);
 
+    // Badges exist but are hidden when filter is off
     const badges = page.locator('.il-section-count');
     expect(await badges.count()).toBeGreaterThan(5);
+    await expect(badges.first()).toBeHidden();
+
+    // Badges become visible when filter is on
+    await toggleFireFilter(page);
+    await expect(badges.first()).toBeVisible();
   });
 
   test('clicking h2 collapses and expands section', async ({ page }) => {
@@ -93,6 +99,45 @@ test.describe('IL Filter & Collapse', () => {
     const countEl = page.locator('#il-count');
     await expect(countEl).toContainText('links');
     await expect(countEl).not.toContainText('of');
+  });
+
+  test('"show all" link appears when filter is active', async ({ page }) => {
+    await page.goto(IL_URL);
+
+    // "show all" links are hidden when filter is off
+    const showAllLinks = page.locator('.il-show-all');
+    expect(await showAllLinks.count()).toBeGreaterThan(0);
+    await expect(showAllLinks.first()).toBeHidden();
+
+    // Enable filter
+    await toggleFireFilter(page);
+
+    // "show all" links should now be visible on sections with items
+    const visibleShowAll = page.locator('[data-il-section="true"]:not(.il-section-empty) .il-show-all');
+    await expect(visibleShowAll.first()).toBeVisible();
+  });
+
+  test('clicking "show all" disables the filter', async ({ page }) => {
+    await page.goto(IL_URL);
+
+    // Enable filter
+    await toggleFireFilter(page);
+
+    // Verify filter is on
+    const cb = page.locator('#il-fire-cb');
+    await expect(cb).toBeChecked();
+
+    // Click "show all" on any visible section
+    const showAllLink = page.locator('[data-il-section="true"]:not(.il-section-empty) .il-show-all').first();
+    await showAllLink.click();
+    await page.waitForTimeout(100);
+
+    // Filter should be off now
+    await expect(cb).not.toBeChecked();
+
+    // All items should be visible
+    const hiddenItems = page.locator('[data-il-section="true"] .sectionbody li.il-hidden');
+    expect(await hiddenItems.count()).toBe(0);
   });
 
   test('toolbar is NOT rendered on non-IL pages', async ({ page }) => {
