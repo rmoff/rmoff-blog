@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to position drawer and label
     function positionDrawer() {
-        if (window.innerWidth <= 1199) {
+        if (window.innerWidth <= 1024) {
             // Find the main content area to align with
             const mainContent = document.querySelector('.docs-content, main, .article, .content');
             const header = document.querySelector('header, .hero, .cover, .post-header, .page-header');
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle clicks on the mobile label
     if (mobileLabel) {
         mobileLabel.addEventListener('click', function(e) {
-            if (window.innerWidth <= 1199 && !isDrawerExpanded) {
+            if (window.innerWidth <= 1024 && !isDrawerExpanded) {
                 isDrawerExpanded = true;
                 positionDrawer();
                 e.preventDefault();
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Close drawer when clicking outside
     document.addEventListener('click', function(e) {
-        if (window.innerWidth <= 1199 && isDrawerExpanded &&
+        if (window.innerWidth <= 1024 && isDrawerExpanded &&
             !drawer.contains(e.target) && e.target !== mobileLabel) {
             isDrawerExpanded = false;
             positionDrawer();
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Close drawer when clicking a link on mobile
   tocLinks.forEach(link => {
     link.addEventListener('click', function() {
-      if (window.innerWidth <= 1199 && isDrawerExpanded) {
+      if (window.innerWidth <= 1024 && isDrawerExpanded) {
         isDrawerExpanded = false;
         positionDrawer();
       }
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Reset drawer state on window resize
   window.addEventListener('resize', function() {
-    if (window.innerWidth > 1199) {
+    if (window.innerWidth > 1024) {
       isDrawerExpanded = false;
     }
     positionDrawer();
