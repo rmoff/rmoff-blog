@@ -18,19 +18,6 @@ test.describe('IL Filter', () => {
     await expect(page.locator('#il-fire-cb')).toBeAttached();
   });
 
-  test('section badges hidden when unfiltered, visible when filtered', async ({ page }) => {
-    await page.goto(IL_URL);
-
-    // Badges exist but are hidden when filter is off
-    const badges = page.locator('.il-section-count');
-    expect(await badges.count()).toBeGreaterThan(5);
-    await expect(badges.first()).toBeHidden();
-
-    // Badges become visible when filter is on
-    await toggleFireFilter(page);
-    await expect(badges.first()).toBeVisible();
-  });
-
   test('fire filter hides non-fire non-rmoff items', async ({ page }) => {
     await page.goto(IL_URL);
 
@@ -83,43 +70,31 @@ test.describe('IL Filter', () => {
     await expect(countEl).not.toContainText('of');
   });
 
-  test('"show all" link appears when filter is active', async ({ page }) => {
-    await page.goto(IL_URL);
+  test('?top query parameter activates filter on load', async ({ page }) => {
+    await page.goto(IL_URL + '?top');
+    await page.waitForSelector('.il-toolbar');
 
-    // "show all" links are hidden when filter is off
-    const showAllLinks = page.locator('.il-show-all');
-    expect(await showAllLinks.count()).toBeGreaterThan(0);
-    await expect(showAllLinks.first()).toBeHidden();
-
-    // Enable filter
-    await toggleFireFilter(page);
-
-    // "show all" links should now be visible on sections with items
-    const visibleShowAll = page.locator('[data-il-section="true"]:not(.il-section-empty) .il-show-all');
-    await expect(visibleShowAll.first()).toBeVisible();
-  });
-
-  test('clicking "show all" disables the filter', async ({ page }) => {
-    await page.goto(IL_URL);
-
-    // Enable filter
-    await toggleFireFilter(page);
-
-    // Verify filter is on
     const cb = page.locator('#il-fire-cb');
     await expect(cb).toBeChecked();
 
-    // Click "show all" on any visible section
-    const showAllLink = page.locator('[data-il-section="true"]:not(.il-section-empty) .il-show-all').first();
-    await showAllLink.click();
-    await page.waitForTimeout(100);
-
-    // Filter should be off now
-    await expect(cb).not.toBeChecked();
-
-    // All items should be visible
     const hiddenItems = page.locator('[data-il-section="true"] .sectionbody li.il-hidden');
-    expect(await hiddenItems.count()).toBe(0);
+    expect(await hiddenItems.count()).toBeGreaterThan(0);
+  });
+
+  test('toggling filter updates URL query parameter', async ({ page }) => {
+    await page.goto(IL_URL);
+    await page.waitForSelector('.il-toolbar');
+
+    // URL should not have ?top initially
+    expect(new URL(page.url()).searchParams.has('top')).toBe(false);
+
+    // Enable filter — URL should gain ?top
+    await toggleFireFilter(page);
+    expect(new URL(page.url()).searchParams.has('top')).toBe(true);
+
+    // Disable filter — ?top should be removed
+    await toggleFireFilter(page);
+    expect(new URL(page.url()).searchParams.has('top')).toBe(false);
   });
 
   test('toolbar is NOT rendered on non-IL pages', async ({ page }) => {

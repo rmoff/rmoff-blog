@@ -4,8 +4,6 @@
  * Features:
  *   1. "Show top picks only" toggle hides non-🔥 list items
  *      (links to rmoff.net are always kept visible)
- *   2. Section count badges update when filter is active
- *   3. Per-section "show all" link to disable filter
  */
 (function () {
   'use strict';
@@ -54,68 +52,10 @@
   // Insert toolbar right before the first link section
   linkSections[0].parentNode.insertBefore(toolbar, linkSections[0]);
 
-  // ── Add section badges ─────────────────────────────────────────────
+  // ── Mark link sections ─────────────────────────────────────────────
   linkSections.forEach(function (section) {
-    var h2 = section.querySelector('h2');
-    var body = section.querySelector('.sectionbody');
-    if (!h2 || !body) return;
-
-    // Count badge + show-all wrapper
-    var meta = document.createElement('span');
-    meta.className = 'il-section-meta';
-
-    var badge = document.createElement('span');
-    badge.className = 'il-section-count';
-
-    var showAll = document.createElement('a');
-    showAll.className = 'il-show-all';
-    showAll.textContent = 'show all';
-    showAll.href = '#';
-    showAll.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      fireCheckbox.checked = false;
-      try { sessionStorage.setItem('il-fire-only', 'false'); } catch (ex) {}
-      applyFilter();
-    });
-
-    meta.appendChild(badge);
-    meta.appendChild(showAll);
-    h2.appendChild(meta);
-
     section.dataset.ilSection = 'true';
-
-    updateSectionBadge(section);
   });
-
-  function updateSectionBadge(section) {
-    var badge = section.querySelector('.il-section-count');
-    var showAll = section.querySelector('.il-show-all');
-    if (!badge) return;
-
-    var allItems = section.querySelectorAll('.sectionbody li');
-    var visibleItems = 0;
-    allItems.forEach(function (li) {
-      if (!li.classList.contains('il-hidden')) {
-        visibleItems++;
-      }
-    });
-
-    var totalItems = allItems.length;
-    var isFiltered = document.getElementById('il-fire-cb').checked;
-
-    if (isFiltered) {
-      badge.textContent = visibleItems + '/' + totalItems;
-      badge.classList.add('il-filtered');
-      badge.style.display = '';
-      if (showAll) showAll.style.display = '';
-    } else {
-      badge.textContent = '';
-      badge.classList.remove('il-filtered');
-      badge.style.display = 'none';
-      if (showAll) showAll.style.display = 'none';
-    }
-  }
 
   // ── 🔥 filter logic ────────────────────────────────────────────────
   var fireCheckbox = document.getElementById('il-fire-cb');
@@ -171,7 +111,6 @@
         section.classList.remove('il-section-empty');
       }
 
-      updateSectionBadge(section);
     });
 
     // Update count display
@@ -188,19 +127,35 @@
 
   fireCheckbox.addEventListener('change', applyFilter);
 
-  // ── Persist toggle state in session ─────────────────────────────────
-  try {
-    var saved = sessionStorage.getItem('il-fire-only');
-    if (saved === 'true') {
-      fireCheckbox.checked = true;
+  // ── Sync state with URL query parameter and sessionStorage ─────────
+  function updateUrl(fireOnly) {
+    var url = new URL(window.location);
+    if (fireOnly) {
+      url.searchParams.set('top', '');
+    } else {
+      url.searchParams.delete('top');
     }
-    fireCheckbox.addEventListener('change', function () {
-      sessionStorage.setItem('il-fire-only', fireCheckbox.checked);
-    });
-  } catch (e) {
-    // sessionStorage not available
+    history.replaceState(null, '', url);
   }
 
-  // Show count on load (and apply filter if restored from session)
+  // Initialise: ?top query param takes priority, then sessionStorage
+  var params = new URLSearchParams(window.location.search);
+  if (params.has('top')) {
+    fireCheckbox.checked = true;
+  } else {
+    try {
+      if (sessionStorage.getItem('il-fire-only') === 'true') {
+        fireCheckbox.checked = true;
+      }
+    } catch (e) {}
+  }
+
+  fireCheckbox.addEventListener('change', function () {
+    try { sessionStorage.setItem('il-fire-only', fireCheckbox.checked); } catch (e) {}
+    updateUrl(fireCheckbox.checked);
+  });
+
+  // Apply filter on load and sync URL to match initial state
   applyFilter();
+  updateUrl(fireCheckbox.checked);
 })();
