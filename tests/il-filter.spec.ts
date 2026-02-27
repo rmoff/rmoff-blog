@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const IL_URL = 'http://localhost:1313/2026/02/26/interesting-links-february-2026/';
+const IL_URL = 'http://localhost:1313/2026/01/20/interesting-links-january-2026/';
 
 // The checkbox is visually hidden behind a custom toggle switch,
 // so we click the label instead of calling .check() on the input.
