@@ -125,7 +125,15 @@
     toolbar.classList.toggle('il-fire-active', fireOnly);
   }
 
-  fireCheckbox.addEventListener('change', applyFilter);
+  fireCheckbox.addEventListener('change', function () {
+    applyFilter();
+    // Track toggle usage in PostHog
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('il_filter_toggled', {
+        filter_state: fireCheckbox.checked ? 'top_picks_only' : 'show_all'
+      });
+    }
+  });
 
   // ── Sync state with URL query parameter and sessionStorage ─────────
   function updateUrl(fireOnly) {
@@ -153,6 +161,24 @@
   fireCheckbox.addEventListener('change', function () {
     try { sessionStorage.setItem('il-fire-only', fireCheckbox.checked); } catch (e) {}
     updateUrl(fireCheckbox.checked);
+  });
+
+  // ── Track outbound link clicks ────────────────────────────────────
+  linkSections.forEach(function (section) {
+    section.addEventListener('click', function (e) {
+      var link = e.target.closest('a');
+      if (!link || !link.href) return;
+      // Only track external links
+      if (link.hostname === window.location.hostname) return;
+      if (typeof posthog !== 'undefined') {
+        var sectionTitle = section.querySelector('h2');
+        posthog.capture('il_link_clicked', {
+          link_url: link.href,
+          link_text: link.textContent.trim().substring(0, 100),
+          section: sectionTitle ? sectionTitle.textContent.trim() : 'unknown'
+        });
+      }
+    });
   });
 
   // Apply filter on load and sync URL to match initial state
