@@ -184,4 +184,11 @@
   // Apply filter on load and sync URL to match initial state
   applyFilter();
   updateUrl(fireCheckbox.checked);
+
+  // Track IL page view with filter state
+  if (typeof posthog !== 'undefined') {
+    posthog.capture('il_page_viewed', {
+      filter_active: fireCheckbox.checked
+    });
+  }
 })();
