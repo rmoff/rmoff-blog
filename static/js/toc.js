@@ -131,9 +131,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-  // Close drawer when clicking a link on mobile
+  // Close drawer when clicking a link on mobile, and track TOC clicks
   tocLinks.forEach(link => {
     link.addEventListener('click', function() {
+      if (typeof posthog !== 'undefined') {
+        posthog.capture('toc_link_clicked', {
+          section: link.textContent.trim().substring(0, 100),
+          mobile: window.innerWidth <= 1024
+        });
+      }
       if (window.innerWidth <= 1024 && isDrawerExpanded) {
         isDrawerExpanded = false;
         positionDrawer();
