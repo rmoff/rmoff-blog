@@ -1,9 +1,9 @@
 ---
 draft: false
-title: 'Claude Code can build dbt pipelines…but are they any good?'
-date: "2026-03-10T15:16:15Z"
-image: "/images/2026/03/"
-thumbnail: "/images/2026/03/"
+title: 'Claude Code isn''t going to replace data engineers (yet)'
+date: "2026-03-11T15:16:15Z"
+image: "/images/2026/03/h_IMG_2929.jpeg"
+thumbnail: "/images/2026/03/t_IMG_2922.jpeg"
 #socialimage: "/images/2026/03/"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
@@ -14,16 +14,19 @@ categories:
 ---
 
 Ten years late (but hopefully not a dollar short) I recently figured out link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/[what all the fuss about dbt is about].
-dbt makes it easy to adhere to a ton of good practices that have always been true when working with data including staging layers, slowly-changing dimensions (SCD), and dimensional modelling as well as "newer" (but equally important) concepts such as documentation (gasp!), testing (imagine!) and a smooth integration with source control and CI/CD (how modern!).
 
-Well that's cute, Robin, you might be saying.
-Congratulations for catching up on what data/analytics engineers have been doing for years now.
-But you see, coding by hand is _so_ 2025.
+_Well that's cute, Robin_, you might be saying.
+_Congratulations for catching up on what data/analytics engineers have been doing for years now._
+_But you see, coding by hand is *so* 2025._
+_Didn't you hear?_
+_AI is going to replace data engineers._
 
-So, whilst I'd used link:/2026/02/20/claude-the-instructor/[Claude to _teach_ me dbt], I was very curious to see to what extent Claude Code (at the beginning of March 2026) could actually *write* a dbt project.
+No it's not (at least, not yet).
+In this article I'll show you why.
 
 <!--more-->
 
+I'd already used link:/2026/02/20/claude-the-instructor/[Claude to _teach_ me dbt], and so I was very curious to see to what extent Claude Code (at the beginning of March 2026) could actually *write* a dbt project.
 Not only that, but:
 
 * Can Claude build a *credible* dbt project from *real data*?
@@ -41,27 +44,6 @@ I've deliberately split this write-up into two posts as they each address differ
 * The rig I built to run the scenarios, evals, and LLM-as-judge assessments to see what impact different factors had on the quality of what was built.
     ** This one's for the detail nerds, and LLM folk to poke holes in what & how I tested stuff ;)
 ====
-
-== AI denier redirect
-
-_I guess at some point I'll stop including these disclaimers._
-_For now, there are too many people fundamentally misunderstanding (deliberately, or not) what is going on with AI, that I feel it's important to frame it carefully and correctly._
-
-[source,javascript]
-----
-IF ai_sceptic==true
-    CONTINUE
-ELSE
-    GOTO next_section
-END IF
-----
-
-Lemme guess: before you even read the article, you'd decided the answer to its title was no, right?
-*OF COURSE* AI can't write a dbt project as richly functional and beautifully crafted as you can.
-Who on earth am I to even think, let alone explore, that it might?
-
-You see, that's missing the point.
-Rather than derail this post, I took the time to crudely spell it all out in this other article: link:/2026/03/06/ai-will-fuck-you-up-if-youre-not-on-board/[*you're maybe missing the point about AI*].
 
 == Building a dbt project with Claude Code
 
@@ -153,266 +135,6 @@ and writes data successfully to DuckDB:
 │ 2026-03-09 12:00:00 │ 3015TH-level-stage-i-15_min-mASD          │  0.178 │ 2026-03-09   │
 └─────────────────────┴───────────────────────────────────────────┴────────┴──────────────┘
 ----
-
-== Okay…but Is it any good?
-
-_As the content of many LinkedIn posts and comments are testament to: infinite AI monkeys with infinite tokens will crap out as much nonsense as you want—but most of it is garbage._
-_Is that what Claude is doing here? Is it garbage?_
-
-Actually, the dbt project that Claude built is pretty good.
-
-=== Not bad…
-
-image:/images/2026/03/not-bad-james-corden.gif[]
-
-* ✅ Plausible data model
-+
-image:/images/2026/03/dbt-data-model.png[]
-
-* ✅ Correct key relationships enforced with https://docs.getdbt.com/reference/resource-properties/constraints?version=1.10[dbt constraints]
-+
-[source,yaml]
-----
-config:
-  contract:
-    enforced: true
-columns:
-  - name: station_id
-    data_type: varchar
-    description: "Unique station identifier (e.g. '1029TH')"
-    tests:
-      - not_null
-      - unique
-----
-+
-One point to note is that it didn't include https://docs.getdbt.com/docs/build/data-tests?version=1.10[tests] to check the keys in the loaded data.
-This is arguably 'belt and braces' anyway.
-
-* ✅ Incremental fact table load
-+
-[source,jinja]
-----
-config(
-	materialized='incremental',
-	unique_key=['date_time', 'measure_id'],
-)
-----
-
-* ✅ Handle messy source data (e.g. multiple values where only one expected)
-+
-[source,sql]
-----
--- Value cleaning: handle pipe-delimited values (e.g. "0.770|0.688")
--- by taking the first value, then cast to double
-try_cast(
-    case
-        when value like '%|%' then split_part(value, '|', 1)
-        else value
-    end as double
-)                                               as reading_value,
-----
-* ✅ Handles Slowly Changing Dimensions (SCD)
-+
-[source,sql]
-----
-from {{ ref('snap_stations') }}
-where dbt_valid_to is null
-----
-+
-NOTE: +++<del>For some reason</del>+++ Claude only implemented this for the _stations_ dimension, not _measures_.
-*Turns out, I told it to _what_ in the prompt!*
-But it'd have been nice for it to perhaps challenge me on that.
-Measure definitions _shouldn't_ change…but they might?
-* ✅ Documentation
-+
-image:/images/2026/03/dbt-docs.webp[Screenshot of dbt docs showing the stg_flood_monitoring__stations view, with project structure in the left sidebar and the model's description, metadata, and column definitions in the main panel]
-* ✅ Tests
-+
-[source,yaml]
-----
-- name: status
-  tests:
-    - not_null
-    - accepted_values:
-        arguments:
-          values: ['Active', 'Closed', 'Suspended', 'ukcmf', 'Unknown']
-----
-+
-[source,yaml]
-----
-- name: flood_monitoring_api
-  freshness:
-    warn_after:
-      count: 1
-      period: hour
-    error_after:
-      count: 6
-      period: hour
-  loaded_at_field: "loaded_at"
-----
-* ✅ Backfill
-+
-[source,sql+jinja]
-----
-{% macro generate_archive_urls(start_date, end_date) %}
-{%- set start = modules.datetime.datetime.strptime(start_date, '%Y-%m-%d') -%}
-{%- set end_dt = modules.datetime.datetime.strptime(end_date, '%Y-%m-%d') -%}
-{%- set day_count = (end_dt - start).days -%}
-{%- set ns = namespace(urls=[]) -%}
-{%- for i in range(day_count + 1) -%}
-  {%- set d = start + modules.datetime.timedelta(days=i) -%}
-  {%- do ns.urls.append("'https://environment.data.gov.uk/flood-monitoring/archive/readings-" ~ d.strftime('%Y-%m-%d') ~ ".csv'") -%}
-{%- endfor -%}
-[{{ ns.urls | join(', ') }}]
-{%- endmacro %}
-----
-+
-[source,sql]
-----
-select
-    cast("dateTime" as timestamp)                         as date_time,
-    regexp_replace(coalesce(measure, ''), '.+/', '')      as measure_id,
-    try_cast(split_part(cast(value as varchar), '|', 1) as double)  as value
-from read_csv(
-    {{ generate_archive_urls(start_date, end_date) }}
-----
-
-* General good practice and nice surprises
-	** ✅ Doesn't use `SELECT *` but instead hardcodes column names.
-  Generally a better pattern for creating less brittle pipelines.
-	** ✅ Parses out the station `status` field cleanly
-+
-[source,sql]
-----
-regexp_replace(coalesce(status, ''), '.+/', '')  as status
-----
-+
-Rather than storing the source which looks like this
-+
-[source]
-----
-http://environment.data.gov.uk/flood-monitoring/def/core/statusActive
-----
-	** ✅ More elegant date logic:
-+
-[source,sql]
-----
-extract(isodow from date_day) in (6, 7)
-  as is_weekend
-----
-+
-vs
-+
-[source,sql]
-----
-CAST(CASE WHEN dayofweek(range) IN (0,6) THEN 1 ELSE 0 END AS BOOLEAN)
-  AS date_is_weekend
-----
-
-=== …but not _that_ good
-
-_All you Claude Code-fans out there, hold your horses on the "yes, but…" until the "yes, but" section below :p_
-
-In link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/#_ingest[the version that I built by hand], I pull the raw API data into a DuckDB table using a Jinja macro:
-
-[source,sql+jinja]
-----
-{% macro load_raw_measures() %}
-{% set endpoint = var('api_base_url') ~ '/id/measures' %}
-{% do log("raw_measures ~ reading from " ~ endpoint, info=true) %}
-
-{% set sql %}
-    CREATE OR REPLACE TABLE raw_measures AS
-    SELECT *,
-            CURRENT_TIMESTAMP
-            AS _latest_reading_at
-    FROM read_json('{{ endpoint }}')
-{% endset %}
-{% do run_query(sql) %}
-
-{% do log("raw_measures ~ loaded", info=true) %}
-
-{% endmacro %}
-----
-
-Claude approached it differently, writing a Python script, `load_api_data.py`.
-Arguably more elegant, but I have three issues with it.
-The first of these is personal preference.
-I'm a SQL guy, and I'd rather not be on the hook to support a pipeline that leans on Python.
-After all, it's one thing to generate code with AI, but ultimately someone's left holding the support baby.
-
-The next two issues are the code itself.
-There's a one silly flaw in it, and an insidiously bad one.
-The silly flaw is easily spotted and easily fixed: it only does a `CREATE TABLE` and so falls over if the table exists already.
-Easily spotted (the job falls over) and easily fixed (`CREATE OR REPLACE TABLE`).
-
-The really bad problem is this, in Claude's own mea culpa words:
-
-> `load_api_data.py` fetches stations with ?_limit=2000, but the API itself has a maximum response size of 2000 items (it silently caps at that). *The actual total number of stations is ~5,458, so the script only gets 1,493 rows back* (fewer than the limit because the API returns a paginated subset — probably the first page).
-
-image:/images/2026/03/really-tommy-norris.gif[]
-
-.Wrong is worse than absent because you can't trust it.
-[WARNING]
-====
-If Claude just doesn't build a feature, that's ok because I can add it (or tell it to).
-But if it confidently builds it and it turns out to be wrong, that's a _trust issue_.
-====
-
-Other things that I picked up from eyeballing the code that look off include:
-
-* `dim_stations` drops several columns (`stageScale`, `datumOffset`, `gridReference`, `downstageScale`).
-Two of these arguably extend the data model beyond what I've manually investigated myself before (`stageScale`/`downstageScale`) but two definitely hold relevant reference data (`datumOffset`, `gridReference`) which is getting silently dropped.
-* `dim_measures` drops `unit`.
-Arguably a decent optimisation given the repetition between `unit` and the human-friendly `unitName`:
-+
-[source,sql]
-----
-🟡◗ select unit, unitName,label, parameter,parameterName,valueType from measures using sample 5 rows;
-┌──────────────────────────────────────┬──────────┬──────────────────────────────────────────────┬───────────┬───────────────┬───────────────┐
-│                 unit                 │ unitName │                    label                     │ parameter │ parameterName │   valueType   │
-│               varchar                │ varchar  │                   varchar                    │  varchar  │    varchar    │    varchar    │
-├──────────────────────────────────────┼──────────┼──────────────────────────────────────────────┼───────────┼───────────────┼───────────────┤
-│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ LAVERSTOCK - level-stage-i-15_min-m          │ level     │ Water Level   │ instantaneous │
-│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ KNETTISHALL GS GSM - level-stage-i-15_min-m  │ level     │ Water Level   │ instantaneous │
-│ http://qudt.org/1.1/vocab/unit#Meter │ mASD     │ Keadby TL B - level-tidal_level-i-5_min-mASD │ level     │ Water Level   │ instantaneous │
-│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ Riding Mill - level-stage-i-15_min-m         │ level     │ Water Level   │ instantaneous │
-│ http://qudt.org/1.1/vocab/unit#Meter │ mASD     │ Clomoney Way LVL - level-stage-i-15_min-mASD │ level     │ Water Level   │ instantaneous │
-└──────────────────────────────────────┴──────────┴──────────────────────────────────────────────┴───────────┴───────────────┴───────────────┘
-Run Time (s): real 0.007 user 0.002663 sys 0.001729
-----
-+
-But that's not the point is it; silently dropping data fields is not what I want my robot to do.
-* `fct_readings` duplicates the `date_time` field:
-+
-[source,sql]
-----
-select
-	date_time,
-	measure_id,
-	value,
-	cast(date_time as date) as reading_date <1>
-from deduped
-----
-<1> y, tho?
-
-* Claude builds the SCD (nice!) but `check_cols` only lists _some_ of the values that might change:
-+
-[source,sql]
-----
-check_cols=[
-	'station_name',
-	'town',
-	'river_name',
-	'catchment_name',
-	'latitude',
-	'longitude',
-	'status',
-],
-----
-+
-So if `latitude`/`longitude` are in there, why not `northing`/`easting`?
-As with the `measures` decisions above, these are real data issues that a human should be involved in reviewing, _or_ the AI surfacing for review.
 
 == Agentic coding in action
 
@@ -717,16 +439,268 @@ This is just one example of numerous ways in which Claude Code makes things easi
 There are plenty of examples in link:/2026/02/20/claude-the-instructor/[my previous article] too of Claude assisting a data engineer in building a pipeline.
 Truly invaluable.
 
-== It's all in the prompt…
+== Okay…but Is it any good?
 
-image:/images/2026/03/prompt-engineer.jpg[Meme using the "father meeting daughter's boyfriend" template. In the first panel, the father shakes the young man's hand saying "My daughter tells me you're a data engineer." The young man replies "Yes, a prompt engineer." In the second panel, the father's expression turns hostile: "You have exactly 10 seconds to get the fuck out of my house."]
+_As the content of many LinkedIn posts and comments are testament to: infinite AI monkeys with infinite tokens will crap out as much nonsense as you want—but most of it is garbage._
+_Is that what Claude is doing here? Is it garbage?_
+
+Actually, the dbt project that Claude built is pretty good.
+
+What I love about dbt is that it makes it easy to adhere to a ton of good practices that have always been true when working with data including staging layers, slowly-changing dimensions (SCD), and dimensional modelling as well as "newer" (but equally important) concepts such as documentation (gasp!), testing (imagine!) and a smooth integration with source control and CI/CD (how modern!).
+
+How much of these good features did Claude use, and use successfully?
+
+=== Not bad…
+
+image:/images/2026/03/not-bad-james-corden.gif[]
+
+* ✅ Plausible data model
++
+image:/images/2026/03/dbt-data-model.png[]
+
+* ✅ Correct key relationships enforced with https://docs.getdbt.com/reference/resource-properties/constraints?version=1.10[dbt constraints]
++
+[source,yaml]
+----
+config:
+  contract:
+    enforced: true
+columns:
+  - name: station_id
+    data_type: varchar
+    description: "Unique station identifier (e.g. '1029TH')"
+    tests:
+      - not_null
+      - unique
+----
++
+One point to note is that it didn't include https://docs.getdbt.com/docs/build/data-tests?version=1.10[tests] to check the keys in the loaded data.
+This is arguably 'belt and braces' anyway.
+
+* ✅ Incremental fact table load
++
+[source,jinja]
+----
+config(
+	materialized='incremental',
+	unique_key=['date_time', 'measure_id'],
+)
+----
+
+* ✅ Handle messy source data (e.g. multiple values where only one expected)
++
+[source,sql]
+----
+-- Value cleaning: handle pipe-delimited values (e.g. "0.770|0.688")
+-- by taking the first value, then cast to double
+try_cast(
+    case
+        when value like '%|%' then split_part(value, '|', 1)
+        else value
+    end as double
+)                                               as reading_value,
+----
+* ✅ Handles Slowly Changing Dimensions (SCD)
++
+[source,sql]
+----
+from {{ ref('snap_stations') }}
+where dbt_valid_to is null
+----
++
+NOTE: +++<del>For some reason</del>+++ Claude only implemented this for the _stations_ dimension, not _measures_.
+*Turns out, I told it to _what_ in the prompt!*
+But it'd have been nice for it to perhaps challenge me on that.
+Measure definitions _shouldn't_ change…but they might?
+* ✅ Documentation
++
+image:/images/2026/03/dbt-docs.webp[Screenshot of dbt docs showing the stg_flood_monitoring__stations view, with project structure in the left sidebar and the model's description, metadata, and column definitions in the main panel]
+* ✅ Tests
++
+[source,yaml]
+----
+- name: status
+  tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values: ['Active', 'Closed', 'Suspended', 'ukcmf', 'Unknown']
+----
++
+[source,yaml]
+----
+- name: flood_monitoring_api
+  freshness:
+    warn_after:
+      count: 1
+      period: hour
+    error_after:
+      count: 6
+      period: hour
+  loaded_at_field: "loaded_at"
+----
+* ✅ Backfill
++
+[source,sql+jinja]
+----
+{% macro generate_archive_urls(start_date, end_date) %}
+{%- set start = modules.datetime.datetime.strptime(start_date, '%Y-%m-%d') -%}
+{%- set end_dt = modules.datetime.datetime.strptime(end_date, '%Y-%m-%d') -%}
+{%- set day_count = (end_dt - start).days -%}
+{%- set ns = namespace(urls=[]) -%}
+{%- for i in range(day_count + 1) -%}
+  {%- set d = start + modules.datetime.timedelta(days=i) -%}
+  {%- do ns.urls.append("'https://environment.data.gov.uk/flood-monitoring/archive/readings-" ~ d.strftime('%Y-%m-%d') ~ ".csv'") -%}
+{%- endfor -%}
+[{{ ns.urls | join(', ') }}]
+{%- endmacro %}
+----
++
+[source,sql]
+----
+select
+    cast("dateTime" as timestamp)                         as date_time,
+    regexp_replace(coalesce(measure, ''), '.+/', '')      as measure_id,
+    try_cast(split_part(cast(value as varchar), '|', 1) as double)  as value
+from read_csv(
+    {{ generate_archive_urls(start_date, end_date) }}
+----
+
+* General good practice and nice surprises
+	** ✅ Doesn't use `SELECT *` but instead hardcodes column names.
+  Generally a better pattern for creating less brittle pipelines.
+	** ✅ Parses out the station `status` field cleanly
++
+[source,sql]
+----
+regexp_replace(coalesce(status, ''), '.+/', '')  as status
+----
++
+Rather than storing the source which looks like this
++
+[source]
+----
+http://environment.data.gov.uk/flood-monitoring/def/core/statusActive
+----
+	** ✅ More elegant date logic:
++
+[source,sql]
+----
+extract(isodow from date_day) in (6, 7)
+  as is_weekend
+----
++
+vs
++
+[source,sql]
+----
+CAST(CASE WHEN dayofweek(range) IN (0,6) THEN 1 ELSE 0 END AS BOOLEAN)
+  AS date_is_weekend
+----
+
+=== …but not _that_ good
+
+_All you Claude Code-fans out there, hold your horses on the "yes, but…" until the "link:#_yes_but[yes, but]" section below :p_
+
+In link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/#_ingest[the version that I built by hand], I pull the raw API data into a DuckDB table https://github.com/rmoff/env-agency-dbt/blob/master/macros/ingestion/load_raw_measures.sql[using a Jinja macro].
+Claude approached it differently, writing a Python script, `load_api_data.py`.
+Arguably more elegant, but I have three issues with it, as follows.
+
+* The first of these is personal preference.
+I'm a SQL guy, and I'd rather not be on the hook to support a pipeline that leans on Python.
+After all, it's one thing to generate code with AI, but ultimately someone's left holding the support baby.
+
+* The next two issues are the code itself.
+There's a one silly flaw in it, and an insidiously bad one.
+  ** The silly flaw is easily spotted and easily fixed: it only does a `CREATE TABLE` and so falls over if the table exists already (like, the second time you run it).
+Easily spotted (the job falls over) and easily fixed (`CREATE OR REPLACE TABLE`).
+
+** The really bad problem is this, in Claude's own mea culpa words:
++
+> `load_api_data.py` fetches stations with `?_limit=2000`, but the API itself has a maximum response size of 2000 items (it silently caps at that). *The actual total number of stations is ~5,458, so the script only gets 1,493 rows back* (fewer than the limit because the API returns a paginated subset — probably the first page).
++
+Let that sink in.
+We have a huge whole in our data, that's not evident until we wonder why a ton of our facts are without corresponding dimension entries.
++
+image:/images/2026/03/really-tommy-norris.gif[]
+
+.Wrong is worse than absent because you can't trust it.
+[WARNING]
+====
+If Claude just doesn't build a feature, that's ok because I can add it (or tell it to).
+But if it confidently builds it and it turns out to be wrong, that's a _trust issue_.
+====
+
+_Yes, but Robin, you could `<do this thing>`!  -> See link:#_yes_but[yes, but]_ below
+
+Other things that look off from just eyeballing the code include:
+
+* `dim_stations` drops several columns (`stageScale`, `datumOffset`, `gridReference`, `downstageScale`).
+Two of these arguably extend the data model beyond what I've manually investigated myself before (`stageScale`/`downstageScale`) but two definitely hold relevant reference data (`datumOffset`, `gridReference`) which is getting silently dropped.
+* `dim_measures` drops `unit`.
+Arguably a decent optimisation given the repetition between `unit` and the human-friendly `unitName`:
++
+[source,sql]
+----
+🟡◗ select unit, unitName,label, parameter,parameterName,valueType from measures using sample 5 rows;
+----
++
+[source]
+----
+┌──────────────────────────────────────┬──────────┬──────────────────────────────────────────────┬───────────┬───────────────┬───────────────┐
+│                 unit                 │ unitName │                    label                     │ parameter │ parameterName │   valueType   │
+│               varchar                │ varchar  │                   varchar                    │  varchar  │    varchar    │    varchar    │
+├──────────────────────────────────────┼──────────┼──────────────────────────────────────────────┼───────────┼───────────────┼───────────────┤
+│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ LAVERSTOCK - level-stage-i-15_min-m          │ level     │ Water Level   │ instantaneous │
+│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ KNETTISHALL GS GSM - level-stage-i-15_min-m  │ level     │ Water Level   │ instantaneous │
+│ http://qudt.org/1.1/vocab/unit#Meter │ mASD     │ Keadby TL B - level-tidal_level-i-5_min-mASD │ level     │ Water Level   │ instantaneous │
+│ http://qudt.org/1.1/vocab/unit#Meter │ m        │ Riding Mill - level-stage-i-15_min-m         │ level     │ Water Level   │ instantaneous │
+│ http://qudt.org/1.1/vocab/unit#Meter │ mASD     │ Clomoney Way LVL - level-stage-i-15_min-mASD │ level     │ Water Level   │ instantaneous │
+└──────────────────────────────────────┴──────────┴──────────────────────────────────────────────┴───────────┴───────────────┴───────────────┘
+----
++
+But that's not the point is it; *silently dropping data fields is not what I want my robot to do*.
+* `fct_readings` duplicates the `date_time` field:
++
+[source,sql]
+----
+select
+	date_time,
+	measure_id,
+	value,
+	cast(date_time as date) as reading_date <1>
+from deduped
+----
+<1> y, tho?
+
+* Claude builds the SCD (nice!) but `check_cols` only lists _some_ of the values that might change:
++
+[source,sql]
+----
+check_cols=[
+	'station_name',
+	'town',
+	'river_name',
+	'catchment_name',
+	'latitude',
+	'longitude',
+	'status',
+],
+----
++
+So if `latitude`/`longitude` are in there, why not `northing`/`easting`?
+As with the `measures` decisions above, these are real data issues that a human should be involved in reviewing, _or_ the AI surfacing for review.
+
+== It's all in the prompt
+
+image:/images/2026/03/prompt-engineer.webp[Meme using the "father meeting daughter's boyfriend" template. In the first panel, the father shakes the young man's hand saying "My daughter tells me you're a data engineer." The young man replies "Yes, a prompt engineer." In the second panel, the father's expression turns hostile: "You have exactly 10 seconds to get the fuck out of my house."]
 
 [NOTE]
 ====
 This blog post is not about testing different permutations of a prompt.
-I've done that, and am writing about it seperately.
+I've done that, and am writing about it separately.
 This blog post is looking at an approximation of the best effort I could get from Claude.
-There'll always be "_yes, but did you try `$thing`_" and I discuss that below.
+There'll always be "_yes, but did you try `$thing`_" and I discuss that link:#_yes_but[below].
 ====
 
 Let's look a bit more closely at the prompt that I gave Claude to understand what we're giving it to work with.
@@ -764,24 +738,43 @@ My yardstick for this prompt was:
 
 That is, how much does AI help a data engineer _today_ without them having to get into the guts of prompt engineering?
 
+I also tested with a much more minimal prompt:
+
+[source]
+----
+The UK Environment Agency publishes flood monitoring data,
+see https://environment.data.gov.uk/flood-monitoring
+
+Build an idiomatic dbt project following good practices using DuckDB that ingests this data and
+models it for analytics.
+
+Run the project and make sure that it works. If it fails, fix the errors and re-run until it passes.
+----
+
+This didn't do very well beyond the absolute basics, and I'm not covering it in the rest of this article.
+
 == Yes, but…
 
-All of the mistakes and errors that Claude made and which I discuss above, I could of course get Claude to fix.
-This would be an iterative process - Claude builds -> I review -> Claude fixes, etc.
+All of the mistakes and errors that Claude made and which I discuss above, I could, _of course_, get Claude to fix.
+This would be an iterative process: Claude builds -> I review -> Claude fixes, etc.
 
 But…that isn't what I wanted to determine in this article.
-It changes Claude from a means of production into a means of assistance.
+It changes Claude from a means of production into a means of assistance (_which is, BTW, what I conclude in this post that its most effective role is today_).
 It's the difference between giving a junior (or senior!) colleague a piece of work to do and being confident that it will be ready for testing, versus knowing that it will need a lot of checking and reworking.
 
-Another option would be to build the prompt defensively up-front (`make no mistakes`, encode everything I've seen it do here into a better prompt for next time).
+Another option would be to build the prompt defensively up-front (encode everything I've seen it do here into a better prompt for next time, `make no mistakes`, etc).
 The point remains, that _I would have had to do that_.
 The prompt I already gave it was designed to give it enough hints, without having to hold its hand through every step.
 
-Could I create an improved version, based on what it's learnt? sure. but that's not having Claude build it _for_ me is it.
+Could I create an improved version, based on what it's learnt?
+Sure.
+But that's not having Claude build it _for_ me is it.
 It's building it _with me_.
 Which is my whole argument here.
-Claude is an amazing productivity _companion_.
-Do not, if you value your job, use it to one-shot a dbt project though.
+
+TIP: Claude Code is an amazing productivity _companion_.
+
+WARNING: Do not, if you value your job, use it to one-shot a dbt project!
 
 === Prompt tweaking is a mug's game
 
@@ -802,6 +795,7 @@ The best thing about using AI agents to make you more productive is that they ma
 The worst thing about using AI agents to make you more productive is that they make you more productive at _any random stupid idea that pops into your lizard brain_.
 
 Thus, in figuring out what Claude Code could do with dbt, I also stumbled into the worlds of evals, LLM-as-judge, and a whole bunch more.
+Oh, and of course, having Claude Code build a bespoke dashboard to track all of my results :)
 
 image:/images/2026/03/harness-dashboard.webp[Terminal-style dashboard titled "dbt EVAL//DASHBOARD" showing evaluation results for Claude models across different prompts and skills. A popup displays judge variance for one configuration judged by gemini-2.5-pro. The table includes columns for LLM judge scores, pass/fail/warn counts, turns, and cost per run]
 
@@ -811,9 +805,43 @@ For now, the headline:
 
 [TIP]
 ====
-The prompt and the skills matter more than the model.
+*The prompt and the skills matter more than the model.*
 Sonnet 4.5 can produce respectable results given the necessary context.
 Opus 4.6 isn't a silver bullet.
 
 image:/images/2026/03/score-heatmap-by-prompt.webp[Heatmap comparing LLM scores across 9 evaluation criteria and 6 prompt variants, color-coded from red (0) to green (5)]
 ====
+
+== A fantastic productivity booster for data engineers
+
+=== What does even replacing a data engineer with AI mean?
+
+To truly suggest that AI can _replace_ a data engineer you'd be talking about a tool that a business user could tell to build a pipeline and it do it with sufficient quality and robustness that it could be thrown over the wall to a general IT ops team to run.
+
+Perhaps in the same way that business users these days eat Excel sheets for breakfast whereas 40 years ago they'd have a specialist in IT to do that for them.
+
+We're not there with AI yet.
+
+=== `DE + AI > DE`
+
+What agentic coding tools such as Claude Code are doing is making data engineers vastly more _productive_.
+We saw above that it's not going to build the whole pipeline in one go, hands-off.
+And in fact, there are chances it's going to be a drag on productivity to do so because you won't have built up the mental map of what's been built to then be able to verify and troubleshoot it.
+But Claude Code excels at specific tasks, and iteration.
+It can link:#_agentic_coding_in_action[troubleshoot a failing build], as well as link:/2026/03/10/claude-code-/-dbt-example[figure out nuances in the data].
+
+Whilst it does need coaching through some tasks, and reprimanding and correcting, and whilst it does make mistakes…so do humans!
+My experience is that it is shit-hot, and fast as f…erarri the _vast majority of the time_ that the nett gain over just doing it yourself manually by hand is still great.
+
+My mental model for _not_ using Claude Code is currently something like this:
+
+[TIP]
+====
+* An accountant choosing to do their sums by hand, instead of use a calculator
+* An SRE manually logging into AWS to provision a dozen EC2 machines and SSHing into each one individually to install software, instead of using Terraform
+* A programmer using https://xkcd.com/378/[a magnetized needle and a steady hand] to edit a file, instead of a text editor ;)
+====
+
+You don't _have_ to use agentic coding tools…but you're going to get left behind and have to catch up at some point.
+
+NOTE: Oh…and if you honestly think AI is just ChatGPT writing haikus about Linux and other chatbot-esque simplicity…link:/2026/03/06/ai-will-fuck-you-up-if-youre-not-on-board/[*you're maybe missing the point about AI*].

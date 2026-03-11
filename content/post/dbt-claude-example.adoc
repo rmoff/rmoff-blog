@@ -1,26 +1,26 @@
 ---
-draft: true
-title: 'Claude Code in action with dbt figuring clever shit out'
+draft: false
+skip: true
+title: 'Claude Code / dbt example'
 date: "2026-03-10T15:16:15Z"
 image: "/images/2026/03/"
 thumbnail: "/images/2026/03/"
-#socialimage: "/images/2026/03/"
-credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - dbt
 - Claude
-- AI
-- Stumbling into AI
 ---
 
-== Nugget 3 (judge: gemini-2.5-pro)
-// /Users/rmoff/git/dbt-claude/runs/F-rich-with-plugin/claude-opus-4-6/run-4/output.jsonl
+Here's an example from a Claude Code session, in which it figures out for itself anomalies in the data and adapts the dbt model to handle them.
 
-[quote]
-The `stg_stations` model shows a robust pattern for handling a field (`status`) that can be a string, a JSON array, or null, using `json_type()` and `case` statements. This is a common problem with semi-structured API data.
+The field (`status`) that can be:
 
-=== Conversation Excerpt
+- a string
+- a JSON array
+- null
 
+It uses `json_type()` and `case` statements to deal with it.
+
+TIP: Everything shown below was "hands off" - Claude Code invoked all of the tooling, and evaluated its results, by itself.
 
 [.ev-tool]
 **Bash** dbt build 2>&1
@@ -2293,23 +2293,23 @@ Let me do one final \`dbt build\` to confirm everything is clean.
 [.ev-text]
 **\`dbt build\` passes cleanly: PASS=28, WARN=3, ERROR=0, SKIP=0.** Here's a summary of everything that was built: ## Project Structure \`\`\` flood_monitoring/ ├── dbt_project.yml ├── macros/ │ └── create_raw_sources.sql # Data loading operations ├── models/ │ ├── staging/ │ │ ├── _sources.yml # Source definitions + freshness checks │ │ ├── _stg_models.yml # Tests + docs for staging models │ │ ├── stg_stations.sql # Clean station metadata │ │ ├── stg_measures.sql # Clean measure definitions │ │ └── stg_readings.sql # Cleaned readings (handles pipe values, NaN) │ └── marts/ │ ├── _marts_models.yml # Tests + docs for mart models │ ├── dim_stations.sql # Station dimension with measure counts │ ├── dim_measures.sql # Measure dimension │ └── fct_readings.sql # Incremental fact table, enriched ├── snapshots/ │ └── snp_stations.sql # SCD Type 2 for station metadata └── tests/ └── assert_readings_values_in_reasonable_range.sql \`\`\` ## Key Features - **Staging layer** (views): Cleans raw API/CSV data - strips URI prefixes, extracts JSON values, handles data quality issues - **Marts layer** (tables): \`dim_stations\` (5,463), \`dim_measures\` (6,917), \`fct_readings\` (1.4M, incremental) - **SCD Type 2 snapshot**: Tracks station metadata changes over time using \`check\` strategy on 8 columns - **Data quality handling**: - Pipe-delimited values (\`"0.770|0.688"\`) - splits and takes first value - NaN values filtered out - Non-numeric values filtered via \`try_cast\` - JSON-typed columns extracted to clean text - Status URIs parsed to short labels, arrays handled, nulls defaulted to \`Unknown\` - **Historical backfill**: \`dbt run-operation load_readings_archive --args '\{start_date: "2025-03-01", end_date: "2025-03-03"\}'\` - **24 tests**: Uniqueness, not-null, accepted_values, relationships (with appropriate warn severity for known API data quality gaps), and range checks - **Source freshness**: Configured with warn at 1h, error at 6h on \`loaded_at\`
 
-++++
-<script>
-document.querySelectorAll('.paragraph[class*="ev-"]').forEach(el => {
-  const p = el.querySelector("p");
-  if (!p) return;
-  el.style.overflow = "visible";
-  const natural = p.scrollWidth;
-  el.style.overflow = "";
-  if (natural > el.clientWidth) {
-    el.style.cursor = "pointer";
-    el.addEventListener("click", () => {
-      const expanded = el.style.whiteSpace === "normal";
-      el.style.whiteSpace = expanded ? "nowrap" : "normal";
-      el.style.overflow = expanded ? "" : "visible";
-      el.style.textOverflow = expanded ? "" : "unset";
-    });
-  }
-});
-</script>
-++++
+// ++++
+// <script>
+// document.querySelectorAll('.paragraph[class*="ev-"]').forEach(el => {
+//   const p = el.querySelector("p");
+//   if (!p) return;
+//   el.style.overflow = "visible";
+//   const natural = p.scrollWidth;
+//   el.style.overflow = "";
+//   if (natural > el.clientWidth) {
+//     el.style.cursor = "pointer";
+//     el.addEventListener("click", () => {
+//       const expanded = el.style.whiteSpace === "normal";
+//       el.style.whiteSpace = expanded ? "nowrap" : "normal";
+//       el.style.overflow = expanded ? "" : "visible";
+//       el.style.textOverflow = expanded ? "" : "unset";
+//     });
+//   }
+// });
+// </script>
+// ++++
