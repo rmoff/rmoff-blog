@@ -9,7 +9,36 @@ on:
 #     - cron: '0 * * * *'
 
 jobs:
+  check-image:
+    # Check if Docker image needs rebuilding
+    runs-on: ubuntu-latest
+    outputs:
+      image-changed: ${{ steps.changes.outputs.image }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+    - name: Check for Dockerfile changes
+      id: changes
+      run: |
+        if git diff --name-only HEAD~1 HEAD | grep -qE '^(Dockerfile|lib/)'; then
+          echo "image=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "image=false" >> "$GITHUB_OUTPUT"
+        fi
+
+  build-image:
+    needs: [check-image]
+    if: needs.check-image.outputs.image-changed == 'true'
+    uses: ./.github/workflows/docker-image.yml
+    permissions:
+      contents: read
+      packages: write
+
   build-deploy:
+    needs: [check-image, build-image]
+    # Run even if build-image was skipped (no Dockerfile changes)
+    if: ${{ !failure() }}
     runs-on: ubuntu-22.04
     permissions:
       contents: read
