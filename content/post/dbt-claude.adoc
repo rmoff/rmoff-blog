@@ -137,6 +137,68 @@ and writes data successfully to DuckDB:
 └─────────────────────┴───────────────────────────────────────────┴────────┴──────────────┘
 ----
 
+== The prompt
+
+image:/images/2026/03/prompt-engineer.webp[Meme using the "father meeting daughter's boyfriend" template. In the first panel, the father shakes the young man's hand saying "My daughter tells me you're a data engineer." The young man replies "Yes, a prompt engineer." In the second panel, the father's expression turns hostile: "You have exactly 10 seconds to get the fuck out of my house."]
+
+[NOTE]
+====
+This blog post is not about testing different permutations of a prompt.
+I've done that, and am writing about it separately.
+This blog post is looking at an approximation of the best effort I could get from Claude.
+There'll always be "_yes, but did you try `$thing`_" and I discuss that link:#pass:[_yes_but][below].
+====
+
+Let's look a bit more closely at the prompt that I gave Claude to understand what we're giving it to work with.
+
+[source]
+----
+I've explored and built pipelines for the UK Environment Agency flood monitoring API. Here's my analysis: <1>
+
+- Data exploration: https://rmoff.net/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/ <2>
+- Pipeline build: https://rmoff.net/2025/03/20/building-a-data-pipeline-with-duckdb/ <3>
+
+Build a dbt project using DuckDB for this data using idiomatic patterns and good practices. Requirements: <4>
+
+- Proper staging → dim/fact data model  <5>
+- Handle known data quality issues (see blog posts for details)  <5>
+- SCD type 2 snapshots for station metadata  <5>
+- Historical backfill from CSV archives (see https://environment.data.gov.uk/flood-monitoring/archive)  <5>
+- Documentation and tests  <5>
+- Source freshness checks  <5>
+
+Run `dbt build` to verify your work. If it fails, fix the errors and re-run until it passes. <6>
+----
+<1> Background context
+<2> Tell Claude where to go and find out the nitty-gritty detail about the data, its relationships, and its quirks
+<3> Show Claude what I built myself using just SQL and no dbt
+<4> Lay out the requirements.
+<5> Skeleton spec, as one might give to a junior engineer
+<6> "Secret sauce".
+This is where _agentic coding_ kicks in.
+It will literally sit there and fix its own errors.
+
+My yardstick for this prompt was:
+
+> What would a senior data engineer write if they were giving this to someone else to build?
+
+That is, how much does AI help a data engineer _today_ without them having to get into the guts of prompt engineering?
+
+I also tested with a much more minimal prompt:
+
+[source]
+----
+The UK Environment Agency publishes flood monitoring data,
+see https://environment.data.gov.uk/flood-monitoring
+
+Build an idiomatic dbt project following good practices using DuckDB that ingests this data and
+models it for analytics.
+
+Run the project and make sure that it works. If it fails, fix the errors and re-run until it passes.
+----
+
+This didn't do very well beyond the absolute basics, and I'm not covering it in the rest of this article.
+
 == Agentic coding in action
 
 At the heart of using Claude Code rather than a "chat bot" like ChatGPT is the idea of agentic AI.
@@ -675,68 +737,6 @@ check_cols=[
 +
 So if `latitude`/`longitude` are in there, why not `northing`/`easting`?
 As with the `measures` decisions above, these are real data issues that a human should be involved in reviewing, _or_ the AI surfacing for review.
-
-== It's all in the prompt
-
-image:/images/2026/03/prompt-engineer.webp[Meme using the "father meeting daughter's boyfriend" template. In the first panel, the father shakes the young man's hand saying "My daughter tells me you're a data engineer." The young man replies "Yes, a prompt engineer." In the second panel, the father's expression turns hostile: "You have exactly 10 seconds to get the fuck out of my house."]
-
-[NOTE]
-====
-This blog post is not about testing different permutations of a prompt.
-I've done that, and am writing about it separately.
-This blog post is looking at an approximation of the best effort I could get from Claude.
-There'll always be "_yes, but did you try `$thing`_" and I discuss that link:#pass:[_yes_but][below].
-====
-
-Let's look a bit more closely at the prompt that I gave Claude to understand what we're giving it to work with.
-
-[source]
-----
-I've explored and built pipelines for the UK Environment Agency flood monitoring API. Here's my analysis: <1>
-
-- Data exploration: https://rmoff.net/2025/02/28/exploring-uk-environment-agency-data-in-duckdb-and-rill/ <2>
-- Pipeline build: https://rmoff.net/2025/03/20/building-a-data-pipeline-with-duckdb/ <3>
-
-Build a dbt project using DuckDB for this data using idiomatic patterns and good practices. Requirements: <4>
-
-- Proper staging → dim/fact data model  <5>
-- Handle known data quality issues (see blog posts for details)  <5>
-- SCD type 2 snapshots for station metadata  <5>
-- Historical backfill from CSV archives (see https://environment.data.gov.uk/flood-monitoring/archive)  <5>
-- Documentation and tests  <5>
-- Source freshness checks  <5>
-
-Run `dbt build` to verify your work. If it fails, fix the errors and re-run until it passes. <6>
-----
-<1> Background context
-<2> Tell Claude where to go and find out the nitty-gritty detail about the data, its relationships, and its quirks
-<3> Show Claude what I built myself using just SQL and no dbt
-<4> Lay out the requirements.
-<5> Skeleton spec, as one might give to a junior engineer
-<6> "Secret sauce".
-This is where _agentic coding_ kicks in.
-It will literally sit there and fix its own errors.
-
-My yardstick for this prompt was:
-
-> What would a senior data engineer write if they were giving this to someone else to build?
-
-That is, how much does AI help a data engineer _today_ without them having to get into the guts of prompt engineering?
-
-I also tested with a much more minimal prompt:
-
-[source]
-----
-The UK Environment Agency publishes flood monitoring data,
-see https://environment.data.gov.uk/flood-monitoring
-
-Build an idiomatic dbt project following good practices using DuckDB that ingests this data and
-models it for analytics.
-
-Run the project and make sure that it works. If it fails, fix the errors and re-run until it passes.
-----
-
-This didn't do very well beyond the absolute basics, and I'm not covering it in the rest of this article.
 
 == Yes, but…
 
