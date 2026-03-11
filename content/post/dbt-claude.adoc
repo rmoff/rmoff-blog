@@ -13,7 +13,7 @@ categories:
 - Stumbling into AI
 ---
 
-Ten years late (but hopefully not a dollar short) I recently figured out link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/[what all the fuss about dbt is about].
+Ten years late (but hopefully not https://en.wiktionary.org/wiki/a_day_late_and_a_dollar_short[a dollar short]) I recently figured out link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/[what all the fuss about dbt is about].
 
 _Well that's cute, Robin_, you might be saying.
 _Congratulations for catching up on what data/analytics engineers have been doing for years now._
@@ -22,6 +22,8 @@ _Didn't you hear?_
 _AI is going to replace data engineers._
 
 No it's not (at least, not yet).
+In fact, used incorrectly, it'll do a worse job than you!
+But used right, it's a kick-ass tool that any data engineer should be adding to their toolbox _today_ ^link:#srsly[*]^.
 In this article I'll show you why.
 
 <!--more-->
@@ -108,15 +110,15 @@ It compiles and it runs:
 
 [source,bash]
 ----
-12:30:27  1 of 37 START sql table model main.dim_date .................................... [RUN]
-12:30:27  2 of 37 START sql view model main.stg_flood_monitoring__measures ............... [RUN]
-12:30:27  3 of 37 START sql view model main.stg_flood_monitoring__readings ............... [RUN]
-12:30:27  4 of 37 START sql view model main.stg_flood_monitoring__stations ............... [RUN]
+1 of 37 START sql table model main.dim_date .................................... [RUN]
+2 of 37 START sql view model main.stg_flood_monitoring__measures ............... [RUN]
+3 of 37 START sql view model main.stg_flood_monitoring__readings ............... [RUN]
+4 of 37 START sql view model main.stg_flood_monitoring__stations ............... [RUN]
 […]
-12:30:27  37 of 37 PASS unique_station_freshness_station_id .............................. [PASS in 0.01s]
-12:30:27  36 of 37 PASS not_null_station_freshness_station_id ............................ [PASS in 0.01s]
-12:30:27
-12:30:27  Finished running 1 incremental model, 1 snapshot, 4 table models, 26 data tests, 2 unit tests, 3 view models in 0 hours 0 minutes and 0.61 seconds (0.61s).
+37 of 37 PASS unique_station_freshness_station_id .............................. [PASS in 0.01s]
+36 of 37 PASS not_null_station_freshness_station_id ............................ [PASS in 0.01s]
+
+Finished running 1 incremental model, 1 snapshot, 4 table models, 26 data tests, 2 unit tests, 3 view models in 0 hours 0 minutes and 0.61 seconds (0.61s).
 ----
 
 and writes data successfully to DuckDB:
@@ -602,9 +604,12 @@ CAST(CASE WHEN dayofweek(range) IN (0,6) THEN 1 ELSE 0 END AS BOOLEAN)
   AS date_is_weekend
 ----
 
+So, pretty solid work, if the alternative is starting from a blank slate of a dbt project.
+What about the downsides?
+
 === …but not _that_ good
 
-_All you Claude Code-fans out there, hold your horses on the "yes, but…" until the "link:#_yes_but[yes, but]" section below :p_
+_All you Claude Code-fans out there, hold your horses on the "yes, but…" until the "link:#pass:[_yes_but][yes, but]" section below :p_
 
 In link:/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/#_ingest[the version that I built by hand], I pull the raw API data into a DuckDB table https://github.com/rmoff/env-agency-dbt/blob/master/macros/ingestion/load_raw_measures.sql[using a Jinja macro].
 Claude approached it differently, writing a Python script, `load_api_data.py`.
@@ -624,7 +629,7 @@ Easily spotted (the job falls over) and easily fixed (`CREATE OR REPLACE TABLE`)
 > `load_api_data.py` fetches stations with `?_limit=2000`, but the API itself has a maximum response size of 2000 items (it silently caps at that). *The actual total number of stations is ~5,458, so the script only gets 1,493 rows back* (fewer than the limit because the API returns a paginated subset — probably the first page).
 +
 Let that sink in.
-We have a huge whole in our data, that's not evident until we wonder why a ton of our facts are without corresponding dimension entries.
+We have a huge hole in our data, that's not evident until we wonder why a ton of our facts are without corresponding dimension entries.
 +
 image:/images/2026/03/really-tommy-norris.gif[]
 
@@ -635,7 +640,7 @@ If Claude just doesn't build a feature, that's ok because I can add it (or tell 
 But if it confidently builds it and it turns out to be wrong, that's a _trust issue_.
 ====
 
-_Yes, but Robin, you could `<do this thing>`!  -> See link:#_yes_but[yes, but]_ below
+_Yes, but Robin, you could `<do this thing>`!  -> See link:#pass:[_yes_but][yes, but]_ below
 
 Other things that look off from just eyeballing the code include:
 
@@ -704,7 +709,7 @@ image:/images/2026/03/prompt-engineer.webp[Meme using the "father meeting daught
 This blog post is not about testing different permutations of a prompt.
 I've done that, and am writing about it separately.
 This blog post is looking at an approximation of the best effort I could get from Claude.
-There'll always be "_yes, but did you try `$thing`_" and I discuss that link:#_yes_but[below].
+There'll always be "_yes, but did you try `$thing`_" and I discuss that link:#pass:[_yes_but][below].
 ====
 
 Let's look a bit more closely at the prompt that I gave Claude to understand what we're giving it to work with.
@@ -832,11 +837,12 @@ What agentic coding tools such as Claude Code are doing is making data engineers
 We saw above that it's not going to build the whole pipeline in one go, hands-off.
 And in fact, there are chances it's going to be a drag on productivity to do so because you won't have built up the mental map of what's been built to then be able to verify and troubleshoot it.
 But Claude Code excels at specific tasks, and iteration.
-It can link:#_agentic_coding_in_action[troubleshoot a failing build], as well as link:/2026/03/11/claude-code-in-action-with-dbt/[figure out nuances in the data].
+It can link:#pass:[_agentic_coding_in_action][troubleshoot a failing build], as well as link:/2026/03/11/claude-code-in-action-with-dbt/[figure out nuances in the data].
 
 Whilst it does need coaching through some tasks, and reprimanding and correcting, and whilst it does make mistakes…so do humans!
 My experience is that it is shit-hot, and fast as f…erarri the _vast majority of the time_ that the nett gain over just doing it yourself manually by hand is still great.
 
+[[srsly]]
 My mental model for _not_ using Claude Code is currently something like this:
 
 [TIP]
