@@ -2545,6 +2545,11 @@ h4:hover .headline-hash {
   --color-assistant-border: #546E7A;
   --color-thinking-bg: #EAEFF5;
   --color-thinking-border: var(--color-assistant-border);
+  --color-tool-bg: #F0F0F0;
+  --color-tool-border: #999;
+  --color-tool-error-bg: #FFF3F0;
+  --color-tool-error-border: #D32F2F;
+
 }
 
 /* --- Shared conversation block base --- */
@@ -2683,10 +2688,90 @@ details:has(.thinking)::after {
   opacity: 0.5;
 }
 
-/* --- Action lines (italic text between conversation blocks) --- */
-/* These are the "_Claude launches agent..._" lines — they render as
-   <p><em>...</em></p> between the styled blocks. They look fine as-is
-   with the default body styling; no special CSS needed. */
+/* --- Tool action blocks (centered, subtle) --- */
+.sidebarblock.tool-action {
+  position: relative;
+  margin: 0.75rem auto;
+  max-width: 90%;
+  background: var(--color-tool-bg);
+  border-left: none;
+  border-right: none;
+  border-top: 1px solid var(--color-tool-border);
+  border-bottom: 1px solid var(--color-tool-border);
+  padding: 0.5rem 1.25rem;
+  text-align: center;
+}
+
+.sidebarblock.tool-action > .content {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.sidebarblock.tool-action > .content p {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.sidebarblock.tool-action::after {
+  content: "\2699";
+  position: absolute;
+  top: 0.35rem;
+  right: 0.6rem;
+  font-size: 0.7rem;
+  color: var(--color-tool-border);
+  opacity: 0.5;
+}
+
+/* --- Tool result blocks (inside collapsible <details>) --- */
+details:has(.tool-result) {
+  position: relative;
+  margin: 0.25rem 0 1rem 0;
+  background: transparent;
+  border: none;
+}
+
+details:has(.tool-result) > summary {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 0.25rem 1.25rem;
+  cursor: pointer;
+  font-style: italic;
+}
+
+details:has(.tool-result) > .content {
+  padding: 0.25rem 1.25rem 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Tool error blocks (inside collapsible <details>) --- */
+details:has(.tool-error) {
+  position: relative;
+  margin: 0.25rem 0 1rem 0;
+  background: var(--color-tool-error-bg);
+  border-left: 2px solid var(--color-tool-error-border);
+}
+
+details:has(.tool-error) > summary {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-tool-error-border);
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  font-style: italic;
+}
+
+details:has(.tool-error) > .content {
+  padding: 0.25rem 1.25rem 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
 
 /* --- Conversation block mobile adjustments --- */
 @media (max-width: 640px) {
@@ -2727,7 +2812,183 @@ details:has(.thinking)::after {
   details:has(.thinking) > summary {
     font-size: 0.75rem;
   }
+
+  .sidebarblock.tool-action {
+    max-width: 100%;
+    margin: 0.5rem 0;
+  }
 }
+
+/* ==========================================================================
+   Log Event Blocks — .ev-* roles for compact log-style session excerpts
+   Mirrors the dashboard's flat log view: single-line rows, colored borders.
+   Used in blog posts with AsciiDoc paragraphs: [.ev-text], [.ev-tool], etc.
+   ========================================================================== */
+
+/* --- Shared base for all ev-* blocks --- */
+.ev-text,
+.ev-user,
+.ev-tool,
+.ev-result,
+.ev-error,
+.ev-thinking,
+.ev-system {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 0.15rem 0.75rem;
+  margin: 0;
+  border-left: 3px solid transparent;
+  background: #1a1d23;
+  color: #c8c8c8;
+}
+
+/* --- Per-type overrides --- */
+.ev-text {
+  border-left-color: #8bc38b;
+  color: #8bc38b;
+}
+
+.ev-user {
+  border-left-color: #b8a0d8;
+  color: #b8a0d8;
+}
+
+.ev-tool {
+  border-left-color: #5cbcbc;
+  color: #c8c8c8;
+}
+
+.ev-tool strong {
+  color: #5cbcbc;
+}
+
+.ev-result {
+  border-left-color: #c8b860;
+  color: #909090;
+}
+
+.ev-error {
+  border-left-color: #e05050;
+  color: #e05050;
+}
+
+.ev-thinking {
+  border-left-color: #7890a0;
+  font-style: italic;
+  color: #7890a0;
+}
+
+.ev-system {
+  border-left-color: #d0a050;
+  color: #d0a050;
+  font-style: italic;
+}
+
+/* Link color inside ev blocks */
+[class*="ev-"] a {
+  color: inherit;
+}
+
+/* Override inline code styling inside ev blocks */
+[class*="ev-"] code {
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border: none;
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+/* Kill inner <p> margin so rows stack tight */
+[class*="ev-"] > p {
+  margin: 0 !important;
+  padding: 0;
+}
+
+/* Listing/literal/example blocks with ev-* classes: reset inner pre/code */
+/* !important needed to override default pre{} and Rouge inline styles */
+.listingblock[class*="ev-"] pre,
+.literalblock[class*="ev-"] pre,
+.exampleblock[class*="ev-"] pre {
+  background: inherit !important;
+  color: inherit !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre-wrap;
+}
+
+.listingblock[class*="ev-"] > .content,
+.literalblock[class*="ev-"] > .content,
+.exampleblock[class*="ev-"] > .content {
+  padding: 0;
+  margin: 0;
+}
+
+/* Reset Rouge syntax spans inside ev-* blocks */
+.listingblock[class*="ev-"] pre span,
+.exampleblock[class*="ev-"] pre span {
+  background: none !important;
+  color: inherit !important;
+}
+
+/* ev-detail on non-<details> blocks (listingblock, exampleblock) */
+.listingblock.ev-detail,
+.exampleblock.ev-detail {
+  background: #12141a;
+  border-left: 3px solid #3a5555;
+  margin: 0;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  padding: 0.2rem 0.75rem;
+  color: #a0a8b0;
+}
+
+/* --- Dark collapsible detail blocks (file contents, diffs) --- */
+details.ev-detail {
+  margin: 0;
+  background: #12141a;
+  border-left: 3px solid #3a5555;
+}
+
+details.ev-detail > summary {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  color: #5cbcbc;
+  padding: 0.1rem 0.75rem;
+  cursor: pointer;
+}
+
+details.ev-detail > .content {
+  padding: 0 0.5rem 0.2rem;
+}
+
+details.ev-detail .listingblock {
+  margin: 0;
+}
+
+details.ev-detail pre {
+  background: #12141a !important;
+  color: #a0a8b0 !important;
+  font-size: 0.75rem !important;
+  padding: 0.2rem 0.75rem !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+}
+
+details.ev-detail pre code,
+details.ev-detail pre span {
+  background: none !important;
+  border: none;
+  padding: 0;
+}
+
 
 /* ==========================================================================
    Interesting Links — Filter & Collapse UI

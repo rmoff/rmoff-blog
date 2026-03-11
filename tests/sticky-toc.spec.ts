@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:1314';
+const BASE_URL = 'http://localhost:1313';
 const ARTICLE_URL = '/2026/01/14/alternatives-to-minio-for-single-node-local-s3/';
 
 test.describe('Sticky ToC', () => {

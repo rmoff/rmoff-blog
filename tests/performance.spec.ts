@@ -5,13 +5,13 @@ test.describe('Page Load - Homepage', () => {
     await page.goto('http://localhost:1313/');
 
     // Header elements visible
-    await expect(page.locator('.glass-header')).toBeVisible();
-    await expect(page.locator('.headshot')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeVisible();
+    await expect(page.locator('img[src*="headshot"]')).toBeVisible();
 
-    // Blog post cards visible
-    const cards = page.locator('.retro-card');
-    await expect(cards.first()).toBeVisible();
-    expect(await cards.count()).toBeGreaterThan(0);
+    // Blog post rows visible
+    const posts = page.locator('.post-row');
+    await expect(posts.first()).toBeVisible();
+    expect(await posts.count()).toBeGreaterThan(0);
   });
 
   test('homepage fonts render correctly', async ({ page }) => {
@@ -20,8 +20,8 @@ test.describe('Page Load - Homepage', () => {
     // Wait for fonts to load
     await page.waitForLoadState('networkidle');
 
-    // Check that terminal title is visible
-    const title = page.locator('.terminal-title-header');
+    // Check that site title is visible
+    const title = page.locator('.site-title');
     await expect(title).toBeVisible();
     await expect(title).toContainText('rmoff');
   });
@@ -30,7 +30,7 @@ test.describe('Page Load - Homepage', () => {
     await page.goto('http://localhost:1313/');
 
     // Social icons should be visible
-    const icons = page.locator('.header-icons .icon-link');
+    const icons = page.locator('.nav-social a');
     expect(await icons.count()).toBeGreaterThan(3);
   });
 });
@@ -39,16 +39,16 @@ test.describe('Page Load - Article Page', () => {
   test('article page loads correctly', async ({ page }) => {
     // Navigate to an article from homepage
     await page.goto('http://localhost:1313/');
-    const firstCard = page.locator('.retro-card a').first();
-    const href = await firstCard.getAttribute('href');
+    const firstLink = page.locator('.post-row .post-title-link').first();
+    const href = await firstLink.getAttribute('href');
 
     await page.goto(href!);
 
     // Article title should be visible
-    await expect(page.locator('.title-box h1')).toBeVisible();
+    await expect(page.locator('.article-hero-content h1')).toBeVisible();
 
     // Navigation should be visible
-    await expect(page.locator('.glass-nav')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeVisible();
   });
 
   test('TOC appears on right side on wide viewport', async ({ page }) => {
@@ -77,8 +77,8 @@ test.describe('Page Load - Article Page', () => {
 
   test('article page has readable content', async ({ page }) => {
     await page.goto('http://localhost:1313/');
-    const firstCard = page.locator('.retro-card a').first();
-    const href = await firstCard.getAttribute('href');
+    const firstLink = page.locator('.post-row .post-title-link').first();
+    const href = await firstLink.getAttribute('href');
 
     await page.goto(href!);
 
@@ -93,8 +93,8 @@ test.describe('Page Load - Article Page', () => {
 
   test('article page footer visible', async ({ page }) => {
     await page.goto('http://localhost:1313/');
-    const firstCard = page.locator('.retro-card a').first();
-    const href = await firstCard.getAttribute('href');
+    const firstLink = page.locator('.post-row .post-title-link').first();
+    const href = await firstLink.getAttribute('href');
 
     await page.goto(href!);
 
@@ -116,9 +116,9 @@ test.describe('Page Load - Category Page', () => {
     // Go directly to a known category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should have compact article cards
-    const cards = page.locator('.compact-card');
-    await expect(cards.first()).toBeVisible({ timeout: 5000 });
+    // Should have post rows
+    const posts = page.locator('.post-row');
+    await expect(posts.first()).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -143,18 +143,19 @@ test.describe('Navigation Consistency', () => {
   test('can navigate from homepage to article and back', async ({ page }) => {
     await page.goto('http://localhost:1313/');
 
-    // Click an article using the overlay link
-    const firstCard = page.locator('.retro-card .retro-card-overlay-link').first();
-    await firstCard.click();
+    // Click an article title link
+    const firstLink = page.locator('.post-row .post-title-link').first();
+    await firstLink.click();
 
     // Should be on article page
-    await expect(page.locator('.glass-nav')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeVisible();
 
     // Click home logo
-    await page.locator('.glass-nav a[title="Home"]').click();
+    await page.locator('a.site-title').click();
 
     // Should be back on homepage
-    await expect(page.locator('.glass-header')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeVisible();
+    await expect(page.locator('.post-row').first()).toBeVisible();
   });
 
   test('can navigate from homepage to category', async ({ page }) => {
@@ -163,8 +164,8 @@ test.describe('Navigation Consistency', () => {
     // Navigate directly to categories page then to a specific category
     await page.goto('http://localhost:1313/categories/kafka/');
 
-    // Should show category page with compact article cards
-    await expect(page.locator('.compact-card').first()).toBeVisible({ timeout: 5000 });
+    // Should show category page with post rows
+    await expect(page.locator('.post-row').first()).toBeVisible({ timeout: 5000 });
   });
 });
 
