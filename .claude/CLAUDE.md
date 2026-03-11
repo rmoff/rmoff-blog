@@ -25,6 +25,15 @@ docker run --rm -it \
 
 For background/detached mode, add `-d` flag and `--name hugo-server`.
 
+### CSS Changes
+Hugo fingerprints CSS via `resources.Get | fingerprint` in `layouts/_default/baseof.html`. The fingerprinted CSS file is cached and **does not update on live reload**. After any CSS edit, you must **stop and restart** the Hugo Docker container to regenerate the fingerprinted file, then hard-refresh the browser:
+
+```bash
+docker stop hugo-server && docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 ghcr.io/rmoff/rmoff-blog:0.152.2 server --bind 0.0.0.0
+```
+
+`docker restart` alone is NOT sufficient — the container must be fully stopped and started fresh.
+
 ### Validation
 **MANDATORY:** For any website changes (layouts, templates, CSS, JavaScript, configuration, etc.) other than new articles, you MUST run Playwright tests to validate the changes before considering the work complete. Run tests to verify visual and functional changes work correctly.
 
