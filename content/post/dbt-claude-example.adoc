@@ -22,6 +22,8 @@ It uses `json_type()` and `case` statements to deal with it.
 
 TIP: Everything shown below was "hands off" - Claude Code invoked all of the tooling, and evaluated its results, by itself.
 
+== Run the build
+
 [.ev-tool]
 **Bash** dbt build 2>&1
 
@@ -152,8 +154,12 @@ parsing.
 ----
 ====
 
+== Diagnose the failure
+
 [.ev-text]
 Good progress! Models compile and run. There are 5 test failures to fix. Let me investigate each: 1. **accepted_values for status** - there are additional status values beyond Active/Closed/Suspended 2. **not_null for lat/long** - 631 stations have null coordinates (real data quality issue) 3. **relationships stg_measures→stg_stations** - 90 measures reference stations not in the stations table 4. **readings values range** - 1880 readings outside my range assumptions Let me investigate these.
+
+== Query DuckDB to look at the data
 
 [.ev-tool]
 **Bash** python3 -c "
@@ -271,6 +277,8 @@ Now I understand the real data quality issues: 1. **Status values**: Status is s
 
 [.ev-text]
 Now I understand the real issues. Let me fix them: 1. **Status** has quotes and is sometimes a URI, an array, or null - I need better parsing 2. **Lat/long nulls** - real data issue, change test to warn 3. **Orphan measures** - real data issue, change test to warn 4. **NaN values** in readings - need to filter those out in staging
+
+== Further DuckDB queries to understand `status` values
 
 [.ev-tool]
 **Bash** python3 -c "
@@ -393,6 +401,8 @@ con.close()
   ('E85123', '["http://environment.data.gov.uk/flood-monitoring/def/core/statusActive","http://environment.data.gov.uk/flood-monitoring/def/core/statusSuspended"]', 'JSON')
 ----
 ====
+
+== Fix the staging models
 
 [.ev-text]
 Now I understand the data fully. Let me fix the staging models and tests.
@@ -673,6 +683,8 @@ x <tool_use_error>File has not been read yet. Read it first before writing to it
 [.ev-result]
 ← The file /workspace/flood_monitoring/models/staging/stg_readings.sql has been updated successfully.
 
+== Update the tests
+
 [.ev-text]
 Now update the tests to be realistic about the data quality.
 
@@ -781,6 +793,8 @@ models:
 
 [.ev-result]
 ← The file /workspace/flood_monitoring/models/staging/_stg_models.yml has been updated successfully.
+
+== Fix the range tests
 
 [.ev-text]
 Now update the range test - the values with -99 are likely sentinel values. Let me also widen the flow range and make it a warn.
@@ -1025,6 +1039,8 @@ models:
 [.ev-result]
 ← The file /workspace/flood_monitoring/models/marts/_marts_models.yml has been updated successfully.
 
+== Run the build again
+
 [.ev-text]
 Now let me do a full rebuild. I need to drop and recreate the fct_readings since it's incremental and we changed the schema.
 
@@ -1152,6 +1168,8 @@ Exit code 1
 [.ev-text]
 Down to 1 error - the accepted_values test for station status. There are still 4 unexpected status values. Let me check what they are.
 
+== Check the data for further `status` issues
+
 [.ev-tool]
 **Bash** python3 -c "
 
@@ -1270,6 +1288,8 @@ The issue is the JSON values still have trailing double-quotes. The status field
     56→
 ----
 ====
+
+== Iterate on the `status` fix
 
 [.ev-text]
 The problem is that \`cast(status as varchar)\` returns \`"http://...statusActive"\` with quotes because it's a JSON type. I need to use \`->>\` to extract as text.
@@ -1438,6 +1458,8 @@ The problem is that \`cast(status as varchar)\` returns \`"http://...statusActiv
 [.ev-result]
 ← Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
 
+== Final data check
+
 [.ev-text]
 Let me verify the final state of the project and data.
 
@@ -1526,6 +1548,8 @@ con.close()
   ('52119', '"Gaw Bridge"', 'Active', datetime.datetime(2026, 3, 9, 14, 6, 19, 719023), None)
 ----
 ====
+
+== Spotting its own errors and fixing them
 
 [.ev-text]
 I notice the station names still have JSON quotes. Let me fix that in the staging model as well. The \`label\`, \`town\`, \`riverName\`, \`catchmentName\` are also JSON strings.
@@ -1768,6 +1792,8 @@ Measure types:
 [.ev-text]
 Good, measures columns are all VARCHAR or BIGINT already - no JSON types to worry about. Let me rebuild.
 
+== Rebuild
+
 [.ev-tool]
 **Bash** dbt build --full-refresh 2>&1
 
@@ -1891,6 +1917,8 @@ Exit code 1
 14:07:53  Done. PASS=27 WARN=3 ERROR=1 SKIP=0 NO-OP=0 TOTAL=31
 ----
 ====
+
+== Diagnose and fix problem
 
 [.ev-text]
 The snapshot is failing because it's comparing the existing snapshot (which has JSON-quoted catchment_name) to the new data (which has unquoted catchment_name via \`->>\` extraction). The existing snapshot table has stale JSON data. I need to drop the snapshot table and let it recreate cleanly.
@@ -2021,6 +2049,8 @@ con.close()
 ----
 ====
 
+== Sample the data produced by dbt, make sure it looks right
+
 [.ev-text]
 **\`dbt build\` passes: PASS=28, WARN=3, ERROR=0, SKIP=0.** All 6 models, 1 snapshot, and 24 tests run successfully. Let me do a final verification of the data quality and clean output.
 
@@ -2113,6 +2143,8 @@ snp_stations: 5,463 snapshot rows
   ('52119', 'Gaw Bridge', 'Active', datetime.datetime(2026, 3, 9, 14, 8, 17, 324882), None)
 ----
 ====
+
+== Cleanup
 
 [.ev-text]
 All the data looks clean now (no JSON quotes in station names). Let me also clean up the backup table that dbt created.
@@ -2286,30 +2318,3 @@ Let me do one final \`dbt build\` to confirm everything is clean.
 14:09:16  Done. PASS=28 WARN=3 ERROR=0 SKIP=0 NO-OP=0 TOTAL=31
 ----
 ====
-
-[.ev-text]
-**\`dbt build\` passes cleanly: PASS=28, WARN=3, ERROR=0, SKIP=0.** Here's a summary of everything that was built: ## Project Structure \`\`\` flood_monitoring/ ├── dbt_project.yml ├── macros/ │ └── create_raw_sources.sql # Data loading operations ├── models/ │ ├── staging/ │ │ ├── _sources.yml # Source definitions + freshness checks │ │ ├── _stg_models.yml # Tests + docs for staging models │ │ ├── stg_stations.sql # Clean station metadata │ │ ├── stg_measures.sql # Clean measure definitions │ │ └── stg_readings.sql # Cleaned readings (handles pipe values, NaN) │ └── marts/ │ ├── _marts_models.yml # Tests + docs for mart models │ ├── dim_stations.sql # Station dimension with measure counts │ ├── dim_measures.sql # Measure dimension │ └── fct_readings.sql # Incremental fact table, enriched ├── snapshots/ │ └── snp_stations.sql # SCD Type 2 for station metadata └── tests/ └── assert_readings_values_in_reasonable_range.sql \`\`\` ## Key Features - **Staging layer** (views): Cleans raw API/CSV data - strips URI prefixes, extracts JSON values, handles data quality issues - **Marts layer** (tables): \`dim_stations\` (5,463), \`dim_measures\` (6,917), \`fct_readings\` (1.4M, incremental) - **SCD Type 2 snapshot**: Tracks station metadata changes over time using \`check\` strategy on 8 columns - **Data quality handling**: - Pipe-delimited values (\`"0.770|0.688"\`) - splits and takes first value - NaN values filtered out - Non-numeric values filtered via \`try_cast\` - JSON-typed columns extracted to clean text - Status URIs parsed to short labels, arrays handled, nulls defaulted to \`Unknown\` - **Historical backfill**: \`dbt run-operation load_readings_archive --args '\{start_date: "2025-03-01", end_date: "2025-03-03"\}'\` - **24 tests**: Uniqueness, not-null, accepted_values, relationships (with appropriate warn severity for known API data quality gaps), and range checks - **Source freshness**: Configured with warn at 1h, error at 6h on \`loaded_at\`
-
-[.ev-text]
-**\`dbt build\` passes cleanly: PASS=28, WARN=3, ERROR=0, SKIP=0.** Here's a summary of everything that was built: ## Project Structure \`\`\` flood_monitoring/ ├── dbt_project.yml ├── macros/ │ └── create_raw_sources.sql # Data loading operations ├── models/ │ ├── staging/ │ │ ├── _sources.yml # Source definitions + freshness checks │ │ ├── _stg_models.yml # Tests + docs for staging models │ │ ├── stg_stations.sql # Clean station metadata │ │ ├── stg_measures.sql # Clean measure definitions │ │ └── stg_readings.sql # Cleaned readings (handles pipe values, NaN) │ └── marts/ │ ├── _marts_models.yml # Tests + docs for mart models │ ├── dim_stations.sql # Station dimension with measure counts │ ├── dim_measures.sql # Measure dimension │ └── fct_readings.sql # Incremental fact table, enriched ├── snapshots/ │ └── snp_stations.sql # SCD Type 2 for station metadata └── tests/ └── assert_readings_values_in_reasonable_range.sql \`\`\` ## Key Features - **Staging layer** (views): Cleans raw API/CSV data - strips URI prefixes, extracts JSON values, handles data quality issues - **Marts layer** (tables): \`dim_stations\` (5,463), \`dim_measures\` (6,917), \`fct_readings\` (1.4M, incremental) - **SCD Type 2 snapshot**: Tracks station metadata changes over time using \`check\` strategy on 8 columns - **Data quality handling**: - Pipe-delimited values (\`"0.770|0.688"\`) - splits and takes first value - NaN values filtered out - Non-numeric values filtered via \`try_cast\` - JSON-typed columns extracted to clean text - Status URIs parsed to short labels, arrays handled, nulls defaulted to \`Unknown\` - **Historical backfill**: \`dbt run-operation load_readings_archive --args '\{start_date: "2025-03-01", end_date: "2025-03-03"\}'\` - **24 tests**: Uniqueness, not-null, accepted_values, relationships (with appropriate warn severity for known API data quality gaps), and range checks - **Source freshness**: Configured with warn at 1h, error at 6h on \`loaded_at\`
-
-// ++++
-// <script>
-// document.querySelectorAll('.paragraph[class*="ev-"]').forEach(el => {
-//   const p = el.querySelector("p");
-//   if (!p) return;
-//   el.style.overflow = "visible";
-//   const natural = p.scrollWidth;
-//   el.style.overflow = "";
-//   if (natural > el.clientWidth) {
-//     el.style.cursor = "pointer";
-//     el.addEventListener("click", () => {
-//       const expanded = el.style.whiteSpace === "normal";
-//       el.style.whiteSpace = expanded ? "nowrap" : "normal";
-//       el.style.overflow = expanded ? "" : "visible";
-//       el.style.textOverflow = expanded ? "" : "unset";
-//     });
-//   }
-// });
-// </script>
-// ++++

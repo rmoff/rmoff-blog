@@ -1,0 +1,95 @@
+= Blog Scripts
+:toc:
+
+Utility scripts for rmoff.net blog content.
+
+== Claude Code Session Scripts
+
+Two scripts for converting Claude Code JSONL session logs into AsciiDoc blog content.
+They serve different purposes and produce different output formats.
+
+=== jsonl-to-adoc.py — Execution log viewer
+
+Converts a single Claude Code `output.jsonl` into a compact, color-coded execution
+log using `[.ev-*]` CSS classes. Shows every tool call, result, thinking block,
+and text output as dense single-line rows with click-to-expand.
+
+[source,bash]
+----
+# From a run directory (auto-finds output.jsonl and summary.json)
+python3 scripts/jsonl-to-adoc.py ~/git/dbt-claude/runs/D-rich-with-skills/claude-opus-4-6/run-1/
+
+# From a specific JSONL file, write to file
+python3 scripts/jsonl-to-adoc.py /path/to/output.jsonl -o post.adoc
+
+# Skip Hugo front matter (just the log content)
+python3 scripts/jsonl-to-adoc.py /path/to/output.jsonl --no-frontmatter
+----
+
+*Output format:* Flat stream of `[.ev-tool]`, `[.ev-result]`, `[.ev-text]`,
+`[.ev-thinking]`, `[.ev-error]`, `[.ev-user]`, `[.ev-system]` paragraphs.
+Write/Edit tool calls include collapsible `[.ev-detail]` blocks with full file
+contents and diffs. Requires the `ev-*` CSS rules in `static/css/redesign.css`.
+
+*Features:*
+
+- Full content preserved (no truncation) -- CSS handles visual overflow
+- AsciiDoc inline formatting escaped (backticks, curly braces) to prevent rendering artifacts
+- Hugo front matter with model, cost, duration, turns from `summary.json`
+- Language-aware syntax highlighting in Write blocks (sql, yaml, python, etc.)
+- Inline click-to-expand `<script>` for overflowing rows
+
+=== extract_chat_log.py — Conversation transcript
+
+Converts one or more Claude Code session JSONL files into a narrative conversation
+format with human/assistant blocks. Reads like a chat transcript rather than a
+terminal log.
+
+[source,bash]
+----
+# Process all sessions in a project directory (hardcoded path)
+python3 scripts/extract_chat_log.py > chat_log.adoc
+----
+
+NOTE: The sessions directory is hardcoded to `~/.claude/projects/-Users-rmoff-git-env-agency-dbt`.
+Edit `SESSIONS_DIR` at the top of the script to point at a different project.
+
+*Output format:* `[.human]` and `[.assistant]` sidebar blocks with collapsible
+thinking sections. Tool uses are summarised as italicised action lines
+(e.g., _Claude reads `models.yml`, edits `schema.yml`_). Consecutive tool-only
+turns are merged into a single action line.
+
+*Differences from jsonl-to-adoc.py:*
+
+- Processes multiple sessions, sorted chronologically
+- Conversation-oriented (human said X, Claude replied Y)
+- Tool results truncated to 200 chars or hidden entirely
+- Thinking truncated at 2000 chars
+- Write/Edit file contents not included
+- No Hugo front matter or click-to-expand behaviour
+
+== Cross-posting
+
+=== devto_post.py
+
+Cross-posts blog articles to https://dev.to[dev.to] via their API. Handles both
+Markdown and AsciiDoc posts (converts AsciiDoc to Markdown via pandoc).
+
+[source,bash]
+----
+python3 scripts/devto_post.py content/post/my-article.adoc
+----
+
+Requires: `requests`, `pyyaml`, pandoc (external), `DEV_TO_API_KEY` env var.
+
+== Migration (historical)
+
+=== wordpress-to-hugo.py
+
+One-time migration of WordPress.com REST API JSON exports to Hugo Markdown posts
+with WebP images organised by date.
+
+=== recover-wayback-images.py
+
+Recovers broken blogspot-hosted images from the Wayback Machine, downloads them,
+converts to WebP, and updates Markdown references.
