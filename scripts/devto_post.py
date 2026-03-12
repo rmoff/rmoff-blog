@@ -3,7 +3,7 @@
 
 The content is pushed directly via the API (not RSS import), so:
   - .md files: raw Markdown body sent as-is (no conversion, no whitespace risk)
-  - .adoc files: pandoc converts AsciiDoc→Markdown at AST level (not HTML→Markdown)
+  - .adoc files: asciidoctor converts AsciiDoc→DocBook, then pandoc converts DocBook→Markdown
 
 Usage:
     # Post specific files (e.g. backfill)
@@ -17,7 +17,7 @@ Usage:
 
 Requires:
     DEVTO_API_KEY environment variable
-    pandoc installed (for .adoc files)
+    asciidoctor and pandoc installed (for .adoc files)
     pip install requests pyyaml
     Python 3.11+ (for tomllib) or pip install tomli
 """
@@ -94,21 +94,43 @@ def parse_frontmatter(fm_str: str, fmt: str) -> dict:
 
 
 def convert_adoc_to_markdown(body: str) -> str:
-    """Convert AsciiDoc body to Markdown using pandoc (AST-level, not via HTML)."""
-    result = subprocess.run(
-        [
-            "pandoc",
-            "-f", "asciidoc",
-            "-t", "markdown+fenced_code_blocks+pipe_tables",
-            "--wrap=none",
-        ],
+    """Convert AsciiDoc body to Markdown via asciidoctor (DocBook) then pandoc."""
+    # Step 1: AsciiDoc → DocBook using asciidoctor
+    adoc_result = subprocess.run(
+        ["asciidoctor", "-b", "docbook", "-o", "-", "-"],
         input=body,
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0:
-        raise RuntimeError(f"pandoc failed: {result.stderr}")
-    return clean_pandoc_markdown(result.stdout)
+    if adoc_result.returncode != 0:
+        raise RuntimeError(f"asciidoctor failed: {adoc_result.stderr}")
+
+    # Fix invalid XML: asciidoctor puts alt text with unescaped quotes into
+    # contentwidth/contentdepth attributes, producing invalid DocBook XML.
+    # Strip these attributes from <imagedata> tags since they're not needed
+    # for Markdown conversion. We rebuild each tag keeping only fileref.
+    def fix_imagedata(m):
+        tag = m.group(0)
+        fileref = re.search(r'fileref="([^"]*)"', tag)
+        ref = fileref.group(0) if fileref else ''
+        return f'<imagedata {ref}/>'
+    docbook = re.sub(r'<imagedata [^>]*/?>', fix_imagedata, adoc_result.stdout)
+
+    # Step 2: DocBook → Markdown using pandoc
+    pandoc_result = subprocess.run(
+        [
+            "pandoc",
+            "-f", "docbook",
+            "-t", "markdown+fenced_code_blocks+pipe_tables",
+            "--wrap=none",
+        ],
+        input=docbook,
+        capture_output=True,
+        text=True,
+    )
+    if pandoc_result.returncode != 0:
+        raise RuntimeError(f"pandoc failed: {pandoc_result.stderr}")
+    return clean_pandoc_markdown(pandoc_result.stdout)
 
 
 def clean_pandoc_markdown(md: str) -> str:
