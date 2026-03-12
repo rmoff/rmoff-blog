@@ -8,17 +8,12 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
-      packages: read
       deployments: write
     steps:
     - uses: actions/checkout@v3
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build Docker image
+      run: docker build -t rmoff-blog:local .
 
     - name: Build reveal.js presentations (requires local asciidoctor)
       run: |
@@ -31,7 +26,7 @@ jobs:
       run: |
         docker run --rm \
           -v $(pwd):/src \
-          ghcr.io/${{ github.repository }}:0.152.2 \
+          rmoff-blog:local \
           --baseURL https://preview.rmoff.net/ --destination public
 
     - name: Build Pagefind search index

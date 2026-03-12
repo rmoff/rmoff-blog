@@ -9,23 +9,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Ruby Dev                     
-      run: sudo apt-get install ruby-dev
-
-    - name: Install AsciiDoctor
-      run: sudo gem install asciidoctor
-      
-    - name: Install Rouge
-      run: sudo gem install rouge -v 3.30.0
-
-    - name: Setup Hugo                           
-      uses: peaceiris/actions-hugo@v2
-      with:
-        hugo-version: '0.152.2'
-        extended: true
+    - name: Build Docker image
+      run: docker build -t rmoff-blog:local .
 
     - name: Build
-      run: hugo --buildFuture --destination public
+      run: |
+        docker run --rm \
+          -v $(pwd):/src \
+          rmoff-blog:local \
+          --buildFuture --destination public
 
     - name: Build Pagefind search index
       run: npx pagefind --site public
@@ -48,4 +40,4 @@ jobs:
         else
           echo "No real bad links found (all detected issues were JS string concatenation false positives)"
         fi
-        
+

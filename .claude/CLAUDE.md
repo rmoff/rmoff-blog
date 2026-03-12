@@ -14,25 +14,16 @@ This blog contains **both AsciiDoc (`.adoc`) and Markdown (`.md`) files**. When 
 ## Development Environment
 
 ### Hugo Server
-Always use Docker to run Hugo:
-```bash
-docker run --rm -it \
-  -v $(pwd):/src \
-  -p 1313:1313 \
-  ghcr.io/rmoff/rmoff-blog:0.152.2 \
-  server --bind 0.0.0.0
-```
+Always use `./serve.sh` to run Hugo locally. It builds the Docker image from the Dockerfile and starts the dev server. Use `./serve.sh 1314` for a different port (e.g. in worktrees).
 
-For background/detached mode, add `-d` flag and `--name hugo-server`.
+For background/detached mode, build and run manually:
+```bash
+docker build -t rmoff-blog:local .
+docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 rmoff-blog:local server --bind 0.0.0.0
+```
 
 ### CSS Changes
-Hugo fingerprints CSS via `resources.Get | fingerprint` in `layouts/_default/baseof.html`. The fingerprinted CSS file is cached and **does not update on live reload**. After any CSS edit, you must **stop and restart** the Hugo Docker container to regenerate the fingerprinted file, then hard-refresh the browser:
-
-```bash
-docker stop hugo-server && docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 ghcr.io/rmoff/rmoff-blog:0.152.2 server --bind 0.0.0.0
-```
-
-`docker restart` alone is NOT sufficient — the container must be fully stopped and started fresh.
+Hugo fingerprints CSS via `resources.Get | fingerprint` in `layouts/_default/baseof.html`. The fingerprinted CSS file is cached and **does not update on live reload**. After any CSS edit, you must **stop and restart** the Hugo Docker container to regenerate the fingerprinted file, then hard-refresh the browser. `docker restart` alone is NOT sufficient — the container must be fully stopped and started fresh.
 
 ### Validation
 **MANDATORY:** For any website changes (layouts, templates, CSS, JavaScript, configuration, etc.) other than new articles, you MUST run Playwright tests to validate the changes before considering the work complete. Run tests to verify visual and functional changes work correctly.
@@ -47,6 +38,6 @@ When asked to proofread or review a blog post:
 ## CI/CD Changes
 
 When adding or modifying build steps in GitHub Actions workflows:
-1. Check ALL workflow files in `.github/workflows/` 
+1. Check ALL workflow files in `.github/workflows/`
 2. Identify which workflows build/deploy the site (e.g., production AND preview deployments)
 3. Apply the change consistently to all relevant workflows
