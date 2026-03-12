@@ -1,4 +1,4 @@
-FROM hugomods/hugo:0.152.2
+FROM hugomods/hugo:0.157.0
 
 # Install Ruby and AsciiDoctor
 RUN apk add --no-cache \

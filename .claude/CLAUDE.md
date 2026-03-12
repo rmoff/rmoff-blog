@@ -19,7 +19,7 @@ Always use Docker to run Hugo:
 docker run --rm -it \
   -v $(pwd):/src \
   -p 1313:1313 \
-  ghcr.io/rmoff/rmoff-blog:0.152.2 \
+  ghcr.io/rmoff/rmoff-blog:0.157.0 \
   server --bind 0.0.0.0
 ```
 
@@ -29,7 +29,7 @@ For background/detached mode, add `-d` flag and `--name hugo-server`.
 Hugo fingerprints CSS via `resources.Get | fingerprint` in `layouts/_default/baseof.html`. The fingerprinted CSS file is cached and **does not update on live reload**. After any CSS edit, you must **stop and restart** the Hugo Docker container to regenerate the fingerprinted file, then hard-refresh the browser:
 
 ```bash
-docker stop hugo-server && docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 ghcr.io/rmoff/rmoff-blog:0.152.2 server --bind 0.0.0.0
+docker stop hugo-server && docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 ghcr.io/rmoff/rmoff-blog:0.157.0 server --bind 0.0.0.0
 ```
 
 `docker restart` alone is NOT sufficient — the container must be fully stopped and started fresh.

@@ -9,7 +9,7 @@ This is the source for [rmoff.net](https://rmoff.net), built using Hugo and host
 docker run --rm -it \
   -v $(pwd):/src \
   -p 1313:1313 \
-  ghcr.io/rmoff/rmoff-blog:0.152.2 \
+  ghcr.io/rmoff/rmoff-blog:0.157.0 \
   server --bind 0.0.0.0
 ```
 
@@ -17,7 +17,7 @@ Then visit: http://localhost:1313
 
 ## Tech Stack
 
-- **Hugo**: 0.152.2 (static site generator)
+- **Hugo**: 0.157.0 (static site generator)
 - **Content**: Markdown and AsciiDoc
 - **Presentations**: Reveal.js (built from AsciiDoc)
 - **Theme**: Story (customized, unmaintained)
@@ -31,13 +31,13 @@ Then visit: http://localhost:1313
 All environments (local, preview, production) use the same Docker image for consistency:
 
 ```
-Local Dev:    ghcr.io/rmoff/rmoff-blog:0.152.2
-PR Previews:  ghcr.io/rmoff/rmoff-blog:0.152.2
-Production:   ghcr.io/rmoff/rmoff-blog:0.152.2
+Local Dev:    ghcr.io/rmoff/rmoff-blog:0.157.0
+PR Previews:  ghcr.io/rmoff/rmoff-blog:0.157.0
+Production:   ghcr.io/rmoff/rmoff-blog:0.157.0
 ```
 
 **Docker image includes:**
-- Hugo 0.152.2 Extended
+- Hugo 0.157.0 Extended
 - AsciiDoctor + AsciiDoctor-Reveal.js
 - Rouge (syntax highlighting)
 - Alpine Linux base
@@ -53,7 +53,7 @@ The Docker image is automatically built and published when:
 - `.github/workflows/docker-image.yml` is modified
 - Manually triggered via workflow_dispatch
 
-Published to: `ghcr.io/rmoff/rmoff-blog:0.152.2` (public package)
+Published to: `ghcr.io/rmoff/rmoff-blog:0.157.0` (public package)
 
 ## Development Workflows
 
@@ -67,7 +67,7 @@ git checkout main && git pull && git checkout -b $id
 # Create new post
 docker run --rm -it \
   -v $(pwd):/src \
-  ghcr.io/rmoff/rmoff-blog:0.152.2 \
+  ghcr.io/rmoff/rmoff-blog:0.157.0 \
   new content/post/$id.adoc
 
 # Edit the post, then commit and use bundle workflow to push
@@ -77,12 +77,12 @@ docker run --rm -it \
 
 **Full build:**
 ```bash
-docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.152.2
+docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.157.0
 ```
 
 **Build with drafts and future posts:**
 ```bash
-docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.152.2 --buildDrafts --buildFuture
+docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.157.0 --buildDrafts --buildFuture
 ```
 
 ### Building Presentations
@@ -107,7 +107,7 @@ Check for broken links locally:
 ```bash
 mkdir /tmp/hugo_public && \
 docker run --rm -v $(pwd):/src -v /tmp/hugo_public:/tmp/public \
-  ghcr.io/rmoff/rmoff-blog:0.152.2 --buildFuture --buildDrafts -d /tmp/public && \
+  ghcr.io/rmoff/rmoff-blog:0.157.0 --buildFuture --buildDrafts -d /tmp/public && \
 docker run -v /tmp/hugo_public:/check ghcr.io/untitaker/hyperlink:0.1.26 /check && \
 rm -rf /tmp/hugo_public
 ```
@@ -151,7 +151,7 @@ rm -rf /tmp/hugo_public
 - Manual workflow_dispatch
 
 **Outputs:**
-- `ghcr.io/rmoff/rmoff-blog:0.152.2`
+- `ghcr.io/rmoff/rmoff-blog:0.157.0`
 - `ghcr.io/rmoff/rmoff-blog:latest`
 - `ghcr.io/rmoff/rmoff-blog:<branch>-<sha>`
 
@@ -161,13 +161,13 @@ If you need to modify the Dockerfile:
 
 ```bash
 # Build
-docker build -t rmoff-blog-hugo:0.152.2 .
+docker build -t rmoff-blog-hugo:0.157.0 .
 
 # Use local image
 docker run --rm -it \
   -v $(pwd):/src \
   -p 1313:1313 \
-  rmoff-blog-hugo:0.152.2 \
+  rmoff-blog-hugo:0.157.0 \
   server --bind 0.0.0.0
 ```
 
@@ -185,7 +185,7 @@ rmoff-blog/
 ├── config.yaml             # Hugo configuration
 ├── Dockerfile              # Docker image definition
 ├── build-slides.sh         # Presentation build script
-├── HUGO_UPGRADE.md         # Hugo 0.152.2 upgrade documentation
+├── HUGO_UPGRADE.md         # Hugo 0.157.0 upgrade documentation
 └── DEVELOPMENT.md          # This file
 ```
 
@@ -250,7 +250,7 @@ The Story theme has been modified to:
 
 ## Migration History
 
-- **2024-12-18**: Upgraded Hugo 0.105.0 → 0.152.2
+- **2024-12-18**: Upgraded Hugo 0.105.0 → 0.157.0
 - **2024-12-18**: Migrated from mixed native/Docker builds to Docker-only
 - **2024-12-18**: Fixed CloudFlare preview workflow (missing dependencies)
 - **2024-12-18**: Removed Surge preview workflow
@@ -271,5 +271,5 @@ See `HUGO_UPGRADE.md` for detailed upgrade documentation.
 When asking for help (from humans or AI):
 1. Mention you're using Docker-based builds
 2. Reference this file: "See DEVELOPMENT.md"
-3. Include Hugo version (0.152.2)
+3. Include Hugo version (0.157.0)
 4. Note the git bundle workflow if push-related

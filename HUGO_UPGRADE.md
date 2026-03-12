@@ -1,17 +1,17 @@
-# Hugo Upgrade: 0.105.0 → 0.152.2
+# Hugo Upgrade: 0.105.0 → 0.157.0
 
 ## Summary
 
-Successfully upgraded Hugo from version 0.105.0 (Nov 2022) to 0.152.2 (Oct 2024).
+Successfully upgraded Hugo from version 0.105.0 (Nov 2022) to 0.157.0 (Oct 2024).
 
 ## Changes Made
 
 ### 1. Docker-Based Build System
 
 **New Dockerfile** (`Dockerfile`)
-- Base image: `hugomods/hugo:0.152.2`
+- Base image: `hugomods/hugo:0.157.0`
 - Includes: AsciiDoctor, AsciiDoctor-Reveal.js, Rouge 3.30.0
-- Published to GitHub Container Registry: `ghcr.io/rmoff/rmoff-blog:0.152.2`
+- Published to GitHub Container Registry: `ghcr.io/rmoff/rmoff-blog:0.157.0`
 
 **Benefits:**
 - ✅ Identical builds across local, preview, and production environments
@@ -73,9 +73,9 @@ Live:     Ubuntu 22.04 + Native installation ❌ DIFFERENT
 
 ### After
 ```
-Local:    Alpine Linux + Docker (ghcr.io/rmoff/rmoff-blog:0.152.2)
-Preview:  Ubuntu 22.04 + Docker (ghcr.io/rmoff/rmoff-blog:0.152.2) ✅ SAME
-Live:     Ubuntu 22.04 + Docker (ghcr.io/rmoff/rmoff-blog:0.152.2) ✅ SAME
+Local:    Alpine Linux + Docker (ghcr.io/rmoff/rmoff-blog:0.157.0)
+Preview:  Ubuntu 22.04 + Docker (ghcr.io/rmoff/rmoff-blog:0.157.0) ✅ SAME
+Live:     Ubuntu 22.04 + Docker (ghcr.io/rmoff/rmoff-blog:0.157.0) ✅ SAME
 ```
 
 ## Breaking Changes from Hugo 0.105 → 0.152
@@ -94,13 +94,13 @@ Live:     Ubuntu 22.04 + Docker (ghcr.io/rmoff/rmoff-blog:0.152.2) ✅ SAME
 ### Local Testing
 ```bash
 # Build the Docker image
-docker build -t rmoff-blog-hugo:0.152.2 .
+docker build -t rmoff-blog-hugo:0.157.0 .
 
 # Test build
-docker run --rm -v $(pwd):/src rmoff-blog-hugo:0.152.2 --buildDrafts --buildFuture
+docker run --rm -v $(pwd):/src rmoff-blog-hugo:0.157.0 --buildDrafts --buildFuture
 
 # Test server
-docker run --rm -v $(pwd):/src -p 1313:1313 rmoff-blog-hugo:0.152.2 server --bind 0.0.0.0
+docker run --rm -v $(pwd):/src -p 1313:1313 rmoff-blog-hugo:0.157.0 server --bind 0.0.0.0
 ```
 
 ### Build Statistics
@@ -115,22 +115,22 @@ docker run --rm -v $(pwd):/src -p 1313:1313 rmoff-blog-hugo:0.152.2 server --bin
 
 1. **Create dedicated branch and push Dockerfile to trigger image build:**
    ```bash
-   git checkout -b hugo-upgrade-0.152.2
+   git checkout -b hugo-upgrade-0.157.0
    git add Dockerfile .dockerignore .github/workflows/docker-image.yml
    git commit -m "Add Docker image workflow"
-   git push origin hugo-upgrade-0.152.2
+   git push origin hugo-upgrade-0.157.0
    ```
 
 2. **Wait for Docker image to build:**
    - Check Actions tab: "Build and Publish Docker Image" workflow
-   - Image will be published to: `ghcr.io/rmoff/rmoff-blog:0.152.2`
+   - Image will be published to: `ghcr.io/rmoff/rmoff-blog:0.157.0`
    - Make sure the package visibility is set to public or accessible to Actions
 
 3. **Then push the workflow updates:**
    ```bash
    git add .github/workflows/*.yml
    git commit -m "Update workflows to use Docker builds"
-   git push origin hugo-upgrade-0.152.2
+   git push origin hugo-upgrade-0.157.0
    ```
 
 ### Ongoing Development
@@ -138,13 +138,13 @@ docker run --rm -v $(pwd):/src -p 1313:1313 rmoff-blog-hugo:0.152.2 server --bin
 **Local development workflow unchanged:**
 ```bash
 # Build image (only needed once, or when Dockerfile changes)
-docker build -t rmoff-blog-hugo:0.152.2 .
+docker build -t rmoff-blog-hugo:0.157.0 .
 
 # Run server for development
 docker run --rm -it \
   -v $(pwd):/src \
   -p 1313:1313 \
-  rmoff-blog-hugo:0.152.2 \
+  rmoff-blog-hugo:0.157.0 \
   server --bind 0.0.0.0
 ```
 
@@ -176,9 +176,9 @@ If issues are encountered:
    - Change workflows back to use `peaceiris/actions-hugo@v2`
    - Restore gem installation steps
 
-2. **Keep Hugo 0.152.2:**
+2. **Keep Hugo 0.157.0:**
    - The breaking changes are minimal and addressed
-   - Staying on 0.152.2 is recommended even if reverting Docker approach
+   - Staying on 0.157.0 is recommended even if reverting Docker approach
 
 ## Future Improvements
 
@@ -191,4 +191,4 @@ If issues are encountered:
 
 - **Presentation builds** still require local AsciiDoctor because `build-slides.sh` runs asciidoctor CLI directly (not through Hugo)
 - **Docker image** is cached in GitHub Actions, speeding up builds significantly
-- **Version pinning** at 0.152.2 ensures consistency; update by changing version in Dockerfile and workflows
+- **Version pinning** at 0.157.0 ensures consistency; update by changing version in Dockerfile and workflows
