@@ -1,6 +1,11 @@
 name: Cross-post new articles to dev.to
 
 on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'Space-separated post paths (e.g. content/post/foo.adoc)'
+        required: true
   push:
     branches:
       - main
@@ -35,4 +40,9 @@ jobs:
       - name: Cross-post new articles to dev.to
         env:
           DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
-        run: python scripts/devto_post.py --new-in-commit
+        run: |
+          if [ -n "${{ github.event.inputs.files }}" ]; then
+            python scripts/devto_post.py ${{ github.event.inputs.files }}
+          else
+            python scripts/devto_post.py --new-in-commit
+          fi
