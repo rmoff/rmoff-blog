@@ -14,16 +14,13 @@ This blog contains **both AsciiDoc (`.adoc`) and Markdown (`.md`) files**. When 
 ## Development Environment
 
 ### Hugo Server
-Always use Docker to run Hugo. See `DEVELOPMENT.md` for the full command, but the short version:
-```bash
-docker run --rm -it \
-  -v $(pwd):/src \
-  -p 1313:1313 \
-  ghcr.io/rmoff/rmoff-blog:0.157.0 \
-  server --bind 0.0.0.0
-```
+Always use `./serve.sh` to run Hugo locally. It builds the Docker image from the Dockerfile and starts the dev server. Use `./serve.sh 1314` for a different port (e.g. in worktrees).
 
-For background/detached mode, add `-d` flag and `--name hugo-server`.
+For background/detached mode, build and run manually:
+```bash
+docker build -t rmoff-blog:local .
+docker run --rm -d --name hugo-server -v $(pwd):/src -p 1313:1313 rmoff-blog:local server --bind 0.0.0.0
+```
 
 ### CSS Changes
 Hugo fingerprints CSS via `resources.Get | fingerprint` in `layouts/_default/baseof.html`. The fingerprinted CSS file is cached and **does not update on live reload**. After any CSS edit, you must **stop and restart** the Hugo Docker container to regenerate the fingerprinted file, then hard-refresh the browser. `docker restart` alone is NOT sufficient — the container must be fully stopped and started fresh.

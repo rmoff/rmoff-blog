@@ -4,45 +4,42 @@ This is the source for [rmoff.net](https://rmoff.net), built using Hugo and host
 
 ## Quick Start
 
-**Run the development server:**
 ```bash
-docker run --rm -it \
-  -v $(pwd):/src \
-  -p 1313:1313 \
-  ghcr.io/rmoff/rmoff-blog:0.157.0 \
-  server --bind 0.0.0.0
+./serve.sh
 ```
 
 Then visit: http://localhost:1313
 
+To run on a different port (e.g. for worktrees): `./serve.sh 1314`
+
+This builds the Docker image from the Dockerfile and starts the Hugo dev server.
+
 ## Tech Stack
 
-- **Hugo**: 0.157.0 (static site generator)
+- **Hugo**: see `Dockerfile` for current version (static site generator)
 - **Content**: Markdown and AsciiDoc
 - **Presentations**: Reveal.js (built from AsciiDoc)
 - **Theme**: Story (customized, unmaintained)
 - **Deployment**: GitHub Pages (live) + CloudFlare Pages (previews)
-- **Build System**: Docker (for consistency across environments)
+- **Build System**: Docker — all environments build from the same Dockerfile
 
 ## Build System Architecture
 
-All environments use the same Docker image for consistency:
+All environments build the Docker image from the Dockerfile at that commit. This guarantees what you test locally is exactly what runs in CI and production.
 
 ```
-Local Dev:    ghcr.io/rmoff/rmoff-blog:0.157.0
-PR Previews:  ghcr.io/rmoff/rmoff-blog:0.157.0
-Production:   ghcr.io/rmoff/rmoff-blog:0.157.0
+Local Dev:    docker build + docker run  (./serve.sh)
+PR Previews:  docker build + docker run  (GitHub Actions)
+Production:   docker build + docker run  (GitHub Actions)
 ```
 
 **Docker image includes:**
-- Hugo 0.157.0 Extended
+- Hugo Extended
 - AsciiDoctor + AsciiDoctor-Reveal.js
 - Rouge 3.30.0 (syntax highlighting) + custom `sql+jinja` lexer
 - Alpine Linux base
 
-**Multi-platform support:**
-- linux/amd64 (GitHub Actions runners)
-- linux/arm64 (M1/M2 Macs)
+**Hugo version is defined in one place:** the `FROM` line in `Dockerfile`.
 
 ## Development Workflows
 
@@ -52,9 +49,10 @@ Production:   ghcr.io/rmoff/rmoff-blog:0.157.0
 id=my-new-post-slug
 git checkout main && git pull && git checkout -b $id
 
+docker build -t rmoff-blog:local .
 docker run --rm -it \
   -v $(pwd):/src \
-  ghcr.io/rmoff/rmoff-blog:0.157.0 \
+  rmoff-blog:local \
   new content/post/$id.adoc
 ```
 
@@ -62,12 +60,13 @@ docker run --rm -it \
 
 **Full build:**
 ```bash
-docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.157.0
+docker build -t rmoff-blog:local .
+docker run --rm -v $(pwd):/src rmoff-blog:local
 ```
 
 **Build with drafts and future posts:**
 ```bash
-docker run --rm -v $(pwd):/src ghcr.io/rmoff/rmoff-blog:0.157.0 --buildDrafts --buildFuture
+docker run --rm -v $(pwd):/src rmoff-blog:local --buildDrafts --buildFuture
 ```
 
 ### Building Presentations
@@ -88,9 +87,10 @@ Presentations are automatically built before Hugo in CI/CD workflows.
 ### Link Checking
 
 ```bash
+docker build -t rmoff-blog:local .
 mkdir /tmp/hugo_public && \
 docker run --rm -v $(pwd):/src -v /tmp/hugo_public:/tmp/public \
-  ghcr.io/rmoff/rmoff-blog:0.157.0 --buildFuture --buildDrafts -d /tmp/public && \
+  rmoff-blog:local --buildFuture --buildDrafts -d /tmp/public && \
 docker run -v /tmp/hugo_public:/check ghcr.io/untitaker/hyperlink:0.1.26 /check && \
 rm -rf /tmp/hugo_public
 ```
@@ -122,11 +122,13 @@ python scripts/devto_post.py --dry-run content/post/my-post.adoc
 
 ## CI/CD Pipeline
 
+All workflows build the Docker image from the Dockerfile — no pre-built images or registries involved.
+
 ### Live Deployment (main branch)
 
 **Workflow:** `.github/workflows/gh-pages-deployment.yml`
 
-1. If `Dockerfile` or `lib/` changed, rebuilds the Docker image first
+1. Builds Docker image from Dockerfile
 2. Builds reveal.js presentations (local AsciiDoctor)
 3. Builds site with Docker
 4. Deploys to `rmoff/rmoff.github.io` (GitHub Pages)
@@ -137,55 +139,36 @@ python scripts/devto_post.py --dry-run content/post/my-post.adoc
 
 **Workflow:** `.github/workflows/preview-blog-cloudflare.yaml`
 
-1. Builds reveal.js presentations
-2. Builds site with Docker
-3. Deploys to CloudFlare Pages
+1. Builds Docker image from Dockerfile
+2. Builds reveal.js presentations
+3. Builds site with Docker
+4. Deploys to CloudFlare Pages
 
 **URL:** https://preview.rmoff.net/
 
-### Docker Image Build
+### Link Checking
 
-**Workflow:** `.github/workflows/docker-image.yml`
+**Workflow:** `.github/workflows/pr_check_links.yaml`
 
-**Triggers:** Manual (workflow_dispatch) or called by deploy workflow when needed.
-
-**Outputs:**
-- `ghcr.io/rmoff/rmoff-blog:0.157.0`
-- `ghcr.io/rmoff/rmoff-blog:latest`
-- `ghcr.io/rmoff/rmoff-blog:<branch>-<sha>`
-
-### Building the Docker Image Locally
-
-If you need to modify the Dockerfile:
-
-```bash
-docker build -t rmoff-blog-hugo:local .
-
-docker run --rm -it \
-  -v $(pwd):/src \
-  -p 1313:1313 \
-  rmoff-blog-hugo:local \
-  server --bind 0.0.0.0
-```
+1. Builds Docker image from Dockerfile
+2. Builds site with Docker
+3. Runs hyperlink checker
 
 ## Common Tasks
 
 ### Update Hugo Version
 
-1. Edit `Dockerfile` — change Hugo base image version
-2. Update version in all workflow files (`.github/workflows/`)
-3. Update version references in `README.adoc`, `DEVELOPMENT.md`, `.claude/CLAUDE.md`
-4. Test locally with full Playwright suite
-5. Commit and push
-6. Docker image will auto-build on deploy
-7. Create PR to test preview deployment
-8. Merge to deploy to production
+1. Edit `Dockerfile` — change the `FROM hugomods/hugo:X.Y.Z` line
+2. Test locally: `./serve.sh` and run Playwright tests
+3. Commit and push — CI will build the new image automatically
+
+That's it. No other files to update.
 
 ### Add New Dependencies to Docker Image
 
 1. Edit `Dockerfile`
-2. Build locally and test
-3. Commit and push — image auto-rebuilds on deploy
+2. Test locally: `./serve.sh`
+3. Commit and push
 
 ## Project Structure
 
@@ -203,25 +186,17 @@ rmoff-blog/
 ├── scripts/                  # Utility scripts (cross-posting, etc.)
 ├── tests/                    # Playwright tests
 ├── config.yaml               # Hugo configuration
-├── Dockerfile                # Docker image definition
+├── Dockerfile                # Docker image definition (Hugo version lives here)
+├── serve.sh                  # Local dev server script
 ├── build-slides.sh           # Presentation build script
 └── DEVELOPMENT.md            # This file
 ```
 
 ## Troubleshooting
 
-**Docker image not pulling:**
-- Check package visibility: https://github.com/rmoff/rmoff-blog/pkgs/container/rmoff-blog
-- Must be set to "Public"
-
 **Workflows failing with permission errors:**
 - Check workflow has required permissions block
-- Docker workflows need: `packages: read`
 - CloudFlare workflow needs: `deployments: write`
-
-**ARM64 Mac can't pull image:**
-- Ensure Dockerfile builds are multi-platform
-- Check `.github/workflows/docker-image.yml` has: `platforms: linux/amd64,linux/arm64`
 
 **Push rejected from local machine:**
 - Normal! Use the git-sync workflow via `~/work/git-sync.sh --push`
@@ -229,6 +204,6 @@ rmoff-blog/
 ## Upgrade History
 
 - **2026-03**: Upgraded Hugo 0.152.2 -> 0.157.0; added custom `sql+jinja` Rouge lexer
+- **2026-03**: Simplified build: all environments build from Dockerfile (no GHCR)
 - **2024-12**: Upgraded Hugo 0.105.0 -> 0.152.2; migrated to Docker-only builds
 - **2024-12**: Fixed CloudFlare preview workflow; removed Surge preview
-- **2024-12**: Added multi-platform Docker support
