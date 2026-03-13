@@ -239,11 +239,19 @@ def process_jsonl(jsonl_path, summary_data=None):
                         lines.append(escape_inline(single_line(content)))
                         lines.append('')
 
-                # Array content = tool results
+                # Array content = tool results and/or subagent prompts
                 elif isinstance(content, list):
                     for block in content:
                         btype = block.get('type')
-                        if btype == 'tool_result':
+
+                        if btype == 'text':
+                            text = block.get('text', '')
+                            if text.strip():
+                                lines.append('[.ev-user]')
+                                lines.append(escape_inline(single_line(text)))
+                                lines.append('')
+
+                        elif btype == 'tool_result':
                             is_error = block.get('is_error', False)
                             # Content can be string or list of content blocks
                             result_content = block.get('content', '')
