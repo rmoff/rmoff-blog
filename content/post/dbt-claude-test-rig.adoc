@@ -3,7 +3,7 @@ draft: false
 title: 'Evaluating Claude''s dbt Skills: Building an Eval from Scratch'
 date: "2026-03-12T15:34:37Z"
 image: "/images/2026/03/dashboard01.webp"
-thumbnail: "/images/2026/03/"
+thumbnail: "/images/2026/03/t_IMG_4427.jpeg"
 categories:
 - AI
 - Claude Code
@@ -12,7 +12,8 @@ categories:
 
 I wanted to explore the extent to which Claude Code could build a data pipeline using dbt without iterative prompting.
 What difference did skills, models, and the prompt itself make?
-I've written link:/2026/03/11/claude-code-isnt-going-to-replace-data-engineers-yet/[in a separate post] about what I found (yes it's good; no it's not going to replace data engineers, yet).
+I've written link:/2026/03/11/claude-code-isnt-going-to-replace-data-engineers-yet/[in a separate post] about what I found (_yes it's good; no it's not going to replace data engineers, yet_).
+
 In this post I'm going to show how I ran these tests (with Claude) and analysed the results (using Claude), including a pretty dashboard (created by Claude):
 
 image:/images/2026/03/dashboard01.webp[dbt EVAL dashboard showing test results across prompt, skill, and model combinations with LLM judge scores out of 27, pass/fail/warn counts, and token turns per run]
@@ -29,8 +30,7 @@ Can Claude Code build a production-ready dbt project?
 [NOTE]
 ====
 I am not, as you can already tell, an expert at building and running this kind of controlled test.
-I already mentioned one snafu (running tests with only a partial plugin), and there are more covered below too around contamination of results.
-As well as this, I've adopted my own terminology to refer to elements of what I was doing, which may or may not match what someone who knows what they're doing would use :)
+I've adopted my own terminology to refer to elements of what I was doing, which may or may not match what someone who knows what they're doing would use :)
 
 * Scenario: What are we testing (specific Prompt + Skill combination)
 * Configuration: Scenario + Model
@@ -94,6 +94,7 @@ Run the project and make sure that it works. If it fails, fix the errors and re-
     ** Single skill (https://github.com/dbt-labs/dbt-agent-skills/blob/main/skills/dbt/skills/using-dbt-for-analytics-engineering/SKILL.md[Using dbt for Analytics Engineering])
 +
 _I'd meant to test the full plugin, but a snafu meant I only ended up pulling in the single skill._
+_I realised this only after running the scenario in full, so expanded the test to include the full plugin as a separate scenario._
     ** Full plugin (https://github.com/dbt-labs/dbt-agent-skills/tree/main[dbt Agent Skills])
 * Model
     ** Claude Sonnet 4.5
@@ -113,7 +114,7 @@ claude --dangerously-skip-permissions $PROMPT
 
 This was wrapped in a Docker container so that it couldn't cause too much trouble.
 
-Claude Code writes a full transcript of its sessions to a JSONL file that usually resides in ~/.claude, so for the Docker container I had that copied out into the test results too, along with the actual dbt project itself and any other artefacts from the test run.
+Claude Code writes a full transcript of its sessions to a JSONL file that usually resides in `~/.claude/`, so for the Docker container I had that copied out into the test results too, along with the actual dbt project itself and any other artefacts from the test run.
 The JSONL is interesting for what it tells us about how Claude Code approaches the task, particularly on multiple runs of the same configuration.
 Here's an link:/2026/03/11/claude-code-in-action-with-dbt/[example analysis of part of a session log].
 
@@ -353,7 +354,7 @@ This produces output that looks like this:
 As well as the original Claude model, I tried with Qwen (`qwen2.5-coder:32b`, running locally on Ollama), and Gemini (`gemini-2.5-pro`, hosted externally).
 For a model to be of use it needs to be able to _accurately_ analyse the dbt project with sufficient detail to then be able to judge it.
 That is, it's no use if it takes a cursory look (figuratively speaking), sees some SQL and YAML and signs it off as a `LGTM`.
-As well as being able to do analysis of sufficient depth, it then needs to be able to then judge what it's found against the criteria it's given.
+As well as being able to do analysis of sufficient depth, it needs to be able to then judge what it's found against the criteria it's given.
 
 With yet another healthy dollop of Claude, I processed the judging data into some charts, such as this one showing how different aspects of the judging rubric were assessed by different models:
 
@@ -372,11 +373,19 @@ image:/images/2026/03/judge-comparison-consistency.webp[]
 In addition, Qwen's freeform notes are much sparser.
 Compare these judging notes relating to the same dbt project:
 
-> "correctly uses the station URI field (not stationReference) as the FK, with a code comment noting 'stationReference diverges in ~0.4% of records'"
-> -- Opus
+.`claude-opus-4-6`
+[NOTE]
+====
+[quote]
+correctly uses the station URI field (not stationReference) as the FK, with a code comment noting 'stationReference diverges in ~0.4% of records'
+====
 
-> "Joins exist and use correct keys"
-> -- Qwen
+.`qwen2.5-coder:32b`
+[NOTE]
+====
+[quote]
+Joins exist and use correct keys
+====
 
 So, Qwen is ok for local testing, but for really consistent and insightful judging, it's not going to be my first choice.
 
@@ -386,11 +395,11 @@ image:/images/2026/03/opus-vs-qwen.jpg[]
 
 My initial version of the rubric had the LLM score from 0 (sucks) to 3 (excellent) on a range of features, including data model, testing, SCD, and documentation.
 
-This was fine, but arguably an slightly crude way to do things.
+This was fine, but arguably a slightly crude way to do things.
 After all, if the project is missing some core best practices or has correctness issues (e.g. missing a dimension, or has mis-identified the correct PK/FK relationships), it's garbage and needs fixing.
 Other features that might be missing or sub-optimal, perhaps incomplete documentation or missing tests, oughtn't count as much as they can be rectified or added on later.
 
-I created a second rubric and reran the judging (a nice side-effect of having captured the project and running the validation and judging separately) using a tiered, giving greater weight to _foundation_ principles and less weight to _advanced_ ones.
+I created a second rubric and reran the judging (a nice side-effect of having captured the project and running the validation and judging separately) using a tiered approach, giving greater weight to _foundation_ principles and less weight to _advanced_ ones.
 Given another pass at it, I'd probably refine it further, adding some kind of punishment weighting for correctness errors (such as truncating the input dimension data from the API call by ~60%, which one of the runs did).
 
 === Gosh, didn't I do well?
@@ -460,8 +469,8 @@ So not only the rubric was exposed (giving Claude a huge glance at the answers t
 So, well and truly contaminated.
 If you want to spin it…an example of what Claude Code can do when you give it a ton of help ;)
 
-All these test runs I marked as contaminated.
-I didn't delete them because in isolation they were still interesting as they demonstrated 'given a huge helping hand, how do different models perform?'.
+All these test runs I marked as contaminated and excluded from my analysis and notes shown below.
+(I didn't delete them because in isolation they were still interesting as they demonstrated 'given a huge helping hand, how do different models perform?').
 
 == Front End
 
@@ -494,7 +503,7 @@ I included an option to view the log in https://simonwillison.net/[Simon Williso
 
 image:/images/2026/03/8df61b2bb7b0d10f516e686b988191435cd59746d71ff73aca511f70e865843c-l.webp[]
 
-Going back up to judging, for test the details of the scores can be viewed:
+Going back up to judging, for each test the details of the scores can be viewed:
 
 image:/images/2026/03/e0e319a06491cfb3819e1bd2e081de69c27cf9f95c6955dc776de1f0a6bda30f-l.webp[]
 
