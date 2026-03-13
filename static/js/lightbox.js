@@ -30,7 +30,7 @@
   }
 
   function updateImages() {
-    var imgs = document.querySelectorAll('.article .content img');
+    var imgs = document.querySelectorAll('article.article img');
     for (var i = 0; i < imgs.length; i++) {
       (function (img) {
         if (img.naturalWidth > img.clientWidth) {
@@ -50,7 +50,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     // Wait for images to load so naturalWidth is available
-    var imgs = document.querySelectorAll('.article .content img');
+    var imgs = document.querySelectorAll('article.article img');
     var loaded = 0;
     var total = imgs.length;
     if (total === 0) return;
