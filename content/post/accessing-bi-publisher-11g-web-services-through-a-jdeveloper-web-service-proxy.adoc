@@ -1,0 +1,144 @@
+---
+title: 'Accessing BI Publisher 11g Web Services through a JDeveloper Web Service Proxy'
+date: "2011-11-24T00:00:00+00:00"
+url: "/2011/11/24/accessing-bi-publisher-11g-web-services-through-a-jdeveloper-web-service-proxy/"
+draft: false
+categories:
+- OBIEE
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2011/11/accessing-bi-publisher-11g-web-services-through-a-jdeveloper-web-service-proxy/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/11/accessing-bi-publisher-11g-web-services-through-a-jdeveloper-web-service-proxy/[Rittman Mead blog].
+
+In the second part of this series looking at Web Services in BI Publisher 11g, I will look at using JDeveloper to create a *Web Service Proxy*. This exposes the BI Publisher Web Services in Java, from where they can be embedded in numerous other applications.
+
+
+I demonstrated in link:https://www.rittmanmead.com/blog/2011/11/web-services-in-bi-publisher-11g[part one] how simple it is to invoke a Web Service, such as running an existing report in BI Publisher and writing the output as PDF to file. Now we will take a look at extending this to something that can actually be used in real applications. JDeveloper is Oracle's development platform for Java applications, and it includes functionality to dynamically generate java code for accessing Web Services. It calls this a Web Service Proxy, for obvious reasons since it is generating a proxy for the Web Service proper as a set of java methods and data types.
+
+
+By utilising a Web Service Proxy, calls can be made out to the BI Publisher Web Services from any java code. Think of the possibilities! Whether you just want to touch BI Publisher briefly to schedule a report, or integrate a lot more closely, perhaps putting together report components on the fly, all of this is possible from java code.
+
+
+== Versions
+
+
+Before we start on the worked example, a very important note about versions. Pay attention to this and you will save yourself the loss of hair and hours that I suffered!
+
+
+If you are running OBIEE _11.1.1.5_, then you must use JDeveloper _11.1.1.5_. *You cannot use JDeveloper 11.1.2!*
+
+
+If you try to use JDeveloper 11.1.2.1.0 you will most likely see the following:
+
+
+* Using a JAX-WS style proxy, the generate fails with an error: 
++
+[source,java]
+----
+java.lang.IllegalArgumentException: Not a valid simple name: 'v2/ScheduleServiceClient'
+----
++
+* Using a JAX-RPC style proxy, your Java code will be generated full of these errors:
++
+[source,java]
+----
+Unreported Exception
+----
++
+
+
+== Create a Web Service Proxy in JDeveloper, step by step
+
+
+The following steps walk you through creating a Web Service Proxy in JDeveloper for the ReportService BI Publisher Web Service. It then uses the proxy to invoke the runReport method that we prototyped in link:https://www.rittmanmead.com/blog/2011/11/web-services-in-bi-publisher-11g[part one] to run a report and write the output to PDF.
+
+
+. Run *JDeveloper* 11.1.1.5, and create a new *Generic Application*. 
+In the new project, insert a *Web Service Proxy* (under Business Tier -> Web Services) 
++
+. Select a *JAX-WS* Client Style
+. Use the same WSDL URL as you prototyped in soapUI, for example, 
++
+[source,java]
+----
+http://localhost:7001/xmlpserver/services/v2/ReportService?wsdl
+----
++
+. Click *Finish* (you don't need to specify anything in the rest of the Wizard)
++
+
+
+image::/images/2011/11/05203BIP-102-BI-Publisher-for-Developers.key-4.png[]
+. You should get a successful creation of your proxy. Remember, it is just a java program, that has been generated to wire into the specified Web Service, but is still just java code.
+ 
+
+
+image::/images/2011/11/05204Untitled-13.png[]
+
+ 
+If not open already, open up *V2ReportServiceClient.java* and locate the line which says _"Add your code to call the desired methods"_. So now, you can add your code to call the desired methods :-)
+
++
+[source,java]
+----
+
+    public static void main(String[] args) {
+        reportService_Service = new ReportService_Service();
+        ReportService reportService =
+            reportService_Service.getV2ReportService();
+        // Add your code to call the desired methods.
+    // Set up the credentials for our service call
+    String username = &quot;weblogic&quot;;
+    String password = &quot;Admin123&quot;;
+    
+    // Instantiate a new ReportRequest object
+    ReportRequest repReq = new ReportRequest();
+    
+    // Define the report that we want to run
+    repReq.setReportAbsolutePath(&quot;/6. Published Reporting/Sales/North America Sales.xdo&quot;); // This is the Report name, as an absolute path.
+    
+    // Define what we want to do with it
+    repReq.setAttributeFormat(&quot;pdf&quot;); // defaults to HTML
+    repReq.setReportOutputPath(&quot;/tmp/jdev_ws.pdf&quot;); // The path on the **BIP server** to which the report should be saved
+    
+    // Let's go!
+    try {
+        reportService.runReport(repReq, username, password);
+    } catch (InvalidParametersException_Exception e) {
+        System.out.println(&quot;Exception thrown: InvalidParameters!&quot;);
+    } catch (AccessDeniedException_Exception e) {
+        System.out.println(&quot;Exception thrown: AccessDenied!&quot;);
+    } catch (OperationFailedException_Exception e) {
+        System.out.println(&quot;Exception thrown: OperationFailed!&quot;);
+    }
+    // All done
+    System.out.println(&quot;Success!&quot;);
+}
+----
++
+. *Run* it, and you should get _"Success!"_ in the JDeveloper message window
+
+
+image::/images/2011/11/05199Untitled-14.png[]
+
+And there should be a PDF file in the path specified:
+
+image::/images/2011/11/05198Untitled-15.png[]
+
+
+So there you have it -- easy access of BI Publisher 11g Web Services from Java, using the JDeveloper Web Service Proxy functionality
+
+
+NB: The above java code is heavily based on link:http://oraclebizint.wordpress.com/2008/01/04/oracle-bi-publisher-101331-creating-applications-using-jdeveloper-11g-and-web-service-soap-apis/?ref=rittmanmead.com[Venkat's original code here].
+
+
+== BI Publisher Web Services and BPEL
+
+
+The third part of this series will demonstrate incorporating a call to a BI Publisher Web Service in a SOA / BPEL process. link:https://www.rittmanmead.com/blog/2011/11/calling-bi-publisher-11g-web-services-from-bpel/[Click here to read it].
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/11/accessing-bi-publisher-11g-web-services-through-a-jdeveloper-web-service-proxy/[Rittman Mead blog].

@@ -1,0 +1,130 @@
+---
+title: 'Date formatting in OBIEE 11g - setting the default Locale for users'
+date: "2014-02-12T00:00:00+00:00"
+url: "/2014/02/12/date-formatting-in-obiee-11g-setting-the-default-locale-for-users/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/02/date-formatting-in-obiee-11g-setting-the-default-locale-for-users/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/02/date-formatting-in-obiee-11g-setting-the-default-locale-for-users/[Rittman Mead blog].
+
+_A short and sweet blog post this one, simply to plug a gap in Google that I found when trying to do achieve this today._
+
+
+How user’s see things like date formats in OBIEE is determined by their *locale*, which is usually related to *language* but not always the same.
+
+
+The classic example, and the one I was trying to resolve, was that users were seeing dates presenting in the ‘wrong’ format. The users are British and instead of seeing dates in the correct format of *DD/MM/YYYY* (19/01/2014) they were *MM/DD/YYYY* (01/19/2014). _(side note: link:http://www.theguardian.com/news/datablog/2013/dec/16/why-do-americans-write-the-month-before-the-day?ref=rittmanmead.com[this lighthearted article] in the Guardian refers to this ridiculous format as "Middle-Endianness"...)_
+
+
+image::/images/2014/02/486cdate02.png[]
+
+
+In this example I have got the same date value in two columns. One column I have explicitly formatted (“DATE_VERBOSE”) so there is no ambiguity about the date. The second column (“DATE_LOCALE”) is the same date value, but formatted according to the locale setting. It is this default locale setting that I want to demonstrate how to set - manually changing all date columns to a particular format is not a sustainable way to develop reports…
+
+
+Oracle's documentation is not very clear in this respect, and Google is a mishmash of half solutions and rubbish, so I humbly offer this short instruction for how to ensure users have the correct locale applied.
+
+
+== Solution 1 - manually
+
+
+Each user can configure their chosen locale, from the My Account dialog:
+
+
+image::/images/2014/02/485cdate03.png[]
+
+
+Whenever changing the locale, you need to logout and log back in to OBIEE for it to take effect.
+
+
+This setting, if they override it from the default, is stored in the Presentation Catalog under the user’s *userprefsxmlstore.xml* file
+
+
+[source]
+----
+<sawprefs:userPreference prefKey="Locale">en-gb</sawprefs:userPreference>
+----
+
+
+So for a single user, this method is fine - but for more than one existing user, or any new users, it doesn’t fly. We don’t want to go hacking Presentation Catalog files, that is bad, mmm'kay?
+
+
+== Solution 2 - The USERLOCALE System Session Variable
+
+
+There is a System Session Variable called USERLOCALE which you can set per user, and will define their locale. Easy! All you have to watch out for is that its _value_ (thanks Christian) is case sensitive. This cost me some hours today, so I’ll say it again - *the value you specify for USERLOCALE is case sensitive and OBIEE will not help you out if you specify it wrong* (it'll just ignore it).
+
+
+You can hardcode the value to the same for all users, or if you want to get fancy you could drive it from a database table to make it variable dependent upon the user’s location that you store in a table.
+
+
+The Session Variable and example Initialisation Block are shown here:
+
+
+image::/images/2014/02/487cdate04.png[]
+
+
+To validate what is going on with the session variable, you can use a Static Text view with the following content to show the values of the relevant session and presentation variables:
+
+
+[source]
+----
+[u][b]System Session Variables[/b][/u]
+<p align=left>
+[b]NQ_SESSION.USERLOCALE: [/b]@{biServer.variables['NQ_SESSION.USERLOCALE']}[br/]
+[b]NQ_SESSION.WEBLANGUAGE: [/b] @{biServer.variables['NQ_SESSION.WEBLANGUAGE']}[br/]
+</p>
+
+[u][b]Predefined Presentation Variables[/b][/u][br/]
+<p align="left">
+[b]session.language:[/b] @{session.language}[br/]
+[b]session.locale:[/b] @{session.locale}[br/]
+</p>
+----
+
+
+In my test report the Static Text view is to the right of the data table, and I can now see that the *USERLOCALE* session variable has been populated. Crucially, the *session.locale* presentation variable is inheriting the correct value, which in turn is driving the desired formatting of the DATE_LOCALE column.
+
+
+image::/images/2014/02/484cdate01.png[]
+
+
+== Method 3 - the hack
+
+
+I’m including this here for completeness, and because you will come across it in plenty of places on the web so it is good to understand why it is not the correct solution.
+
+
+Within the OBIEE installation folder (FMW_HOME) you will find the ORACLE_HOME folder, *Oracle_BI1*, in which all the application’s binaries and internal configuration are stored. This is not a “user serviceable” folder, and Oracle are at liberty to change any of the files within it whenever you patch or upgrade the software.
+
+
+Within Oracle_BI1 there is a file called *localemappings.xml* and this file sets the default locale used if one is not explicitly configured. If you change the “catch all” line in this XML file to your desired locale, it will set the default.
+
+
+[source]
+----
+<when matches="*"><localeDefinition name="en-gb"/></when>
+----
+
+
+*But, this is not the correct way to do it, and there is no need to because the USERLOCALE method above works just fine.*
+
+
+== What about AllowedLocales in instanceconfig.xml?
+
+
+In combing through the documentation (RTFM, after all), you will come across reference to the *Localization* tags for the Presentation Services configuration file `instanceconfig.xml`. Within this tag you can specify *AllowedLocales*. However, all this does is provide a way to restrict the dropdown locale list (shown in method 1 above). So this is a nice thing to do for your user base if there is a finite number of locales they will want to use (save them wading through many options), but it does not influence the default locale - even if you set it to a single value, your desired default.
+
+
+== Summary
+
+
+If you want to set the default locale, use the system session variable *USERLOCALE*. Make sure you specify your value in lowercase, otherwise it won’t work.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/02/date-formatting-in-obiee-11g-setting-the-default-locale-for-users/[Rittman Mead blog].

@@ -1,0 +1,1444 @@
+---
+title: 'How To Poke Around OBIEE on Linux with strace (Working with Unsupported ODBC Sources in OBIEE 12c)'
+date: "2016-08-23T00:00:00+00:00"
+url: "/2016/08/23/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/"
+draft: false
+categories:
+- Apache Drill
+- OBIEE
+- Linux
+- Performance
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/[Rittman Mead blog].
+
+OBIEE 12c (and 11g and 10g before it) supports link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1465[three primary ways] of connecting to data sources:
+
+
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1179[Native Gateway], such as OCI for Oracle. This is always the preferred option as it gives the greatest support and performance.
+. link:https://www.progress.com/datadirect-connectors?ref=rittmanmead.com[Data Direct ODBC Drivers], a set of which are bundled with OBIEE for enabling connectivity to sources such as SQL Server, MySQL, Hive, and Impala. The configuration of these is link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1194[documented in the OBIEE manuals] and is generally a supported configuration.
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Native ODBC Drivers].
+
+
+_There's also kind of a fourth option, which is link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[JDBC], as explained by link:https://twitter.com/cfiston/?ref=rittmanmead.com[Fiston] in link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[this excellent post]. It's OBIEE 12c only and not fully documented/supported._
+
+
+In this article we're going to dig into the third option (native ODBC) and look at how it can be used, and also how to troubleshoot it (and the OBIEE stack in general) on Linux.
+
+
+ODBC (link:https://en.wikipedia.org/wiki/Open_Database_Connectivity?ref=rittmanmead.com[Open Database Connectivity]) is a documented API designed to enable applications to work with databases, without one explicitly supporting the other. A comparable protocol is link:https://en.wikipedia.org/wiki/Java_Database_Connectivity?ref=rittmanmead.com[JDBC], which is also widely used (but as yet not fully supported/documented within OBIEE). To use native ODBC drivers with OBIEE on *nix, you install the driver on your OBIEE server and then configure OBIEE to use it. Mark Rittman wrote an example of how to do this link:http://www.rittmanmead.com/2013/04/obiee-odi-and-hadoop-part-2-connecting-obiee-11-1-1-7-to-hadoop-data-sources/?ref=rittmanmead.com[with the original Hive ODBC drivers here] (before they were formally bundled with OBIEE), and link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[the manual] shows how to use it with a native driver for Teradata.
+
+
+My interest in this is the link:https://drill.apache.org/?ref=rittmanmead.com[Apache Drill] tool, which enables querying with SQL against a link:https://drill.apache.org/docs/connect-a-data-source/?ref=rittmanmead.com[multitude of datasources], including things like JSON files, Hive tables, RDBMS, and more. MapR have released an link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com#step-1:-download-the-mapr-drill-odbc-driver[ODBC driver] for it, and I thought it'd be neat to get link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Apache Drill to work with OBIEE]. It link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[evidently does work] for OBIEE running on Windows, but I wanted to be able to use it on my standard environment, Linux. This blog post is a warts-and-all exploration of the process I went through to get it to work, since I thought it might be of interest to see some of the forensic methods available when trying to get things to work. For just the headlines, see link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Using Apache Drill with OBIEE 12c].
+
+
+== First Things First - Setting Up Apache Drill
+
+
+Drill can be deployed in distributed configuration (with all the parallel processing goodness which that brings), but also run as a single instance locally. For the sake of simplicity that's what I'm going to do here. It's rather easy to do:
+
+
+[source,shell]
+----
+# Download Apache Drill
+wget http://www.apache.org/dyn/closer.cgi/drill/drill-1.7.0/apache-drill-1.7.0.tar.gz
+# Unpack
+tar -xvf apache-drill-1.7.0.tar.gz
+# Run
+cd /opt/apache-drill-1.7.0/ && bin/sqlline -u jdbc:drill:zk=local
+----
+
+
+You need to make sure you've got a recent JDK available, and if you're running it on SampleApp, watch out for link:http://rmoff.net/2016/06/20/apache-drill-not-connected/?ref=rittmanmead.com[this odd problem that I had] which was related to classpaths and manifested itself with the error `java.lang.NoSuchMethodError: com.fasterxml.jackson.databind.JavaType.isReferenceType()Z`.
+
+
+All being well, you'll now have a Drill prompt:
+
+
+[source]
+----
+Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=512M; support was removed in 8.0
+Aug 09, 2016 5:51:43 AM org.glassfish.jersey.server.ApplicationHandler initialize
+INFO: Initiating Jersey application, version Jersey: 2.8 2014-04-29 01:25:26...
+apache drill 1.7.0
+"say hello to my little drill"
+0: jdbc:drill:zk=local>
+----
+
+
+From here you can run a simple query to check the version:
+
+
+[source,sql]
+------------
+0: jdbc:drill:zk=local> SELECT version FROM sys.version;
++----------+
+| version  |
++----------+
+| 1.7.0    |
++----------+
+1 row selected (0.392 seconds)
+------------
+
+
+or query one of the built-in sample data sets:
+
+
+[source,sql]
+----------
+0: jdbc:drill:zk=local> select count(*) from cp.`employee.json`;
++---------+
+| EXPR$0  |
++---------+
+| 1155    |
++---------+
+1 row selected (0.977 seconds)
+----------
+
+
+For more examples of Drill, see the link:https://drill.apache.org/docs/analyzing-the-yelp-academic-dataset/?ref=rittmanmead.com[tutorials].
+
+
+== Setting up Drill ODBC on Linux
+
+
+With Drill setup and running locally, let's now install the ODBC driver. This is all on SampleApp v511 / Oracle Linux 6.7.
+
+
+[source,shell]
+----
+sudo rpm -i http://package.mapr.com/tools/MapR-ODBC/MapR_Drill/MapRDrill_odbc_v1.2.1.1000/MapRDrillODBC-1.2.1.x86_64.rpm
+----
+
+
+Per the link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com#system-requirements[system requirements], we need to make sure that we're using one of the supported ODBC Driver Managers, so we'll install iODBC to start with (the other option being unixODBC):
+
+
+[source,shell]
+----
+sudo yum install -y unixodbc
+----
+
+
+Now follow the link:https://drill.apache.org/docs/configuring-odbc-on-linux/?ref=rittmanmead.com[configuration instructions]. To start with we'll do this in isolation of OBIEE to check that it works, and then bring it into OBIEE's world (for example, `odbc.ini` already exists in OBIEE).
+
+
+. Set environment variables
+
+
++
+[source]
+----
+ export ODBCINI=~/.odbc.ini
+ export MAPRDRILLINI=~/.mapr.drillodbc.ini
+ export LD_LIBRARY_PATH=/opt/mapr/drillodbc/lib/64
+----
++
+. Set up ODBC DSN in `~/.odbc.ini`
+
+
++
+[source]
+----
+ [ODBC Data Sources]
+ DrillDSN=MapR Drill ODBC Driver 64-bit
+
+ [DrillDSN]
+ Driver=/opt/mapr/drillodbc/lib/64/libmaprdrillodbc64.so
+ Description=Drill ODBC Driver
+ ConnectionType=Direct
+ HOST=localhost
+ PORT=31010
+ AuthenticationType=No Authentication
+----
++
+. Copy the default ODBC driver manager config
+
+
++
+[source]
+----
+ cp /opt/mapr/drillodbc/Setup/odbcinst.ini ~/.odbcinst.ini
+----
++
+. Configure the Drill ODBC driver in `~/.mapr.drillodbc.ini`
+
+
+Here I've set the log level to Trace, so that we can see what's going on in depth—in practice this would generate huge amounts of unnecessary log data so set it to a lower value (e.g. 0) for actual use.
+
+
++
+[source]
+----
+ [Driver]
+ DisableAsync=0
+ DriverManagerEncoding=UTF-32
+ ErrorMessagesPath=/opt/mapr/drillodbc/ErrorMessages
+ LogLevel=6
+ LogPath=/tmp/odbc.log
+ SwapFilePath=/tmp
+
+ ODBCInstLib=libiodbcinst.so.2
+ # This is the ODBC Driver Manager library
+ # Note the documentation - the DriverManagerEncoding (above) will vary depending
+ # on the driver manager in use.
+ # See https://drill.apache.org/docs/configuring-odbc-on-linux/#configuring-.mapr.drillodbc.ini
+----
++
+
+
+Having set this up, we'll now test it:
+
+
+[source]
+----
+[oracle@demo ~]$ iodbctest "DSN=DrillDSN"
+----
+
+
+You should see:
+
+
+[source]
+----
+iODBC Demonstration program
+This program shows an interactive SQL processor
+Driver Manager: 03.52.0709.0909
+Driver: 1.2.1.1001 (MapR Drill ODBC Driver)
+
+SQL>
+----
+
+
+From where you can enter a command (don't include the `;` suffix as this is added automatically)
+
+
+[source,sql]
+----------
+SQL> SELECT version FROM sys.version
+
+version
+--------
+1.7.0
+
+result set 1 returned 1 rows.
+----------
+
+
+* If you get `Unable to locate SQLGetPrivateProfileString function` then check that your `LD_LIBRARY_PATH` includes the location of the Driver Manager (`libiodbc.so.2`), and that the exact library specified by `ODBCInstLib` exists—in my installation it was called `libiodbcinst.so.2` rather than `libiodbc.so` as shown in the docs. Also check that you've set `MAPRDRILLINI` environment variable.
+
++
+* `libiodbc` installs into `/usr/lib64` which is one of the default paths checked for library files, hence not including it explicitly in the `LD_LIBRARY_PATH` environment variable.
++
+* If you just get `Have a nice day.` with no error but no `SQL> ` prompt, check your ODBC DSN configuration. I hit this issue when inadvertently omitting the `AuthenticationType` parameter.
+
+
+If you head over to `/tmp/odbc.log/` you should see a file called `driver.log` with a bunch of trace data in it. Here's the data from the above session, excluding TRACE logs:
+
+
+[source,sql]
+----
+Aug 09 06:23:35.701 INFO  1148090112 Driver::LogVersions: SDK Version: 09.05.07.1008
+Aug 09 06:23:35.701 INFO  1148090112 Driver::LogVersions: DSII Version: 1.2.1.1001
+Aug 09 06:23:35.701 INFO  1148090112 Driver::Initialize: Database CHAR Encoding: UTF-8
+Aug 09 06:23:35.701 INFO  1148090112 Driver::Initialize: Database WCHAR Encoding: UTF-8
+Aug 09 06:23:35.701 INFO  1148090112 Driver::Initialize: ANSI CHAR Encoding: UTF-8
+Aug 09 06:23:35.701 INFO  1148090112 Driver::Initialize: Driver Manager WCHAR Encoding: UTF-32LE
+Aug 09 06:23:35.702 INFO  1148090112 Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+Aug 09 06:23:35.702 INFO  1148090112 Driver::Initialize: Locale name: en_GB
+Aug 09 06:23:35.702 INFO  1148090112 Driver::Initialize: Bitness: 64-bit
+Aug 09 06:23:35.702 INFO  1148090112 CInterface::SQLAllocHandle: Allocating environment handle.
+Aug 09 06:23:35.702 INFO  1148090112 Environment::SQLSetEnvAttr: Attribute: SQL_ATTR_ODBC_VERSION (200)
+Aug 09 06:23:35.702 INFO  1148090112 EnvironmentAttributes::SetAttribute: Setting ODBC version to: 3
+Aug 09 06:23:35.702 INFO  1148090112 CInterface::SQLAllocHandle: Allocating connection handle.
+Aug 09 06:23:35.702 INFO  1148090112 Connection::SQLSetConnectAttr: Attribute: Unknown Attribute (1051)
+Aug 09 06:23:35.702 INFO  1148090112 ConnectionAttributes::SetAttribute: Invalid attribute: 1051
+Aug 09 06:23:35.704 ERROR 1148090112 Connection::SQLSetConnectAttr: [MapR][ODBC] (10210) Attribute identifier invalid or not supported: 1051
+Aug 09 06:23:35.708 INFO  1148090112 DiracClient::DiracClient: Create a new Dirac Client [194bd90] (handshakeTimeout = 5, queryTimeout = 180)
+Aug 09 06:23:35.708 INFO  1148090112 DiracClient::connect: Connection String 'local=localhost:31010' & Default Schema ''
+Aug 09 06:23:35.712 DEBUG 1148090112 DiracClient::connect: Connection successfully.
+Aug 09 06:23:35.713 INFO  1148090112 Connection::SQLGetInfoW: InfoType: SQL_CURSOR_COMMIT_BEHAVIOR (23)
+Aug 09 06:23:35.713 INFO  1148090112 Connection::SQLGetInfoW: InfoType: SQL_CURSOR_ROLLBACK_BEHAVIOR (24)
+Aug 09 06:23:35.713 INFO  1148090112 Connection::SQLGetInfoW: InfoType: SQL_DRIVER_VER (7)
+Aug 09 06:23:35.713 INFO  1148090112 Connection::SQLGetInfoW: InfoType: SQL_DRIVER_NAME (6)
+Aug 09 06:23:35.713 INFO  1148090112 CInterface::SQLAllocHandle: Allocating statement handle.
+Aug 09 06:23:35.714 INFO  1148090112 Statement::SQLGetStmtAttrW: Attribute: SQL_ATTR_APP_ROW_DESC (10010)
+Aug 09 06:23:35.714 INFO  1148090112 Statement::SQLGetStmtAttrW: Attribute: SQL_ATTR_APP_PARAM_DESC (10011)
+Aug 09 06:23:35.714 INFO  1148090112 Statement::SQLGetStmtAttrW: Attribute: SQL_ATTR_IMP_ROW_DESC (10012)
+Aug 09 06:23:35.714 INFO  1148090112 Statement::SQLGetStmtAttrW: Attribute: SQL_ATTR_IMP_PARAM_DESC (10013)
+Aug 09 06:25:39.409 INFO  1148090112 StatementState::InternalPrepare: Preparing query: SELECT version FROM sys.version
+Aug 09 06:25:39.412 INFO  1148090112 DiracClient::ExecuteStatementDirect: DRResultSet [19494c0] executes query 'SELECT * FROM (SELECT version FROM sys.version) T LIMIT 0'
+Aug 09 06:25:39.412 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: START DEQUEUE. Current ResultQueue Size = 0
+Aug 09 06:25:40.219 DEBUG 979547904 DiracClient::QueryResultsListener: DRResultSet [19494c0]: Handle RecordBatch [34001c40], DrillClientError [0]'
+Aug 09 06:25:40.219 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: END DEQUEUE. Get RecordBatch 34001c40 [m_recordCount = 0 ]. Now ResultQueue Size = 0
+Aug 09 06:25:40.219 DEBUG 1148090112 DRResultSet::InitializeColumns: Column 1 version: {DataMode: OPTIONAL, MinorType: VARCHAR, Precision = 1, Scale = 0}
+Aug 09 06:25:40.219 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: START DEQUEUE. Current ResultQueue Size = 0
+Aug 09 06:25:40.276 DEBUG 979547904 DiracClient::QueryResultsListener: DRResultSet [19494c0]: Handle RecordBatch [0], DrillClientError [0]'
+Aug 09 06:25:40.276 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: status = QRY_COMPLETED.
+Aug 09 06:25:40.276 INFO  1148090112 DiracClient::CloseStatement: Close statement and free query resources
+Aug 09 06:25:40.276 INFO  1148090112 DiracClient::ExecuteStatementDirect: DRResultSet [19494c0] executes query 'SELECT version FROM sys.version'
+Aug 09 06:25:40.277 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: START DEQUEUE. Current ResultQueue Size = 0
+Aug 09 06:25:40.748 DEBUG 979547904 DiracClient::QueryResultsListener: DRResultSet [19494c0]: Handle RecordBatch [3400cb60], DrillClientError [0]'
+Aug 09 06:25:40.750 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: END DEQUEUE. Get RecordBatch 3400cb60 [m_recordCount = 1 ]. Now ResultQueue Size = 0
+Aug 09 06:25:40.750 DEBUG 1148090112 DRResultSet::InitializeColumns: Column 1 version: {DataMode: OPTIONAL, MinorType: VARCHAR, Precision = 1, Scale = 0}
+Aug 09 06:25:40.751 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: START DEQUEUE. Current ResultQueue Size = 0
+Aug 09 06:25:40.985 DEBUG 979547904 DiracClient::QueryResultsListener: DRResultSet [19494c0]: Handle RecordBatch [0], DrillClientError [0]'
+Aug 09 06:25:40.985 DEBUG 1148090112 DRResultSet::GetNextRecordBatch: status = QRY_COMPLETED.
+Aug 09 06:25:40.986 INFO  1148090112 DiracClient::CloseStatement: Close statement and free query resources
+Aug 09 06:25:40.991 ERROR 1148090112 Statement::SQLCloseCursor: [MapR][ODBC] (10510) Invalid cursor state.
+Aug 09 06:27:19.748 ERROR 1148090112 Statement::SQLCloseCursor: [MapR][ODBC] (10510) Invalid cursor state.
+Aug 09 06:27:19.748 INFO  1148090112 CInterface::SQLFreeHandle: Freeing statement handle.
+Aug 09 06:27:19.748 INFO  1148090112 DiracClient::~DiracClient: Close the Dirac Client [194bd90]
+Aug 09 06:27:19.748 INFO  1148090112 CInterface::SQLFreeHandle: Freeing connection handle.
+Aug 09 06:27:19.749 INFO  1148090112 CInterface::SQLFreeHandle: Freeing environment handle.
+----
+
+
+== Hooking it up to OBIEE
+
+
+We've shown that we can connect to Apache Drill using ODBC and query it. Let's see if we get it to work for OBIEE. Our starting point is the 12c docs, link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Configuring Database Connections Using Native ODBC Drivers].
+
+
+. Environment variables are defined per-component in a `.properties` file, which for the BI Server (OBIS / nqsserver) is `BI_DOMAIN/config/fmwconfig/bienv/obis/obis.properties`, so on SampleApp `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/OBIS/obis.properties`. To this file (which in 12.2.1 is empty by default) we add:
+
+
++
+[source,properties]
+----
+ MAPRDRILLINI=/home/oracle/.mapr.drillodbc.ini
+ LD_LIBRARY_PATH=/opt/mapr/drillodbc/lib/64
+----
++
+. Add the Drill DSN to `odbc.ini` which for OBIEE already exists and is populated with other ODBC configurations. You'll find the file in `BI_DOMAIN/config/fmwconfig/bienv/core`, which on SampleApp is `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini`.
+
+
++
+. Add to the `[ODBC Data Sources]` section
+
+
++
+[source,properties]
+----
+ DrillDSN=MapR Drill ODBC Driver 64-bit
+----
++
+. Add a section to the bottom of the file:
+
+
++
+[source]
+----
+ [DrillDSN]
+ Driver=/opt/mapr/drillodbc/lib/64/libmaprdrillodbc64.so
+ AuthenticationType=No Authentication
+ Description=Drill ODBC Driver
+ ConnectionType=Direct
+ HOST=localhost
+ PORT=31010
+----
++
++
+
+
+Now restart the BI Server:
+
+
+[source]
+----
+/app/oracle/biee/user_projects/domains/bi/bitools/bin/stop.sh -i obis1 && /app/oracle/biee/user_projects/domains/bi/bitools/bin/start.sh -i obis1
+----
+
+
+We can check that the BI Server has picked up our new environment variables by using the link:http://man7.org/linux/man-pages/man5/proc.5.html?ref=rittmanmead.com[`/proc` pseudo file-system] (you can also see an environment variable dump as part of the `obis1.out` logfile during startup):
+
+
+[source,properties]
+----
+[oracle@demo ~]$ strings /proc/$(pgrep nqsserver)/environ|grep mapr
+LD_LIBRARY_PATH=/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib:/app/oracle/biee/bi/bifoundation/server/bin:/app/oracle/biee/bi/bifoundation/web/bin:/app/oracle/biee/bi/clients/Essbase/EssbaseRTC/bin:/app/oracle/biee/bi/lib:/app/oracle/biee/lib:/app/oracle/biee/oracle_common/adr:/app/oracle/biee/oracle_common/lib:/usr/lib:/lib:/opt/mapr/drillodbc/lib/64:::/app/oracle/app/oracle/product/12.1.0/dbhome_1/lib:/app/oracle/endeca/olt/bin:/app/oracle/biee/wlserver/server/native/linux/x86_64:/app/oracle/biee/wlserver/server/native/linux/x86_64/oci920_8:/app/oracle/biee/wlserver/server/native/linux/x86_64:/app/oracle/biee/wlserver/server/native/linux/x86_64/oci920_8
+MAPRDRILLINI=/home/oracle/.mapr.drillodbc.ini
+----
+
+
+Over in the Administration Tool I set up a new Database (type: ODBC Basic) and associated connection pool (ODBC 2.0) pointing to DrillDSN.
+
+
+image::/images/2016/08/dr02.png[]
+
+
+image::/images/2016/08/dr03.png[]
+
+
+Now to try it out! In Answers I build a Direct Database Request:
+
+
+image::/images/2016/08/dr04.png[]
+
+
+But...oh no!
+
+
+[source,sql]
+----
+Odbc driver returned an error (SQLExecDirectW).
+State: HY000. Code: 10058. [NQODBC] [SQL_STATE: HY000] [nQSError: 10058] A general error has occurred. (HY000)
+State: HY000. Code: 12010. [nQSError: 12010] Communication error connecting to remote end point: address = demo.us.oracle.com; port = 7792. (HY000)
+SQL Issued: {call NQSGetQueryColumnInfo('EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version;')}
+----
+
+
+Let's pick through this, because it's a common error and easily misinterpreted.
+
+
+. `Odbc driver returned an error (SQLExecDirectW).`
+
+
++
+* When you run an analysis/dashboard, Presentation Services (OBIPS/sawserver) connects to the BI Server (OBIS/nqsserver) to send the request as Logical SQL, and it connects to the BI Server *using ODBC*. Therefore any kind of issue running the request will always show as an "ODBC error".
+* *Learning*: nothing, other than that Presentation Services hit an error.
++
+. `State: HY000. Code: 10058. [NQODBC] [SQL_STATE: HY000] [nQSError: 10058] A general error has occurred. (HY000)`
+
+
++
+* *Learning*: nothing. Something went wrong, somewhere, and OBIEE was involved (`nQSError`).
++
+. `State: HY000. Code: 12010. [nQSError: 12010] Communication error connecting to remote end point: address = demo.us.oracle.com; port = 7792. (HY000)`
+
+
++
+* Now we're getting somewhere. Port 7792 is, on this server, the BI Server (OBIS / nqsserver). And, there was an error connecting to it.
+* *Learning*: We failed to successfully connect to the BI Server. Is it running? Was it running but crashed? Is there a network problem? Lots to investigate.
++
+. `SQL Issued: {call NQSGetQueryColumnInfo('EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version;')}`
+
+
++
+* *Learning*: This is the _logical_ SQL that Presentation Services was trying to run. Useful to know.
++
+
+
+Let's go and have a look at the BI Server log, because something's evidently not right. We know that it _was_ running, because otherwise we'd not have been able to login to OBIEE in the first place.
+
+
+In `/app/oracle/biee/user_projects/domains/bi/servers/obis1/logs/obis1.out` there's some bad news:
+
+
+[source]
+----
+<NodeManager ComponentManager> <The server 'obis1' with process id 7059 is no longer alive; waiting for the process to die.>
+<NodeManager ComponentManager> <Process died.>
+<NodeManager ComponentManager> <get latest startup configuration before deciding/trying to restart the server>
+<NodeManager ComponentManager> <Server failed so attempting to restart (restart count = 1)>
+----
+
+
+So it looks like the BI Server crashed. In the folder above where `obis1.out` is kept, there's a corresponding crash report (note that the process ID matches the log message above), `nqsserver_7059_crashreport.txt`. Some bits of interest from it:
+
+
+[source,sql]
+----
+[...]
+Beginning of crash dump...
+Signal: 11
+================================================================
+[...]
+Activity type: ExecutePhysical GatewayDbGateway Prepare
+DSN:Apache Drill
+User Name:weblogic
+SQL:SELECT version FROM sys.version;
+================================================================
+Activity #2 ECID: 005EPt5qYm2Fw000jzwkno0001iJ0001KT,0
+================================================================
+Activity type: Producer Executing Query
+Repository Name:ssi;Subject Area Name:;User Name:weblogic
+Logical Hash of SQL: 0x3d5c4ef2SQL:{call NQSGetQueryColumnInfo('EXECUTE PHYSICAL  CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version;')}
+[...]
+
+BACKTRACE:
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilityserver64.so(+0x12a829)[0x7f554995b829]
+/lib64/libpthread.so.0(+0xf790)[0x7f5547cde790]
+/lib64/libc.so.6(cfree+0x1c)[0x7f554721693c]
+/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbc.so(+0xa5c55)[0x7f550f2efc55]
+/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbc.so(+0xa4fc0)[0x7f550f2eefc0]
+/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbc.so(+0xa53f0)[0x7f550f2ef3f0]
+/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbc.so(SQLDriverConnect+0x149)[0x7f550f2d8337]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbgatewayodbc64.so(_ZN8NQSQLAPI18NQSQLDriverConnectEPvS0_RKN3sup6StringIwN7_SASSTL9allocatorIwEEEES8_S8_tbS8_+0x1c8)[0x7f54abfb5078]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbgatewayodbc64.so(_ZN24OdbcDataSourceConnection7ConnectERK6SignonbjN10ServerInfo17TxnIsolationLevelEi+0x275)[0x7f54abfcbb45]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilityserver64.so(_ZN20DataSourceConnection7ConnectERK6SignonbRK14GatewayOptions+0x79)[0x7f55498d6819]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbconnection64.so(_ZN12DbConnection9FixDamageERK14GatewayOptions+0x7c)[0x7f55524e12cc]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbconnection64.so(_ZN20SingleThreadedDbPool22GetAvailableConnectionERK6SignonR17DbConnectionGuardRbRK14GatewayOptions+0x45e)[0x7f555250513e]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbgateway64.so(_ZN11NQDbGateway7PrepareEv+0xb14)[0x7f5552294fa4]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsexecutionlist64.so(_ZN8Producer11ExecuteOnceEv+0xb4c)[0x7f555146192c]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN16NQExecutionState17ExecuteSystemMainEv+0x82)[0x7f5549c92032]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN15NQThreadJobBase17ExecuteSystemMainEv+0x51)[0x7f5549cd9dd1]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbconnection64.so(_ZN18NQThreadServerBaseI17ManagedJobFunctorE11ScheduleJobEv+0x40)[0x7f5552509650]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN19NQThreadServerNoJob15ExecuteUserMainEv+0x16)[0x7f5549cda256]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN16NQExecutionState17ExecuteSystemMainEv+0x82)[0x7f5549c92032]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN8NQThread17ExecuteSystemMainEv+0x5b)[0x7f5549cd897b]
+/app/oracle/biee/bi/bifoundation/server/bin/libnqutilitygeneric64.so(_ZN8NQThread15ThreadMainEntryEPv+0x2e)[0x7f5549cd8c9e]
+/lib64/libpthread.so.0(+0x7a51)[0x7f5547cd6a51]
+/lib64/libc.so.6(clone+0x6d)[0x7f554728393d]
+----
+
+
+Signal 11 is "SIGSEGV", or segmentation fault, which is bad, link:https://www.youtube.com/watch?v=KqOsrniBooQ&ref=rittmanmead.com[m'kay]?
+
+
+== Tracing OBIEE's ODBC Connectivity with strace
+
+
+Looking in at the ODBC `driver.log` we can see that _something_ happened, but no error logged. Here's everything, minus TRACE logs:
+
+
+[source]
+----
+Aug 09 07:13:43.283 INFO  2896611072 Driver::LogVersions: SDK Version: 09.05.07.1008
+Aug 09 07:13:43.288 INFO  2896611072 Driver::LogVersions: DSII Version: 1.2.1.1001
+Aug 09 07:13:43.288 INFO  2896611072 Driver::Initialize: Database CHAR Encoding: UTF-8
+Aug 09 07:13:43.288 INFO  2896611072 Driver::Initialize: Database WCHAR Encoding: UTF-8
+Aug 09 07:13:43.288 INFO  2896611072 Driver::Initialize: ANSI CHAR Encoding: UTF-8
+Aug 09 07:13:43.288 INFO  2896611072 Driver::Initialize: Driver Manager WCHAR Encoding: UTF-32LE
+Aug 09 07:13:43.289 INFO  2896611072 Driver::Initialize: Detected Driver Manager: DataDirect Driver Manager, 07.14.0119 (U0115)
+Aug 09 07:13:43.289 INFO  2896611072 Driver::Initialize: Locale name: en_US
+Aug 09 07:13:43.289 INFO  2896611072 Driver::Initialize: Bitness: 64-bit
+Aug 09 07:13:43.290 INFO  2896611072 CInterface::SQLAllocHandle: Allocating environment handle.
+Aug 09 07:13:43.293 INFO  2896611072 CInterface::SQLAllocHandle: Allocating connection handle.
+Aug 09 07:13:43.298 ERROR 2896611072 CInterface::SQLGetConnectAttr: [MapR][ODBC] (10210) Attribute identifier invalid or not supported: 1063
+Aug 09 07:13:43.300 INFO  2896611072 CInterface::SQLFreeHandle: Freeing connection handle.
+Aug 09 07:13:43.301 INFO  2896611072 CInterface::SQLFreeHandle: Freeing environment handle.
+Aug 09 07:13:43.312 INFO  2896611072 CInterface::SQLAllocHandle: Allocating environment handle.
+Aug 09 07:13:43.315 INFO  2896611072 Environment::SQLSetEnvAttr: Attribute: SQL_ATTR_ODBC_VERSION (200)
+Aug 09 07:13:43.315 INFO  2896611072 EnvironmentAttributes::SetAttribute: Setting ODBC version to: 2
+Aug 09 07:13:43.315 INFO  2896611072 CInterface::SQLAllocHandle: Allocating connection handle.
+Aug 09 07:13:43.317 INFO  2896611072 Environment::SQLGetEnvAttr: Attribute: Unknown Attribute (1065)
+Aug 09 07:13:43.317 INFO  2896611072 Connection::SQLGetInfoW: InfoType: SQL_DRIVER_ODBC_VER (77)
+----
+
+
+One thing that stands out (with the benefit of hindsight because I've been hacking away at this for a while) is
+
+
+[source]
+----
+Driver::Initialize: Detected Driver Manager: DataDirect Driver Manager, 07.14.0119 (U0115)
+----
+
+
+Whereas in my successful standalone test above it was
+
+
+[source]
+----
+Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+----
+
+
+So now let's do some digging. Using `strace` (link:http://www.rittmanmead.com/2015/03/lifting-the-lid-on-obiee-internals-with-linux-diagnostics-tools/?ref=rittmanmead.com[which I've written about previously]) we can see every system call that OBIEE makes, letting us audit the files that it reads and libraries that it loads. You can invoke `strace` at process startup or, easier, attach it to a running one. Since the BI Server also creates child processes, and also may crash (as here), we'll use a loop to make sure we've always got a strace running against it until we opt to cancel it:
+
+
+[source]
+----
+while [ 1 -eq 1 ]; do strace -f -p $(pgrep nqsserver) -tt -y -s 4096 -o ~/nqs_trace_$(date +%Y%m%dT%H%M%S%N).out;done
+----
+
+
+If the BI Server isn't running, you'll just see
+
+
+[source]
+----
+strace: Invalid process id: '-tt'
+----
+
+
+But once it starts, you'll get
+
+
+[source]
+----
+Process 8457 attached
+----
+
+
+The output is written to the home folder, in files named `nqs_trace_` followed by the timestamp at which the trace started. To cancel it, hit Ctrl-C several times to break out of `strace` and the `while` loop. *If you leave this running for a long period of time you'll likely fill the filesystem and possibly make the server unusable…*
+
+
+Using your text editor of choice, you can search through the `strace` output to try and pick apart what's happening. Even if you don't find the cause of the error, you can at least rule other causes out this way. For example, whether a configuration file that you think is being used actually is, or where a library is actually being read from.
+
+
+First up in searching the trace for `odbc` is the BI Server's own ODBC gateway library being opened and read:
+
+
+[source]
+----
+7222  07:13:43.080212 open("/app/oracle/biee/bi/bifoundation/server/bin/libnqsdbgatewayodbc64.so", O_RDONLY) = 31
+----
+
+
+Next it checks for the `odbc.ini` configuration file and gets a success return code (`0`), but at this point it doesn't read it
+
+
+[source]
+----
+8382  07:13:43.097901 stat("/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini", {st_mode=S_IFREG|0640, st_size=2613, ...}) = 0
+----
+
+
+and then looks for the ODBC trace library, and this is interesting because it can't find it. One of the very useful things with `strace` is to be able to see all the paths that a program tries to read for a given file. Here you see a selection of the paths it's trying, and the failure (`-1 ENOENT (No such file or directory)`) each time:
+
+
+[source]
+----
+8382  07:13:43.098135 stat("/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/odbctrac.so", 0x7f54aca68b90) = -1 ENOENT (No such file or directory)
+8382  07:13:43.098190 stat("/usr/local/lib//app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/odbctrac.so", 0x7f54aca68b90) = -1 ENOENT (No such file or directory)
+8382  07:13:43.098230 stat("/usr/local/lib/..//app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/odbctrac.so", 0x7f54aca68b90) = -1 ENOENT (No such file or directory)
+8382  07:13:43.098274 stat("/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib//app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/odbctrac.so", 0x7f54aca68b90) = -1 ENOENT (No such file or directory)
+8382  07:13:43.098312 stat("/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/..//app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/odbctrac.so", 0x7f54aca68b90) = -1 ENOENT (No such file or directory)
+----
+
+
+We can use one of my favourite linux utilities, `locate`, to find where this file actually is:
+
+
+[source]
+----
+[oracle@demo ~]$ locate odbctrac.so
+/app/oracle/biee/bi/bifoundation/odbc/lib/odbctrac.so
+/app/oracle/biee/bi/common/ODBC/Merant/5.3/lib/odbctrac.so
+----
+
+
+You can install this on your system with `sudo yum install -y mlocate`, and if you've recently changed files (e.g. installed a new package) refresh the database with `sudo updatedb` before running `locate`.
+
+
+This is one interesting point of note here, then, that the ODBC trace library isn't loading properly. Let's note this for now, and carry on through the trace file. Next up it opens and reads the `odbc.ini` file:
+
+
+[source]
+----
+8382  07:13:43.102664 open("/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini", O_RDONLY) = 31
+8382  07:13:43.102786 read(31</app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini>, "[ODBC]\nTrace=1\nTraceFile=/app/oracle/biee/user_projects/domains/bi/odbctrace.out\nTraceDll=/app/oracle/biee/bi/common/ODBC/M [...]
+----
+
+
+Now we get into the meat of it. The Apache Drill ODBC driver gets checked that it exists:
+
+
+[source]
+----
+8382  07:13:43.109475 stat("/opt/mapr/drillodbc/lib/64/libmaprdrillodbc64.so", {st_mode=S_IFREG|0645, st_size=38794216, ...}) = 0
+----
+
+
+and then opened and read. Next OBIEE tries to read the `libdrillClient.so` library, starting here:
+
+
+[source]
+----
+8382  07:13:43.113071 open("/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+----
+
+
+Note that this fails (`-1 ENOENT`), and it works it's way through other paths until it succeeds:
+
+
+[source]
+----
+8382  07:13:43.113071 open("/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113189 open("/app/oracle/biee/bi/bifoundation/server/bin/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113238 open("/app/oracle/biee/bi/bifoundation/web/bin/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113274 open("/app/oracle/biee/bi/clients/Essbase/EssbaseRTC/bin/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113309 open("/app/oracle/biee/bi/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113341 open("/app/oracle/biee/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113374 open("/app/oracle/biee/oracle_common/adr/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113408 open("/app/oracle/biee/oracle_common/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113440 open("/usr/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113484 open("/lib/libdrillClient.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+8382  07:13:43.113517 open("/opt/mapr/drillodbc/lib/64/libdrillClient.so", O_RDONLY) = 31
+----
+
+
+Where do these paths come from? `LD_LIBRARY_PATH`! And we can confirm that by comparing the above sequence of folders with the value of `LD_LIBRARY_PATH` that we saw above, split out onto lines here with a bit of `sed` magic:
+
+
+[source]
+----
+[oracle@demo ~]$  strings /proc/$(pgrep nqsserver)/environ|grep LD_LIBRARY_PATH|sed 's/:/\n/g'|sed 's/=/\n/g'
+LD_LIBRARY_PATH
+/app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib
+/app/oracle/biee/bi/bifoundation/server/bin
+/app/oracle/biee/bi/bifoundation/web/bin
+/app/oracle/biee/bi/clients/Essbase/EssbaseRTC/bin
+/app/oracle/biee/bi/lib
+/app/oracle/biee/lib
+/app/oracle/biee/oracle_common/adr
+/app/oracle/biee/oracle_common/lib
+/usr/lib
+/lib
+/opt/mapr/drillodbc/lib/64
+----
+
+
+So...we've read the `odbc.ini` config file, loaded the Apache Drill ODBC driver (`libmaprdrillodbc64.so`) and associated library (`libdrillClient.so`). Now a further library is opened and read:
+
+
+[source]
+----
+8382  07:13:43.271710 open("/opt/mapr/drillodbc/lib/64/SimbaDrillODBC.did", O_RDONLY) = 31
+----
+
+
+and then the Apache Drill ODBC driver configuration file that we created earlier (and referenced in the `MAPRDRILLINI` environment variable) is opened and read:
+
+
+[source]
+----
+8382  07:13:43.281356 open("/home/oracle/.mapr.drillodbc.ini", O_RDONLY) = 31
+----
+
+
+Because we've enabled logging in the driver configuration, what happens next in the strace is that log file being created and written to:
+
+
+[source]
+----
+8382  07:13:43.283527 mkdir("/tmp/odbc.log/", 0755) = -1 EEXIST (File exists)
+8382  07:13:43.283834 open("/tmp/odbc.log/driver.log", O_WRONLY|O_CREAT|O_APPEND, 0666) = 31
+8382  07:13:43.284037 fstat(31</tmp/odbc.log/driver.log>, {st_mode=S_IFREG|0640, st_size=174018, ...}) = 0
+8382  07:13:43.284220 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f54ad460000
+8382  07:13:43.284338 fstat(31</tmp/odbc.log/driver.log>, {st_mode=S_IFREG|0640, st_size=174018, ...}) = 0
+8382  07:13:43.284389 lseek(31</tmp/odbc.log/driver.log>, 174018, SEEK_SET) = 174018
+8382  07:13:43.284438 write(31</tmp/odbc.log/driver.log>, "Aug 09 07:13:43.283 INFO  2896611072 Driver::LogVersions: SDK Version: 09.05.07.1008\n", 85) = 85
+[...]
+----
+
+
+After a bunch of trace logging is written, the ODBC messages translation file is read:
+
+
+[source,xml]
+----
+8382  07:13:43.290888 read(34</opt/mapr/drillodbc/ErrorMessages/en-US/ODBCMessages.xml>, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE Messages [\n    <!ELEMENT Messages (Package*)>\n\n    <!ELEMENT Package (Error*)>\n    <!ATTLI
+----
+
+
+The next file read is `odbc.ini` again
+
+
+[source]
+----
+8382  07:13:43.304659 read(35</app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini>, "", 4096) = 0
+----
+
+
+followed by `odbc.ini` in the default `/etc/` path (which exists but is zero bytes):
+
+
+[source]
+----
+8382  07:13:43.306727 open("/etc/odbc.ini", O_RDONLY) = 35
+----
+
+
+The `odbcinst.ini` file is then read, from `/etc/odbcinst.ini` (which is created by unixODBC on installation, and has entries for non-existant mysql/postgresql drivers):
+
+
+[source]
+----
+8382  07:13:43.307417 read(35</etc/odbcinst.ini>, "# Example driver definitions\n\n# Driver from the postgresql-odbc package\n# Setup from the unixODBC package\n[PostgreSQL]\nDescription\t= ODBC for PostgreSQL\nDriver\t\t= /usr/lib/psqlod
+----
+
+
+and then the version for Drill:
+
+
+[source]
+----
+8382  07:13:43.308040 read(35</home/oracle/.odbcinst.ini>, "[ODBC Drivers]\nMapR Drill ODBC Driver 64-bit=Installed\n\n[MapR Drill ODBC Driver 64-bit]\nDescription=MapR Drill ODBC Driver(64-bit)\nDriver=/opt/mapr/drillodbc/lib/64/libmaprd
+----
+
+
+Back to the `odbc.ini` file, both OBIEE and default (empty) system:
+
+
+[source]
+----
+8382  07:13:43.309065 open("/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini", O_RDONLY) = 35
+8382  07:13:43.309619 read(35</etc/odbc.ini>, "", 4096) = 0
+----
+
+
+After another read of the two `odbcinst.ini` files (per above), there's logging information written
+
+
+[source]
+----
+8382  07:13:43.312345 write(31</tmp/odbc.log/driver.log>, "Aug 09 07:13:43.312 INFO  2896611072 CInterface::SQLAllocHandle: Allocating environment handle.\n", 96) = 96
+[...]
+8382  07:13:43.317106 write(31</tmp/odbc.log/driver.log>, "Aug 09 07:13:43.317 INFO  2896611072 Connection::SQLGetInfoW: InfoType: SQL_DRIVER_ODBC_VER (77)\n", 97) = 97
+8382  07:13:43.317141 stat("/tmp/odbc.log/driver.log", {st_mode=S_IFREG|0640, st_size=179550, ...}) = 0
+----
+
+
+And then, bang.
+
+
+[source]
+----
+8382  07:13:43.317198 --- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_MAPERR, si_addr=0x1f} ---
+----
+
+
+After which, the crashreport is written:
+
+
+[source]
+----
+8382  07:13:43.317249 open("/app/oracle/biee/user_projects/domains/bi/servers/obis1/nqsserver_7059_crashreport.txt", O_WRONLY|O_CREAT|O_APPEND, 0600) = 35
+[...]
+----
+
+
+So from this we can see that the ODBC driver is being loaded from the path we expected, and the configuration files that we expected are being read too. So no smoking gun - but a couple of possible problems ruled out.
+
+
+== Reproducing the Crash on Demand
+
+
+With this kind of problem it's often a case of working through lots of different configuration settings to obtain further diagnostic evidence - which requires reproducing the problem each time. Instead of manually running the query through Answers which triggers the problem, I moved this part of the diagnostics to the command line, with `nqcmd`. I copied the logical SQL to a file `drill-test.lsql`:
+
+
+[source,sql]
+----
+EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version;
+----
+
+
+and then run with:
+
+
+[source]
+----
+/app/oracle/biee/user_projects/domains/bi/bitools/bin/nqcmd.sh -d AnalyticsWeb -u weblogic -p Admin123 -s ~/drill-test.lsql
+----
+
+
+gives the same result (error) but easier to do.
+
+
+[source,sql]
+--------------------------------------------------------------------------------
+Aug 09, 2016 7:59:53 PM oracle.bi.endpointmanager.impl.bienv.BIEnvComponents loadFromInputStream
+INFO: Reading components from: /app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/bienv-components.xml ...
+
+-------------------------------------------------------------------------------
+          Oracle BI ODBC Client
+          Copyright (c) 1997-2015 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
+
+
+EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version
+EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version
+[unixODBC][nQSError: 12010] Communication error connecting to remote end point: address = demo.us.oracle.com; port = 7792.[unixODBC][NQODBC] [SQL_STATE: S1000] [nQSError: 10058] A general error has occurred.
+
+Statement preparation failed
+
+
+Processed: 1 queries
+Encountered 1  errors
+--------------------------------------------------------------------------------
+
+
+== Stuff Ruled Out
+
+
+* The `odbcinst.ini` file doesn't have to be present - strace showed it is looked for, but the result is the same even if it's not (or is but doesn't have an entry for the Drill drivers):
+
+
++
+[source]
+----
+  4270  20:00:06.692891 open("/home/oracle/.odbcinst.ini", O_RDONLY) = -1 ENOENT (No such file or directory)
+----
++
+* Changing the connection pool call interface to ODBC 3.5 doesn't fix things, nor does changing the database type to Apache Hadoop (grasping at straws...)
+
+
+== Driver Manager
+
+
+One of the routes of investigation is the Driver Manager. This is for two reasons; one is that on Windows ODBC is native, the driver manager is built in. As mentioned, link:https://twitter.com/cfiston/?ref=rittmanmead.com[@cfiston] has link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[got this to work] - but on Windows. So platform differences aside (he says casually), this could be something. The second reason is the difference in the driver manager that shows in the ODBC log between a successful (via `iodbctest`) request
+
+
+[source]
+----
+Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+----
+
+
+versus an unsuccessful one (in OBIEE):
+
+
+[source]
+----
+Driver::Initialize: Detected Driver Manager: DataDirect Driver Manager, 07.14.0119 (U0115)
+----
+
+
+Before we dig into this further let's take a look at the driver manager libraries that we've got on the system. DataDirect and unixODBC are both `libodbcinst.so` whilst iODBC is `libiodbc.so`. We'll use a bit of bash magic to find all the files, and list their sizes and checksums so we can spot which are the same:
+
+
+[source]
+------
+[oracle@demo odbc.log]$ locate libodbcinst|xargs -Ifoo ls -l foo
+-rw-r----- 1 oracle oinstall 1380087 2015-10-13 03:04 /app/oracle/biee/bi/bifoundation/odbc/lib/libodbcinst.so
+-rw-r----- 1 oracle oinstall 1380087 2015-10-03 02:59 /app/oracle/biee/bi/common/ODBC/Merant/5.3/lib/libodbcinst.so
+-rw-r----- 1 oracle oinstall 1203032 2015-10-03 02:59 /app/oracle/biee/bi/common/ODBC/Merant/7.0.1/lib/libodbcinst.so
+-rw-r----- 1 oracle oinstall 1239728 2015-10-03 02:59 /app/oracle/biee/bi/common/ODBC/Merant/7.1.2/lib/libodbcinst.so
+-rw-r----- 1 oracle oinstall 1244304 2015-10-03 02:59 /app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbcinst.so
+lrwxrwxrwx 1 root root 20 2016-08-08 11:55 /usr/lib64/libodbcinst.so -> libodbcinst.so.2.0.0
+lrwxrwxrwx 1 root root 20 2016-08-08 11:55 /usr/lib64/libodbcinst.so.2 -> libodbcinst.so.2.0.0
+-rwxr-xr-x 1 root root 68928 2014-08-16 19:58 /usr/lib64/libodbcinst.so.2.0.0
+
+[oracle@demo odbc.log]$ locate libodbcinst|xargs -Ifoo md5sum foo|sort
+0bfd147ff6b41daee527861143040f1b  /app/oracle/biee/bi/common/ODBC/Merant/7.1.2/lib/libodbcinst.so
+7eaee346f92169fc2e2ba5900dceefa3  /app/oracle/biee/bi/common/ODBC/Merant/5.3/lib/libodbcinst.so
+b340968ee0a2188427a66203fb0a56b7  /app/oracle/biee/bi/bifoundation/odbc/lib/libodbcinst.so
+dadcb67d26d42b0c2535a9be44d2b46f  /usr/lib64/libodbcinst.so
+dadcb67d26d42b0c2535a9be44d2b46f  /usr/lib64/libodbcinst.so.2
+dadcb67d26d42b0c2535a9be44d2b46f  /usr/lib64/libodbcinst.so.2.0.0
+eccb81df3cdaaeb83faa86dfc6187844  /app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbcinst.so
+ed27493fd52534e181e0e6cd29c6a48a  /app/oracle/biee/bi/common/ODBC/Merant/7.0.1/lib/libodbcinst.so
+
+[oracle@demo odbc.log]$ locate libiodbcinst|xargs -Ifoo ls -l foo
+lrwxrwxrwx 1 root root 22 2016-08-08 11:24 /usr/lib64/libiodbcinst.so.2 -> libiodbcinst.so.2.1.19
+-rwxr-xr-x 1 root root 72896 2010-06-23 11:07 /usr/lib64/libiodbcinst.so.2.1.19
+
+[oracle@demo odbc.log]$ locate libiodbcinst|xargs -Ifoo md5sum foo|sort
+44a432e25d176079cf30e805c648fc86  /usr/lib64/libiodbcinst.so.2
+44a432e25d176079cf30e805c648fc86  /usr/lib64/libiodbcinst.so.2.1.19
+------
+
+
+What's interesting from this is that the `libodbcinst.so` installed within OBIEE (`bifoundation/odbc/lib/`) is the same size as the DataDirect 5.3 one, but a different checksum.
+
+
+OBIEE uses ODBC for its own internal connectivity between Presentation Services (OBIPS) and BI Server (OBIS). We saw in the strace output above that `odbctrac.so` wasn't successfully loaded, so let's fix that in `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini`:
+
+
+[source,properties]
+----
+[ODBC]
+Trace=1
+TraceFile=/tmp/odbctrace.out
+TraceDll=/app/oracle/biee/bi/bifoundation/odbc/lib/odbctrac.so
+[...]
+----
+
+
+With this enabled there's now debug information written - although in this case it's about OBIEE using ODBC to connect to its internal MDS schemas (which in 12c it looks to use ODBC for):
+
+
+[source]
+----
+ppid=24928:pid= 3bd8:754f8720   ENTER SQLConnect
+                HDBC                0x01385750
+                UCHAR *             0x012fbfb0 [      15] "opss_datasource"
+                SWORD                       15
+                UCHAR *             0x012fcba0 [       9] "BIEE_OPSS"
+                SWORD                        9
+                UCHAR *             0x54665b84 [4294967293] "******"
+                SWORD                       -3
+
+ppid=24928:pid= 3bd8:754f8720   EXIT  SQLConnect  with return code 0 (SQL_SUCCESS)
+                HDBC                0x01385750
+                UCHAR *             0x012fbfb0 [      15] "opss_datasource"
+                SWORD                       15
+                UCHAR *             0x012fcba0 [       9] "BIEE_OPSS"
+                SWORD                        9
+                UCHAR *             0x54665b84 [4294967293] "******"
+                SWORD                       -3
+----
+
+
+So back to driver managers. The DataDirect manager is not listed in the link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com[system requirements] - perhaps it's not supported, perhaps it's not been tested. Let's see if our `iodbctest` works when we force it to use the DataDirect driver. We'll do this by setting the ODBCInst parameter in `~/.mapr.drillodbc.ini`, along with the accompanying LD_LIBRARY_PATH. The latter is necessary for dependent libraries used by the driver manager. We can use strace to verify the paths being picked up.
+
+
+First with the unixODBC driver:
+
+
+[source,sql]
+----------
+[oracle@demo odbc.log]$ export MAPRDRILLINI=~/.mapr.drillodbc.ini
+[oracle@demo odbc.log]$ export LD_LIBRARY_PATH=/opt/mapr/drillodbc/lib/64
+[oracle@demo odbc.log]$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64
+[oracle@demo odbc.log]$ grep ODBCInstLib ~/.mapr.drillodbc.ini
+ODBCInstLib=libodbcinst.so
+[oracle@demo odbc.log]$ iodbctest "DSN=DrillDSN"
+iODBC Demonstration program
+This program shows an interactive SQL processor
+Driver Manager: 03.52.0709.0909
+Driver: 1.2.1.1001 (MapR Drill ODBC Driver)
+SQL>SELECT version FROM sys.version
+
+version
+---------
+1.7.0
+
+result set 1 returned 1 rows.
+----------
+
+
+strace shows the `libodbcinst.so` is loaded from where we'd expect (`/usr/lib64`), but that two other folders are checked first.
+
+
+[source]
+----
+open("/opt/mapr/drillodbc/lib/64/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/tls/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/libodbcinst.so", O_RDONLY) = 5
+----
+
+
+As a debug aside, you can also use `ltrace` to show the library calls being made:
+
+
+[source]
+----
+[oracle@demo ~]$ ltrace --demangle -s 128 -f --indent 2 iodbctest "DSN=DrillDSN"
+(0, 0, 502528, -1, 0x1f25bc2)                                                                                                                      = 0x7fb61240f160
+__libc_start_main(0x402110, 2, 0x7ffd6920ba08, 0x4021f0, 0x4021e0 <unfinished ...>
+  setlocale(6, "")                                                                                                                                 = "en_GB.UTF-8"
+  __printf_chk(1, 0x4025ed, 0, 0x7fb60bba0174, 0x7fb611d92ee8iODBC Demonstration program
+)                                                                                     = 28
+  __printf_chk(1, 0x4023f8, 0x7fb611d92e10, 0x402609, 0xffffffffThis program shows an interactive SQL processor
+)                                                                                  = 48
+  SQLAllocHandle(1, 0, 0x602eb8, 0x402428, 0xa726f737365636f)                                                                                      = 0
+  SQLSetEnvAttr(0xbdcfe0, 200, 3, 0xfffffffb, 0x7ffd6920ac10)                                                                                      = 0
+  SQLAllocHandle(2, 0xbdcfe0, 0x602ec0, 0xfffffffb, 0x7ffd6920ac10)                                                                                = 0
+  SQLSetConnectOption(0xbdd220, 1051, 0x402593, 273, 0x7fb611d92ee8)                                                                               = 0
+  SQLGetInfo(0xbdd220, 171, 0x7ffd6920b6a0, 255, 0x7ffd6920b29c)                                                                                   = 0
+  __printf_chk(1, 0x40259c, 0x7ffd6920b6a0, 0, 0Driver Manager: 03.52.0709.0909
+)                                                                                                  = 32
+  __strcpy_chk(0x7ffd6920b2a0, 0x7ffd6920be7a, 1024, 0x4025af, 1)                                                                                  = 0x7ffd6920b2a0
+  SQLDriverConnect(0xbdd220, 0, 0x7ffd6920b2a0, 0xfffffffd, 0x602ee0 <unfinished ...>
+----
+
+
+From the above invocation, in which it seems the unixODBC driver is being used, the ODBC driver.log records otherwise:
+
+
+[source]
+----
+Aug 09 21:30:32.112 INFO  1444292352 Driver::LogVersions: SDK Version: 09.05.07.1008
+Aug 09 21:30:32.112 INFO  1444292352 Driver::LogVersions: DSII Version: 1.2.1.1001
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Database CHAR Encoding: UTF-8
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Database WCHAR Encoding: UTF-8
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: ANSI CHAR Encoding: UTF-8
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Driver Manager WCHAR Encoding: UTF-32LE
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Locale name: en_GB
+Aug 09 21:30:32.112 INFO  1444292352 Driver::Initialize: Bitness: 64-bit
+----
+
+
+If I use unixODBC's test tool, from the same environment as above:
+
+
+[source,sql]
+----------------------------------------
+[oracle@demo bin]$ isql DrillDSN
++---------------------------------------+
+| Connected!                            |
+|                                       |
+| sql-statement                         |
+| help [tablename]                      |
+| quit                                  |
+|                                       |
++---------------------------------------+
+SQL> SELECT version FROM sys.version
++----------
+| version
++----------
+| 1.7.0
++----------
+SQLRowCount returns -1
+1 rows fetched
+----------------------------------------
+
+
+Then driver.log shows:
+
+
+[source]
+----
+Aug 09 21:38:25.098 INFO  1851778816 Driver::LogVersions: SDK Version: 09.05.07.1008
+Aug 09 21:38:25.098 INFO  1851778816 Driver::LogVersions: DSII Version: 1.2.1.1001
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Database CHAR Encoding: UTF-8
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Database WCHAR Encoding: UTF-8
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: ANSI CHAR Encoding: UTF-8
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Driver Manager WCHAR Encoding: UTF-32LE
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Detected Driver Manager: unixODBC, 2.2.14 or 2.3.x branch
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Locale name: en_GB
+Aug 09 21:38:25.099 INFO  1851778816 Driver::Initialize: Bitness: 64-bit
+----
+
+
+So ODBCInstLib is used, but the calling application also plays a role. We can see from strace that both applications are loading `libodbcinst.so`, but still recording different Driver Managers in the driver.log
+
+
+[source]
+----
+[oracle@demo bin]$ strace isql DrillDSN 2>&1|grep odbcinst.so
+open("/opt/mapr/drillodbc/lib/64/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/tls/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/libodbcinst.so", O_RDONLY) = 5
+[oracle@demo bin]$ ^C
+
+[oracle@demo bin]$ strace iodbctest "DSN=DrillDSN" 2>&1|grep odbcinst.so
+open("/opt/mapr/drillodbc/lib/64/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/tls/libodbcinst.so", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/libodbcinst.so", O_RDONLY) = 5
+[oracle@demo bin]$ ^C
+----
+
+
+For the two above invocations, the driver is recorded thus:
+
+
+[source]
+----
+[oracle@demo bin]$ grep "Driver::Initialize: Detected Driver Manager:" /tmp/odbc.log/driver.log
+[...]
+Aug 09 21:48:47.814 INFO  1812629248 Driver::Initialize: Detected Driver Manager: unixODBC, 2.2.14 or 2.3.x branch
+Aug 09 21:49:08.840 INFO  1312765696 Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+----
+
+
+Let's branch out a bit. nqcmd, as well as being useful for invoking OBIEE logical SQL against the BI Server, is also an ODBC client (in the same way that `iodbctest` and `isql` are).
+
+
+[source,sql]
+--------------------------------------------------------------------------------
+[oracle@demo bin]$ /app/oracle/biee/user_projects/domains/bi/bitools/bin/nqcmd.sh -d DrillDSN -u foo -p bar
+Aug 09, 2016 9:53:00 PM oracle.bi.endpointmanager.impl.bienv.BIEnvComponents loadFromInputStream
+INFO: Reading components from: /app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/bienv-components.xml ...
+
+-------------------------------------------------------------------------------
+          Oracle BI ODBC Client
+          Copyright (c) 1997-2015 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
+
+
+        [T]able info
+        [C]olumn info
+        [D]ata type info
+        [F]oreign keys info
+        [P]rimary key info
+        [K]ey statistics info
+        [S]pecial columns info
+        [Q]uery statement
+Select Option: Q
+Give SQL Statement: SELECT version FROM sys.version
+SELECT version FROM sys.version
+--------------------------------
+version
+-------
+1.7.0
+------
+Row count: 1
+--------------------------------------------------------------------------------
+
+
+Interesting. Now we're moving into the OBIEE stack, and a step closer to the BI Server itself. As I know you're dying to find out, the Driver Manager recorded by the above nqcmd call is:
+
+
+[source]
+----
+Aug 09 21:53:03.064 INFO  706402080 Driver::Initialize: Detected Driver Manager: unixODBC, 2.2.14 or 2.3.x branch
+----
+
+
+Let's switch ODBCInstLib to iODBC now:
+
+
+[source]
+----
+[oracle@demo bin]$ grep ODBCInstLib ~/.mapr.drillodbc.ini
+ODBCInstLib=libiodbcinst.so.2
+[oracle@demo bin]$ echo $LD_LIBRARY_PATH
+/opt/mapr/drillodbc/lib/64:/usr/lib64
+[oracle@demo bin]$ echo $MAPRDRILLINI
+/home/oracle/.mapr.drillodbc.ini
+----
+
+
+Running the same strace tests as above we confirm that the iODBC library is being used:
+
+
+[source]
+----
+[oracle@demo bin]$ strace iodbctest "DSN=DrillDSN" 2>&1|grep odbcinst.so
+open("/opt/mapr/drillodbc/lib/64/libiodbcinst.so.2", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/tls/libiodbcinst.so.2", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/libiodbcinst.so.2", O_RDONLY) = 5
+^C
+[oracle@demo bin]$ strace isql DrillDSN 2>&1|grep odbcinst.so
+open("/opt/mapr/drillodbc/lib/64/libiodbcinst.so.2", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/tls/libiodbcinst.so.2", O_RDONLY) = -1 ENOENT (No such file or directory)
+open("/usr/lib64/libiodbcinst.so.2", O_RDONLY) = 5
+^C
+----
+
+
+and the same driver manager pattern recorded for the two above invocations respectively:
+
+
+[source]
+----
+Aug 09 21:57:02.826 INFO  3571013376 Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+Aug 09 21:57:07.875 INFO  3464189696 Driver::Initialize: Detected Driver Manager: unixODBC, 2.2.14 or 2.3.x branch
+----
+
+
+Running nqcmd again works as before, including with the same driver manager recorded in driver.log
+
+
+Looking at the dependencies for these programs with `ldd` shows:
+
+
+* nqcmd
+
+
++
+[source]
+----
+  [oracle@demo ~]$ ldd /app/oracle/biee/bi/bifoundation/server/bin/nqcmd
+  linux-vdso.so.1 =>  (0x00007fffef5b2000)
+  libodbc.so => /usr/lib64/libodbc.so (0x00007f8ed3248000)
+  libodbcinst.so => /usr/lib64/libodbcinst.so (0x00007f8ed3036000)
+  libARicu27.so => not found
+  libnqsgenericodbcinterface64.so => not found
+  libnqportable64.so => not found
+  libnqutilitygeneric64.so => not found
+  libnqutilityserver64.so => not found
+  libnqsfileutility64.so => not found
+  libnqutilityclient64.so => not found
+  libnqsclusterutility64.so => not found
+  libxerces-c.so.28 => not found
+  libnqstlport64.so => not found
+  libnqsserventry64.so => not found
+  libnqsobjectmodel64.so => not found
+  libsamemoryallocator864.so => not found
+  libz.so.1 => /lib64/libz.so.1 (0x00007f8ed2e06000)
+  libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f8ed2be9000)
+  libstdc++.so.6 => /usr/lib64/libstdc++.so.6 (0x00007f8ed28e3000)
+  libm.so.6 => /lib64/libm.so.6 (0x00007f8ed265f000)
+  libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00007f8ed2448000)
+  libc.so.6 => /lib64/libc.so.6 (0x00007f8ed20b4000)
+  libltdl.so.7 => /usr/lib64/libltdl.so.7 (0x00007f8ed1eab000)
+  /lib64/ld-linux-x86-64.so.2 (0x00007f8ed34b0000)
+  libdl.so.2 => /lib64/libdl.so.2 (0x00007f8ed1ca6000)
+----
++
+* isql
+
+
++
+[source]
+----
+  [oracle@demo ~]$ ldd /usr/bin/isql
+  linux-vdso.so.1 =>  (0x00007ffc8278f000)
+  libodbc.so.2 => /usr/lib64/libodbc.so.2 (0x00007f214b44e000)
+  libltdl.so.7 => /usr/lib64/libltdl.so.7 (0x00007f214b244000)
+  libreadline.so.6 => /lib64/libreadline.so.6 (0x00007f214afec000)
+  libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f214adcf000)
+  libc.so.6 => /lib64/libc.so.6 (0x00007f214aa3a000)
+  libdl.so.2 => /lib64/libdl.so.2 (0x00007f214a836000)
+  libtinfo.so.5 => /lib64/libtinfo.so.5 (0x00007f214a615000)
+  /lib64/ld-linux-x86-64.so.2 (0x00007f214b6b6000)
+----
++
+* iodbctest
+
+
++
+[source]
+----
+  [oracle@demo ~]$ ldd /usr/bin/iodbctest
+  linux-vdso.so.1 =>  (0x00007ffdf9103000)
+  libiodbc.so.2 => /usr/lib64/libiodbc.so.2 (0x00007ff5ef388000)
+  libdl.so.2 => /lib64/libdl.so.2 (0x00007ff5ef16e000)
+  libc.so.6 => /lib64/libc.so.6 (0x00007ff5eedda000)
+  /lib64/ld-linux-x86-64.so.2 (0x00007ff5ef5dc000)
+----
++
+
+
+Of note here is that only nqcmd depends on a driver manager (libodbcinst.so) - so at a guess the other two tools interact with the ODBC drivers directly? Although the strace above did show each one loading the library, so ... ?
+
+
+At the moment `libodbcinst.so` is a soft link to the `.2.0.0` unixODBC version
+
+
+[source]
+----
+[oracle@demo lib64]$ ls -l /usr/lib64/libodbc.so
+lrwxrwxrwx 1 root root 16 2016-08-08 11:55 /usr/lib64/libodbc.so -> libodbc.so.2.0.0
+----
+
+
+What happens if we change this to point to the iODBC one?
+
+
+[source]
+----
+[oracle@demo lib64]$ sudo ln -sf /usr/lib64/libiodbcinst.so.2 /usr/lib64/libodbcinst.so
+[oracle@demo lib64]$ ls -l /usr/lib64/libodbcinst.so
+lrwxrwxrwx 1 root root 28 2016-08-09 22:20 /usr/lib64/libodbcinst.so -> /usr/lib64/libiodbcinst.so.2
+----
+
+
+Same behaviour from isql and iodbctest as above (both work, both log the same driver manager as before). But this time, nqcmd reports as a different driver manager in driver.log:
+
+
+[source]
+----
+Aug 09 22:24:20.514 INFO  3097786112 Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
+----
+
+
+Now let's see if we can force nqcmd to use the DataDirect manager that nqsserver is doing when it crashes:
+
+
+[source]
+----
+[oracle@demo lib64]$ sudo ln -sf /app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbcinst.so /usr/lib64/libodbcinst.so
+[oracle@demo lib64]$ ls -l /usr/lib64/libodbcinst.so
+lrwxrwxrwx 1 root root 63 2016-08-09 22:27 /usr/lib64/libodbcinst.so -> /app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbcinst.so
+----
+
+
+The DataDirect Driver Manager library is loaded according to strace:
+
+
+[source]
+----
+30100 22:30:42.267851 open("libodbcinst.so", O_RDONLY) = 3
+30100 22:30:42.267898 read(3</app/oracle/biee/bi/common/ODBC/Merant/7.1.4/lib/libodbcinst.so>, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\353\6\0\0\0\0\0@\0\0\0\0\0\0\0\220\365\22\0\0\0\0\0\0\0\0\0@\0008\0\5\0@\0\34\0\33\0\1\0\0\0\5
+----
+
+
+But the driver.log still shows unixODBC:
+
+
+[source]
+----
+Aug 09 22:30:43.529 INFO  181618464 Driver::Initialize: Detected Driver Manager: unixODBC, 2.2.14 or 2.3.x branch
+----
+
+
+Hmmm. Not much conclusive from this.
+
+
+== DriverManagerEncoding
+
+
+From link:https://drill.apache.org/docs/configuring-odbc-on-linux/?ref=rittmanmead.com#configuring-.mapr.drillodbc.ini:[https://drill.apache.org/docs/configuring-odbc-on-linux/#configuring-.mapr.drillodbc.ini:]
+
+
+[quote]
+____
+Edit the DriverManagerEncoding setting if necessary. The value is typically UTF-16 or UTF-32, but depends on the driver manager used. iODBC uses UTF-32 and unixODBC uses UTF-16. Review your ODBC Driver Manager documentation for the correct setting.
+____
+
+
+Changing it to `UTF-16` in `~/.mapr.drillodbc.ini` has the following effect:
+
+
+* isql works as before
+* iodbctest fails
+
+
++
+[source]
+----
+  [oracle@demo lib64]$ iodbctest "DSN=DrillDSN"
+  iODBC Demonstration program
+  This program shows an interactive SQL processor
+  Driver Manager: 03.52.0709.0909
+  1: SQLDriverConnect = ����� (10360) SQLSTATE=̭
+  1: ODBC_Connect = ����� (10360) SQLSTATE=0�
+
+  Have a nice day.[oracle@demo lib64]$
+----
++
+
+
+_This failure is to be expected per the documentation, since iodbctest is using the iODBC driver manager which requires UTF-32_
+* nqcmd connecting directly to DrillDSN works as before
+* nqcmd running the Logical SQL *now works*!
+
+
++
+[source,sql]
+------------------------------------------------------------------------------------------------
+  [oracle@demo lib64]$ /app/oracle/biee/user_projects/domains/bi/bitools/bin/nqcmd.sh -d AnalyticsWeb -u weblogic -p Admin123 -s ~/drill-test.lsql
+  Aug 09, 2016 10:47:45 PM oracle.bi.endpointmanager.impl.bienv.BIEnvComponents loadFromInputStream
+  INFO: Reading components from: /app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/bienv-components.xml ...
+
+  -------------------------------------------------------------------------------
+  Oracle BI ODBC Client
+  Copyright (c) 1997-2015 Oracle Corporation, All rights reserved
+  -------------------------------------------------------------------------------
+
+
+  EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version
+  EXECUTE PHYSICAL CONNECTION POOL "Apache Drill"."Apache Drill" SELECT version FROM sys.version
+  -----------------------------------------------------------------------------------------------
+  version
+  -----------------------------------------------------------------------------------------------
+  1.7.0
+  -----------------------------------------------------------------------------------------------
+  Row count: 1
+  -----------------------------------------------------------------------------------------------
+
+
+  Processed: 1 queries
+------------------------------------------------------------------------------------------------
++
+
+
+The Driver Manager is DataDirect as before
+
+
++
+[source]
+----
+  Aug 09 22:48:20.825 INFO  3402434304 Driver::Initialize: Detected Driver Manager: DataDirect Driver Manager, 07.14.0119 (U0115)
+----
++
+
+
+So after all that - an incorrect configuration of the MapR ODBC driver was the culprit.
+
+
+== Conclusion
+
+
+Hindsight is a wonderful thing - at the end of an article like this it's easy enough to wonder if `strace` and other tools were really necessary to get to the bottom of the issue. However, for me, using these tools is a great way of ruling out what the problem _isn't_.
+
+
+The trick is to judge when to jump into the deep-end of system call tracing, and when to maybe take a step back and RTFM closely. Particularly if you're doing something that is supported, that is documented, then you probably wouldn't be reaching for `strace`. But edging away from what is supported or documented, these can be great tools to help explore how applications are running and can be made to work with other components (such as 3rd party ODBC drivers).
+
+
+And if you do want the tl;dr of getting OBIEE to work with Apache Drill, link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[it's written up using the ODBC driver over here], and with the JDBC driver in link:https://twitter.com/cfiston/?ref=rittmanmead.com[Fiston]'s link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[blog post here].
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/[Rittman Mead blog].

@@ -1,0 +1,374 @@
+---
+title: 'Automated Monitoring of OBIEE in the Enterprise - an overview'
+date: "2012-09-12T00:00:00+00:00"
+url: "/2012/09/12/automated-monitoring-of-obiee-in-the-enterprise-an-overview/"
+draft: false
+categories:
+- Monitoring
+- OBIEE
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview/[Rittman Mead blog].
+
+A lot of time is given to the planning, development and testing of OBIEE solutions. Well, hopefully it is. Yet sometimes, the resulting deployment is marked Job Done and chucked over the wall to the Operations team, with little thought given to how it is looked after once it is running in Production.
+
+
+Of course, at the launch and deployment into Production, everyone is paying very close attention to the system. The slightest cough or sneeze will make everyone jump and come running to check that the shiny new project hasn't embarrassed itself. But what about weeks 2, 3, 4…six months later…performance has slowed, the users are unhappy, and once in a while someone thinks to load up a log file to check for errors.
+
+
+This post is the first of a mini-series on monitoring, and will examine some of the areas to consider in deploying OBIEE as a Production service. Two further posts will look at some of this theory in practice.
+
+
+=== Monitoring software
+
+
+The key to happy users is to know there's a problem before they do, and even better, fix it before they realise. How do you do this? You either sit and watch your system 24 hours a day, or you set up some automated monitoring. There's lots of companies willing to take lots of money off your hands for very complex and fancy pieces of software that will do this, and there are lots of open-source solutions (some of them also very complex, and some of them very fancy) that will do the same. They all fall under the umbrella title of *Systems Management*.
+
+
+Which you choose may be dictated to you by corporate policy or your own personal choice, but ultimately all the good ones will do pretty much the same and require configuring in roughly the same kind of way. Some examples of the software include:
+
+
+* HP OpenView
+* Nagios
+* Zabbix
+* Tivoli
+* Zenoss
+* Oracle Enterprise Manager
+* …link:http://en.wikipedia.org/wiki/List_of_systems_management_systems?ref=rittmanmead.com[list on Wikipedia]
+
+Some of these tools can take the output of a bash script and use it as the basis for logging an alert or not. This means that pretty much anything you can think of to check, so long as you can script it, you can check it. 
+
+
+I'm not aware of any which come with out of the box templates for monitoring OBIEE 11g - if there are please let me know. Any company which says they have, make sure they're not mistaking "is capable of" with "is actually implemented".
+
+
+=== What to monitor
+
+
+It's important to try and look at the entire map of _your_ OBIEE deployment and understand where things could go wrong. Start thinking of OBIEE as the end-to-end stack, or service, and not simply the components that you installed. Once you've done that, you can start to plan how to monitor those things, or at least be aware of the fault potential. For example, it's obvious to check that the OBIEE server is running, but what about the AD server which you use for authentication? Or the SAN your webcat resides on? Or the corporate load balanacer you're using?
+
+
+Here are some of the common elements to all OBIEE deployments that you should be considering: 
+
+
+==== OBIEE services
+
+
+An easy one to start with, and almost so easy it could be overlooked. You need to have in place something which is going to check that the OBIEE processes are currently running. Don't forget to include the Web Logic Server process(es) in this too.
+
+
+The simplest way to build this into a monitoring tool is to have it check with the OS (be it Linux/Windows/whatever) that a process with the relevant name is running, and raise an alert if it's not. For example, to check that the Presentation Services process is running, you could do this on Linux:
+
+
+[source]
+----
+ps -ef|grep [s]awserver
+----
+
+
+You could use opmnctl to query the state of the processes, but be aware that OPMN is going to report _how it sees the processes_. If there's something funny with opmn, then it may not pick up a service failure. Of course, if there's something funny with opmn then you may have big trouble anyway.
+
+
+A final point on process monitoring; note that OPMN manages the OBIEE system components and by default will restart them if they crash. This is different behvaiour from OBIEE 10g, where when a process died it stayed dead. In 11g, processes come back to life, and it can be most confusing if an alert fires saying that a process is down but when you check it appears to be running.
+
+
+==== Network ports
+
+
+This is a link:http://www.phrases.org.uk/meanings/61250.html?ref=rittmanmead.com[belts and braces] counterpart to checking that processes are running. It makes sense to also check that the network ports that OBIEE uses to communicate both externally with users and internally with other OBIEE processes are listening for traffic. Why do this? Two reasons spring to mind. The first is that you misconfigure your process-check alert, or it fails, or it gets accidentally disabled. The second, less likely, is that an OBIEE process is running (so doesn't trigger the process-not-running alert) but has hung in some way and isn't accepting TCP traffic.
+
+
+The ports that your particular OBIEE deployment uses will vary, particularly if you've got multiple deployments on one host. To see which ports are used by the BI System Components, look at the file *$FMW_HOME/instances/instance1/config/OPMN/opmn/ports.prop*. The ports used by Web Logic will be in *$FMW_HOME/user_projects/domains/bifoundation_domain/config/config.xml*
+
+
+A simple check that Presentation Services was listening on its default port would be:
+
+
+[source]
+----
+netstat -ln | grep tcp | grep 9710 | wc -l
+----
+
+If a zero is returned that means there are no ports listening, i.e. there's a problem. 
+
+
+==== Application Deployments
+
+
+Web Logic Server hosts various JEE Application Deployments, some of which are crucial to the well-being of OBIEE. An example of one of these is analytics (which handles the traffic between the web browser and the Presentation Services). Just because Web Logic is running, you cannot assume that the application deployment is. You can check automatically using WLST:
+
+
+[source]
+----
+
+connect('weblogic','welcome1','t3://localhost:7001')
+nav=getMBean('domainRuntime:/AppRuntimeStateRuntime/AppRuntimeStateRuntime')
+state=nav.getCurrentState('analytics#11.1.1','bi_server1')
+print &quot;\033[1;32m &quot; + state + &quot;\033[1;m&quot;
+----
+
+You would invoke the above script (assuming you'd saved it as /tmp/check_app.py) using: 
+
+
+[source]
+----
+
+$FMW_HOME/oracle_common/common/bin/wlst.sh tmp/check_app.py
+----
+
+
+image::/images/2012/09/061236monitor02.png[Checking application deployment health using WLST]
+
+Because WLST is verbose when you invoke it, you might want to pipe the command through *tail* so that you just get the output
+
+
+[source]
+----
+
+$FMW_HOME/oracle_common/common/bin/wlst.sh tmp/check_app.py | tail -n 1
+ STATE_ACTIVE
+----
+
+
+If you want to explore more detail around this functionality a good starting point is the MBeans involved, which you can find in Enterprise Manager under *Runtime MBeans > com.bea > Domain: bifoundation_domain* 
+
+image::/images/2012/09/061235monitor04.png[]
+
+
+==== Log files
+
+
+The log files from OBIEE are crucial for spotting problems which have happened, and indicators of problems which may be about to happen. You'll find the OBIEE logs in: 
+
+* *$FMW_HOME/instances/instance1/diagnostics*
+and the Web Logic Server related logs primarily in 
+
+* *$FMW_HOME/user_projects/domain/bifoundation_domain/servers/AdminServer/logs*
+* *$FMW_HOME/user_projects/domain/bifoundation_domain/servers/bi_server1/logs*
+There are others dotted around but these are the main places to start. For a more complete list, look in Enterprise Manager under coreapplication > Diagnostics > Log Viewer > Selected Targets.
+
+
+Once you've located your logs, there's no prescribed list of what to monitor for - it's down to your deployment and the kind of errors you [expect to] see. Life is made easier because FMW already categorises log messages by severity, so you could start with simply watching WLS logs for *<Error>* and OBIEE logs for *[ERROR* _(yes, no closing bracket)_.
+
+If you find there are errors regularly causing alerts which you don't want then set up exceptions in your monitoring software to ignore them or downgrade their alert severity. Of course, if there are regular errors occurring then the correct long-term action is to resolve the root cause so that they don't happen in the first place!
+
+
+I would also watch the server logs for an indication of the processes shutting down, and any database errors thrown. You can monitor the Presentation Services log (sawlog0.log) for errors which are being passed back to the user - always good to get a headstart on a user raising a support call if you're already investigating the error that they're about to phone up and report.
+
+
+Monitoring log files should be the bread and butter of any decent systems management software, and so each will probably have its own way of doing so. You'll need to ensure that it copes with rotating logs - if you have configured them - otherwise it will read a log to position 94, the log rotates and the latest entry is now 42, but the monitoring tool will still be looking at 94.
+
+
+==== Server OS stats
+
+
+In an Enterprise environment you may find that your Ops team will monitor all server OS stats generically, since CPU is CPU, whether it's on an OBI server or SMTP server. If they don't, then you need to make sure that you do. You may find that whatever Systems Management tool you pick supports OS stats monitoring. 
+
+As well as CPU, make sure you're monitoring memory usage, disk IO, file system usage, and network IO.
+
+
+Even if another team does this for your server already, it is a good idea to find out what alert thresholds have been set, and get access to the metrics themselves. Different teams have different aims in collecting metrics, and it may be the Ops team will only look at a server which hits 90% CPU. If you know your OBIEE server runs typically at 30% CPU then you should be getting involved and investigating as soon as CPU hits, say, 40%. Certainly, by the time it hits 90% then there may already be serious problems.
+
+
+==== OBI Performance Metrics
+
+
+Just as you should monitor the host OS for important metrics, you can monitor OBIEE too. Using the Dynamic Monitoring Service (DMS), you can examine metrics such as:
+
+
+* Logged in user count
+* Active users
+* Active connections to each database
+* Running queries
+* Cache hits
+
+
+This is just a handful - there are literally hundreds of metrics available.
+
+
+You can see the metrics in Enterprise Manager (Fusion Middleware Control), but there is no history retained and no integrated alerting, making it of little use as a hands-off monitoring tool.
+
+At Rittman Mead we have developed a solution which records the OBIEE perfomance data and makes it available for realtime monitoring and alerting for OBIEE: 
+
+
+image::/images/2012/09/061234monitor03.png[Realtime monitoring of OBIEE metrics]
+
+
+The kind of alerting you might want on these metrics could include:
+
+
+* High number of failed logins
+* High number of query errors
+* Excessive number of database connections
+* Low cache hit ratio
+
+
+==== Usage Tracking
+
+
+I take this as such a given that I almost forgot it from this list. If you haven't got Usage Tracking in place, then you really should. It's easy to configure, and once it's in place you can forget about it if you want to. The important thing is that you're building up an accurate picture of your system usage which is impossible to do easily any other way. Some good reasons for having Usage Tracking in place:
+
+
+* How many people logged into OBIEE this morning?
+* What was the busiest time period of the day?
+* Which reports are used the most?
+* Which users are running reports which take longer than _x_ seconds to complete? (Can we help optimise the query?)
+* Which users are running reports which bring back more than _x_ rows of data? (Can we help them get the data more efficiently?)
+
+
+In addition to these analytical reasons, going back to the monitoring aspect of this post, Usage Tracking can be used as a data source to trigger alerts for long running reports, large row fetches, and so on. An example query which would list reports from the last day that took longer than five minutes to run, returned more than 60000 rows, or used more than four queries against the database, would be: 
+
+
+[source,sql]
+----
+
+SELECT user_name, 
+       TO_CHAR(start_ts, 'YYYY-MM-DD HH24:MI:SS'), 
+       row_count, 
+       total_time_sec, 
+       num_db_query, 
+       saw_dashboard, 
+       saw_dashboard_pg, 
+       saw_src_path 
+FROM   dev_biplatform.s_nq_acct 
+WHERE  start_ts &gt; SYSDATE - 1 
+       AND ( row_count &gt; 60000 
+              OR total_time_sec &gt; 300 
+              OR num_db_query &gt; 4 )
+----
+
+This kind of monitoring would normally be used to trigger an informational alert, rather than sirens-blazing code red type alert. It's important to be aware of potentially bad queries on the system, but it can wait until after a cup of tea.
+
+Some tools will support database queries natively, others you may have to fashion together a sql*plus call yourself.
+
+
+==== Databases - both reporting sources and repository schemas (BIPLATFORM)
+
+
+Without the database, OBIEE is not a great deal of use. It needs the database in place to provide the data for reports, and it also needs the repository schemas that are created by the RCU (MDS and BIPLATFORM).
+
+
+As with the OS monitoring, it may be your databases are monitored by a DBA team. But as with OS monitoring, it is a good idea to get involved and understand exactly what is being monitored and what isn't. A DBA may have generic alerts in place, maybe for disk usage and deadlocks. It might be useful to monitor the DW also for long running queries or high session counts. Long running queries aren't going to necessarily bring the database down, but they might be a general indicator of some performance problems that you should be investigating sooner rather than later.
+
+
+==== ETL
+
+
+Getting further away from the core point of monitoring OBIEE, don't forget the ancillary components to your deployment. For your reports to have data the database needs to be functioning (see previous point) but there also needs to be data loaded into it. 
+
+OBIEE is the front-end of service you are providing to users, so even if a problem lies further down the line in a failed ETL batch, the users may perceive that as a fault in OBIEE. 
+
+So make sure that alerting is in place on your ETL batch too and there's a way that problems can be efficiently communicated to users of the system.
+
+
+=== Active Monitoring
+
+
+The above areas are crucial for "passive" monitoring of OBIEE. That is, when something happens which could be symptomatic of a problem, raise an alert. For real confidence in the OBIEE deployment, consider what I term active monitoring. Instead of looking for symptoms that everything is working (or not), actually run tests to *confirm* that it is. Otherwise you end up only putting in place alerts for things which have failed in the past and for which you have determined the failure symptom. Consider it the OBIEE equivalent of a doctor reading someone's vital signs chart versus interacting with the person and directly ascertaining their health.
+
+
+image::/images/2012/09/061232monitor01.png[OBIEE stack components involved in a successful report reqest]
+
+
+This diagram shows the key components involved in a successful report request in OBIEE, and illustrated on it are the three options for actively testing it described below. Use this as a guide to understand what you are and are not confirming by running one of these tests.
+
+
+==== sawping
+
+
+This is a command line utility provided by Oracle, and it runs a "ping" of the Presentation Services server. Not complicated, and not overly useful if you're already monitoring for the sawserver process and network port. But, easy to setup so maybe worth including anyway. Note that this doesn't check the BI server, database, or Web Logic.
+
+
+[source]
+----
+[oracle@rnm ~]$ sawping -s myremoteobiserver.company.com -p 9710 -v
+Server alive and well
+[oracle@rnm ~]$ sawping -s myremoteobiserver.company.com -p 9710 -v
+Unable to connect to server. The server may be down or may be too busy to accept additional connections.
+An error occurred during connect to &quot;myremoteobiserver.company.com:9710&quot;. Connection refused [Socket:6]
+Error Codes: YM52INCK
+----
+
+
+==== nqcmd
+
+
+nqcmd is a command line utility provided with OBIEE which acts as an ODBC client to the BI Server. It can be used to run Logical SQL (the query that Presentation Services generates to fetch data for a report) against the BI Server. Using nqcmd you can validate that the BI Cluster Controller, BI Server and Database are functioning correctly. 
+
+You could use nqcmd in several ways here:
+
+* Simple yes/no test that this part of the stack is functioning
+* nqcmd returns the results of a query, so you could test that the data being returned by the database is correct (compare it to what you know it should be)
+* Measure how long it takes nqcmd to run the query, and trigger an alert if the query is slow-running
+
+
+This example runs a query extracted from nqquery.log and saved as query01.lsql. It uses grep and awk to parse the output to show just the row count retrieved, and the total time it took to run nqcmd. It uses the / character to split lines for readability. If you want to understand more about how it works, run the nqcmd bit before the pipe | symbol and then add each of the pipe-separated statements back in one by one.
+
+
+[source]
+----
+
+. $FMW_HOME/instances/instance1/bifoundation/OracleBIApplication/coreapplication/setup/bi-init.sh
+time nqcmd -d AnalyticsWeb -u Prodney -p Admin123 -s ~/query01.lsql -q -T /
+2&gt;/dev/null | grep Row | awk '{print $13}'
+----
+ +
+
+NB don't forget the bi-init step, which sets up the environment variables for OBIEE. On Linux it's "dot-sourced" - with a dot space as the first two characters of the line.
+
+
+==== Web user automation
+
+
+Pretty much the equivelant of logging on to OBIEE in person and checking it is working, this method uses generic web application testing tools to simulate a user running a report and raise an alert if the report doesn't work. As with the nqcmd option previously, you could stay simple with this option and just confirm that a report runs, or you could start analyzing run times for performance trending and alerting.
+
+
+To implement this option you need a tool which lets you record a user's OBIEE session and can replay it simulating the browser activity. Then script the tool to replay the session periodically and raise an alert if it fails. Two tools I'm aware of that could be used for this are JMeter and HP's BAC/LoadRunner.
+
+
+A final point on this method - if possible run it remotely from the OBIEE server. If there are network problems, you want to pick those up too rather than just hitting the local loopback interface.
+
+If you think that this all sounds like overkill, then consider this link:http://rnm1978.wordpress.com/2010/03/05/whos-been-at-the-cookie-jar-ebs-bi-authentication-and-load-balancers/?ref=rittmanmead.com[real-life case here], where all the OBIEE processes were up, the database was up, the network ports were open, the OS stats were fine -- but the users still couldn't run their reports. Only by simulating the end-to-end user process can you get proper confidence that your monitoring *will* alert you when there is a problem
+
+
+=== Enterprise Manager
+
+
+This article is focussed on the _automated_ monitoring of OBIEE. Enterprise Manager (Fusion Middleware Control) as it currently stands is very good for diagnosing and monitoring live systems, but doesn't have the kind of automated monitoring seen in EM for Oracle DB.
+
+
+[line-through]##There has always been the BI Management Pack available as an extra for EM Grid Control, but it's not currently available for OBI 11g##. *Updated:* It looks like there is now, or soon will be, an OBI 11g management pack for EM 12c, see link:http://www.oracle.com/technetwork/oem/pdf/511863.pdf?ref=rittmanmead.com[here] and link:http://apex.oracle.com/pls/apex/f?p=44785:24:0:::24:P24_CONTENT_ID,P24_PREV_PAGE:6441,1&ref=rittmanmead.com[here] (h/t link:http://tipsonobiee.blogspot.co.uk/2012/09/oracle-enterprise-manager-12c-manage.html?ref=rittmanmead.com[Srinivas Malyala])
+
+
+=== Capacity Planning
+
+
+Part of planning a monitoring strategy is building up a profile of your systems' "normal" behaviour so that "abnormal" behaviour can be spotted and alerted. In building up this profile you should find you easily start to capture valuable information which feeds naturally into capacity planning. 
+
+Or put it another way, a pleasant side-effect of decent monitoring is a head-start on capacity planning and understanding your system's usage versus the available resource.
+
+
+=== Diagnostics
+
+
+This post is focused on _automated_ monitoring; in the middle of the night when all is quiet except the roar of your data centre's AC, something is keeping an eye on OBIEE and will raise alarms if it's going wrong. But what about if it is going wrong, or if it went wrong and you need to pick up the pieces? 
+
+This is where diagnostics and "interactive monitoring" come in to play. Enterprise Manager (Fusion Middleware Control) is the main tool here, along with Web Logic Console. You may also delve into the Web Logic Diagnostic Framework (WLDF) and the Web Logic Dashboard. 
+
+For further reading on this see Adam Bloom's presentation from this year's link:http://www.rittmanmead.com/biforum2012/?ref=rittmanmead.com[BI Forum]: link:http://www.rittmanmead.com/files/biforum2012/bloom_obi_diagnostics.pdf?ref=rittmanmead.com[Oracle BI 11g Diagnostics]
+
+
+=== What next
+
+
+Over the next few days I will be posting further articles in this series, looking at how we can put some of this monitoring theory into practice:
+
+* link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios/[An introduction to monitoring OBIEE with Nagios]
+* link:https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/[Advanced monitoring of OBIEE with Nagios]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview/[Rittman Mead blog].

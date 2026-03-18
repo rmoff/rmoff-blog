@@ -1,0 +1,67 @@
+---
+title: 'Mobile App Designer mis-configuration error'
+date: "2014-05-14T00:00:00+00:00"
+url: "/2014/05/14/mobile-app-designer-mis-configuration-error/"
+draft: false
+categories:
+- OBIEE
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/05/mobile-app-designer-mis-configuration-error/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/05/mobile-app-designer-mis-configuration-error/[Rittman Mead blog].
+
+I've been doing some work recently with OBIEE's new link:https://www.rittmanmead.com/blog/2013/08/a-first-look-at-the-obiee11g-mobile-app-designer/[Mobile App Designer] (MAD). It's a great bit of software that I'm genuinely impressed with, but it's got its little v1 quirks, and helpful error messages are not its forte. I hit a MADdening (sorry) problem with it that Google and My Oracle Support both drew blanks on, so I'm posting it here in case it helps out others with the same problem.
+
+
+Setting up MAD is a bit of a fiddly process involving patching OBIEE (regardless of the base version you're on - hopefully in the future it will get rolled into the patchsets) and performing other bits of setup link:http://docs.oracle.com/cd/E52471_01/bi.1111/e48576/toc.htm?ref=rittmanmead.com[detailed in the documentation]. The problem that I hit manifested itself twofold:
+
+
+. Publishing an App to the Apps Library worked fine, but updating an existing App threw an error in the browser:
+
++
+[source]
+----
+Failed to publish /~weblogic/GCBC Mobile - Phone.xma:oracle.xdo.webservice.exception.AccessDeniedException: PublicReportService::executeUpdateTemplateForReport Failure: user has no access to report[/Apps Library//GCBC Mobile - Phone.xma] due to [Ljava.lang.StackTraceElement;@4e6106df
+----
++
+. Trying to subscribe to any App threw a generic error in the browser: "*Error occurred while accessing server. Please contect administrator."* with the corresponding bipublisher.log showing: 
+
++
+[source]
+----
+[2014-05-13T16:49:53.449+01:00] [bi_server1] [WARNING] [] [oracle.xdo] [tid: 24] [userId: <anonymous>] [ecid: 3f3d2d8955322f32:2f756afc:145f4d10b2f:-8000-0000000000003eea,0] [APP: bimad#11.1.1] User (weblogic) with session id: q2fq8fkh66f85ghamsq164u9qs98itvnk0c826i is looking for object in biee path: /shared/Apps Library//GCBC.xma/_mreport.xma[[
+Object Error [Context: 0, code: QM3V3HLV, message: Invalid path (/shared/Apps Library//GCBC.xma/_mreport.xma) -- ]
+]]
+[2014-05-13T16:49:53.450+01:00] [bi_server1] [WARNING] [] [oracle.xdo] [tid: 24] [userId: <anonymous>] [ecid: 3f3d2d8955322f32:2f756afc:145f4d10b2f:-8000-0000000000003eea,0] [APP: bimad#11.1.1] oracle.xdo.XDOException: Target app not found in the repository :/Apps Library//GCBC.xma[[
+    at oracle.xdo.online.AppStoreIO.doPost_subscribeApp(AppStoreIO.java:311)
+    at oracle.xdo.online.AppStoreIO.doPost(AppStoreIO.java:120)
+[...]
+----
++
+
+
+One of my esteemed Rittman Mead colleagues, link:http://www.rittmanmead.com/author/francesco-tisiot/?ref=rittmanmead.com[Francesco Tisiot], pointed out that the path referenced in the errors has a double slash in it. On checking my configuration, I had indeed fat-fingered one of the settings. link:http://docs.oracle.com/cd/E52471_01/bi.1111/e48576/toc.htm?ref=rittmanmead.com#BGBJBFBC[APPS_LIBRARY_FOLDER_LOCAL] is defined in the <DOMAIN_HOME>/config/bipublisher/repository/Admin/Configuration/xmlp-server-config.xml file, and mine looked like this:
+
+
+[source,xml]
+----
+<property name="APPS_LIBRARY_FOLDER_LOCAL" value="/Apps Library/"/>
+----
+
+
+All I needed to do was to remove the trailing slash after _Library_:
+
+
+[source,xml]
+----
+<property name="APPS_LIBRARY_FOLDER_LOCAL" value="/Apps Library"/>
+----
+
+
+After restarting the bimad application deployment all was good again with the MAD world and I could republish and subscribe to Apps happily.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/05/mobile-app-designer-mis-configuration-error/[Rittman Mead blog].

@@ -1,0 +1,262 @@
+---
+title: 'Web Services in BI Publisher 11g'
+date: "2011-11-24T00:00:00+00:00"
+url: "/2011/11/24/web-services-in-bi-publisher-11g/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2011/11/web-services-in-bi-publisher-11g/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/11/web-services-in-bi-publisher-11g/[Rittman Mead blog].
+
+BI Publisher 11g comes with a shiny set of new Web Services, superseding those that were in 10g. This article will discuss some of the uses, and ways to implement them.
+
+
+== Introduction
+
+
+First, a quick refresher : what *is* a web service? I'd link:http://en.wikipedia.org/wiki/Web_service?ref=rittmanmead.com[hasten to Wikipedia for a formal definition], but in essence I would describe the salient points thus: 
+
+* industry standard
+* platform and language agnostic
+* web (HTTP/S) based protocol
+* allows an application to expose an API
+* data exchanged in XML format (using a format called SOAP)
+
+
+A simple example of a web service would be one application invoking the web service of another to find out some information, say, the stock level of a given item. Or another example could be placing an order for that same item.
+
+
+image::/images/2011/11/05210Untitled-1.png[]
+
+
+Web Services are typically bundled into groups of methods within one or more services. Each service will expose its methods and data types through a WSDL file. You'll normally find the WSDL on a URL at the same server as the Web Service itself. WSDL files are great, because they make the Web Service self-documenting, to an extent. You don't have to hunt through the documentation for the exact name of a method, because it's all in the WSDL. Obviously, you'll still need the documentation to understand _how_ to invoke a method or the data it expects.
+
+
+== Web Services in BI Publisher, and what's new in 11g
+
+
+Within BI Publisher, the web services are well provisioned and expose a raft of useful functionality. We can do things such as: 
+
+
+* run a report
+* schedule a report
+* create a report
+* search the catalog
+* determine a user's access rights
+
+We can do all of this just with a bit of XML and some HTTP magic!
+
+
+You can find the documentation for BI Publisher Web Services in the link:http://docs.oracle.com/cd/E21764_01/bi.1111/e18863/toc.htm?ref=rittmanmead.com[Developer's Guide for BI Publisher].
+
+
+In BI Publisher 10g the majority of web service functionality was exposed through the PublicReportService service, and most of the examples that you will currently find on the web use this. In BI Publisher 11g this service still exists for backward compatibility, but has been superceeded by the following four new services:
+
+
+image::/images/2011/11/05209Untitled-2.png[]
+
+
+== WSDL for BI Publisher 11g Web Services
+
+
+Unfortunately the BI Publisher 11g documentation doesn't tell you the WSDL for these services. However, if you go to this URL, substituting your servername and the port on which BI Publisher is running, you will see a list of all Web Services that are available: 
+
+[source]
+----
+http://[server]:[port]/xmlpserver/services
+----
+ 
+
+(NB no trailing slash after 'services').
+
+
+Be aware that the list includes several other services, including those from 10g. The ones for 11g (list above) are all prefixed with "v2":
+
+
+[source]
+----
+
+http://localhost:7001/xmlpserver/services/v2/ScheduleService?wsdl
+http://localhost:7001/xmlpserver/services/v2/ReportService?wsdl
+http://localhost:7001/xmlpserver/services/v2/SecurityService?wsdl
+http://localhost:7001/xmlpserver/services/v2/CatalogService?wsdl
+----
+
+(substitute localhost:7001 for your server and port)
+
+
+== Security
+
+
+Access to Web Services is controlled through the same security model as access to BI Publisher itself. BI Publisher Web Services support two methods of authentication, and there are two versions of each service call, one for each authentication method.
+
+
+* *Session Based*
++
+* Make a call to the SecurityService login() service first to authenticate your user.
+* This either returns a AccessDeniedException, or for a successful login a loginResponse message, with loginReturn token.
+* All subsequent Web Service calls pass the token as part of the call
+* Suitable for uses where you are going to make multiple Web Service calls and want to retain the context of an authenticated user
+* All the BI Publisher Web Services that use this method are suffixed [...]InSession
++
+* *Stateless*
++
+* Oracle refer to this as “Web Services for SOA”
+* Each time you call a Web Service, you include username and password in the call
+* Suitable for single stateless calls to a Web Service, for example in a SOA process (as the name implies)
++
+
+
+== Exploring Web Services in BI Publisher
+
+
+So we've got all this spiffy functionality that we can access, but _how_ do we access it? As an industry standard, there are many ways of consuming a web service. Here are three ways which I will discuss:
+
+
+* *soapUI* - a manual web service client
+* *Java Web Service Proxy* - java code generated by JDeveloper
+* *BPEL* - part of SOA
+
+
+The best way to understand a web service and how it works, what it expects in message format and what data it returns, is to get down 'n dirty with the raw message format. This might sound scary but is actually much better than jumping straight in with an abstracted method of accessing the web service (for example, Java Web Service Proxy).
+
+
+image::/images/2011/11/05208Untitled-4.png[]
+
+
+Until you understand the basic exchange of data in XML format that's going on at the low level between client and web service, you're going to find it hard going trying to debug an issue elsewhere. SoapUI is an excellent tool to use for this. To describe it as a simple web service client would be doing its raft of functionality a disservice, but for our purpose that is in effect what it is. It lets us create the requests, fire them at a web service, and examine the response.
+
+
+Even once you're comfortable with a web service, you can use a tool like soapUI to sandbox your web service calls, and then it's a piece of cake to migrate them to your target client. You can download soapUI for free (there is also a Pro version, which isn't free) from link:http://www.soapui.org/?ref=rittmanmead.com[here], and it works on Windows, Mac and Linux. If you are using the Mac version, make sure you set "Use native Look & Feel" otherwise you won't get title bars in the desktop windows.
+
+
+Here's a walk through of running an existing report and saving the output as PDF. In this example the report is one from the SampleApp107 build.
+
+
+. Run *soapUI*, and create a *New SoapUI Project*
+. Enter a *project name*, and *Initial WSDL*: 
++
+[source]
+----
+http://localhost:7001/xmlpserver/services/v2/ReportService?wsdl
+----
++
+* Your URL may vary, on both servername and port
+* Validate your WSDL URL by entering it in a web browser - if it works you should get a page full of XML that starts with "<wsdl:definitions xmlns:apachesoap=...."
+
+image::/images/2011/11/05207Untitled-8.png[]
++
+. Your project should look something like this: 
+
+
+image::/images/2011/11/05206Untitled-10.png[]
+
+We're going to use the *runReport* method, so navigate to it in the left-pane. Click the + to expand it, and double click on the Request to open it in the right-pane, which soapUI calls the Desktop
+  
+
+By default, the Request will have the complete message structure for all data that can be passed to the runReport method. Note the parent element *v2:reportRequest*, this matches the link:http://docs.oracle.com/cd/E21764_01/bi.1111/e18863/datatypes.htm?ref=rittmanmead.com#BABFDGEF[data type specified] in link:http://docs.oracle.com/cd/E21764_01/bi.1111/e18863/reportservice.htm?ref=rittmanmead.com#CIHIAFJA[the documentation for runReport]
+  
+
+Edit the *request XML* to include just the data that we need to for the report to run:
+
+[source,xml]
+----
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v2="http://xmlns.oracle.com/oxp/service/v2">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <v2:runReport>
+         <v2:reportRequest>
+            <v2:attributeFormat>pdf</v2:attributeFormat>
+            <v2:reportAbsolutePath>/6. Published Reporting/Sales/North America Sales.xdo</v2:reportAbsolutePath>
+            <v2:reportOutputPath>/tmp/soapui_ws.pdf</v2:reportOutputPath>
+         </v2:reportRequest>
+         <v2:userID>weblogic</v2:userID>
+         <v2:password>Admin123</v2:password>
+      </v2:runReport>
+   </soapenv:Body>
+</soapenv:Envelope>
+----
+
+There are a couple of things to note here:
+
+. The *attributeFormat* is case-sensitive, i.e. must be 'pdf' not 'PDF'. This looks like a bug, and a nasty one: If you use *PDF*, no error is thrown _but the output is actually HTML/XML_ (the report default). If you use a spurious value, eg foobar, then an _oracle.xdo.servlet.data.DataException: Invalid format requested_ is thrown. So make sure you check that your "pdf" file really is a PDF! +
+You can see a list of valid values in link:http://docs.oracle.com/cd/E21764_01/bi.1111/e18863/datatypes.htm?ref=rittmanmead.com#autoId48[the documentation].
+. reportAbsolutePath can be quickly determined by logging into BIP, going to Catalog, and selecting the Copy option on the report. The full path is shown in the toolbar
+
+
+*Submit* your request 
+
+
+image::/images/2011/11/05202Untitled-6.png[]
+
+After a pause you should see the Web Service *Response* in the second pane of the window. You can toggle the window horizonal/vertical split using the + icon in the top right of the toolbar. 
+
+
+image::/images/2011/11/05205Untitled-12.png[]
+
+
+The response will either be a success message, or a failure. 
+
+* The failure should include details, like this: 
++
+[source,xml]
+----
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<soapenv:Fault>
+<faultcode>soapenv:Server.userException</faultcode>
+<faultstring>oracle.xdo.webservice.exception.OperationFailedException: PublicReportService::generateReport failed: due to oracle.xdo.servlet.CreateException: Report definition not found:/foo/bar.xdo [username=weblogic]</faultstring>
+[...]
+----
++
+* A success message will be in the format defined by the Web Service (and should be in the product documentation). For runReport, it is a message of type *runReportResponse*, holding details of the report that was run.
++
+[source,xml]
+----
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<runReportResponse xmlns="http://xmlns.oracle.com/oxp/service/v2">
+<runReportReturn>
+<metaDataList xsi:nil="true"/>
+<reportBytes xsi:nil="true"/>
+<reportContentType>PDF</reportContentType>
+<reportFileID>/tmp/soapui_ws.pdf</reportFileID>
+[...]
+----
++
+
+
+Having submitting our runReport request, we can check that it's worked, by opening up the folder and viewing the file:
+
+image::/images/2011/11/05201Untitled-7.png[]
+
+
+== Summary
+
+
+From this very simple example, it should be clear of the precision that is required when working with Web Services, and the value in exploring methods and prototyping calls first. Taking the above point about pdf/PDF case sensitivity in attributeFormat, this would be more difficult to debug when working in a further layer of abstraction (eg. BPEL), since there are numerous more places to look for where the problem could have occured.
+
+
+== Accessing a BI Publisher Web Services through a JDeveloper Web Service Proxy
+
+
+The second part of this series will look at using JDeveloper to create a Web Service Proxy that will expose the BI Publisher Web Services in java, from where they can be embedded in numerous other applications. 
+
+
+link:https://www.rittmanmead.com/blog/2011/11/accessing-bi-publisher-11g-web-services-through-a-jdeveloper-web-service-proxy/[Click here to read part two.]
+
+
+== BI Publisher Web Services and BPEL
+
+
+The third part of this series will demonstrate incorporating a call to a BI Publisher Web Service in a SOA / BPEL process. link:https://www.rittmanmead.com/blog/2011/11/calling-bi-publisher-11g-web-services-from-bpel/[Click here to read part three].
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/11/web-services-in-bi-publisher-11g/[Rittman Mead blog].

@@ -1,0 +1,290 @@
+---
+title: 'Stream Analytics and Processing with Kafka and Oracle Stream Analytics'
+date: "2016-07-26T00:00:00+00:00"
+url: "/2016/07/26/stream-analytics-processing-kafka-oracle-stream-analytics/"
+draft: false
+categories:
+- Apache Kafka
+- Apache Spark
+- Oracle Stream Analytics
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/07/stream-analytics-processing-kafka-oracle-stream-analytics/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/07/stream-analytics-processing-kafka-oracle-stream-analytics/[Rittman Mead blog].
+
+In link:http://www.rittmanmead.com/2016/07/introduction-oracle-stream-analytics/?ref=rittmanmead.com[my previous post] I looked the latest release of Oracle Stream Analytics (OSA), and saw how it provided a graphical interface to "Fast Data". Users can analyse streaming data as it arrives based on conditions and rules. They can also transform the stream data, publishing it back out as a stream in its own right. In this article we'll see how OSA can be used with Kafka.
+
+
+Kafka is one of the foremost streaming technologies nowadays, for very good reasons. It is highly scalable and flexible, supporting multiple concurrent consumers. Oracle Streaming Analytics supports Kafka as both a source and target. To set up an inbound stream from Kafka, first we define the *Connection*:
+
+
+image::/images/2016/07/32cosa51.png[]
+
+
+image::/images/2016/07/30cosa52.png[]
+
+Once the Connection is defined, we can create a *Stream* for a given Kafka topic:
+
+
+image::/images/2016/07/14Oracle_Stream_Analytics-1.png[Oracle_Stream_Analytics]
+
+
+If you get an error at this point of `Unable to deploy OEP application` then check the OSA log - it could be a connectivity issue to Zookeeper.
+
+
+[source]
+----
+Exception in thread "SpringOsgiExtenderThread-286" org.springframework.beans.FatalBeanException:
+Error in context lifecycle initialization; nested exception is com.bea.wlevs.ede.api.EventProcessingException: 
+org.I0Itec.zkclient.exception.ZkTimeoutException: 
+Unable to connect to zookeeper server within timeout: 6000
+----
+
+
+Assuming that the Stream is saved with no errors, you can then create an Exploration based on the stream and all being well, the live tweets are soon shown. Unlike the example at the top of this article, these tweets are coming in via Kafka, rather than the built-in OSA Twitter Stream. This is partly to demonstrate the Kafka capabilities, but also because the built-in OSA Twitter Stream only includes a subset of the available twitter data fields.
+
+
+image::/images/2016/07/31cosa_ani_02.gif[]
+
+
+=== Avro? Nope.
+
+
+Data in Kafka can be serialised in many formats, including link:https://avro.apache.org/?ref=rittmanmead.com[Avro] - which OSA doesn’t seem to like. No error is thrown to the GUI but the exploration remains blank.
+
+
+image::/images/2016/07/29cosa56.png[]
+
+Looking in the OSA log file there’s a whole lot of errors recorded similar to this:
+
+
+[source]
+----
+    
+line 1:0 no viable alternative at character '?'
+line 1:1 no viable alternative at character '?'
+line 1:2 no viable alternative at character '?'
+line 1:3 no viable alternative at character '?'
+line 1:4 no viable alternative at character '?'
+line 1:5 no viable alternative at character '?'
+line 1:6 no viable alternative at character '?'
+line 1:7 no viable alternative at character '?'
+line 1:8 no viable alternative at character ''
+----
+
+
+=== JSON? Kinda.
+
+
+One of the challenges that I found working with OSA was defining the “Shape” (data model) of the inbound stream data. JSON is a format used widely as a technology-agnostic data interchange format, including for the twitter data that I was working with. You can see a link:http://www.jsoneditoronline.org/?id=47c13a332037ddebfa046fdfc29cce7f&ref=rittmanmead.com[sample record here]. One of the powerful features of JSON is its ability to nest objects in a record, as well as create arrays of them. You can read more about this detail in a recent article link:http://www.rittmanmead.com/2016/07/using-sparksql-pandas-import-data-big-data-discovery/?ref=rittmanmead.com[I wrote here]. Unfortunately it seems that OSA does not support flattening out JSON, meaning that only elements in the root of the model are accessible. For twitter, that means we can see the text, and who it was in reply to, but not the user who tweeted it, since the latter is a nested element (along with many other fields, including hashtags which are also an array):
+
+
+[source]
+----
+root
+|-- created_at: string (nullable = true)
+|-- entities: struct (nullable = true)
+|    |-- hashtags: array (nullable = true)
+|    |    |-- element: struct (containsNull = true)
+|    |    |    |-- indices: array (nullable = true)
+|    |    |    |    |-- element: long (containsNull = true)
+|    |    |    |-- text: string (nullable = true)
+|    |-- user_mentions: array (nullable = true)
+|    |    |-- element: struct (containsNull = true)
+|    |    |    |-- id: long (nullable = true)
+|    |    |    |-- id_str: string (nullable = true)
+|    |    |    |-- indices: array (nullable = true)
+|    |    |    |    |-- element: long (containsNull = true)
+|    |    |    |-- name: string (nullable = true)
+|    |    |    |-- screen_name: string (nullable = true)
+|-- source: string (nullable = true)
+|-- text: string (nullable = true)
+|-- timestamp_ms: string (nullable = true)
+|-- truncated: boolean (nullable = true)
+|-- user: struct (nullable = true)
+|    |-- followers_count: long (nullable = true)
+|    |-- following: string (nullable = true)
+|    |-- friends_count: long (nullable = true)
+|    |-- name: string (nullable = true)
+|    |-- screen_name: string (nullable = true)
+----
+
+
+So what to do if the inbound streaming data is in nested-JSON format? It seems to me the only option is to pre-process it to flatten it. There are a variety of tools that could be used here - in the first instance I’d generally reach for link:https://www.elastic.co/products/logstash?ref=rittmanmead.com[Logstash], it being the one I’m most familiar with. To get an idea of the schema of a JSON record you can use link:http://jsonschema.net/?ref=rittmanmead.com#/[jsonschema.net]. Funnily enough when I was researching this blog post I came across the exact same link:https://discuss.elastic.co/t/flatten-json-array-in-logstash/399/4?ref=rittmanmead.com[problem on a forum posted by … me]! Early last year I was working with the same dataset, and had the same issue with embedded arrays. The way to do it in Logstash is with a bit of Ruby code to flatten the arrays, and a standard `mutate` to bring nested objects up to the root level. Sample code:
+
+
+[source]
+----
+mutate {  
+    add_field => { "user_name" => "%{[user][name]}" }  
+    add_field => { "user_screen_name" => "%{[user][screen_name]}" }  
+}
+ruby {  
+    code => 'event["hashtags_array"] = event["[entities][hashtags]"].collect { |m| m["text"] } unless event["[entities][hashtags]"].nil?  
+             event["hashtags_list"] = event["hashtags_array"].join(",")  unless event["[hashtags_array]"].nil?'  
+}
+----
+
+
+You can find the full link:https://gist.github.com/rmoff/6cb9e28245cde010e6f694348286046c?ref=rittmanmead.com[Logstash code on gist here]. With this logstash code running I set up a new OSA Stream pointing to the *new* Kafka topic that Logstash was writing, and added the flattened fields to the Shape:
+
+
+image::/images/2016/07/28cosa59.png[]
+
+We can then see in the Exploration the fields that we wanted to get at - user name, hashtags, and so on:
+
+
+image::/images/2016/07/36cosa_ani_03.gif[]
+
+
+=== Other Shape Gotchas
+
+
+One of the fields in Twitter data is ‘source’ - which unfortunately is a reserved identifier in the CQL language that OSA uses behind the scenes.
+
+
+[source]
+----
+Caused By: org.springframework.beans.FatalBeanException: Exception initializing channel; nested exception is com.bea.wlevs.ede.api.ConfigurationException: Event type [sx-10-16-Kafka_Technology_Tweets_JSON-1] of channel [channel] uses invalid or reserved CQL identifier = , source
+----
+
+
+It’s not clear how to define a shape in which the source data field is named after a reserved identifier.
+
+
+== Further Exploration of Twitter Streams with OSA
+
+
+Using the flattened Twitter stream coming via Kafka that I demonstrated above, let’s now look at more OSA functionality.
+
+
+Depending on the source of your data stream, and your purpose for analysing it, you may well want to *filter* out certain content. This can be done from the Exploration screen:
+
+
+image::/images/2016/07/26cosa61.png[]
+
+The *Business Rules* section of the Exploration enables you to define rules about the data and set field values based on it. This can be static values, or expressions based on data in the stream. There doens’t seem to be a way to add arbitrary fields via this, so I amended the Stream Shape to include a ‘spare’ field that I then populated:
+
+
+image::/images/2016/07/25cosa63.png[]
+
+
+image::/images/2016/07/27cosa65.png[]
+
+
+== Kafka Stream Transformation with OSA
+
+
+Here we’ll see how OSA can be used to ingest one Kafka topic, apply a transformation, and stream it to another Kafka topic.
+
+
+The OSA exploration screen offers a basic aggregation (*‘summary’*) function, here showing the number of tweets per language:
+
+
+image::/images/2016/07/24cosa62.png[]
+
+Using the Windows icon to the right of the Sources box the time window can be defined, along with the refresh frequency:
+
+
+image::/images/2016/07/23cosa64.png[]
+
+This means that the count of tweets per language will be calculated looking at the data for the past 30 seconds, and this will be evaluated every five seconds. More complex functionality such as pivoting on the group-by column (so as to be able to chart out the number of tweets per language as separate metrics) doesn’t seem to be present in this release; arguably this is moving over into per analytics territory such as would be found in Oracle’s Big Data Discovery.
+
+
+Taking the summarised stream (count of tweets, by language) I first *Publish* the exploration, making it available for use as the input to a subsequent exploration. Then from the Catalog page select a *Pattern*, which I’m going to use to build a stream showing the most common languages in the past five seconds. With the *link:https://docs.oracle.com/middleware/12211/osa/using-streamanalytics/GUID-C4068B6A-3AC2-476B-A95E-8CCEA5CFDE70.htm?ref=rittmanmead.com#OEPSX172[Top N]* pattern you specify the event stream (in this case, the summarised stream that I built above), and the metric by which to order the events which here is the count of tweets per language.
+
+
+image::/images/2016/07/22cosa66.png[]
+
+For completeness, I’m going to stream the output of this pattern exploration back to a Kafka topic
+
+
+image::/images/2016/07/21cosa68.png[]
+
+
+image::/images/2016/07/19cosa69.png[]
+
+
+Note that I’ve defined a new Shape here based on the columns in the pattern. In the pattern itself I renamed the COUNT column to a clearer one (`tweet_count_5_sec`). Renaming it wasn’t strictly necessary since it’s possible to define the field/shape mapping when you configure the Target:
+
+
+image::/images/2016/07/20cosa70.png[]
+
+For the target to take effect, I publish the pattern exploration, and then using `kafka-console-consumer` can see the topic being populated in realtime by OSA:
+
+
+image::/images/2016/07/33cosa_ani_04.gif[]
+
+Being able to apply transformations to streams in realtime like this and stream the results is pretty useful. There are some limitations to the capabilities of OSA through the front end GUI. For example, support for nested json, and integration with the Kafka Schema Registry to automatically derive Shapes for inbound topics would both be great. Lower-level, the option to specify the consumer group id, as well as the start point for consumption (beginning of topic, or streaming at the end) are both things that would probably be necessary sooner or later using OSA for full-blown development.
+
+
+== OSA and Spatial
+
+
+One of the Patterns that OSA provides is a Spatial one, which can be used to analyse source data that includes geo-location data. This could be to simply plot the occurrence of the data point (as we'll see shortly) on a map. It can also be used in a more sophisticated manner, to track a given entity's movements on a map. An example of this could be a fleet of trucks reporting their position back at regular intervals. Areas on a map can be defined and conditions triggered as the entity enters or leaves the area. For now though, we'll keep it simple. Using the flattened Twitter stream from Kafka that I produced from Logstash above, I'm going to plot Tweets in realtime on a map, along with a very simplistic tagging of the broad area in which they came from.
+
+
+In my source Kafka topic I have two fields, `latitude` and `longitude`. I expose these as part of the 'flattening' of the JSON link:https://gist.github.com/rmoff/6cb9e28245cde010e6f694348286046c?ref=rittmanmead.com[in this logstash script], since by default they're nested within the `coordinates` field and as an array too. When defining the Stream's _Shape_ make sure you define the datatype correctly (Double) - OSA is not very forgiving of stupidity and I spent a frustrating time trying to work out why "-80.1422195" was coming through as zero - obviously defined as an Integer this was never going to work!
+
+
+Not entirely necessary, but useful for debug purposes, I setup an exploration based on the flattened Twitter stream, with a filter to only include tweets that had geo-location data in them. This way I knew what tweets I should expect to be seeing in the next step. One of the things that I have found with OSA is that it has a tendency to fail silently; instead of throwing errors you'll just not get any data. By setting up the filter exploration I could at least debug things a bit more easily.
+
+
+image::/images/2016/07/12Oracle_Stream_Analytics-2-1024x465.png[Oracle_Stream_Analytics]
+
+
+After this I created a new object, a *Map*. A Map object defines a set of named areas, which could be sourced from a database table, or drawn manually - which is what I did here by setting the Map Type to 'None (Create Manually)'. One thing to note about the maps is that they're sourced online (openstreetmap.org) so you'll need an internet connection to do this. Once the Map is open, click the Polygon Tool icon and click-drag a shape around the area that you want to "geo-fence". Each area is given a name, and this is what is used in the streaming data to label the event's geographical area.
+
+
+image::/images/2016/07/24Oracle_Stream_Analytics-3-1024x603.png[Yorkshire - God's Own County]
+
+
+Having got our source data stream with geo-data in, and a Map on which to plot it and analyse the location of each event, we now use the *Spatial General* pattern to create an Exploration. The topology looks like this:
+
+
+image::/images/2016/07/11Oracle_Stream_Analytics-7-e1469218770977.png[Oracle_Stream_Analytics]
+
+
+The fields in the Spatial General pattern are all pretty obvious. Object key is the field to use to track the same entity across multiple events, if you want to use the enter/exit/stay statuses. For tweets we just use 'Enter', but for people or vehicles, for example, you might get multiple status reports and want to track them on a map. For example, when a person is near a point of interest that you're tracking, or a vehicle has remained in a set area for too long.
+
+
+image::/images/2016/07/13Oracle_Stream_Analytics-5-1024x455.png[Oracle_Stream_Analytics]
+
+
+If you let the Exploration now run, depending on the rate of event ingest, you'll sooner or later see points appearing on the map and event details underneath. The "status" column is populated (blank if the event is outside of the defined geo-fences), as is the "Place", based on the geo-fence names that you defined.
+
+
+image::/images/2016/07/15osa_ani_05.gif[osa_ani_05]
+
+
+== Summary
+
+
+I can see OSA being used in two ways. The first as an ‘endpoint’ for streams with users taking actions based on the data, with some of the link:https://docs.oracle.com/middleware/12211/osa/getting-started-streamanalytics/GUID-4C3BD7E9-A1BB-4079-9C34-3D239E9B2CE2.htm?ref=rittmanmead.com#SXGSG262[use cases] listed here. The second is for prototyping transformations and analyses on streams prior to productionising them. The visual interface and immediacy of feedback on transformations applied means that users can quickly understand what further processing they may want to apply to the stream using actual streaming data to inform this.
+
+
+This latter concept - that of prototyping - is similar to that which we see with another of Oracle’s products, Big Data Discovery. With BDD users can analyse data in the organisation’s data reservoir, as well as apply transformations to it (link:https://speakerdeck.com/rmoff/unlock-the-value-in-your-big-data-reservoir-using-oracle-big-data-discovery-and-oracle-big-data-spatial-and-graph?ref=rittmanmead.com[read more]). Just as BDD doesn’t replace OBIEE or Visual Analyzer but enables users to understand how they do want to model the data in these tools, OSA wouldn’t replace “production grade” integration done by Oracle Data Integrator. What it would do is allow users to get a clearer idea of the transformations they would want performed in it.
+
+
+OSA's user interface is easy to use and intuitive, and this is definitely a tool that you would put in front of technically minded business users. There are limitations to what can be achieved technically through the web GUI alone and something like Oracle Data Integrator (ODI) would still be a more appropriate fit for complex streaming work. At Oracle Open World last year link:http://www.rittmanmead.com/2015/11/oracle-openworld-2015-roundup-part-2-data-integration-and-big-data-in-the-cloud/?ref=rittmanmead.com[it was announced] (link:http://s3.amazonaws.com/ppt-download/con9737-dis-overviewroadmapslideshare-151023012104-lva1-app6891.pdf?response-content-disposition=attachment&Signature=40y%2B6Oo41WQ8ViK1dxQpJDbCJPQ%3D&Expires=1469188005&AWSAccessKeyId=AKIAJ6D6SEMXSASXHDAQ&ref=rittmanmead.com[slides]) that a beta would be starting for ODI using Spark Streaming for ETL and stream processing, so it'll be interesting to see this when it comes out.
+
+
+=== Further Reading
+
+
+* link:https://guidoschmutz.wordpress.com/2016/06/12/providing-oracle-stream-analytics-12c-environment-using-docker/?ref=rittmanmead.com[Providing Oracle Stream Analytics 12c environment using Docker], by Guido Schmutz
+* link:https://www.linkedin.com/pulse/real-time-data-streaming-exploration-oracle-stream-analytics-hijazi-1?ref=rittmanmead.com[Real-Time Data Streaming & Exploration with Oracle GoldenGate & Oracle Stream Analytics], by Issam Hijazi
+* link:https://technology.amis.nl/2015/04/12/demonstration-of-oracle-stream-explorer-for-live-device-monitoring-collect-filter-aggregate-pattern-match-enrich-and-publish/?ref=rittmanmead.com[Demonstration of Oracle Stream Explorer for live device monitoring – collect, filter, aggregate, pattern match, enrich and publish] by Lucas Jellema
+* link:http://www.oracle.com/technetwork/middleware/complex-event-processing?ref=rittmanmead.com[OTN OSA home page]
+* link:https://docs.oracle.com/middleware/12211/osa/index.html?ref=rittmanmead.com[Documentation index]
+
++
+* link:https://docs.oracle.com/middleware/12211/osa/getting-started-streamanalytics/GUID-4C3BD7E9-A1BB-4079-9C34-3D239E9B2CE2.htm?ref=rittmanmead.com#SXGSG262[Use cases]
+* link:https://docs.oracle.com/middleware/12211/lcm/INOEP/toc.htm?ref=rittmanmead.com#INOEP-GUID-8CE0F958-876D-433C-939B-83A8C03A5FBE[Installation]
++
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/07/stream-analytics-processing-kafka-oracle-stream-analytics/[Rittman Mead blog].

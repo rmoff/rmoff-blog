@@ -1,0 +1,539 @@
+---
+title: 'Using Linux Control Groups to Constrain Process Memory'
+date: "2015-12-21T00:00:00+00:00"
+url: "/2015/12/21/using-linux-control-groups-to-constrain-process-memory/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+- Linux
+- Performance
+image: "/images/2015/12/Performance.jpg"
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2015/12/using-linux-control-groups-to-constrain-process-memory/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/12/using-linux-control-groups-to-constrain-process-memory/[Rittman Mead blog].
+
+Linux link:http://docs.oracle.com/cd/E37670_01/E37355/html/ol_about_cgroups.html?ref=rittmanmead.com[Control Groups] (cgroups) are a nifty way to limit the amount of resource, such as CPU, memory, or IO throughput, that a process or group of processes may use. link:https://fritshoogland.wordpress.com/2012/12/15/throttling-io-with-linux/?ref=rittmanmead.com[Frits Hoogland] wrote a great blog demonstrating how to use it to constrain the I/O a particular process could use, and was the inspiration for this one. I have been doing some digging into the performance characteristics of OBIEE in certain conditions, including how it behaves under memory pressure. I'll write more about that in a future blog, but wanted to write this short blog to demonstrate how cgroups can be used to constrain the memory that a given Linux process can be allocated.
+
+
+This was done on Amazon EC2 running an image imported originally from Oracle’s OBIEE SampleApp, built on Oracle Linux 6.5.
+
+
+[source,shell]
+----
+$ uname -a  
+Linux demo.us.oracle.com 2.6.32-431.5.1.el6.x86_64 #1 SMP Tue Feb 11 11:09:04 PST 2014 x86_64 x86_64 x86_64 GNU/Linux
+----
+
+
+First off, install the necessary package in order to use them, and start the service. Throughout this blog where I quote shell commands those prefixed with `#` are run as root and `$` as non-root:
+
+
+[source]
+----
+# yum install libcgroup  
+# service cgconfig start
+----
+
+
+Create a cgroup (I’m shamelessly ripping off Frits’ code here, hence the same cgroup name ;-) ):
+
+
+[source]
+----
+# cgcreate -g memory:/myGroup
+----
+
+
+You can use *cgget* to view the current limits, usage, & high watermarks of the cgroup:
+
+
+[source]
+----
+# cgget -g memory:/myGroup|grep bytes  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.memsw.max_usage_in_bytes: 0  
+memory.memsw.usage_in_bytes: 0  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 9223372036854775807  
+memory.max_usage_in_bytes: 0  
+memory.usage_in_bytes: 0
+----
+
+
+For more information about the field meaning link:http://docs.oracle.com/cd/E37670_01/E37355/html/ol_memory_cgroups.html?ref=rittmanmead.com[see the doc here].
+
+
+To test out the cgroup ability to limit memory used by a process we’re going to use the tool *link:http://linux.die.net/man/1/stress?ref=rittmanmead.com[stress]*, which can be used to generate CPU, memory, or IO load on a server. It’s great for testing what happens to a server under resource pressure, and also for testing memory allocation capabilities of a process which is what we’re using it for here.
+
+
+We’re going to configure cgroups to add `stress` to the myGroup group whenever it runs
+
+
+[source,shell]
+----
+ $ cat /etc/cgrules.conf  
+*:stress memory myGroup
+----
+
+
+[Re-]start the cg rules engine service:
+
+
+[source]
+----
+# service cgred restart
+----
+
+
+Now we’ll use the *watch* command to re-issue the `cgget` command every second enabling us to watch cgroup’s metrics in realtime:
+
+
+[source]
+----
+# watch --interval 1 cgget -g memory:/myGroup  
+/myGroup:  
+memory.memsw.failcnt: 0  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.memsw.max_usage_in_bytes: 0  
+memory.memsw.usage_in_bytes: 0  
+memory.oom_control: oom_kill_disable 0  
+        under_oom 0  
+memory.move_charge_at_immigrate: 0  
+memory.swappiness: 60  
+memory.use_hierarchy: 0  
+memory.stat: cache 0  
+        rss 0  
+        mapped_file 0  
+        pgpgin 0  
+        pgpgout 0  
+        swap 0  
+        inactive_anon 0  
+        active_anon 0  
+        inactive_file 0  
+        active_file 0  
+        unevictable 0  
+        hierarchical_memory_limit 9223372036854775807  
+        hierarchical_memsw_limit 9223372036854775807  
+        total_cache 0  
+        total_rss 0  
+        total_mapped_file 0  
+        total_pgpgin 0  
+        total_pgpgout 0  
+        total_swap 0  
+        total_inactive_anon 0  
+        total_active_anon 0  
+        total_inactive_file 0  
+        total_active_file 0  
+        total_unevictable 0  
+memory.failcnt: 0  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 9223372036854775807  
+memory.max_usage_in_bytes: 0  
+memory.usage_in_bytes: 0
+----
+
+
+In a separate terminal (or even better, use link:https://www.rittmanmead.com/blog/2012/05/screen-and-obiee/[screen]!) run stress, telling it to grab 150MB of memory:
+
+
+[source,shell]
+----
+$ stress --vm-bytes 150M --vm-keep -m 1
+----
+
+
+Review the cgroup, and note that the _usage_ fields have increased:
+
+
+[source]
+----
+/myGroup:  
+memory.memsw.failcnt: 0  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.memsw.max_usage_in_bytes: 157548544  
+memory.memsw.usage_in_bytes: 157548544  
+memory.oom_control: oom_kill_disable 0  
+        under_oom 0  
+memory.move_charge_at_immigrate: 0  
+memory.swappiness: 60  
+memory.use_hierarchy: 0  
+memory.stat: cache 0  
+        rss 157343744  
+        mapped_file 0  
+        pgpgin 38414  
+        pgpgout 0  
+        swap 0  
+        inactive_anon 0  
+        active_anon 157343744  
+        inactive_file 0  
+        active_file 0  
+        unevictable 0  
+        hierarchical_memory_limit 9223372036854775807  
+        hierarchical_memsw_limit 9223372036854775807  
+        total_cache 0  
+        total_rss 157343744  
+        total_mapped_file 0  
+        total_pgpgin 38414  
+        total_pgpgout 0  
+        total_swap 0  
+        total_inactive_anon 0  
+        total_active_anon 157343744  
+        total_inactive_file 0  
+        total_active_file 0  
+        total_unevictable 0  
+memory.failcnt: 0  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 9223372036854775807  
+memory.max_usage_in_bytes: 157548544  
+memory.usage_in_bytes: 157548544
+----
+
+
+Both *memory.memsw.usage_in_bytes* and *memory.usage_in_bytes* are 157548544 = 150.25MB
+
+
+Having a look at the process stats for stress shows us:
+
+
+[source,shell]
+----
+$ ps -ef|grep stress  
+oracle   15296  9023  0 11:57 pts/12   00:00:00 stress --vm-bytes 150M --vm-keep -m 1  
+oracle   15297 15296 96 11:57 pts/12   00:06:23 stress --vm-bytes 150M --vm-keep -m 1  
+oracle   20365 29403  0 12:04 pts/10   00:00:00 grep stress
+
+$ cat /proc/15297/status
+
+Name:   stress  
+State:  R (running)  
+[...]  
+VmPeak:   160124 kB  
+VmSize:   160124 kB  
+VmLck:         0 kB  
+VmHWM:    153860 kB  
+VmRSS:    153860 kB  
+VmData:   153652 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:       328 kB  
+VmSwap:        0 kB  
+[...]
+----
+
+
+The link:http://man7.org/linux/man-pages/man5/proc.5.html?ref=rittmanmead.com[man page for proc] gives us more information about these fields, but of particular note are:
+
+
+* VmSize: Virtual memory size.
+* VmRSS: Resident set size.
+* VmSwap: Swapped-out virtual memory size by anonymous private pages
+
+
+Our `stress` process has a VmSize of 156MB, VmRSS of 150MB, and zero swap.
+
+
+Kill the stress process, and set a memory limit of 100MB for any process in this cgroup:
+
+
+[source]
+----
+# cgset -r memory.limit_in_bytes=100m myGroup
+----
+
+
+Run `cgset` and you should see the see new limit. Note that at this stage we’re just setting *memory.limit_in_bytes* and leaving *memory.memsw.limit_in_bytes* unchanged.
+
+
+[source]
+----
+# cgget -g memory:/myGroup|grep limit|grep bytes  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 104857600
+----
+
+
+Let’s see what happens when we try to allocate the memory, observing the cgroup and process Virtual Memory process information at each point:
+
+
+* 15MB: 
+
++
+[source,shell]
+----
+ $ stress --vm-bytes 15M --vm-keep -m 1  
+stress: info: [31942] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+
+# cgget -g memory:/myGroup|grep usage|grep -v max  
+memory.memsw.usage_in_bytes: 15990784  
+memory.usage_in_bytes: 15990784
+
+$ cat /proc/$(pgrep stress|tail -n1)/status|grep VmVmPeak:    21884 kB  
+VmSize:    21884 kB  
+VmLck:         0 kB  
+VmHWM:     15616 kB  
+VmRSS:     15616 kB  
+VmData:    15412 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:        60 kB  
+VmSwap:        0 kB
+----
++
+* 50MB: 
+
++
+[source,shell]
+----
+ $ stress --vm-bytes 50M --vm-keep -m 1  
+stress: info: [32419] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+
+# cgget -g memory:/myGroup|grep usage|grep -v max  
+memory.memsw.usage_in_bytes: 52748288  
+memory.usage_in_bytes: 52748288     
+
+$ cat /proc/$(pgrep stress|tail -n1)/status|grep Vm  
+VmPeak:    57724 kB  
+VmSize:    57724 kB  
+VmLck:         0 kB  
+VmHWM:     51456 kB  
+VmRSS:     51456 kB  
+VmData:    51252 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:       128 kB  
+VmSwap:        0 kB
+----
++
+* 100MB:
+
++
+[source,shell]
+----
+$ stress --vm-bytes 100M --vm-keep -m 1  
+stress: info: [20379] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd        
+# cgget -g memory:/myGroup|grep usage|grep -v max  
+memory.memsw.usage_in_bytes: 105197568  
+memory.usage_in_bytes: 104738816
+
+$ cat /proc/$(pgrep stress|tail -n1)/status|grep Vm  
+VmPeak:   108924 kB  
+VmSize:   108924 kB  
+VmLck:         0 kB  
+VmHWM:    102588 kB  
+VmRSS:    101448 kB  
+VmData:   102452 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:       232 kB  
+VmSwap:     1212 kB
+----
++
+
+
+Note that *VmSwap* has now gone above zero, despite the machine having plenty of usable memory:
+
+
+[source]
+----
+# vmstat -s  
+     16330912  total memory  
+     14849864  used memory  
+     10583040  active memory  
+      3410892  inactive memory  
+      1481048  free memory  
+       149416  buffer memory  
+      8204108  swap cache  
+      6143992  total swap  
+      1212184  used swap  
+      4931808  free swap
+----
+
+
+So it looks like the memory cap has kicked in and the `stress` process is being forced to get the additional memory that it needs from swap.
+
+
+Let’s tighten the screw a bit further:
+
+
+[source,shell]
+----
+$ stress --vm-bytes 200M --vm-keep -m 1  
+stress: info: [21945] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+----
+
+
+The process is now using 100MB of swap (since we’ve asked it to grab 200MB but cgroup is constraining it to 100MB real):
+
+
+[source,shell]
+----
+$ cat /proc/$(pgrep stress|tail -n1)/status|grep Vm  
+VmPeak:   211324 kB  
+VmSize:   211324 kB  
+VmLck:         0 kB  
+VmHWM:    102616 kB  
+VmRSS:    102600 kB  
+VmData:   204852 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:       432 kB  
+VmSwap:   102460 kB
+----
+
+
+The `cgget` command confirms that we’re using swap, as the *memsw* value shows:
+
+
+[source]
+----
+# cgget -g memory:/myGroup|grep usage|grep -v max  
+memory.memsw.usage_in_bytes: 209788928  
+memory.usage_in_bytes: 104759296
+----
+
+
+So now what happens if we curtail the use of all memory, including swap? To do this we’ll set the *memory.memsw.limit_in_bytes* parameter. Note that running `cgset` whilst a task under the cgroup is executing seems to get ignored *if it is below that currently in use* (per the `usage_in_bytes` field). If it is above this then the change is instantaneous:
+
+
+* Current state
+
++
+[source]
+----
+# cgget -g memory:/myGroup|grep bytes  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.memsw.max_usage_in_bytes: 209915904  
+memory.memsw.usage_in_bytes: 209784832  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 104857600  
+memory.max_usage_in_bytes: 104857600  
+memory.usage_in_bytes: 104775680
+----
++
+* Set the limit _below_ what is currently in use (150m limit vs 200m in use)
+
++
+[source]
+----
+# cgset -r memory.memsw.limit_in_bytes=150m myGroup
+----
++
+* Check the limit – it remains unchanged
+
++
+[source]
+----
+# cgget -g memory:/myGroup|grep bytes  
+memory.memsw.limit_in_bytes: 9223372036854775807  
+memory.memsw.max_usage_in_bytes: 209993728  
+memory.memsw.usage_in_bytes: 209784832  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 104857600  
+memory.max_usage_in_bytes: 104857600  
+memory.usage_in_bytes: 104751104
+----
++
+* Set the limit _above_ what is currently in use (250m limit vs 200m in use)
+
++
+[source]
+----
+# cgset -r memory.memsw.limit_in_bytes=250m myGroup
+----
++
+* Check the limit - it’s taken effect
+
++
+[source]
+----
+# cgget -g memory:/myGroup|grep bytes  
+memory.memsw.limit_in_bytes: 262144000  
+memory.memsw.max_usage_in_bytes: 210006016  
+memory.memsw.usage_in_bytes: 209846272  
+memory.soft_limit_in_bytes: 9223372036854775807  
+memory.limit_in_bytes: 104857600  
+memory.max_usage_in_bytes: 104857600  
+memory.usage_in_bytes: 104816640
+----
++
+
+
+So now we’ve got limits in place of 100MB real memory and 250MB total (real + swap). What happens when we test that out?
+
+
+[source,shell]
+----
+$ stress --vm-bytes 245M --vm-keep -m 1  
+stress: info: [25927] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+----
+
+
+The process is using 245MB total (`VmData`), of which 95MB is resident (`VmRSS`) and 150MB is swapped out (`VmSwap`)
+
+
+[source,shell]
+----
+$ cat /proc/$(pgrep stress|tail -n1)/status|grep Vm  
+VmPeak:   257404 kB  
+VmSize:   257404 kB  
+VmLck:         0 kB  
+VmHWM:    102548 kB  
+VmRSS:     97280 kB  
+VmData:   250932 kB  
+VmStk:        92 kB  
+VmExe:        20 kB  
+VmLib:      2232 kB  
+VmPTE:       520 kB  
+VmSwap:   153860 kB
+----
+
+
+The cgroup stats reflect this:
+
+
+[source]
+----
+# cgget -g memory:/myGroup|grep bytes  
+memory.memsw.limit_in_bytes: 262144000  
+memory.memsw.max_usage_in_bytes: 257159168  
+memory.memsw.usage_in_bytes: 257007616  
+[...]  
+memory.limit_in_bytes: 104857600  
+memory.max_usage_in_bytes: 104857600  
+memory.usage_in_bytes: 104849408
+----
+
+
+If we try to go above this absolute limit (*memory.memsw.max_usage_in_bytes*) then the cgroup kicks in a stops the process getting the memory, which in turn causes `stress` to fail:
+
+
+[source,shell]
+----
+$ stress --vm-bytes 250M --vm-keep -m 1  
+stress: info: [27356] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd  
+stress: FAIL: [27356] (415) <-- worker 27357 got signal 9  
+stress: WARN: [27356] (417) now reaping child worker processes  
+stress: FAIL: [27356] (451) failed run completed in 3s
+----
+
+
+This gives you an indication of how careful you need to be using this type of low-level process control. Most tools will not be happy if they are starved of resource, including memory, and may well behave in unstable ways.
+
+
+'''
+
+
+_Thanks to link:https://fritshoogland.wordpress.com/?ref=rittmanmead.com[Frits Hoogland] for reading a draft of this post and providing valuable feedback._
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/12/using-linux-control-groups-to-constrain-process-memory/[Rittman Mead blog].

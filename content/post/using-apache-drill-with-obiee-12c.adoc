@@ -1,0 +1,299 @@
+---
+title: 'Using Apache Drill with OBIEE 12c'
+date: "2016-08-11T00:00:00+00:00"
+url: "/2016/08/11/using-apache-drill-with-obiee-12c/"
+draft: false
+categories:
+- Apache Drill
+- OBIEE
+- Linux
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Rittman Mead blog].
+
+link:https://drill.apache.org/?ref=rittmanmead.com[Apache Drill] enables querying with SQL against a link:https://drill.apache.org/docs/connect-a-data-source/?ref=rittmanmead.com[multitude of datasources] including things like JSON files, Parquet and Avro, Hive tables, RDBMS and more. MapR have released an link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com#step-1:-download-the-mapr-drill-odbc-driver[ODBC driver] for it, and I thought it'd be neat to get it to work with OBIEE. It link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[evidently does work] for OBIEE running on Windows, but I wanted to be able to use it on my standard environment, Linux.
+
+
+For more information on Apache Drill, see my previous post, link:http://www.rittmanmead.com/2016/08/an-introduction-to-apache-drill?ref=rittmanmead.com[Introduction to Apache Drill].
+
+
+OBIEE 12c (and 11g and 10g before it) supports link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1465[three primary ways] of connecting to data sources:
+
+
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1179[Native Gateway], such as OCI for Oracle. This is always the preferred option as it gives the greatest support and performance.
+. link:https://www.progress.com/datadirect-connectors?ref=rittmanmead.com[Data Direct ODBC Drivers], a set of which are bundled with OBIEE for enabling connectivity to sources such as SQL Server, MySQL, Hive, and Impala. The configuration of these is link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1194[documented in the OBIEE manuals], and is generally a supported configuration.
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Native ODBC Drivers].
+
+
+To get OBIEE to work with Apache Drill we'll use the third option - native ODBC drivers. I'm doing this on link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[SampleApp] v511. For a geek-out on details of the process I went through and diagnostics used to get this to work, link:https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/[see here].
+
+
+_Update: link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[Fiston] has written up link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[an excellent blog post] showing how JDBC can be used to connect OBIEE 12c to Apache Drill - very cool!_
+
+
+== First Things First - Setting up Apache Drill
+
+
+Drill can be deployed in distributed configuration (with all the parallel processing goodness which that brings), but also run as a single instance locally. For the sake of simplicity that's what I'm going to do here. It's rather easy to do:
+
+
+[source,shell]
+----
+# Download Apache Drill
+wget http://www.apache.org/dyn/closer.cgi/drill/drill-1.7.0/apache-drill-1.7.0.tar.gz
+# Unpack
+tar -xvf apache-drill-1.7.0.tar.gz
+# Run
+cd /opt/apache-drill-1.7.0/ && bin/sqlline -u jdbc:drill:zk=local
+----
+
+
+You need to make sure you've got a recent JDK available, and if you're running it on BigDataLite VM watch out for link:http://rmoff.net/2016/06/20/apache-drill-not-connected/?ref=rittmanmead.com[this odd problem that I had] which was related to classpaths and maniested itself with the error `java.lang.NoSuchMethodError: com.fasterxml.jackson.databind.JavaType.isReferenceType()Z`.
+
+
+All being well, you'll now have a Drill prompt:
+
+
+[source,json]
+----
+Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=512M; support was removed in 8.0
+Aug 09, 2016 5:51:43 AM org.glassfish.jersey.server.ApplicationHandler initialize
+INFO: Initiating Jersey application, version Jersey: 2.8 2014-04-29 01:25:26...
+apache drill 1.7.0
+"say hello to my little drill"
+0: jdbc:drill:zk=local>
+----
+
+
+From here you can run a simple query to check the version:
+
+
+[source,sql]
+------------
+0: jdbc:drill:zk=local> SELECT version FROM sys.version;
++----------+
+| version  |
++----------+
+| 1.7.0    |
++----------+
+1 row selected (0.392 seconds)
+------------
+
+
+or query one of the built-in sample data sets:
+
+
+[source,sql]
+----------
+0: jdbc:drill:zk=local> select count(*) from cp.`employee.json`;
++---------+
+| EXPR$0  |
++---------+
+| 1155    |
++---------+
+1 row selected (0.977 seconds)
+----------
+
+
+For more examples of Drill, see the link:https://drill.apache.org/docs/analyzing-the-yelp-academic-dataset/?ref=rittmanmead.com[tutorials].
+
+
+== Setting up Drill ODBC on Linux with OBIEE
+
+
+With Drill setup and running locally, let's now install the ODBC driver. This is all on SampleApp v511 / Oracle Linux 6.7.
+
+
+[source,shell]
+----
+sudo rpm -i http://package.mapr.com/tools/MapR-ODBC/MapR_Drill/MapRDrill_odbc_v1.2.1.1000/MapRDrillODBC-1.2.1.x86_64.rpm
+----
+
+
+Next, create the MapR Drill ODBC driver configuration file. A sample one is provided, which you can copy from the default installation path of `/opt/mapr/drillodbc/Setup/mapr.drillodbc.ini`, or create new. I put it in the default path (`~/.mapr.drillodbc.ini`).
+
+
+[source,properties]
+----
+[Driver]
+DisableAsync=0
+DriverManagerEncoding=UTF-16
+ErrorMessagesPath=/opt/mapr/drillodbc/ErrorMessages
+LogLevel=2
+LogPath=/tmp/odbc.mapr
+SwapFilePath=/tmp
+
+ODBCInstLib=libodbcinst.so
+----
+
+
+In the above I've changed a few things:
+
+
+* The *most important* is `DriverManagerEncoding`. If you leave this as the default of `UTF-32` OBIEE will crash (SIGSEGV) when you try to query the data in Apache Drill. You can read all about my trials and tribulations trying to figure this out in a separate blog post coming soon.
+* I've set `LogLevel` to 2 and `LogPath` to a valid path, so that there's some log files to check if things go wrong
+* Set the `ODBCInstLib` to `libodbcinst.so` which matches the built in DataDirect ODBC Driver Manager library file.
+
+
+Following the documentation, link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Configuring Database Connections Using Native ODBC Drivers]:
+
+
+. Add the link:https://drill.apache.org/docs/configuring-odbc-on-linux/?ref=rittmanmead.com[necessary environment variables] to BI Server. This is done per-component in a `.properties` file, which for the BI Server (OBIS / nqsserver) is `BI_DOMAIN/config/fmwconfig/bienv/obis/obis.properties`, so on SampleApp `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/OBIS/obis.properties`. To this file (which in 12.2.1 is empty by default) we add:
+
+
++
+[source,properties]
+----
+ MAPRDRILLINI=/home/oracle/.mapr.drillodbc.ini
+ LD_LIBRARY_PATH=/opt/mapr/drillodbc/lib/64
+----
++
+. Add the Drill DSN to `odbc.ini` which for OBIEE already exists and is populated with other ODBC configurations. You'll find the file in `BI_DOMAIN/config/fmwconfig/bienv/core`, which on SampleApp is `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/core/odbc.ini`.
+
+
++
+. Add to the `[ODBC Data Sources]` section
+
+
++
+[source,properties]
+----
+ DrillDSN=MapR Drill ODBC Driver 64-bit
+----
++
+. Add a section to the bottom of the file:
+
+
++
+[source,json]
+----
+ [DrillDSN]
+ Driver=/opt/mapr/drillodbc/lib/64/libmaprdrillodbc64.so
+ AuthenticationType=No Authentication
+ Description=Drill ODBC Driver
+ ConnectionType=Direct
+ HOST=localhost
+ PORT=31010
+----
++
++
+
+
+Now restart the BI Server:
+
+
+[source,json]
+----
+/app/oracle/biee/user_projects/domains/bi/bitools/bin/stop.sh -i obis1 && /app/oracle/biee/user_projects/domains/bi/bitools/bin/start.sh -i obis1
+----
+
+
+On a Windows machine I installed the MapR Drill ODBC driver too and created a DSN of the same name as in my `odbc.ini` file above. In the Administration Tool I set up a new Database (type: ODBC Basic) and associated connection pool (ODBC 2.0) pointing to DrillDSN.
+
+
+image::/images/2016/08/dr03-1.png[]
+
+
+Now to try it out! In Answers I build a Direct Database Request:
+
+
+image::/images/2016/08/dr04.png[]
+
+
+and run it
+
+
+image::/images/2016/08/dr14.png[]
+
+
+Nice. We can query data held in HDFS too, again with a Direct Database Request:
+
+
+image::/images/2016/08/dr24.png[]
+
+
+== Exploring Drill data with OBIEE
+
+
+So the above DDR prove the connectivity works. But as any ful kno, DDR is at best a 'tactical' solution, at worst, a complete hack and maintenance nightmare. Let's use the force luke, or at least, the RPD. The first obvious thing to do is Import Metadata from the connection pool that we've defined. But doing this, there's no objects shown:
+
+
+image::/images/2016/08/dr15.png[]
+
+
+That's because 'tables' in Drill are not quite as clearly defined as in a standard RDBMS. A table could be a single file, multiple files matching a pattern, or even literally a table if connecting Drill to an RDBMS. So to expose a set of data through Drill, we define a view. This is where link:https://drill.apache.org/docs/drill-explorer-introduction/?ref=rittmanmead.com[Drill Explorer] comes in as it gives a simple GUI over the available files
+
+
+image::/images/2016/08/dr13-2.png[]
+
+
+from where you can use the *SQL* tab and *Create As* option to create a view
+
+
+image::/images/2016/08/dr17.png[]
+
+
+Having done this, launch the Import Metadata dialog again (right click the Connection Pool and select Import Metadata), and make sure you tick *Views* on the Metadata types to view. Now you'll see the object. Unfortunately, it just has a single column - `*`. I've not figured out yet how - if if it's possible - to get a view to explode out all columns in the underlying select clause. Import the view:
+
+
+image::/images/2016/08/dr18.png[]
+
+
+You'll get an error about the `*` column name, but the table and schema still get brought across.
+
+
+image::/images/2016/08/dr19.png[]
+
+
+Now the slightly tedious bit - define each physical column, and define the physical and logical model, done very simplistically here:
+
+
+image::/images/2016/08/dr20.png[]
+
+
+A simple query:
+
+
+image::/images/2016/08/dr21.png[]
+
+
+Aaaaaand a simple error:
+
+
+[source,sql]
+----
+State: HY000. Code: 16001. [nQSError: 16001] ODBC error state: S1000 code: 1040 message:
+[MapR][Drill] (1040) Drill failed to execute the query:
+select avg(T29568."stars") as c1, T29568."city" as c2, T29568."full_address" as c3, T29568."name" as c4 from "DRILL"."dfs.tmp"."yelp_business" T29568 group by T29568."city", T29568."full_address", T29568."name" order by 2, 4, 3
+[30027]Query execution error. Details:[
+PARSE ERROR: Encountered ". \"" at line 1, column 33.
+Was expecting one of: ")" ... "ORDER" ... "LIMIT" ... "OFFSET" ... "FETCH" ... "," .... (HY000)
+----
+
+
+Looking at the query being run, OBIEE is using double quotation marks (`"`) to quote identifiers, but Drill requires backtick (```) instead. Heading over to DB Features can fix this:
+
+
+image::/images/2016/08/dr22.png[]
+
+
+And refreshing the report gives:
+
+
+image::/images/2016/08/dr23.png[]
+
+
+== Conclusion
+
+
+This is the very basics necessary to get up and running with OBIEE and Apache Drill. It would be good to see if there's an optimal, least-friction, way for getting tables in Drill exposed to OBIEE without needing to enter each physical column.
+
+
+One of the many powerful features of Drill is being able to access nested and array JSON values, which I've discussed in my link:http://www.rittmanmead.com/2016/08/an-introduction-to-apache-drill?ref=rittmanmead.com[Introduction to Apache Drill] post. The above examples just use root-level attributes, and could easily be expanded out to process some of the nested fields (such as `hours` in the business data above). For the time being this would be done with DDR, or a Drill view wrapped around it imported into the Physical layer of the RPD.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Rittman Mead blog].

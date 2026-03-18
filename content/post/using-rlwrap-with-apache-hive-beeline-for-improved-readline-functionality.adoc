@@ -1,0 +1,140 @@
+---
+title: 'Using rlwrap with Apache Hive beeline for improved readline functionality'
+date: "2014-10-17T00:00:00+00:00"
+url: "/2014/10/17/using-rlwrap-with-apache-hive-beeline-for-improved-readline-functionality/"
+draft: false
+categories:
+- Linux
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/10/using-rlwrap-with-apache-hive-beeline-for-improved-readline-functionality/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/10/using-rlwrap-with-apache-hive-beeline-for-improved-readline-functionality/[Rittman Mead blog].
+
+rlwrap is a nice little wrapper in which you can invoke commandline utilities and get them to behave with full link:http://www.gnu.org/software/bash/manual/html_node/Readline-Interaction.html?ref=rittmanmead.com#Readline-Interaction[*readline*] functionality just like you’d get at the *bash* prompt. For example, up/down arrow keys to move between commands, but also home/end to go to the start/finish of a line, and even ctrl-R to search through command history to rapidly find a command. It’s one of the standard config changes I’ll make to any system with link:http://www.oracle-base.com/articles/linux/rlwrap.php?ref=rittmanmead.com[Oracle’s *sqlplus*] on, and it works just as nicely with Apache Hive’s commandline interface, *link:https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients?ref=rittmanmead.com#HiveServer2Clients-Beeline%E2%80%93NewCommandLineShell[beeline]*.
+
+
+beeline comes with some of this functionality (up/down arrow) but not all (for me, it was ‘home’ and ‘end’ not working and printing `1~` and `5~` respectively instead that prompted me to setup rlwrap with it).
+
+
+== Installing rlwrap
+
+
+To install rlwrap simply add the link:http://fedoraproject.org/wiki/EPEL?ref=rittmanmead.com#Extra_Packages_for_Enterprise_Linux_.28EPEL.29[EPEL] yum packages to your repository configuration:
+
+
+[source,shell]
+----
+sudo rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/`uname -p`/epel-release-6-8.noarch.rpm
+----
+
+
+and then install rlwrap from yum:
+
+
+[source,shell]
+----
+sudo yum install -y rlwrap
+----
+
+
+== Use
+
+
+Once rlwrap is installed you can invoke beeline through it manually, specifying all the standard beeline options as you would normally: (I’ve used the `</code> line continuation character here just to make the example nice and clear)`
+
+
+[source]
+----
+rlwrap -a beeline \
+-u jdbc:hive2://bdanode1:10000 \
+-n rmoffatt -p password \
+-d org.apache.hive.jdbc.HiveDriver
+----
+
+
+Now I can connect to beeline, and as before I press up arrow to access commands from when I previously used the tool, but I can also hit link:http://www.gnu.org/software/bash/manual/html_node/Searching.html?ref=rittmanmead.com[ctrl-R to start typing part of a command to recall it], just like I would in bash. Some other useful shortcuts:
+
+
+* *Ctrl-l* - _clears the screen but with the current line still shown_
+* *Ctrl-k* - _deletes to the end of the line from the current cursor position_
+* *Ctrl-u* - _deletes to the beginning of the line from the current cursor position_
+* *Esc-f* - _move forward one word_
+* *Esc-b* - _move backward one word_
+(link:http://www.bigsmoke.us/readline/shortcuts?ref=rittmanmead.com[more here])
+
+
+And most importantly, *Home* and *End* work just fine! (or, ctrl-a/ctrl-e if you prefer).
+
+
+*NB the `-a` argument for rlwrap is necessary because beeline already does _some_ readline-esque functions, and we want rlwrap to forceable override them* (otherwise neither work very well). Or more formally (from `man rlwrap`):
+
+
+[quote]
+____
+Always remain in “readline mode”, regardless of command’s terminal settings. Use this option if you want to use rlwrap with commands that already use readline.
+____
+
+
+== Alias
+
+
+A useful thing to do is to add an alias directly in your profile so that it is always available to launch beeline under rlwrap, in this case as the *rlbeeline* command:
+
+
+[source]
+----
+# this sets up "rlbeeline" as the command to run beeline
+# under rlwrap, you can call it what you want though. 
+cat >> ~/.bashrc<<EOF
+alias rlbeeline='rlwrap -a beeline'
+EOF
+# example usage:
+# rlbeeline /
+# -u jdbc:hive2://bdanode1:10000 /
+# -n rmoffatt -p password /
+# -d org.apache.hive.jdbc.HiveDriver
+----
+
+
+If you want this alias available for all users on a machine create the above as a standalone .sh file in `/etc/profile.d/`.
+
+
+== Autocomplete
+
+
+One possible downside of using rlwrap with beeline is that you lose the native auto-complete option within beeline for the HiveQL statements. But never fear - we can have the best of both worlds, with the `-f` argument for rlwrap, specifying a list of custom auto-completes. So this is even a level-up for beeline, because we could populate it with our own schema objects and so on that we want auto-completed.
+
+
+As a quick-start, run beeline without rlwrap, hit tab-twice and then ‘y’ to show all options and paste the resulting list into a text file (eg `beeline_autocomplete.txt`). Now call beeline, via rlwrap, passing that file as an argument to rlwrap:
+
+
+[source]
+----
+rlwrap -a -f beeline_autocomplete.txt beeline
+----
+
+
+Once connected, use auto-complete just as you would normally (hit tab after typing a character or two of the word you’re going to match):
+
+
+[source]
+----
+Connecting to jdbc:hive2://bdanode1:10000
+Connected to: Apache Hive (version 0.12.0-cdh5.0.1)
+[...]
+Beeline version 0.12.0-cdh5.0.1 by Apache Hive
+0: jdbc:hive2://bdanode1:10000> SE
+SECOND        SECTION       SELECT        SERIALIZABLE  SERVER_NAME   SESSION       SESSION_USER  SET
+0: jdbc:hive2://bdanode1:10000> SELECT
+----
+
+
+== Conclusion
+
+
+rlwrap is the tool that keeps on giving; just as I was writing this article, I noticed that it also auto-highlights opening parentheses when typing the closing one. link:https://www.youtube.com/watch?v=NdWJpHt1Xws&feature=youtu.be&t=24s&ref=rittmanmead.com[Nice]!
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/10/using-rlwrap-with-apache-hive-beeline-for-improved-readline-functionality/[Rittman Mead blog].

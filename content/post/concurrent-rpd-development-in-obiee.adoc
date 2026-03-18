@@ -1,0 +1,259 @@
+---
+title: 'Concurrent RPD Development in OBIEE'
+date: "2015-01-14T00:00:00+00:00"
+url: "/2015/01/14/concurrent-rpd-development-in-obiee/"
+draft: false
+categories:
+- OBIEE
+- DevOps
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2015/01/concurrent-rpd-development-in-obiee/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/01/concurrent-rpd-development-in-obiee/[Rittman Mead blog].
+
+OBIEE is a well established product, having been around in link:https://www.rittmanmead.com/blog/2007/09/a-potted-history-of-oracle-bi-suite-enterprise-edition/[various incarnations for well over a decade]. The latest version, OBIEE 11g, was released 3.5 years ago, and there are link:https://www.rittmanmead.com/blog/2014/10/news-and-updates-from-oracle-openworld-2014/[mutterings of OBIEE 12c already]. In all of this time however, one thing it has never quite nailed is the ability for multiple developers to work with the core metadata model - the repository, known as the RPD - concurrently and in isolation. Without this, development is doomed to be serialised - with the associated bottlenecks and inability to scale in line with the number of developers available.
+
+
+My former colleague Stewart Bryson wrote a link:https://www.rittmanmead.com/blog/2013/05/mds-xml1/[series of posts back in 2013] in which he link:https://www.rittmanmead.com/blog/2013/06/mds-xml2/[outlines the criteria] for a successful OBIEE SDLC (Software Development LifeCycle) method. The key points were :
+
+
+* There should be a source control tool (a.k.a version control system, VCS) that enables us to store all artefacts of the BI environment, including RPD, Presentation Catalog, etc etc. From here we can tag snapshots of the environment at a given point as being ready for release, and as markers for rollback if we take a wrong turn during development.
+* Developers should be able to do _concurrent development_ in *isolation*.
+
++
+* To do this, source control is mandatory in order to enable branch-based development, also known as link:http://en.wikipedia.org/wiki/Feature-driven_development?ref=rittmanmead.com[feature-driven development], which is a central tenet of an Agile method.
++
+
+
+Oracle’s only answer to the SDLC question for OBIEE has always been link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10540/devenvironment.htm?ref=rittmanmead.com[MUDE]. But MUDE link:https://www.rittmanmead.com/blog/2013/06/mds-xml2/[falls short in several respects]:
+
+
+* It only manages the RPD - there is no handling of the Presentation Catalog etc
+* It does not natively integrate with any source control
+* It puts the onus of conflict resolution on the developer rather than the “source master” who is better placed to decide the outcome.
+
+
+Whilst it wasn’t great, it wasn't bad, and MUDE was all we had. Either that, or manual integration into source control (link:https://www.rittmanmead.com/blog/2009/01/simple-version-control-for-obiee-using-subversion-visualsvn-server-and-tortoisesvn/[1], link:https://www.rittmanmead.com/blog/2009/12/obiee-software-configuration-management-part-3-version-controlling-the-project/[2]) tools, which was clunky to say the least. The RPD remained a single object that could not be merged or managed except through the Administration Tool itself, so any kind of automatic merge strategies that the rest of the software world were adopting with source control tools were inapplicable to OBIEE. The merge would always require the manual launching of the Administration Tool, figuring out the merge candidates, before slowly dying in despair at having to repeat such a tortuous and error-prone process on a regular basis…
+
+
+Then back in early 2012 Oracle introduced a new storage format for the RPD. Instead of storing it as a single binary file, closed to prying eyes, it was instead burst into a set of individual files in link:https://docs.oracle.com/cd/E28280_01/bi.1111/e23950/mds_about.htm?ref=rittmanmead.com#BIEXR3800[MDS XML] format.
+
+
+image::/images/2015/01/330cmds13.png[]
+
+
+For example, one Logical Table was now one XML files on disk, made up of entities such as *LogicalColumn*, *ExprText*, *LogicalKey* and so on:
+
+
+image::/images/2015/01/329cmds02a.png[]
+
+
+It even came with a set of configuration screens for link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10540/scm.htm?ref=rittmanmead.com#BIEMG3712[integration with source control]. It looked like the answer to all our SDLC prayers - now us OBIEE developers could truly join in with the big boys at their game. The reasoning went something like:
+
+
+. An RPD stored in MDS XML is no longer binary
+. git can merge code that is plain text from multiple branches
+. _Let’s merge MDS XML with git!_
+
+
+But how viable is MDS XML as a storage format for the RPD used in conjunction with a source control tool such as git? As we will see, it comes down to the Good, the Bad, and the Ugly…
+
+
+image::/images/2015/01/332cmds12.png[]
+
+
+== The Good
+
+
+link:https://www.rittmanmead.com/blog/2013/07/mds-xml4/[As described here], concurrent and _unrelated_ developments on an RPD in MDS XML format _can_be merged successfully by a source control tool such as git. Each logical object is an file, so git just munges (that’s the technical term) the files modified in each branch together to come up with a resulting MDS XML structure with the changes from each development in it.
+
+
+image::/images/2015/01/325cmds01.png[]
+
+
+== The Bad
+
+
+This is where the wheels start to come off. See, our automagic merging fairy dust is based on the idea that individually changed files can be spliced together, and that since MDS XML is not binary, we can trust a source control tool such as git to also work well with changes within the files themselves too.
+
+
+Unfortunately this is a fallacy, and by using MDS XML we expose ourselves to greater complications than we would if we just stuck to a simple binary RPD merged through the OBIEE toolset. The problem is that whilst MDS XML is not binary, *is not unstructured* either. It is *structured*, and it has *application logic* within it (mdsid, of which see below).
+
+
+Within the MDS XML structure, individual first-class objects such as Logical Tables are individual files, and structured within them in the XML are child-objects such as Logical Columns:
+
+
+image::/images/2015/01/326cmds04.png[]
+
+
+Source control tools such as git cannot *parse* it, and therefore do not understand what is a _real conflict_ versus an _unrelated change within the same object_. If you stop and think for a moment (link:http://useless-factor.blogspot.co.uk/2008/01/matching-diffing-and-merging-xml.html?ref=rittmanmead.com[or longer]) quite what would be involved in accurately parsing XML (let alone MDS XML), you’ll realise that you basically need to reverse-engineer the Administration Tool to come up with an accurate engine.
+
+
+We kind of get away with merging when the file differences are _within an element_ in the XML itself. For example, the expression for a logical column is changed in two branches, causing clashing values within *ExprText* and *ExprTextDesc*. When this happens git will throw a conflict and we can easily resolve it, because the difference is within the element(s) themselves:
+
+
+image::/images/2015/01/322cmds14.png[]
+
+
+Easy enough, right?
+
+
+But taking a similarly “simple” merge conflict where two independent developers add or modify different columns *within the same Logical Table* we see what a problem there is when we try to merge it back together relying on source control alone.
+
+
+image::/images/2015/01/323cmds05.png[]
+
+
+Obvious to a human, and obvious to the Administration Tool is that these two new columns are unrelated and can be merged into a single Logical Table without problem. In a paraphrased version of MDS XML the two versions of the file look something like this, and the merge resolution is obvious:
+
+
+image::/images/2015/01/324cmds20.png[]
+
+
+But a source control tool such as git looks as the MDS XML as a *plaintext file*, not understanding the concept of an XML tree and sibling nodes, and throws its toys out of the pram with a big scary merge conflict:
+
+
+image::/images/2015/01/327cmds06.png[]
+
+
+image::/images/2015/01/321cmds07.png[]
+
+
+Now the developer has to roll up his or her sleeves and try to reconcile two XML files – with no GUI to support or validate the change made except loading it back into the Administration Tool each time.
+
+
+So if we want to use MDS XML as the basis for merging, we need to restrict our concurrent developments to completely independent objects. But, that kind of hampers the ideal of more rapid delivery through an Agile method if we’re imposing rules and restrictions like this.
+
+
+== The Ugly
+
+
+This is where is gets a bit grim. Above we saw that MDS XML can cause unnecessary (and painful) merge conflicts. But what about if two developers inadvertently create the same object concurrently? The behaviour we’d expect to see is a single resulting object. But what we actually get is *both versions of the object, and a dodgy RPD*. Uh Oh.
+
+
+Here are the two concurrently developed RPDs, produced in separate branches isolated from each other:
+
+
+image::/images/2015/01/318cmds08.png[]
+
+
+And here’s what happens when you leave it to git to merge the MDS XML:
+
+
+image::/images/2015/01/317cmds09.png[]
+
+
+The duplicated objects now cannot be edited in the Administration Tool in the resulting merged RPD - any attempt to save them throws the above error.
+
+
+Why does it do this? Because the MDS XML files are named after a *globally unique identifier* known as the _mdsid_, and not their corresponding RPD qualified name. And because the _mdsid_ is unique across developments, two concurrent creations of the same object end up with different _mdsid_ values, and thus different filenames.
+
+
+image::/images/2015/01/320cmds21.png[]
+
+
+Two files from separate branches with different names are going to be seen by source control as being unrelated, and so *both* are brought through in the resulting merge.
+
+
+As with the unnecessary merge conflict above, we _could_ define process around same object creation, or add in a manual equalise step. *The issue really here is that the duplicates can arise _without us being aware_ because there is no conflict seen by the source control tool*. It’s not like merging an un-equalised repository in the Administration Tool where we’d get *#1* suffixes on the duplicate object so that at least (a) we spot the duplication and (b) the repository remains valid and the duplicate objects available to edit.
+
+
+== MDS XML Repository opening times
+
+
+Whether a development strategy based on MDS XML is for you or not, another issue to be aware of is that for anything beyond a medium sized RPD opening times of an MDS XML repository are *considerable*. As in, a minute from binary RPD, and 20 minutes from MDS XML. And to be fair, after 20 minutes I gave up on the basis that no sane developer would write off that amount of their day simply waiting for the repository to open _before they can even do any work on it_. This rules out working with any big repositories such as that from BI Apps in MDS XML format.
+
+
+== So is MDS XML viable as a Repository storage format?
+
+
+MDS XML does have two redeeming features :
+
+
+. It reduces the size of your source control repository, because on each commit you will be storing just a delta of the overall repository change, rather than the whole binary RPD each time.
+. For tracking granular development progress and changes you can identify what was modified through the source control tool alone - because the new & modified objects will be shown as changes:
+
+
+image::/images/2015/01/316cmds11.png[]
+
+
+image::/images/2015/01/319cmds10.png[]
+
+
+But the above screenshots both give a hint of the trouble in store. The _mdsid_ unique identifier is used not only in filenames - causing object duplication and strange RPD behaviour- but also within the MDS XML itself, referencing other files and objects. This means that as a RPD developer, or RPD source control overseer, you need to be confident that each time you perform a merge of branches you are correctly putting Humpty Dumpty back together in a valid manner.
+
+
+If you want to use MDS XML with source control you need to view it as part of a larger solution, involving clear process and almost certainly a hybrid approach with the binary RPD still playing a part -- and whatever you do, the Administration Tool within short reach. You need to be aware of the issues detailed above, decide on a process that will avoid them, and make sure you have dedicated resource that understands how it all fits together.
+
+
+== If not MDS XML, then what?…
+
+
+Source control (e.g. git) is mandatory for any kind of SDLC, concurrent development included. But instead of storing the RPD in MDS XML, we store it as a binary RPD.
+
+
+Wait wait wait, don’t go yet ! … it gets better
+
+
+By following the link:http://nvie.com/posts/a-successful-git-branching-model/?ref=rittmanmead.com[*git-flow*] method, which dictates how feature-driven development is done in source control (git), we can write a simple script that determines when merging branches what the *candidates are for an OBIEE three-way RPD merge*.
+
+
+In this simple example we have two concurrent developments - coded “RM–1” and “RM–2”. First off, we create two branches which take the code from our “mainline”. Development is done on the two separate features in each branch independently, and committed frequently per good source control practice. The circles represent commit points:
+
+
+image::/images/2015/01/314cmds16.png[]
+
+
+The first feature to be completed is “RM–1”, so it is merged back into “develop”, the mainline. Because nothing has changed in develop since RM–1 was created from it, the binary RPD file and all other artefacts can simply ‘overwrite’ what is there in develop:
+
+
+image::/images/2015/01/315cmds17.png[]
+
+
+Now at this point we could take “develop” and start its deployment into System Test etc, but the second feature we were working on, RM–2, is also tested and ready to go. Here comes the fancy bit! Git recognises that both RM–1 and RM–2 have made changes to the binary RPD, and as a binary RPD git cannot try to merge it. But now instead of just collapsing in a heap and leaving it for the user to figure out, it makes use of git and the git-flow method we have followed to work out the *merge candidates* for the OBIEE Administration Tool:
+
+
+image::/images/2015/01/310cmds15.png[]
+
+
+Even better, it invokes the Administration Tool (which can be run from the command line, or alternatively use command line tools comparerpd/patchrpd) to automatically perform the merge. If the merge is successful, it goes ahead with the commit in git of the merge into the “develop” branch. *The developer has not had to do any kind of interaction to complete the merge and commit*.
+
+
+image::/images/2015/01/309cmds18.png[]
+
+
+If the merge is not a slam-dunk, then we can launch the Administration Tool and graphically figure out the correct resolution – but using the already-identified merge candidates in order to shorten the process.
+
+
+image::/images/2015/01/312cmds19.png[]
+
+
+This is not perfect, but there is no perfect solution. It is the closest thing that there is to perfection though, because it will handle merges of :
+
+
+* Unique objects
+* Same objects, different modifications (c.f. two new columns on same table example above)
+* Duplicate objects – by equalisation
+
+
+== Conclusion
+
+
+There is no single right answer here, nor are any of the options overly appealing.
+
+
+If you want to work with OBIEE in an Agile method, using feature-driven development, you will have to adopt and learn specific processes for working with OBIEE. The decision you have to make is on how you store the RPD (binary or multiple MDS XML files, or maybe both) and how you handle merging it (git vs Administration Tool).
+
+
+My personal view is that taking advantage of git-flow logic, combined with the OBIEE toolset to perform three-way merges, is sufficiently practical to warrant leaving the RPD in binary format. The MDS XML format is a lovely idea but there are too few safeguards against dodgy/corrupt RPD (and too many unnecessary merge conflicts) for me to see it as a viable option.
+
+
+Whatever option you go for, make sure you are using link:https://www.rittmanmead.com/blog/2014/01/obiee-regression-testing-an-introduction/[regression testing] to test the RPD after you merge changes together, and ideally automate the testing too. Here at Rittman Mead we’ve written our own suite of tools that do just this - get in touch to find out more.
+
+
+image::/images/2015/01/311cmds22.png[]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/01/concurrent-rpd-development-in-obiee/[Rittman Mead blog].

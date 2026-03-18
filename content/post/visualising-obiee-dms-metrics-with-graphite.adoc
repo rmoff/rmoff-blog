@@ -1,0 +1,228 @@
+---
+title: 'Visualising OBIEE DMS metrics with Graphite'
+date: "2014-03-30T00:00:00+00:00"
+url: "/2014/03/30/visualising-obiee-dms-metrics-with-graphite/"
+draft: false
+categories:
+- Monitoring
+- OBIEE
+- Oracle Stream Analytics
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/03/visualising-obiee-dms-metrics-with-graphite/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/03/visualising-obiee-dms-metrics-with-graphite/[Rittman Mead blog].
+
+Assuming you have link:https://www.rittmanmead.com/blog/2014/03/installing-obi-metrics-agent-graphite-and-collectl[set up obi-metrics-agent and collectl as described in my previous post], you have a wealth of data at your disposal for graphing and exploring in Graphite, including:
+
+
+* OS (CPU, disk, network, memory)
+* OBIEE's metrics
+* Metrics about DMS itself
+* Carbon (Graphite's data collector agent) metrics
+
+
+In this post I'll show you some of the techniques we can use to put together a simple dashboard.
+
+
+== Building graphs
+
+
+First off, let's see how Graphite actually builds graphs. When you select a data series from the Metrics pane it is added to the Graphite composer where you can have multiple metrics. They're listed in a legend, and if you click on *Graph Data* you can see the list of them.
+
+
+Data held in Graphite (or technically, held in *whisper*) can be manipulated and pre-processed in many ways before Graphite renders it. This can be mathmatical transforms of the data (eg Moving Average), but also how the data and its label is shown. Here I'll take the example of several of the CPU metrics (via collectl) to see how we can manipulate them.
+
+
+To start with, I've just added *idle*, *wait* and *user* from the *cputotals* folder, giving me a nice graph thus:
+
+
+image::/images/2014/03/477cgr01.png[]
+
+
+We can do some obvious things like add in a title, from the *Graph Options* menu
+
+
+image::/images/2014/03/476cgr02.png[]
+
+
+== Graphite functions
+
+
+Looking at the legend there's a lot of repeated text (the full qualification of the metric name) which makes the graph more cluttered and less easy to read. We can use a Graphite function to fix this. Click on *Graph Data*, and use ctrl-click to select all three metrics:
+
+
+image::/images/2014/03/475cgr03.png[]
+
+
+Now click on *Apply Function* -> *Set Legend Name By Metric*. The `aliasByMetric` function is wrapped around the metrics, and the legend on the graph now shows just the metric names which is much smarter:
+
+
+image::/images/2014/03/474cgr04.png[]
+
+
+You can read more about link:http://graphite.readthedocs.org/en/latest/functions.html?ref=rittmanmead.com[Graphite functions here].
+
+
+Another useful technique is being able to graph out metrics using a wildcard. Consider the *ProcessInfo* group of metrics that DMS provides about some of the OBIEE processes:
+
+
+image::/images/2014/03/473cgr08.png[]
+
+
+Let's say we want a graph that shows cpuTime for each of the processes (not all are available). We _could_ add each metric individually:
+
+
+image::/images/2014/03/472cgr09.png[]
+
+
+But that's time consuming, and assumes there are only two processes. What if DMS gives us data for other processes? Instead we can use a wildcard in place of the process name:
+
+
+[source]
+----
+obieesample.DMS.dms_cProcessInfo.ProcessInfo.*.cpuTime
+----
+
+
+You can do this by selecting a metric and then amending it in the *Graph Data* view, or from the *Graph Data* view itself click on *Add* and use the auto-complete to manually enter it.
+
+
+image::/images/2014/03/470cgr10.png[]
+
+
+But now the legend is pretty unintelligable, and this time using the `aliasByMetric` function won't help because the metric name is constant (`cpuTime`). Instead, use the *Set Legend Name By Node* function. In this example we want the third node (the name of the process). Combined with a graph title this gives us:
+
+
+image::/images/2014/03/471cgr11.png[]
+
+
+This `aliasbyNode` method works well for Connection Pool data too. However it can be sensitive to certain characters (including brackets) in the metric name, throwing a `IndexError: list index out of range` error. The latest version of obi-metrics-agent should workaround this by modifying the metric names before sending them to carbon.
+
+
+The above graph shows a further opportunity for using Graphite functions. The metric is a cumulative one - amount to CPU time that the process has used, in total. What would be more useful would be if we could show the delta between each occurrence. For this, the *derivative* function is appropriate:
+
+
+image::/images/2014/03/469cgr12.png[]
+
+
+Sometimes you'll get graphs with gaps in; maybe the server was busy and the collector couldn't keep up.
+
+
+image::/images/2014/03/06432014-03-28_07-29-47.png[2014-03-28_07-29-47]
+
+
+To "gloss over" these, use the Keep Last Value function:
+
+
+image::/images/2014/03/06412014-03-28_07-30-51.png[2014-03-28_07-30-51]
+
+
+== Saving graphs
+
+
+You don't have to login to Graphite by default, but to save and return to graphs and dashboards between sessions you'll want to. If you used the obi-metrics-agent installation script then Graphite will have a user `oracle` with password `Password01`. Click the *Login* button in the top right of the Graphite screen and enter the credentials.
+
+
+Once logged in, you should see a Save icon (for you young kids out there, that's a 3.5" floppy disk...).
+
+
+image::/images/2014/03/468cgr14.png[]
+
+
+You can return to saved graphs from the Tree pane on the left:
+
+
+image::/images/2014/03/466cgr15.png[]
+
+
+== flot
+
+
+As well as the standard Graphite graphing described above, you also have the option of using flot, which is available from the link in the top-right options, or the icon on an existing graph:
+
+
+image::/images/2014/03/467c2014-03-30_21-44-431.png[2014-03-30_21-44-43]
+
+
+Graphlot/Flot is good for things like examining data values at specific times:
+
+
+image::/images/2014/03/06392014-03-30_21-47-36.png[2014-03-30_21-47-36]
+
+
+== Creating a dashboard
+
+
+So far we've seen individual graphs in isolation, which is fine for ad-hoc experimentation but doesn't give us an overall view of a system. Click on *Dashboard* in the top-right of the Graphite page to go to the dashboards area, ignoring the error about the default theme.
+
+
+You can either build Graphite dashboards from scratch, or you can bring in graphs that you have prepared already in the Graphite Composer and saved.
+
+
+At the top of the Graphite Dashboard screen is the metrics available to you. Clicking on them drills down the metric tree, as does typing in the box underneath
+
+
+image::/images/2014/03/465cgr16.png[]
+
+
+Selecting a metric adds it in a graph to the dashboard, and selecting a second adds it into a second graph:
+
+
+image::/images/2014/03/463cgr17.png[]
+
+
+You can merge graphs by dragging and dropping one onto the other:
+
+
+image::/images/2014/03/464cgr18.png[]
+
+
+Metrics within a graph can be modified with functions in exactly the same way as in the Graphite Composer discussed above:
+
+
+image::/images/2014/03/461cgr19.png[]
+
+
+To add in a graph that you saved from Graphite Composer, use the *Graphs* menu
+
+
+image::/images/2014/03/460cgr20.png[]
+
+
+You can resize the graphs shown on the dashboard, again using the *Graphs* menu:
+
+
+image::/images/2014/03/462cgr22.png[]
+
+
+To save your dashboard, use the *Dashboard* -> *Save* option.
+
+
+== Example Graphite dashboards
+
+
+Here are some examples of obi-metrics-agent/Graphite being used in anger. Click on an image to see the full version.
+
+
+* *OS stats* (via collectl)
+
+
+image::/images/2014/03/0645gr23.png[OS stats from collectl]
+* Presentation Services sessions, cache and charting
+
+
+image::/images/2014/03/0642gr25.png[Presentation Services sessions, cache and charting]
+* BI Server (nqserver) Connection and Thread Pools
+
+
+image::/images/2014/03/0640gr26.png[BI Server (nqserver) Connection and Thread Pools]
+* Response times vs active users (via JMeter)
+
+
+image::/images/2014/03/0637gr24.png[Response times vs active users (via JMeter)]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/03/visualising-obiee-dms-metrics-with-graphite/[Rittman Mead blog].

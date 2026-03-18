@@ -1,0 +1,176 @@
+---
+title: 'Performance and OBIEE - part I - Introduction'
+date: "2013-03-18T00:00:00+00:00"
+url: "/2013/03/18/performance-and-obiee-introduction/"
+draft: false
+categories:
+- OBIEE
+- Performance
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-introduction/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-introduction/[Rittman Mead blog].
+
+Performance matters. Performance _really_ matters. And performance can actually be *easy*, but it takes some thinking about. It can't be brute-forced, or learnt by rote, or solved in a list of Best Practices, Silver Bullets and fairy dust.
+
+
+*The problem with performance* is that it is too easy to guess and sometimes strike lucky, to pick at a "Best Practice Tuning" setting that by chance matches an issue on your system. This leads people down the path of thinking that performance is just about _tweaking_ parameters, _tuning_ settings, and _twiddling_ knobs. The trouble with trusting this magic beans approach is that down this path leads wasted time, system instability, uncertainty, and insanity. Your fix that worked on another system *might* work this time, or a setting you find in a "Best Practice" document *might* work. But would it not be better to *know* that it would?
+
+
+I wanted to write this series of posts as a way of getting onto paper how I think analysing and improving performance in OBIEE should be done and why. It is intended to address the very basic question of *how do we improve the performance of OBIEE*. Lots of people work with OBIEE, and many of them will have lots of ideas about performance, but not all have a clear picture of how to empirically test and improve performance.
+
+
+== Why does performance matter?
+
+
+image::/images/2013/03/06978perf41.png[Last and only Stopwatch graphic, promise!]
+ (link:http://www.fotopedia.com/items/flickr-3296379139?ref=rittmanmead.com[image src])
+
+Why does performance matter? Why are some people (me) so obsessed with testing and timing and tuning things? Can't we just put the system live and see how it goes, since it seems fast enough in Dev?...
+
+
+=== Why performance matters to a project's success
+
+
+* Slow systems upset users. No-one likes to be kept waiting. If you're withdrawing cash from an ATM, you're going to be quite cross if it takes five minutes. In fact, a pause of five seconds will probably get you fidgeting.
+Once users dislike a system, regaining their favour is an uphill battle. “Trust is hard to win and easily lost”. One of the things about performance is _perception_ of speed, and if a user has decided a system is slow you will have to work twice as hard to get them to simply recognise a small improvement. You not only have to fix the performance problem, you also have to win round the user again and prove that it is genuinely faster.
+* From a cost point of view, poorly performing systems are inefficient:
+
++
+* They *waste hardware resource*, increasing the machine capacity required, decreasing the time between hardware upgrades
+* They *cost more to support,* particularly as performance bottlenecks can cause unpredictable stability issues
+* They *cost more to maintain*, in two ways. Firstly, each quick-win used in an attempt to resolve the problem will probably add to the complexity or maintenance overhead of the system. Secondly, a proper resolution of the problem may involve a redesign on such a scale that it can become a rewrite of the entire system in all but name.
+* They *cost more to use*. User waiting = user distracted = less efficient at his job. Eventually, User waiting = disgruntled user = poor system usage and support from the business.
++
+
+
+=== Why performance matters to the techie
+
+
+Performance is not a fire-and-forget task, and box on a checklist. It has many facets and places in a project's life cycle.
+
+
+image::/images/2013/03/06975perf_redherring.gif[Red Herring]
+
+
+Done properly, you will have confidence in the performance of your system, knowledge of the limits of its capacity, a better understanding of the workings of it, and a repeatable process for validating any issues that arise or prospective configuration changes.
+
+
+image::/images/2013/03/06972perf_goblin.png[Performance Goblin]
+
+
+Done badly, or not at all, you might hit lucky and not have any performance problems for a while. But when they do happen, you'll be starting from a position of ignorance, trying to learn at speed and under pressure how to diagnose and resolve the problems. Silver bullets appear enticing and get fired at the problem in the vain hope that one will work. Time will be wasted chasing red herrings. You have no real handle on how much capacity your server has for an increasing user base. Version upgrades fill you with fear of the unknown. You don't dare change your system for fear of upsetting the performance goblin lest he wreak havoc.
+
+
+Building a good system is not just about one which cranks out the correct numbers. A good system is one which not only cranks out the good numbers, but performs well when it does so. Performance is a key component of any system design.
+
+
+=== OBIEE and Performance
+
+
+image::/images/2013/03/06974perf_dotmatrix.png[dotmatrix report]
+
+
+Gone are the days of paper reports, when a user couldn't judge the performance of a computer system except by whether the paper reports were on their desk by 0800 on Monday morning. Now, users are more and more technologically aware. They are more aware of the concept and power of data. Most will have smartphones and be used to having their email, music and personal life at the finger-swipe of a screen. They know how fast computers _can_ work.
+
+
+One of the many strengths of OBIEE is that it enables "self-service" BI. The challenge that this gives us is that users will typically expect their dashboards and analyses to run as fast as all their other interactions with technology. A slow system risks being an unsuccessful system, as users will be impatient, frustrated, even angry with it.
+
+
+Below I propose an approach, a method, which will support the testing and tuning of the performance of OBIEE during all phases of a project. Every method must have a silly TLA or catchy name, and this one is no different….
+
+
+== Fancy a brew? Introducing T.E.A., the OBIEE Performance Method
+
+
+In working with performance one of _the most important things_ is to retain a structured and logical approach to it. Here is mine:
+
+
+. _Test creation_
+
++
+* A predefined, repeatable, workload
++
+. _Execute and Measure_
+
++
+* Run the test and collect data
++
+. _Analyse_
+
++
+* Analyse the test results, and if necessary apply a change to the system which is then validated through a repeat of the cycle
++
+
+
+image::/images/2013/03/06973perf_tea1.png[T.E.A.]
+
+The emphasis is on this method being *applicable at any time* in a system's lifecycle, not _just_ the "Performance Test" phase. Here are a few examples to put it in context:
+
+
+. *Formal performance test stage of a project*
+
++
+. _Test_ : define and build a set of tests simulating users, including at high concurrency
+. _Execute and Measure_: run test and collect detailed statistics about system profile
+. _Analyse_ : check for bottlenecks, diagnose, redesign or reconfigure system and retest
++
+. *Continual Monitoring of performance*
+
++
+. _Test_ could be a standard prebuilt report with known run time (i.e. a baseline)
+. _Execute_ could be just when the report gets run on demand, or a scheduled version of the report for monitoring purposes. Measure just the response time, alongside standard OS metrics
+. _Analyse_ - collect response times to track trends, identify problems before they escalate. Provides a baseline against which to test changes
++
+. *Troubleshooting a performance problem*
+
++
+. _Test_ could be existing reports with known performance times taken from OBIEE's Usage Tracking data
+. _Execute_ Rerun reports and measure response times and detailed system metrics
+. _Analyse_ Diagnose root cause, fix and retest
++
+
+
+=== Re-inventing the wheel
+
+
+T.E.A. is nothing new in the overall context of Performance. It is almost certainly in existence elsewhere under another name or guise. I have deliberately split it into three separate parts to make it easier to work with in the context of OBIEE. The OBIEE stack is relatively complex and teasing apart the various parts for consideration has to be done carefully. For example, designing how we *generate* the test against OBIEE should be done in isolation from how we are going to *monitor* it. Both have numerous ways of doing so, and in several places can interlink. The most important thing is that they're _initially_ considered separately.
+
+
+The other reason for defining my own method is that I wanted to get something in writing on which I can then hang my various OBIEE-specific performance rants without being constrained by the terminology of another method.
+
+
+image::/images/2013/03/06968standards.png[obXKCD]
+
+
+== What's to come
+
+
+This series of articles is split into the following :
+
+
+. link:/2013/03/performance-and-obiee-introduction[Introduction] (this page)
+. link:/2013/03/performance-and-obiee-test-define[Test - Define]
+. link:/2013/03/performance-and-obiee-test-design[Test - Design]
+. link:/2013/03/performance-and-obiee-test-build[Test - Build]
+. link:/2013/03/performance-and-obiee-execute-and-measure[Execute]
+. link:/2013/03/performance-and-obiee-analysing-results[Analyse]
+. link:/2013/03/optimising-obiee-performance-tuning[Optimise]
+. link:/2013/03/performance-and-obiee-summary-and-faq[Summary and FAQ]
+
+I'm tempted to hyperlink these in the fashion of link:http://en.wikipedia.org/wiki/Choose_Your_Own_Adventure?ref=rittmanmead.com[Choose Your Own Adventure] and if you click straight from here onto the last section, Optimise, without having read the other parts first, it will redirect you back to them ;-)
+
+
+== Comments?
+
+
+I’d love _your_ feedback. Do you agree with this method, or is it a waste of time? What have I overlooked or overemphasised? Am I flogging a dead horse?
+
+
+Because there are several articles in this series, and I’d like to keep the thread of comments in one place, I’ve enabled comments on the link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-summary-and-faq[summary and FAQ] post here, and disabled comments on the others.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-introduction/[Rittman Mead blog].

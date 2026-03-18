@@ -1,0 +1,148 @@
+---
+title: 'Testing aggregate navigation on OBIEE and Exalytics'
+date: "2013-05-18T00:00:00+00:00"
+url: "/2013/05/18/testing-aggregate-navigation-on-obiee-and-exalytics/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/05/testing-aggregate-navigation-on-obiee-and-exalytics/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/05/testing-aggregate-navigation-on-obiee-and-exalytics/[Rittman Mead blog].
+
+One of OBIEE’s many great strengths is *aggregate navigation*; the ability to choose from a list of possible tables the one which will probably give the optimal performance for a given user query. Users are blissfully unaware of which particular table their query is being satisfied from, since aggregate navigation happens on the BI Server once the user’s request comes through from an Analysis or Dashboard.
+
+
+image::/images/2013/05/611cis00.jpg[]
+
+This seamless nature of aggregate navigation means that testing specific aggregates are working can be fiddly. We want to ensure that the aggregates we’ve built are (i) being used when appropriate and (ii) showing the correct data. This is the particularly the case in Exalytics when aggregates are put into in-memory (TimesTen) by the Summary Advisor and we need to validate them.
+
+
+Whilst the log file `nqquery.log` (or Usage Tracking table `S_NQ_DB_ACCT`) tells us pretty easily which table a query used, it is nice to be able to switch a query easily between possible aggregate sources to be able to compare the data. This blog demonstrates how we can use the `INACTIVE_SCHEMAS` variable (as described in my link:https://www.rittmanmead.com/blog/2013/04/incremental-refresh-of-exalytics-aggregates-using-native-bi-server-capabilities/[previous blog on loading Exalytics incrementally]) to do this.
+
+
+`INACTIVE_SCHEMAS` is a Logical SQL variable that tells the BI Server to exclude the specified physical schema(s) from consideration for resolving an inbound query. Normally, the BI Server will parse each incoming query through the RPD, and where a Logical Table has multiple Logical Table Sources it will evaluate each one to determine if it (a) can satisfy the query and (b) whether it will be the most efficient one to use. By using `INACTIVE_SCHEMAS` we can force the BI Server to ignore certain Logical Table Sources (those associated with the physical schema specified), ensuring that it just queries the source(s) we want it to.
+
+
+In the following example, the data exists on both Oracle database, and TimesTen (in-memory). Whilst the example here is based on an Exalytics architecture, the principle should be exactly the same regardless of where the aggregates reside. This is how the RPD is set up for the Fact table in my example:
+
+
+image::/images/2013/05/610cis01.png[]
+
+The `GCBC_SALES` schema on Oracle holds the unaggregated sales data, whilst the `EXALYTICS` schema on TimesTen has an aggregate of this data in it. The very simple report pictured here shows sales by month, and additionally uses a *Logical SQL* view to show the contents of the query being sent to the BI Server:
+
+
+image::/images/2013/05/609cis02.png[]
+
+Looking at nqquery.log we can see the query by default hits the TimesTen source:
+
+
+[source,sql]
+--------------
+[...]
+------------- Sending query to database named TimesTen aggregates
+WITH
+SAWITH0 AS (select distinct T1528.Sale_Amoun000000AD as c1,
+     T1514.Month_YYYY000000D0 as c2
+from
+     SA_Month0000011E T1514,
+     ag_sales_month T1528
+[...]
+--------------
+
+Now, for thoroughness, let’s compare this to what’s in the TimesTen database, using a Direct Database Request:
+
+
+image::/images/2013/05/608cis03.png[]
+
+OK, all looks good. But, is what we’ve aggregated into TimesTen matching what we’ve got in the source data on Oracle? Here was can use `INACTIVE_SCHEMAS` to force the BI Server to ignore TimesTen entirely. We can see from the nqquery.log that OBI has now gone back to the Oracle source of the data:
+
+
+[source,sql]
+--------------
+[...]
+------------- Sending query to database named orcl
+WITH
+SAWITH0 AS (select sum(T117.FCAST_SAL_AMT) as c1,
+     T127.MONTH_YYYYMM as c2
+from
+     GCBC_SALES.TIMES T127 /* Dim_TIMES */ ,
+     GCBC_SALES.SALES T117 /* Fact_SALES */
+[...]
+--------------
+
+and the report shows that actually we have a problem in our data, since what’s on the source doesn’t match the aggregate:
+
+
+image::/images/2013/05/607cis04.png[]
+
+A Direct Database Request against Oracle confirms the data we’re seeing - we have a mismatch between our source and our aggregate:
+
+
+image::/images/2013/05/606cis05.png[]
+
+This is the kind of testing that it is crucial to perform. Without proper testing, problems may only come to light in specific reports or scenarios, because by the very nature of aggregate navigation working silently and hidden from the user.
+
+
+So this is the feature we can use to perform the testing, but below I demonstrate a much more flexible way that having to build multiple reports.
+
+
+== Implementing INACTIVE_SCHEMAS
+
+
+Using `INACTIVE_SCHEMAS` in your report is very simple, and doesn’t require modification to your reports. Simply use a *Variable Prompt* to populate `INACTIVE_SCHEMAS` as a *Request Variable*. Disable the *Apply* button for instantaneous switching when the value is changed.
+
+
+image::/images/2013/05/605cis08.png[]
+
+A Request Variable will be prepended it to any logical SQL sent to the BI Server. Save this prompt in your web catalog, and add it to any dashboard on which you want to test the aggregate:
+
+
+image::/images/2013/05/604cis06.png[]
+
+Even better, if you set the security on the dashboard prompt such that only your admins have access to it, then you could put it on *all of your dashboards* as a diagnostic tool and only those users with the correct privilege will even see it:
+
+
+image::/images/2013/05/603cis11.png[]
+
+
+image::/images/2013/05/602cis09.png[]
+
+
+image::/images/2013/05/601cis10.png[]
+
+
+== Displaying the aggregate source name in the report
+
+
+So far this is all negative , in that we are specifying the data source *not* to use. We can examine `nqquery.log` etc to confirm which source *was* used, but it’s hardly convenient to wade through log files each time we execute the report. [line-through]##Ripped off from## Inspired by SampleApp is this trick:
+
+
+image::/images/2013/05/600cis07.png[]
+
+
+. Add a logical column to the fact table
+. Hard code the expression for the column in each Logical Table Source
+. Bring the column through to the relevant subject area
+. Incorporate it in reports as required, for example using a *Narrative View*.
+
+Bringing it all together gives us this type of diagnostic view of our reports:
+
+
+image::/images/2013/05/599cis12.png[]
+
+
+== Summary
+
+
+There’s a variety of ways to write bespoke test reports in OBI, but what I’ve demonstrated here is a very minimal way of overlaying a test capability _on top of all existing dashboards_. Simply create the Request Variable dashboard prompt, set the security so only admins etc can see it, and then add it in to each dashboard page as required.
+
+
+In addition, the use of a ‘data source’ logical column in a fact table tied to each LTS can help indicate further where the data seen is coming from.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/05/testing-aggregate-navigation-on-obiee-and-exalytics/[Rittman Mead blog].

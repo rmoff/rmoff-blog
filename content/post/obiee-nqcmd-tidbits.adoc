@@ -1,0 +1,239 @@
+---
+title: 'OBIEE nqcmd Tidbits'
+date: "2015-03-24T00:00:00+00:00"
+url: "/2015/03/24/obiee-nqcmd-tidbits/"
+draft: false
+categories:
+- OBIEE
+- Performance
+- Data Visualisation
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2015/03/obiee-nqcmd-tidbits/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/03/obiee-nqcmd-tidbits/[Rittman Mead blog].
+
+nqcmd is the ODBC command line tool that always has, and hopefully always will, shipped with OBIEE. It enables you to manually fire queries directly at the BI Server, rather than through the usual way of Presentation Services generating Logical SQL and sending it to BI Server. This can be useful in several cases:
+
+
+. Automated cache purging, by sending one of the SAPurge[…] ODBC commands to the BI Server, usually done as part of a script
+. Automated execution of Logical SQL, often done to support testing scenarios
+. link:https://www.rittmanmead.com/blog/2014/03/built-in-obiee-load-testing-with-nqcmd/[Load Testing the BI Server] (via a link:https://blogs.oracle.com/pa/entry/obiee_11_1_1_advanced?ref=rittmanmead.com[magic undocumented switch, SA_NQCMD_ADVANCED])
+. Manual interogation of the BI Server - if you want to poke and prod nqsserver without launching a web browser, nqcmd is your friend :)
+
+
+In using nqcmd there’re a couple of things I want to demonstrate here that I find useful but haven’t seen discussed [in detail] elsewhere.
+
+
+== Query Log via nqcmd
+
+
+All BI Server queries run with a LOGLEVEL>=1 will write some log details to nqquery.log. The usual route to view this is either on the server directly itself, transferring it off with a tool such as WinSCP, or through the Administration page of OBIEE. Another option that is available is from nqcmd itself. You need to do two things:
+
+
+. Set the environment variable *SA_NQCMD_ADVANCED* to *Yes*
+. Include the command line arguments *-ShowQueryLog -H* when you invoke nqcmd. I don’t know what _-H_ does - it’s just specified as being required for this to work.
+
+
+Here’s a simple example in action:
+
+
+[source,sql]
+--------------------------------------------------------------------------------
+[oracle@demo ~]$ export SA_NQCMD_ADVANCED=Yes
+[oracle@demo ~]$ nqcmd -d AnalyticsWeb -u prodney -p Admin123 -ShowQueryLog -H
+
+-------------------------------------------------------------------------------
+          Oracle BI ODBC Client
+          Copyright (c) 1997-2013 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
+
+
+Connection open with info:
+[0][State: 01000] [DataDirect][ODBC lib] Application's WCHAR type must be UTF16, because odbc driver's unicode type is UTF16
+
+        [T]able info
+        [C]olumn info
+        [D]ata type info
+        [F]oreign keys info
+        [P]rimary key info
+        [K]ey statistics info
+        [S]pecial columns info
+        [Q]uery statement
+Select Option: Q
+
+Give SQL Statement: SET VARIABLE LOGLEVEL=1:SELECT "A - Sample Sales"."Base Facts"."1- Revenue" s_1 FROM "A - Sample Sales"
+SET VARIABLE LOGLEVEL=1:SELECT "A - Sample Sales"."Base Facts"."1- Revenue" s_1 FROM "A - Sample Sales"
+-----------------------
+s_1
+-----------------------
+70000000.00
+-----------------------
+Row count: 1
+-----------------------
+[2015-03-21T16:36:31.000+00:00] [OracleBIServerComponent] [TRACE:1] [USER-0] [] [ecid: 0054Sw944KmFw000jzwkno0003ac0000rl,0] [tid: 56660700] [requestid: 201f0002] [sessionid: 201f0000] [username: prodney] ###
+########################################### [[
+-------------------- SQL Request, logical request hash:
+d2294415
+SET VARIABLE LOGLEVEL=1:SELECT "A - Sample Sales"."Base Facts"."1- Revenue" s_1 FROM "A - Sample Sales"
+
+]]
+[2015-03-21T16:36:31.000+00:00] [OracleBIServerComponent] [TRACE:1] [USER-34] [] [ecid: 0054Sw94mRzFw000jzwkno0003ac0000ro,0] [tid: 56660700] [requestid: 201f0002] [sessionid: 201f0000] [username: prodney] -------------------- Query Status: Successful Completion [[
+
+]]
+[2015-03-21T16:36:31.000+00:00] [OracleBIServerComponent] [TRACE:1] [USER-28] [] [ecid: 0054Sw94mRzFw000jzwkno0003ac0000ro,0] [tid: 56660700] [requestid: 201f0002] [sessionid: 201f0000] [username: prodney] -------------------- Physical query response time 0 (seconds), id <<333971>> [[
+
+]]
+
+]]
+[2015-03-21T16:36:31.000+00:00] [OracleBIServerComponent] [TRACE:1] [USER-29] [] [ecid: 0054Sw94mRzFw000jzwkno0003ac0000ro,0] [tid: 56660700] [requestid: 201f0002] [sessionid: 201f0000] [username: prodney] -------------------- Physical Query Summary Stats: Number of physical queries 1, Cumulative time 0, DB-connect time 0 (seconds) [[
+
+]]
+[2015-03-21T16:36:31.000+00:00] [OracleBIServerComponent] [TRACE:1] [USER-33] [] [ecid: 0054Sw94mRzFw000jzwkno0003ac0000ro,0] [tid: 56660700] [requestid: 201f0002] [sessionid: 201f0000] [username: prodney] -------------------- Logical Query Summary Stats: Elapsed time 0, Response time 0, Compilation time 0 (seconds) [[
+
+]]
+--------------------------------------------------------------------------------
+
+
+Neat! But so what? Well, I see two uses straight away:
+
+
+. In some situations you may not have access to the filesystem of the server on which the BI Server is running. For example, as a consultant I’ve been to clients where I’m given the Administration Tool client installation only. If I want to debug an RPD that I’m developing I’ll usually want to poke around in nqquery.log to see quite what physical SQL is being generated – and now I can.
+. There was a discussion on the link:https://groups.google.com/forum/?ref=rittmanmead.com#!forum/obiee-enterprise-methodology[EMG mailing list] recently about generating Physical SQL without executing it on the database. I’m going to discuss this in the next section of this article, and to do the analysis for this rapidly I’m using the inline query log.
+
+
+== Generating Physical SQL for OBIEE without Executing it - SKIP_PHYSICAL_QUERY_EXEC
+
+
+OBIEE generates the Physical SQL that it runs against the database dynamically, at runtime. It takes the Logical request (“Logical SQL”), runs it through the RPD and generates one or more “Physical SQL” statements to be executed on the database as required to pull back the necessary data. A question arose recently on the link:https://groups.google.com/forum/?ref=rittmanmead.com#!forum/obiee-enterprise-methodology[EMG mailing list] as to whether it is possible to get the Physical SQL - _without executing it_. You can imagine the benefits of this (namely, regression testing) since executing the database query each time is typically going to be expensive in machine resource and time consuming.
+
+
+In link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[SampleApp v406] there is a /home/oracle/scripts/PhysicalSQLGenerator, which does two things. First off it generates the Logical SQL for a given analysis, presumably using the link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/methods.htm?ref=rittmanmead.com#i1009522[generateReportSQL] web service. It then takes that and runs it through *nqcmd*, scraping the *nqquery.log* for the resulting Physical SQL. In all of this no database queries get run. Very cool. But what’s the “secret sauce” at play here - can we distill it down in order to use it ourselves?
+
+
+First, let’s look at how the SampleApp script does it. It sets some additional _request variables_ in the Logical SQL:
+
+
+[source,sql]
+----
+[oracle@demo PhysicalSQLGenerator]$ cat lsql-out-dir/q1.lsql
+SET VARIABLE SKIP_PHYSICAL_QUERY_EXEC=1, LOGLEVEL=2, DISABLE_CACHE_HIT=1, DISABLE_CACHE_SEED=1, QUERY_SRC_CD='SampleApp-PSQLGEN', SAW_SRC_PATH='/users/prodney/folder/request variable example':SELECT
+   0 s_0,
+   "A - Sample Sales"."Base Facts"."1- Revenue" s_1
+FROM "A - Sample Sales"
+ORDER BY 1
+FETCH FIRST 5000001 ROWS ONLY
+;
+----
+
+
+And if we extract the relevant part out of the bash script we can see that it also uses a couple of extra command line arguments (*-q -NoFetch*) when invoking nqcmd:
+
+
+[source]
+----
+nqcmd -q -NoFetch -d AnalyticsWeb -u weblogic -p Admin123 -s lsql-out-dir/q1.lsql
+----
+
+
+When it’s run we check nqquery.log and lo-and-behold we get this:  (edited for brevity)
+
+
+[source,sql]
+--------------------
+------------------- Sending query to database named 01 - Sample App Data (ORCL) (id: <<69923>>), connection pool named Sample Relational Connection, logical request hash dd4fb54f, physical request hash 8d6f36
+3d: [[
+WITH
+SAWITH0 AS (select sum(T42442.Revenue) as c1
+from
+     BISAMPLE.SAMP_REVENUE_FA2 T42442 /* F21 Rev. (Aggregate 2) */ )
+select D1.c1 as c1, D1.c2 as c2 from ( select distinct 0 as c1,
+     D1.c1 as c2
+from
+     SAWITH0 D1 ) D1 where rownum <= 5000001
+
+]]
+
+Query Status: Successful Completion [[
+
+Rows 0, bytes 24 retrieved from database query id: <<69923>> Simulation Gateway 
+
+Physical query response time 0 (seconds), id <<69923>> Simulation Gateway
+--------------------
+
+
+Whilst the log says it is “Sending query to database” it does no such thing, and the “Simulation Gateway” is the giveaway clue. Proof that it doesn’t connect to the database? I shut the database down, and it still worked just fine. Crude, yes, but effective.
+
+
+I’ll intersperse here the little trick that I mentioned in the first part of this article : *-ShowQueryLog*. It’s tedious switching back and forth between nqcmd and the nqquery.log when doing this kind of testing, so let’s do it all as one:
+
+
+[source]
+----
+export SA_NQCMD_ADVANCED=Yes
+nqcmd -H -ShowQueryLog -q -NoFetch -d AnalyticsWeb -u weblogic -p Admin123 -s lsql-out-dir/q1.lsql
+----
+
+
+Unfortunately it looks like *-ShowQueryLog* is mutually exclusive to *-q* and *-NoFetch* since it doesn’t return anything, even though the nqquery.log did get additional entries. But that’s fine, since by removing these two flags in order to get *-ShowQueryLog* to work we’re whittling down what is actually needed to generate the physical SQL on its own without database execution. Here’s the nqcmd, showing the query log inline and showing still the “Simulation Gateway” indicative of no physical query execution:
+
+
+[source,sql]
+--------------------------------------------------------------------------------
+[oracle@demo PhysicalSQLGenerator]$ export SA_NQCMD_ADVANCED=Yes
+[oracle@demo PhysicalSQLGenerator]$ nqcmd -H -ShowQueryLog -d AnalyticsWeb -u weblogic -p Admin123 -s lsql-out-dir/q1.lsql
+
+-------------------------------------------------------------------------------
+          Oracle BI ODBC Client
+          Copyright (c) 1997-2013 Oracle Corporation, All rights reserved
+-------------------------------------------------------------------------------
+
+[...]
+
+------------------------------------
+s_0          s_1
+------------------------------------
+------------------------------------
+Row count: 0
+------------------------------------
+[2015-03-23T05:52:57.000+00:00] [OracleBIServerComponent] [TRACE:2] [USER-0] [] [ecid: 0054Ut7AJ33Fw000jzwkno0005UZ00005Q,0] [tid: 8f194700] [requestid: 8a1e0002] [sessionid: 8a1e0000] [username: weblogic] ############################################## [[
+-------------------- SQL Request, logical request hash:
+dd4fb54f
+SET VARIABLE SKIP_PHYSICAL_QUERY_EXEC=1, LOGLEVEL=2, DISABLE_CACHE_HIT=1, DISABLE_CACHE_SEED=1, QUERY_SRC_CD='SampleApp-PSQLGEN', SAW_SRC_PATH='/users/prodney/folder/request variable example':SELECT
+   0 s_0,
+   "A - Sample Sales"."Base Facts"."1- Revenue" s_1
+FROM "A - Sample Sales"
+ORDER BY 1
+FETCH FIRST 5000001 ROWS ONLY
+
+
+[...]
+
+[2015-03-23T05:52:57.000+00:00] [OracleBIServerComponent] [TRACE:2] [USER-18] [] [ecid: 0054Ut7AK5DFw000jzwkno0005UZ00005S,0] [tid: 8f194700] [requestid: 8a1e0002] [sessionid: 8a1e0000] [username: weblogic] -------------------- Sending query to database named 01 - Sample App Data (ORCL) (id: <<70983>>), connection pool named Sample Relational Connection, logical request hash dd4fb54f, physical request hash 8d6f363d: [[
+WITH
+SAWITH0 AS (select sum(T42442.Revenue) as c1
+from
+     BISAMPLE.SAMP_REVENUE_FA2 T42442 /* F21 Rev. (Aggregate 2) */ )
+select D1.c1 as c1, D1.c2 as c2 from ( select distinct 0 as c1,
+     D1.c1 as c2
+from
+     SAWITH0 D1 ) D1 where rownum <= 5000001
+
+]]
+[2015-03-23T05:52:57.000+00:00] [OracleBIServerComponent] [TRACE:2] [USER-34] [] [ecid: 0054Ut7AYi0Fw000jzwkno0005UZ00005T,0] [tid: 8f194700] [requestid: 8a1e0002] [sessionid: 8a1e0000] [username: weblogic] -------------------- Query Status: Successful Completion [[
+
+]]
+[2015-03-23T05:52:57.000+00:00] [OracleBIServerComponent] [TRACE:2] [USER-26] [] [ecid: 0054Ut7AYi0Fw000jzwkno0005UZ00005T,0] [tid: 8f194700] [requestid: 8a1e0002] [sessionid: 8a1e0000] [username: weblogic] -------------------- Rows 0, bytes 24 retrieved from database query id: <<70983>> Simulation Gateway [[
+
+]]
+[2015-03-23T05:52:57.000+00:00] [OracleBIServerComponent] [TRACE:2] [USER-28] [] [ecid: 0054Ut7AYi0Fw000jzwkno0005UZ00005T,0] [tid: 8f194700] [requestid: 8a1e0002] [sessionid: 8a1e0000] [username: weblogic] -------------------- Physical query response time 0 (seconds), id <<70983>> Simulation Gateway [[
+
+[...]
+--------------------------------------------------------------------------------
+
+
+It’s clear that the "-q -Nofetch" parameters used in nqcmd don’t have an effect on whether the physical query is executed (they're to do with whether nqcmd as an ODBC client pulls back and displays the data you ask for). It’s actually just a single request variable that does the job, and it goes under the rather obvious name of *SKIP_PHYSICAL_QUERY_EXEC*. When set to 1 it generates all the necessary physical SQL but doesn’t execute it, and the presence of “Simulation Gateway” in the log signals this.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/03/obiee-nqcmd-tidbits/[Rittman Mead blog].

@@ -1,0 +1,109 @@
+---
+title: 'OBIEE Administration Tool - Import Metadata shows no schemas'
+date: "2012-05-24T00:00:00+00:00"
+url: "/2012/05/24/obiee-administration-tool-import-metadata-shows-no-schemas/"
+draft: false
+categories:
+- OBIEE
+- ODI
+- Monitoring
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/05/obiee-administration-tool-import-metadata-shows-no-schemas/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/05/obiee-administration-tool-import-metadata-shows-no-schemas/[Rittman Mead blog].
+
+== Importing Metadata with the Administration Tool
+
+
+The client-only install of the OBIEE 11g Administration Tool is installed with a set of OCI libraries. This means that it can support basic Oracle Database interaction, without the need for a full Oracle Client installation on the machine. For example, you can update row counts in the Physical layer of the RPD of tables that are on Oracle.
+
+
+Unfortunately, the supplied OCI libraries are not complete, which leads to a rather tricky problem to diagnose. When you use the *Import Metadata*operation (either from the File menu, or context menu on an existing Connection Pool), the step ("Select Metadata objects") which ought to show the schemas just shows a stub, and no schemas.
+
+
+image::/images/2012/05/061339NewImage16.png[No schemas shown in Select Metadata Objects / Import Metadata]
+
+
+No error is shown by the Administration Tool, giving the erroneous impression that there just aren't any schemas in the database.
+
+
+== Missing OCI library
+
+
+The Administration Tool writes a log, which by default is in the following rather long path: ?xml version="1.0" encoding="UTF-8" standalone="no"? ?xml version="1.0" encoding="UTF-8" standalone="no"?*C:\Program Files\Oracle Business Intelligence Enterprise Edition Plus Client\oraclebi\orainst\diagnostics\logs\OracleBIServerComponent\coreapplication\Administrator_NQSAdminTool.log*
+
+
+If you examine the log, you'll see this error:
+
+
+[source]
+----
+
+[2011-12-16T15:10:12.000+00:00] [OracleBIServerComponent] [ERROR:1] [] [] [ecid: ] [tid: 8b4]  [nQSError: 93001] Can not load library, oracore11.dll, due to, The specified module could not be found. [[
+.
+The specified module could not be found.
+]]
+----
+
+ 
+
+
+The key bit in this is "*Can not load library, oracore11.dll*". This is the library which is missing and on which there is a dependency. The library isn't provided by InstantClient, so you must install the full Oracle Client.
+ 
+
+
+== Installing the Oracle Client
+
+
+Download the Oracle Client from the Oracle Website. The link is currently link:http://www.oracle.com/technetwork/database/enterprise-edition/downloads/112010-win32soft-098987.html?ref=rittmanmead.com[this], but may change. In this instance I downloaded "*Oracle Database 11g Release 2 Client (11.2.0.1.0) for Microsoft Windows (32-bit)*" (all 600MB+ of it).
+ 
+
+
+Unzip the installer and run setup.exe. If you want as minimal an installation as possible, then select the custom installation, and choose just the "Oracle Call Interface (OCI)" option.
+
+
+image::/images/2012/05/061340oci.png[Oracle Client installer - OCI libraries]
+
+Once you've installed the Full Client, restart the AdminTool and the Import Metadata function will now work. 
+
+
+== Footnote - tnsnames.ora
+
+
+Don't forget that if you don't install the full Oracle Client and use the OCI functionality provided by the OBIEE installation alone, you will need to configure your tnsnames.ora file in *C:\Program Files\Oracle Business Intelligence Enterprise Edition Plus Client\oraclebi\orahome\network\admin\tnsnames.ora*. The exception is if you are using Easy Connect DSNs (*dbserver:port/sid*) in your RPD rather than TNS entries (*orcl* etc)
+
+
+== Footnote - troubleshooting library issues
+
+
+Microsoft's link:http://technet.microsoft.com/en-us/sysinternals/bb545021.aspx?ref=rittmanmead.com[*SysInternals* suite] includes the program *ProcMon*. You can point this at a running process and see what it's up to in terms of file access, DLLs, and networking. It is great for detecting things like:
+
+
+* Which files a process writes to (eg where is a user preference stored)
+* Check which PATHs are being searched for an executable / library
+* Which tnsnames.ora is being picked up
+* What network connections are being made, or failing
+* Registry key access
+
+
+When you run ProcMon you'll realise how much is going on in the background of your Windows machine - there'll be screenful upon screenful of output. To focus on the target of your analysis, use the Include Process option to just show AdminTool.exe:
+
+
+image::/images/2012/05/061336NewImage17.png[Include AdminTool in procmon traces]
+
+
+You can then see things like it searching for the oracore11.dll which it is missing:
+
+
+image::/images/2012/05/061338NewImage18.png[oracore11.dll missing]
+
+
+The next entry shows the log file being updated, giving you the path if you didn't know it already:
+
+
+image::/images/2012/05/061335NewImage19.png[AdminTool log file]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/05/obiee-administration-tool-import-metadata-shows-no-schemas/[Rittman Mead blog].

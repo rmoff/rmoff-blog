@@ -1,0 +1,115 @@
+---
+title: 'Running the RCU from the commandline'
+date: "2012-06-11T00:00:00+00:00"
+url: "/2012/06/11/running-rcu-from-the-commandline/"
+draft: false
+categories:
+- OBIEE
+- Linux
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/06/running-rcu-from-the-commandline/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/06/running-rcu-from-the-commandline/[Rittman Mead blog].
+
+OBIEE uses the Repository Creation Utility, or RCU, to create a set of schemas that are required and hold internal metadata such as Usage Tracking and Scheduler tables.
+
+
+When you run RCU, you are given a GUI interface to specify the database connection details, schema prefixes, and so on. It is good to be aware that you can run it from the command line, and silently too if you want. This can be useful if you are installing on Linux/Unix and don't have easy access to an X-Windows server, and also very handy if you want to run an unattended installation.
+
+
+== Creating repositories
+
+
+Unlike Oracle Universal Installer (OUI), you cannot specify a "response" file for the RCU, but can you can supply lots of options as command-line arguments. The full syntax is documented link:http://docs.oracle.com/cd/E23943_01/doc.1111/e14259/rcu_silent.htm?ref=rittmanmead.com#BABGFFCG[here]. 
+
+
+An example call to RCU to create the two schemas for OBI (MDS and BIPLATFORM) would be:
+
+
+[source]
+----
+
+./rcu -silent -createRepository -connectString localhost:1521:orcl -dbUser SYS -dbRole SYSDBA -schemaPrefix DEV -component BIPLATFORM -component MDS
+----
+
+
+This uses the connection string *localhost:1521:orcl*, that is, a database with SID "orcl" running on machine "localhost", with the listener on port 1521.
+
+
+NB the documentation lists "tablespace" and "tempTablespace" as required, but the RCU command line syntax does work without specifying them.
+
+
+You cannot specify in the command line parameters the password of your target database's SYS user, nor the password for the new schemas which you are creating. There are two options for supplying passwords - either interactively from the command line, or put them in a text file and have the RCU read it in.
+
+
+Be aware that if you don't supply the passwords, you are prompted for them. When I've run this on Linux, the RCU erases the screen before prompting for input, and erases the prompt text too. So if you get a blank screen, it's probably waiting for you to enter the SYS or new schema passwords.
+
+
+To supply the passwords, create a file, for example, /tmp/pw.txt. It should have three lines; one for your SYS password and two of the new schemas
+
+
+[source]
+----
+
+mySYSpassword
+newschemapassword
+newschemapassword
+----
+
+
+Then redirect this in to the RCU call, using the -f parameter
+
+
+[source]
+----
+
+./rcu -silent -createRepository -connectString localhost:1521:orcl -dbUser SYS -dbRole SYSDBA -schemaPrefix DEV -component BIPLATFORM -component MDS -f < /tmp/pw.txt
+----
+
+
+Don't forget to delete /tmp/pw.txt afterwards for security reasons. Also, don't use leading numerics in the passwords - otherwise the RCU will fail with the error *ORA-00922: missing or invalid option*
+
+
+== Dropping repositories
+
+
+Just as you can create repositories from the command line, you can drop them from the command line. The syntax is similar:
+
+
+[source]
+----
+
+./rcu -silent -dropRepository -connectString localhost:1521:orcl -dbUser SYS -dbRole SYSDBA -schemaPrefix DEV -component BIPLATFORM -component MDS
+----
+
+This will prompt you for your SYS password. If you want to supply it as part of the command, you can use the /tmp/pw.txt approach described above, or something slightly simpler using echo: 
+
+
+[source,shell]
+----
+
+echo 'mysyspassword'|./rcu -silent -dropRepository -connectString localhost:1521:orcl -dbUser SYS -dbRole SYSDBA -schemaPrefix DEV -component BIPLATFORM -component MDS -f
+----
+
+*Note : there is no confirmation prompt when you run this* - so take care!
+
+
+Footnote: It is critical that if you want to remove an RCU schema, you do so through the RCU utility. If you try to drop the schema from your database directly, you will get all sorts of problems, including if you try to re-use the schema prefix for a different RCU repository:
+
+
+[source]
+----
+
+RCU-6016:The specified prefix already exists.
+RCU-6091:Component name/schema prefix validation failed.
+----
+
+
+You then can't run the standard RCU drop, because the schemas no longer exist. +
+
+Instead, try recreating the schemas (with no content) manually in the database, and *then* run the RCU dropRepository process.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/06/running-rcu-from-the-commandline/[Rittman Mead blog].

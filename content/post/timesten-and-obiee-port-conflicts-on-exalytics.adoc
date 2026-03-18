@@ -1,0 +1,215 @@
+---
+title: 'TimesTen and OBIEE port conflicts on Exalytics'
+date: "2013-07-23T00:00:00+00:00"
+url: "/2013/07/23/timesten-and-obiee-port-conflicts-on-exalytics/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/07/timesten-and-obiee-port-conflicts-on-exalytics/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/07/timesten-and-obiee-port-conflicts-on-exalytics/[Rittman Mead blog].
+
+== Introduction
+
+
+Whilst helping a customer set up their Exalytics server the other day I hit an interesting problem. Not interesting as in hey-this-will-cure-cancer, or oooh-big-data-buzzword interesting, or even interesting as in link:https://twitter.com/andybolton/status/359568006545809408/photo/1?ref=rittmanmead.com[someone-has-had-a-baby], but nonetheless, interesting if you like learning about the internals of the Exalytics stack.
+
+
+The installation we were doing was multiple non-production environments on bare metal, a design that we developed on our own link:https://www.rittmanmead.com/blog/2012/05/rittman-mead-take-delivery-of-our-exalytics-server/[Rittman Mead Exalytics box] early on last year, and one that Oracle describe in their link:https://blogs.oracle.com/pa/entry/exalytics_v1_exalytics_deployment_guide?ref=rittmanmead.com[Exalytics white paper] which was published recently. Part of a multiple environment install is careful planning of the port allocations. OBIEE binds to many ports per instance, and there is also TimesTen to consider. I’d been through this meticuluously, specifying ports through the link:http://docs.oracle.com/cd/E28280_01/bi.1111/e10539/c4_installing.htm?ref=rittmanmead.com#BIEIG3205[`staticports.ini`] file when building the OBIEE domain, as well as in the link:http://docs.oracle.com/cd/E41246_01/bi.1/e39709/install_procedure.htm?ref=rittmanmead.com#CHDICIHC[`bim-setup.properties`] for TimesTen.
+
+
+So, having given such careful thought to ports, imagine my surprise at seeing this error when we started up one of the OBIEE instances:
+
+
+[source]
+----
+[OracleBIServerComponent] [ERROR:1] [] [] [ecid: ] [tid: e1dbd700]  [nQSError: 12002] 
+Socket communication error at call=bind: (Number=98) Address already in use
+----
+
+
+which caused a corresponding OPMN error:
+
+
+[source]
+----
+ias-component/process-type/process-set:
+  coreapplication_obis1/OracleBIServerComponent/coreapplication_obis1/
+
+Error
+--> Process (index=1,uid=328348864,pid=17875)
+  time out while waiting for a managed process to start
+----
+
+
+*Address already in use*? But…all my ports were hand-picked so that they explicitly woulnd’t clash …
+
+
+== Dynamic ports
+
+
+So it turns out that TimesTen, as well as using the two ports that are explicitly configured (deamon and server, usually 53396 and 53397 respectively), the TimesTen server processs also binds to a port chosen at random by the OS each time for the purpose of internal communication. The OS chooses this port based on the configured dynamic port range, and of that range, which ports are available. This is similar to what the Oracle Database listener does, and as my colleague link:http://www.rittmanmead.com/author/peter-scott/?ref=rittmanmead.com[Pete Scott] link:https://twitter.com/dw_pete/status/359600741494697985?ref=rittmanmead.com[pointed out] it's been known for port clashes to occur between ODI and the Oracle Database listener. What TimesTen is doing is nothing specific to TimesTen as such, and it is conforming to standard good practice in its use of the OS API calls for port allocations.
+
+
+To see this in action, use the *netstat* command, with the flags *tlnp*:
+
+
+* *`t`* : tcp only
+* *`l`* : LISTEN status only
+* *`n`* : numeric addresses/ports only
+* *`p`* : show associated processes
+
+We pipe the output of the netstat command to *grep*to filter for just the process we're looking for, giving us:
+
+
+[source]
+----
+[oracle@obieesample info]$ netstat -tlnp|grep ttcserver
+(Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.)
+tcp        0      0 127.0.0.1:58476             0.0.0.0:*                   LISTEN      4811/ttcserver
+tcp        0      0 0.0.0.0:53397               0.0.0.0:*                   LISTEN      4811/ttcserver
+----
+
+Here we can see on the last line the TimesTen server process (`ttcserver`) listening on the explicitly configured port *53397* for traffic on any address. We also see it listening on port *58476* for traffic only on the local loopback address `127.0.0.1`.
+
+
+What happens if we restart the TimesTen server and look at the ports again?
+
+
+[source]
+----
+[oracle@obieesample info]$ ttdaemonadmin -restartserver
+TimesTen Server stopped.
+TimesTen Server started.
+
+[oracle@obieesample info]$ netstat -tlnp|grep ttcserver
+(Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.)
+tcp        0      0 127.0.0.1:17073             0.0.0.0:*                   LISTEN      6878/ttcserver
+tcp        0      0 0.0.0.0:53397               0.0.0.0:*                   LISTEN      6878/ttcserver
+----
+
+
+We can see the same listen port *53397* as before, listening for any client connections either locally or remotely, but now the port bound to the local loopback address `127.0.0.1` has changed - *17073*.
+
+
+== Russian Roulette
+
+
+So each time TimesTen starts it requests a port from the OS which will allocate one from the ports available in the dynamic port range. Unfortunately, this may or may not be one of the ones that OBIEE is configured to use. If OBIEE is started first, then the problem does not arise because OBIEE has already taken the ports it needs, leaving the OS to choose from the remaining unused ports for TimesTen to use.
+
+
+If there are multiple instances of TimesTen and multiple instances of OBIEE then the chances of a port collision increase. What I wanted to know was how to isolate TimesTen from the ports I’d chosen for OBIEE. Constraining the application startup order (so that OBIEE gets all its ports first, and then TimesTen can use whatever is left) is a lame solution since it artificially couples two components that don’t need to be, adding to the complexity and support overhead.
+
+
+TimesTen itself cannot be configured in its behaviour with these ports - link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1295539.1&ref=rittmanmead.com[Doc ID 1295539.1] states:
+
+
+[quote]
+____
+[...] All other TCP/IP port assignments to TimesTen processes are completely random and based on the availability of ports at the time when the process is spawned.
+____
+
+To understand the port range that TimesTen was using (so that I could then configure OBIEE to avoid it) I knocked up this little script. It restarts the TimesTen server, and then appends to a file the random port that it has bound to:
+
+
+[source,shell]
+----
+<br />
+$ cat ./tt_port_scrape.sh<br />
+ttdaemonadmin -restartserver<br />
+netstat -tlnp|grep ttcserver|grep 127.0.0.1|awk -F &amp;amp;quot;:&amp;amp;quot; '{print $2}'|cut -d &amp;amp;quot; &amp;amp;quot; -f 1 1&amp;amp;gt;&amp;amp;gt;tt_ports.txt<br />
+----
+
+
+Using my new favourite linux command, `watch`, I can run the above repeatedly (by default, every two seconds) until I get bored`^H^H^H^H^H^H^H^H^H` have collected sufficient data points
+
+
+[source]
+----
+<br />
+watch ./tt_port_scrape.sh<br />
+----
+
+
+Finally, parse the output from the script to look at the port ranges:
+
+
+[source,shell]
+----
+<br />
+echo &amp;amp;quot;Lowest port: &amp;amp;quot; $(sort -n tt_ports.txt | head -n1)<br />
+echo &amp;amp;quot;Highest port: &amp;amp;quot; $(sort -n tt_ports.txt | tail -n1)<br />
+echo &amp;amp;quot;Number of tests: &amp;amp;quot; $(wc -l tt_ports.txt )<br />
+----
+
+
+Using this, I observed that TimesTen server would bind to ports ranging from as low as around 9000, up to 65000 or so. The port ranges I was using for OBIEE in this case were the default, so from 7001 (Admin Server) up to 9810 (Java Host).
+
+
+== Solution
+
+
+Raising this issue with the good folks at Oracle Support yielded a nice easy solution. In the kernel settings, there is a configuration option `net.ipv4.ip_local_port_range` which specifies the local port range available for use by applications. By default this is 9000 to 65500, which matches the range that I observed in my testing above:
+
+
+[source]
+----
+[root@rnm-exa-01 ~]# sysctl net.ipv4.ip_local_port_range
+net.ipv4.ip_local_port_range = 9000     65500
+----
+
+I changed this range with `sysctl -w` :
+
+
+[source]
+----
+[root@rnm-exa-01 ~]# sysctl -w net.ipv4.ip_local_port_range="11000 65000"
+[root@rnm-exa-01 ~]# sysctl net.ipv4.ip_local_port_range
+net.ipv4.ip_local_port_range = 11000    65000
+----
+
+and then reran my testing above, which sure enough showed that TimesTen was now keeping its hands to itself and away from my configured OBIEE port ranges:
+
+
+[source]
+----
+Lowest port:  11002
+Highest port:  64990
+----
+
+If I ran the test for longer, I’m sure I’d hit the literal extremes of the range. One important point here is that*the range should not be set too small*, because really nasty things will happen if the OS runs out of dynamic ports, and these ports are used in many places in the OS and applications running on it, not just the obvious TimesTen and associated Exalytics applications.
+
+
+To make the changes permanent, I added the entry to `/etc/sysctl.conf`:
+
+
+[source,properties]
+----
+net.ipv4.ip_local_port_range = 11000 65535
+----
+
+
+The final point to note here is that if you are installing multiple TimesTen environments on the same Exalytics server then you may actually find one TimesTen instance conflicting with another, if the first instance to start gets allocated a port by the OS which happens to be one of the two static ones that another TimesTen instance on the server is configured to use. Thus, if you are planning on mapping your OBIEE ports outside of the (possible reconfigured) `net.ipv4.ip_local_port_range` you may be advised to do the same for the static TimesTen ports too.
+
+
+== Lessons learned
+
+
+. Diagnosing application interactions and dependencies is fun ;-)
+. `watch` is a really useful little command on linux
+. When choosing OBIEE port ranges in multi-environment Exalytics installations, bear in mind that you want to partition off a port range for TimesTen, so keep the port ranges allocated to OBIEE ‘lean’.
+
+
+'''
+
+
+_This article was updated on 19th August 2013 to reflect clarifications kindly supplied by the TimesTen team at Oracle._
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/07/timesten-and-obiee-port-conflicts-on-exalytics/[Rittman Mead blog].

@@ -1,0 +1,181 @@
+---
+title: 'Using OBIEE SampleApp 305 in VM Fusion'
+date: "2013-06-12T00:00:00+00:00"
+url: "/2013/06/12/using-obiee-sampleapp-305-in-vm-fusion/"
+draft: false
+categories:
+- OBIEE
+- Linux
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/06/using-obiee-sampleapp-305-in-vm-fusion/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/06/using-obiee-sampleapp-305-in-vm-fusion/[Rittman Mead blog].
+
+Oracle distribute the new link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[OBIEE SampleApp] as a VirtualBox image, but it is dead easy to run it on VM Fusion instead. Here’s how:
+
+
+. *Unzip* the link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[SampleApp archive files], and *import the OVF* to VM
+. Add and amend network adaptors if required. I always use three: 
++
+* a host-only network private to my Mac and any other VMs running
+* NAT
+* Bridged
++
+. The first means I can always work with the VM from my Mac (SSH, web, etc) regardless of external network changes. The second two, NAT and Bridged, cover internet access out from the VM (software updates, etc) for 95% of situations.
+
++
+image::/images/2013/06/06699sa_01.png[]
++
+. Boot up. Expect to get X server error (because VMWare has a different video driver to VirtualBox). Keep selecting No, until you get to the console
+
++
+image::/images/2013/06/06697sa_02.png[]
++
+. Login as root/root
+
++
+image::/images/2013/06/06696sa_03.png[]
++
+. Remove the VirtualBox additions services:
+
++
+. List the VirtualBox additions services
+
++
+[source]
+----
+chkconfig --list|grep vbox
+----
++
+. Disable VirtualBox additions, as root:
+
++
+[source]
+----
+chkconfig --list|grep vbox|awk '{print $1}'|xargs -I'{}' chkconfig --del {}
+----
++
+. Confirm they’ve been removed:
+
++
+[source]
+----
+chkconfig --list|grep vbox
+----
++
++
+image::/images/2013/06/06695sa_04.png[]
++
+. Install VM Tools
+
++
+. Select “Update VMWare Tools” from VM Fusion menu
+. Mount the CD image on the guest
+
++
+[source]
+----
+mkdir /media/cdrom
+mount /dev/cdrom /media/cdrom
+----
++
+. Copy the installer to the guest
+
++
+[source]
+----
+cp /media/cdrom/VMwareTools*.tar.gz /tmp
+----
++
+. Unpack the installer
+
++
+[source,shell]
+----
+cd /tmp
+tar xf VMwareTools*.tar.gz
+----
++
+. Run the installer. Go with all the defaults given.
+
++
+[source,shell]
+----
+cd vmware-tools-distrib/
+./vmware-install.pl
+----
++
+. Reboot the VM.
+
++
+[source]
+----
+reboot
+----
++
+. On reboot, the VM should startup to the graphical (GNOME) Desktop
+
++
+image::/images/2013/06/06698sa_06.png[]
++
++
+
+
+== Pimp my server
+
+
+This is all optional, but steps I run on a new server instance to get it how I like it:
+
+
+. Open a terminal window and run setup
+
++
+[source,shell]
+----
+sudo setup
+----
++
+
+From here you can amend setting for things such as the keyboard layout, timezone, and networking. You can also use the desktop GUI tools to do this if you prefer
+
++
+image::/images/2013/06/06691sa_05.png[]
++
+. Add your public SSH key to `~/.ssh/authorized_keys` to enable connecting over SSH without entering a password each time
+. Create `~/.screenrc` (`screen` is already installed on SampleApp. See link:http://www.rittmanmead.com/blog/2012/05/screen-and-obiee/[this post] for details of what screen is and why it is so useful).
+
++
+[source]
+----
+hardstatus alwayslastline "%{= RY}%H %{kG}%{G} Screen(s): %{c}%w %=%{kG}%c  %D, %M %d %Y  LD:%l"
+startup_message off
+msgwait 1
+defscrollback 100000
+nethack on
+----
++
+image::/images/2013/06/06690sa_07.png[]
++
+. Add EPEL yum repository:
+
++
+[source,shell]
+----
+wget http://www.mirrorservice.org/sites/dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+sudo rpm -i epel*.rpm
+----
++
+. Update all packages
+
++
+[source,shell]
+----
+sudo yum update -y
+----
++
+. Set the OBIEE and DB instances to start automagically at bootup, using link:https://gist.github.com/rmoff/42e2faa0c71805c58712?ref=rittmanmead.com[init.d script such as these]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/06/using-obiee-sampleapp-305-in-vm-fusion/[Rittman Mead blog].

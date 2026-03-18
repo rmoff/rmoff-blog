@@ -1,0 +1,197 @@
+---
+title: 'Exalytics - TimesTen and OBIEE connectivity'
+date: "2012-07-23T00:00:00+00:00"
+url: "/2012/07/23/exalytics-timesten-and-obiee-connectivity/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/07/exalytics-timesten-and-obiee-connectivity/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/07/exalytics-timesten-and-obiee-connectivity/[Rittman Mead blog].
+
+Two of the key components in Exalytics are OBIEE and the TimesTen in-memory database. Configuring them to work together, particularly in non-standard configurations, can be fiddly, so here is a guide on how to make sure you get it right.
+
+
+=== The aim
+
+
+To recap, the aim of this configuration is for the BI Server to be able to access the correct TimesTen database. This is necessary for both users running reports which use data held in TimesTen, and also when you are running the Summary Advisor/Aggregate Persistence Wizard script to create aggregates.
+
+
+=== The configuration files
+
+
+There are four configuration files involved:
+
+
+* The OBI Repository (RPD)
+* odbc.ini
+* sys.odbc.ini
+* sys.ttconnect.ini
+
+
+In addition, you need to be aware of opmn.xml, but of that more later
+
+
+=== Scenario 1 - Single Exalytics node, single OBIEE/TimesTen installation
+
+
+If you have a single Exalytics server and have not deviated from the supported configuration then this is what you will have. By default Exalytics will come configured with part or all of this done.
+
+
+image::/images/2012/07/061255Untitled-11.png[]
+
+
+==== sys.odbc.ini
+
+
+In TimesTen, the database is defined in a file called sys.odbc.ini. You'll find this file in $TIMESTEN_HOME/info, for example, /u01/app/oracle/product/TimesTen/tt1122/info/.
+
+
+There are two important things about this file. One is the name of the database is set. The second is that the actual database definition is held here.
+
+
+[source,properties]
+----
+
+[ODBC Data Sources]
+TT_AGGR_STORE1=TimesTen 11.2.2 Driver
+[TT_AGGR_STORE1]
+Driver=/u01/app/oracle/product/TimesTen/tt1122/lib/libtten.so
+DataStore=/u01/data/tt/tt_aggr_store1/data
+LogDir=/u01/data/tt/tt_aggr_store1/logs
+[… ]
+----
+
+
+In line 4 we set the database name, also referred to as the DSN (DataSource Name). This must also be included in the list of data sources, see line 2.
+
+Lines 5-8 and onwards are the definition of the database - where the data is stored, how large the database is, etc.
+
+
+==== odbc.ini
+
+
+This is the configuration file used by OBIEE for holding any ODBC data source definitions. This includes the OBIEE datasource itself, AnalyticsWeb (which is connected to by ODBC). You may have entries here for SQL Server and other ODBC-connected datasources too. The file is located in *$FMW_HOME/instances/instance1/bifoundation/OracleBIApplication/coreapplication/setup*.
+
+For Exalytics TimesTen, the relevant entry here will look like this: 
+
+
+[source,properties]
+----
+
+[…]
+[ODBC Data Sources]
+TT_AGGR_STORE1 = TimesTen 11.2.2 Driver
+[…]
+[TT_AGGR_STORE1]
+Driver = /u01/app/oracle/product/TimesTen/tt1122/lib/libttclient.so
+TTC_SERVER_DSN = TT_AGGR_STORE1
+TTC_SERVER = localhost
+TTC_TIMEOUT = 0
+----
+
+
+Line 5 defines the DSN name, and must also be listed under ODBC Data Sources, see line 2.
+
+*The key thing here is that the name of the DSN defined in odbc.ini doesn’t have to match that of sys.odbc.ini.*.
+From the DSN defined here, the DSN defined in TimesTen is referenced, as *TTC_SERVER_DSN*, see line 7.
+The *TTC_SERVER* in this context is the physical hostname (eg localhost) of the Exalytics server.
+
+
+==== The OBI Repository (RPD)
+
+
+In your Exalytics RPD, the connection pool for your TimesTen database definition will have a *Data source name* entry. You set this to the DSN defined (i.e. the name between the square brackets) in *odbc.ini*.
+
+
+=== Scenario 2 - Single Exalytics node, multiple OBIEE/TimesTen installations
+
+
+If there are multiple TimesTen installations on the one Exalytics server (for example, to support dev/test/pre-prod, and/or for standalone patching and versioning) then there will be multiple TimesTen daemon/server processes on distinct ports.
+
+
+In the above example "Scenario 1", the OBIEE *odbc.ini* configuration relies on the TimesTen server on which the intended database exists listening on the default server port. This is because *TTC_SERVER* can refer to either a physical hostname of the TimesTen server, _*or*_ of a TimesTen logical server definition. 
+
+If the TimesTen server process that we want to connect to is on a different port, it is necessary to use a Logical Server reference.
+
+image::/images/2012/07/061256Untitled-38-1.png[]
+
+A logical server is configured in the *sys.ttconnect.ini* file: 
+
+
+[source,properties]
+----
+
+[ttServerB]
+Description=TimesTen Server
+Network_Address=localhost
+TCP_PORT=54397
+----
+
+
+Line 1 defines the logical server name. The *Network_Address* is the physical hostname, and *TCP_PORT* the port on which the server process is listening. Be aware of some special values that Network_Address can be set to, see link:http://docs.oracle.com/cd/E11882_01/timesten.112/e21633/client_server.htm?ref=rittmanmead.com#BGBDAJEI[the documentation] for more details.
+
+
+To reference the logical server, the name (in the above example, ttServerB) is referenced in the odbc.ini DSN definition: 
+
+
+==== odbc.ini
+
+
+[source,properties]
+----
+
+[ODBC Data Sources]
+TT_AGGR_STORE1 = TimesTen 11.2.2 Driver
+[…]
+[TT_AGGR_STORE1]
+Driver = /u01/app/oracle/product/TimesTen/tt1122/lib/libttclient.so
+TTC_SERVER_DSN = TT_AGGR_STORE1
+TTC_SERVER = ttServerB
+TTC_TIMEOUT = 0
+----
+
+
+==== The OBI Repository (RPD)
+
+
+In your Exalytics RPD, the connection pool for your TimesTen database definition will have a *Data source name* entry. You set this to the DSN defined (i.e. the name between the square brackets) in *odbc.ini*.
+
+
+=== Troubleshooting
+
+
+The nqserver.log will show if there are problems, even if you are not querying TimesTen. This is because OBI recognises TimesTen connection pools and automatically checks them every sixty seconds (you can configure this interval with HA_DB_PING_PERIOD_MILLISECS in NQSConfig.ini).
+
+A couple of common errors and their causes:
+
+
+* [nQSError: 16001] ODBC error state: IM002 code: 0 message: [TimesTen][TimesTen 11.2.2.2.1 ODBC Driver]*Data source name not found and no default driver specified.*
++
+* _This means that you have specified a *TTC_SERVER_DSN* in the OBIEE odbc.ini for which there is no corresponding DSN in TimesTen's *sys.odbc.ini*_
++
+* [nQSError: 16001] ODBC error state: IM002 code: 0 message: [TimesTen][TimesTen 11.2.2.3.0 CLIENT]*Cannot find the requested DSN* (TT_AGGR_STORE) in ODBCINI [...]
++
+* _This means that your RPD is specifying a DSN which you haven't defined in OBIEE's *odbc.ini*_
++
+
+
+=== opmn.xml
+
+
+If you are using multiple TimesTen binaries then make sure you set the correct *LD_LIBRARY_PATH* and *TIMESTEN_DLL* in the *opmn.xml* configuration file, which you'll find in $FMW_HOME/instances/instance1/config/OPMN/opmn/
+
+
+=== Documentation
+
+
+* link:http://docs.oracle.com/cd/E27027_01/bi.1/e24706/install_post.htm?ref=rittmanmead.com#BABBBEDH[Configuring the ODBC Connection from Oracle Business Intelligence to TimesTen]
+* link:http://docs.oracle.com/cd/E21901_01/doc/timesten.1122/e21633/client_server.htm?ref=rittmanmead.com#CHDHEBJB[Working with the TimesTen Client and Server]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/07/exalytics-timesten-and-obiee-connectivity/[Rittman Mead blog].

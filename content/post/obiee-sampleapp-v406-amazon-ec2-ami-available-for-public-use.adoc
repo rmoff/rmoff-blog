@@ -1,0 +1,154 @@
+---
+title: 'OBIEE SampleApp v406 Amazon EC2 AMI - available for public use'
+date: "2014-11-13T00:00:00+00:00"
+url: "/2014/11/13/obiee-sampleapp-v406-amazon-ec2-ami-available-for-public-use/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/11/obiee-sampleapp-v406-amazon-ec2-ami-available-for-public-use/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/11/obiee-sampleapp-v406-amazon-ec2-ami-available-for-public-use/[Rittman Mead blog].
+
+I wrote a while ago about converting Oracle's superb OBIEE SampleApp from a link:https://www.rittmanmead.com/blog/2014/09/obiee-sampleapp-in-the-cloud-importing-virtualbox-machines-to-aws-ec2/[VirtualBox image into an EC2-hosted instance]. I'm pleased to announce that Oracle have agreed for us to make the image (AMI) on Amazon available publicly. This means that anyone who wants to run their own SampleApp v406 server on Amazon's EC2 cloud service can do so.
+
+
+image::/images/2014/11/077032014-11-11_17-47-32.png[2014-11-11_17-47-32]
+
+
+image::/images/2014/11/077052014-11-12_09-15-41.png[2014-11-12_09-15-41]
+
+
+== Important caveats
+
+
+Before getting to the juicy stuff there's some important points to note about access to the AMI, which you are implicitly bound by if you use it:
+
+
+. In accessing it you're bound by the same link:http://www.oracle.com/technetwork/licenses/biee-sample-app-vm-license-2209742.html?ref=rittmanmead.com[terms and conditions] that govern the original SampleApp
+. SampleApp is only ever for use in your own development/testing/prototyping/demonstrating with OBIEE. It must not be used as the basis for any kind of Productionisation.
+. Neither Oracle nor Rittman Mead provide any support for SampleApp or the AMI, nor warranty to any issues caused through their use.
+. Once launched, the server will be accessible to the public and its your responsibility to secure it as such.
+
+
+== How does it work?
+
+
+. Create yourself an AWS account, if you haven't already. You'll need your credit card for this. Read more about link:http://aws.amazon.com/getting-started/?nc2=h_l2_cc/&ref=rittmanmead.com[getting started with AWS here].
+. Request access to the AMI (below)
+. Launch the AMI on your AWS account
+. link:https://www.rittmanmead.com/blog/2014/06/sampleapp-v406-automatic-startup-of-obiee/[Everything starts up automagically]. After 15-20 minutes, enjoy your fully functioning SampleApp v406 instance, running in the cloud!
+
+
+== How much does it cost?
+
+
+You can get an estimate of the cost involved using the link:http://calculator.s3.amazonaws.com/index.html?ref=rittmanmead.com[Amazon Calculator].
+
+
+As a rough guide, as of November 2014 an "m3.large" instance costs around $4 a day  -- but it's your responsibility to check pricing and commitments.
+
+
+Be aware that once a server is created you'll incur costs on it right through until you "terminate" it. You can "stop" it (in effect, power it off) which reduces the running costs but you'll still pay for the 'disk' (EBS volume) that holds it. The benefit of this though is that you can then power it back up and it'll be as you left it (just with a different IP).
+
+
+You can track your AWS usage through link:http://docs.aws.amazon.com/gettingstarted/latest/awsgsg-intro/gsg-aws-track-usage.html?ref=rittmanmead.com[the AWS page here].
+
+
+== Security
+
+
+* Access to the instance's command line is through SSH as the *oracle* user using link:https://www.rittmanmead.com/blog/2013/10/tips-and-tricks-for-the-obiee-linux-sysadmin/[SSH keys] only (provided by you when you launch the server) - no password access
+
++
+* You cannot ssh to the server as root; instead connect as *oracle* and use *sudo* as required.
+* The ssh key does not get set up until the very end of the first boot sequence, which can be 20 minutes. Be patient!
++
+* All the OBIEE/WebLogic usernames and passwords are per the stock SampleApp v406 image, so you are well advised to change them. Otherwise if someone finds your instance running, they'll be able to access it
+* There is no firewall (iptables) running on the server. Since this is a public server you'd be wise to make use of Amazon's Security Group functionality (in effect, a firewall at the virtual hardware level) to block access on all ports except those necessary.
+For example, you could block all traffic except 7780, and then enable access on port 22 (SSH) and 7001 (Admin Server) just when you need to access it for admin.
+
+
+== Using the AMI
+
+
+. You first need to get access to the AMI, through the form below. You also need an active AWS account.
+. Launch the server:
+
++
+. From the AWS AMI page locate the SampleApp AMI using the details provided when you request access through the form below. Make sure you are on the Ireland/eu-west-1 region. Click *Launch*.
+. Select an *Instance Type*. An "m3.large" size is a good starting point (link:http://www.ec2instances.info/?ref=rittmanmead.com[this site] is useful to see the spec of all instances).
++
+image::/images/2014/11/077042014-11-11_22-42-48.png[2014-11-11_22-42-48]
++
+. Click through the _Configure Instance Details_, _Add Storage,_and _Tag Instance_screens without making changes unless you need to.
+. On the *Security Group*page select either a dedicated security group if you have already configured one, or create a new one.
+A security group is a firewall that controls traffic to the server regardless of any software firewall configured or not on the instance. By default only port 22 (SSH) is open, so you'll need to open at least 7780 for analytics, and 7001 too if you want to access WLS/EM as well
+Note that you can amend a security group's rules once the instance is created, but you cannot change which security group it is bound to. For ad-hoc purposes I'd always use a dedicated security group per instance so that you can change rules just for your server without impacting others on your account.
+
++
+image::/images/2014/11/077022014-11-11_22-47-33.png[2014-11-11_22-47-33]
++
+. Click on *Review and Launch*, check what you've specified, and then click *Launch*. You'll now need to either specific an existing SSH key pair, or generate a new one. It's vital that you get this bit right, otherwise you'll not be able to access the server. If you generate a new key pair, make sure you download it (it'll be a .pem file). 
++
+image::/images/2014/11/077012014-11-11_22-49-29.png[2014-11-11_22-49-29]
++
+. Click *Launch Instances*
+
++
+image::/images/2014/11/076992014-11-11_22-51-09.png[2014-11-11_22-51-09]
++
+You'll get a hyperlinked Instance ID; click on that and it'll take you to the Instances page filtered for your new server.
+
++
+image::/images/2014/11/077002014-11-11_22-52-01.png[2014-11-11_22-52-01]
++
+
+Shortly you'll see the server's public IP address shown.
+
++
+image::/images/2014/11/076972014-11-11_22-52-09.png[2014-11-11_22-52-09]
++
++
+. OBIEE is configured to start automagically at boot time along with the database. This means that in theory you don't need to actually access the server directly. It does take 15-20 minutes on first boot to all fire up though, so be patient.
+. The managed server is listening on port 7780, and admin server on 7001. If your server IP is 42.42.42.42 the URLs would be:
+
++
+* Analytics: http://42.42.42.42:7780/analytics
+* WLS: http://42.42.42.42:7001/console
+* EM: http://42.42.42.42:7001/em
++
+
+
+== On the server
+
+
+The server is a stock SampleApp v406 image, with a few extras:
+
+
+* *obiee* and *dbora* services configured and set to run at bootup. Control obiee using:
+
++
+[source,shell]
+----
+sudo service obiee status
+sudo service obiee stop
+sudo service obiee start
+sudo service obiee restart
+----
++
+* *screen* installed with a .screenrc setup
+
+
+== Accessing the AMI
+
+
+To get access to the AMI, please complete this short form and we will send you the AMI details by email.
+
+
+By completing the form and requesting access to the AMI, you are acknowledging that you have read and understood the link:http://www.oracle.com/technetwork/licenses/biee-sample-app-vm-license-2209742.html?ref=rittmanmead.com[terms and conditions set out by Oracle here].
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/11/obiee-sampleapp-v406-amazon-ec2-ami-available-for-public-use/[Rittman Mead blog].

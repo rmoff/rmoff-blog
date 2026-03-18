@@ -1,0 +1,55 @@
+---
+title: 'Analysing ODI performance with Flame Graphs'
+date: "2015-04-02T00:00:00+00:00"
+url: "/2015/04/02/analysing-odi-performance-with-flame-graphs/"
+draft: false
+categories:
+- ODI
+- Linux
+- Performance
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2015/04/analysing-odi-performance-with-flame-graphs/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/04/analysing-odi-performance-with-flame-graphs/[Rittman Mead blog].
+
+link:http://www.brendangregg.com/flamegraphs.html?ref=rittmanmead.com[Flame Graphs] are a visualisation that I learnt about through the excellent Linux systems performance work of link:http://www.brendangregg.com/?ref=rittmanmead.com[Brendan Gregg], and saw link:https://twitter.com/lucacanalidb?ref=rittmanmead.com[Luca Canali] talk about recently at link:http://tech14.ukoug.org/default.asp?p=11991&dlgact=shwprs&prs_prsid=9967&day_dayid=84&ref=rittmanmead.com[UKOUG Tech 14]. They’re a brilliant way of summarising extremely dense information in a way from which the main components accounting for the most time can be identified. I was recently doing some analysis for a client on their ODI batch runtime and I thought it would be a good idea to try them out. Load Plans can have complex hierarchies to them and working out which main sections account for what time can be tricky, as can following a load plan step through to a session and on to a session step and its constituent parts.
+
+
+image::/images/2015/04/211cfg01.png[]
+
+A flame graph is made up of the “stack trace” on the y-axis, and the amount of time spent in each on the x-axis. This is different from most other standard visualisations where the x-axis represents the passage of time, and instead summarises the data at multiple levels of the stack trace hierarchy. The “stack trace” in this case with ODI is Load plan -> load plan step (load plan step [...]) -> session -> session step -> task. It's as easy to see the overall run time as it is a load plan step part way down, as a constituent task of a session step. And what's more, flame graphs look nice! This may seem a flimsy reason for using them on their own, but it's a bonus over trawling through dull tables of data alone.
+
+
+Looking at the flame graph above (taken from a demo BI Apps implementation) it’s nice and easy to see that the Warehouse Load Phase accounts for c.75% of the time, within which the two areas accounting for most time are AP and AR balances. This is from literally a single glance at one graphic. Flame Graphs are built as SVGs which enables them to be interactive (link:https://s3.amazonaws.com/rmc_docs/session-step-task-flame.svg?ref=rittmanmead.com[here's an example]). Clicking on any of the stack trace boxes drills into that area, so for the tasks taking less time (and so displaying less text) this is useful to see the specifics. Here’s the GL balance load in detail, showing how long the row inserts take in proportion to the index build:
+
+
+image::/images/2015/04/209cfg02.png[]
+ 
+
+
+Creating the flame graph is simple. You just need a stack trace that is semi-colon separated, followed by a space-delimited counter value at the end. A bit of link:http://docs.oracle.com/database/121/SQLRF/queries003.htm?ref=rittmanmead.com#SQLRF52332[recursive SQL magic] with the SNP_ tables (helpfully link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1903225.1&ref=rittmanmead.com[documented by Oracle here]) gives us this kind of output file with one line for every task executed and its duration:
+
+
+[source]
+----
+;Start_Load_Plan;Global_Variable_Refresh;Source_Extract_Phase;1_General;2_General_PRE-SDE;3_PRE-SDE_Day;Finalize_Day;Finalize_W_DAY_D;CREATE_INDEXES;Create_Indexes_:_W_DAY_D_2/2;EXEC_TABLE_MAINT_PROC;TABLE_MAINT_PROC;Create Indexes 3
+[...]
+----
+
+
+which you then run through the link:https://github.com/brendangregg/FlameGraph?ref=rittmanmead.com[Flame Graph tool]:
+
+
+[source]
+----
+cat /tmp/odi.out |~/git/FlameGraph/flamegraph.pl --title "EBSVISION FIN HR_21_20141021_223159 / 2014-10-24 15:41:42" > /tmp/odi-flame-graph.svg
+----
+
+
+Simply load the resulting SVG into a web browser such as Chrome, and you’re done. link:https://s3.amazonaws.com/rmc_docs/session-step-task-flame.svg?ref=rittmanmead.com[Here’s an example that you can download and try out].
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2015/04/analysing-odi-performance-with-flame-graphs/[Rittman Mead blog].

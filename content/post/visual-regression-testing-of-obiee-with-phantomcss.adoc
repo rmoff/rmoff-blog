@@ -1,0 +1,329 @@
+---
+title: 'Visual Regression Testing of OBIEE with PhantomCSS'
+date: "2014-05-23T00:00:00+00:00"
+url: "/2014/05/23/visual-regression-testing-of-obiee-with-phantomcss/"
+draft: false
+categories:
+- OBIEE
+- Performance
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/05/visual-regression-testing-of-obiee-with-phantomcss/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/05/visual-regression-testing-of-obiee-with-phantomcss/[Rittman Mead blog].
+
+Earlier this year I wrote a couple of blogs posts (link:https://www.rittmanmead.com/blog/2014/01/obiee-regression-testing-an-introduction/[here] and link:https://www.rittmanmead.com/blog/2014/01/automated-regression-testing-for-obiee/[here]) discussing the topic of automated Regression Testing and OBIEE. One of the points that I was keen make was that OBIEE is a stack of elements and depending on the change being tested, it may be sensible to focus on certain elements in the stack instead of all of it. For example, if you are changing the RPD, there is little value in doing a web-based test when you can actually test for the vast majority of regressions using the *nqcmd* tool alone.
+
+
+I also argued that testing the front end of OBIEE using tools such as Selenium is difficult to do comprehensively, it can be inflexible, time-consuming and in some cases just not a sensible use of effort. These tools work around the idea of *parsing* the web page that is served up and checking for presence (or absence) of a particular piece of text or an element on a web page. So for example, you could run a test and tell it to fail if it finds the text “Error” on the page, or you could say only pass the test if some known-content is present, such as a report title or data figure. *This type of testing is prone to a great deal of false-negatives*, because to efficiently build any kind of test case you must focus on something to check for in the page, but you cannot code for every possible error or failure. It is also usually based heavily on the internal IDs of elements on the page in locating the 'something' to check for. As the OBIEE Document Object Model (DOM) is undocumented code, Oracle are at presumably at liberty to change it whenever they feel like it, and thus any tests written based on it may fail. Finally, OBIEE 11g still defaults to serving up graphs as Flash objects, which Selenium et al just cannot handle, and so cannot be tested.
+
+
+So, what do we do about regression testing the OBIEE front end?
+
+
+== What do we need to test in the front end?
+
+
+There is still a strong case for regression testing the OBIEE front end. Analyses get changed, Dashboards break, permissions are updated - all these things can cause errors or problems for the end user, but which are something that testing further down the OBIEE stack (using something like nqcmd) will not cover.
+
+
+Consider a simple dashboard:
+
+
+image::/images/2014/05/448crt37.png[]
+
+If one of the dashboard pages that are linked to in the central section get moved in the Presentation Catalog, then this happens:
+
+
+image::/images/2014/05/442crt38.png[]
+
+OK, so *Invalid Link Path:* is pretty easy to code in as an error check into Selenium. But, what about if the permissions on an analysis used in the dashboard get changed and the user can no longer access it when running the dashboard?
+
+
+image::/images/2014/05/441crt39.png[]
+
+This is a different problem altogether. We need to check for the absence of something. There’s no error, there just isn’t the analysis that ought to be present. One way around this would be to code for the presence of the analysis title text or content – but that is not going to scale nor be maintainable to do for every dashboard being tested.
+
+
+Another thing that is important to check in the front end is that authorisations are enforced as they should be. That is, a user *can*see the dashboards that they should be able to, and that they *cannot*see the ones they're not. Changes made in the LDAP directory holding users and their groups, or a configuration change in the Application Roles, could easily mean that a user can no longer see the dashboards they should be able to. We _could_ code for this specific issue using something like link:https://www.rittmanmead.com/blog/2014/01/exploring-obiee-web-services-through-python/[Web Services] to programatically check each and every actual permission - but that could well be overkill.
+
+
+What I would like to introduce here is the idea of testing OBIEE for regressions *visually* - but automated, of course.
+
+
+== Visual Regression Testing
+
+
+Driven by the huge number of applications that are accessed solely on the web (sorry, “Cloud”), a new set of tools have been developed to support the idea of testing web pages for regressions visually. Instead of ‘explaining’ to the computer specifically what to look for in a page (no error text, etc), visual regression testing uses a process to compare *images* of a web page, comparing a baseline to a sample taken afterwards. This means that the number of false-negatives (missing genuine errors because the test didn’t detect them) drops drastically because instead of relying on coding a test program to *parse the Document Object Model (DOM)* of an OBIEE web page (which is extremely complex), instead it is simply considering if two snapshots of the resulting *rendered page* look the same.
+
+
+The second real advantage of this method is that typically the tools (including the one I have been working with and will demonstrate below, *PhantomCSS*) are based on _the actual engine that drives the web browsers in use by real end-users_. So it’s not a case of parsing the HTML and CSS that the web server sends us and trying to determine if there’s a problem or not - it is actually rendering it the same as Chrome etc and taking a snapshot of it. PhantomCSS uses link:http://phantomjs.org/?ref=rittmanmead.com[PhantomJS], which uses the engine that Safari is built on, WebKit.
+
+
+=== Let’s Pretend…
+
+
+So, we’ve got a tool - that I’ll demonstrate shortly - that can programatically fetch and snapshot OBIEE pages, and compare the snapshots to check for any changes. But what about graphs rendered in flash? These are a blindspot usually. Well here we can be a bit cheeky. If you pretend (in the User-Agent HTTP request header) to be an iPhone or iPad (devices that don’t support flash) then OBIEE obligingly serves up PNG graphs plus some javascript to do the hover tooltips. Because it’s a PNG image that means that it will be rendered correctly in our “browser”, and so included in the snapshot for comparison.
+
+
+== CasperJS
+
+
+Let’s see this scripting in action. Some clarification of the programs we’re going to use first:
+
+
+* link:http://phantomjs.org/?ref=rittmanmead.com[PhantomJS] is the core functionality we’re using, a headless browser sporting Javascript (JS) APIs
+* link:http://casperjs.org/?ref=rittmanmead.com[CasperJS] provides a set of APIs on top of PhantomJS that make working with web page forms, navigation etc much easier
+* link:https://github.com/Huddle/PhantomCSS?ref=rittmanmead.com[PhantomCSS] provides the regression testing bit, taking snapshots and running code to compare them and report differences.
+
+
+We'll consider a simple CasperJS example first, and come on to PhantomCSS after. Because PhantomCSS uses CasperJS for its core interactions, it makes sense to start with the basics.
+
+
+Here is a bare-bones script. It loads the login page for OBIEE, echoes the page title to the console, takes a snapshot, and exits:
+
+
+[source]
+----
+var casper = require('casper').create();
+
+casper.start('http://rnm-ol6-2:9704/analytics', function() {
+  this.echo(this.getTitle());
+  this.capture('casper_screenshots/login.png');
+});
+
+casper.run();
+----
+
+
+I run it from the command line:
+
+
+[source,shell]
+----
+$ casperjs casper_example_01.js
+Oracle Business Intelligence Sign In
+$
+----
+
+
+As you can see, it outputs the title of the page, and then in the screenshots folder I have this:
+
+
+image::/images/2014/05/440crt40.png[]
+
+I want to emphasise again to make clear why this is so useful: I ran this from the commandline only. I didn’t run a web browser, I didn’t take any snapshots by hand - it was all automatic.
+
+
+Now, let’s build a bit of a bigger example, where we login to OBIEE and see what dashboards are available to us:
+
+
+[source]
+----
+// Set the size of the browser window as part of the 
+// Casper instantiation
+var casper = require('casper').create({viewportSize: {
+        width: 800,
+        height: 600
+    }});
+
+// Load the login page
+casper.start('http://rnm-ol6-2:9704/analytics', function() {
+  this.echo(this.getTitle());
+  this.capture('casper_screenshots/login.png');
+});
+
+// Do login
+casper.then(function(){
+  this.fill('form#logonForm', { NQUser: 'weblogic' ,
+                                NQPassword: 'Password01'
+                              }, true);
+}).
+waitForUrl('http://rnm-ol6-2:9704/analytics/saw.dll?bieehome',function(){
+  this.echo('Logged into OBIEE','INFO')
+  this.capture('casper_screenshots/afterlogin.png');
+  });
+
+// Now "click" the Dashboards menu
+casper.then(function() {
+  this.echo('Clicking Dashboard menu','INFO')
+  casper.click('#dashboard');
+  this.waitUntilVisible('div.HeaderPopupWindow', function() {
+    this.capture('casper_screenshots/dashboards.png');
+  });
+});
+
+casper.run();
+----
+
+
+So I now get a screenshot of after logging in:
+
+
+image::/images/2014/05/444crt41.png[]
+
+and after “clicking” the Dashboard menu:
+
+
+image::/images/2014/05/443crt42.png[]
+
+The only bit of the script above that isn’t self-explanatory is where I am referencing elements. The references are as link:http://www.w3.org/TR/selectors/?ref=rittmanmead.com#selectors[CSS3 selectors] and are easily found using something like Chrome Developer Tools. Where the click on Dashboards is simulated, there is a `waitUntilVisible` function, which is crucial for making sure that the page has rendered fully. For a user clicking the menu, they’d obviously wait until it appears but computers work much faster so functions like this are important for reining them back.
+
+
+To round off the CasperJS script, let’s add to the above navigating to a Dashboard, snapshotting it (with graphs!), and then logging out.
+
+
+[source]
+----
+[...]
+casper.then(function(){
+  this.echo('Navigating to GCBC Dashboard','INFO')
+  casper.clickLabel('GCBC Dashboard');
+})
+
+casper.waitForUrl('http://rnm-ol6-2:9704/analytics/saw.dll?dashboard', function() {
+  casper.waitWhileVisible('div.AjaxLoadingOpacity', function() {
+    casper.waitWhileVisible('div.ProgressIndicatorDiv', function() {
+      this.capture('casper_screenshots/dashboard.png');
+    })
+  })
+});
+
+casper.then(function() {
+  this.echo('Signing out','INFO')
+  casper.clickLabel('Sign Out');
+});
+----
+
+
+Again, there’s a couple of *waitWhileVisible* functions in there, necessary to get CasperJS to wait until the dashboard has rendered properly. The dashboard rendered is captured thus:
+
+
+image::/images/2014/05/439crt43.png[]
+
+
+== PhantomCSS
+
+
+So now let’s see how we can use the above CasperJS code in conjunction with PhantomCSS to generate a viable regression test scenario for OBIEE.
+
+
+The script remains pretty much the same, except CasperJS’s *capture* gets replaced with a `phantomcss.screenshot` based on an element (`html` for the whole page), and there’s some extra code “footer” to include that executes the actual test.
+
+
+So let’s see how the proposed test method holds up to the examples above - broken links and disappearing reports.
+
+
+First, we run the baseline capture, the “known good”. The console output shows that this is the first time it’s been run, because there are no existing images against which to compare:
+
+
+image::/images/2014/05/438crt44.png[]
+
+In the screenshots folder is the ‘baseline’ image for each of the defined snapshots:
+
+
+image::/images/2014/05/437crt45.png[]
+
+Now let’s break something! First off I’ll rename the target page for one of the links in the central pane of the dashboard, which will cause the ‘Invalid Link Path’ message to display.
+
+
+Now I run the same PhantomCSS test again, and this time it tells me there’s a problem:
+
+
+image::/images/2014/05/436crt46.png[]
+
+When an image is found to differ, a composite of the two highlighting the differences is created:
+
+
+image::/images/2014/05/434crt47.png[]
+
+OK, so first test passed (or rather, failed), but arguably this could have been picked up simply by parsing the page returned from the OBIEE server for known error strings. But what about a disappearing analysis - that’s more difficult to ascertain from the page source alone.
+
+
+Again, PhantomCSS picks up the difference, and highlights it nice and clearly in the generated image:
+
+
+image::/images/2014/05/433crt48.png[]
+
+
+image::/images/2014/05/431crt49.png[]
+
+For the baseline image that you capture it would be against a "gold" version of a dashboard - no point including ad-hoc reports or dashboards under development. You'd also want to work with data that was unchanging, so where available a time filter fixed at a point in the past, rather than 'current day' which will be changing frequently.
+
+
+=== Belts and Braces?
+
+
+So visual regression testing is a great thing, but I think a hybrid approach, of parsing the page contents for text too, is worthwhile. CasperJS provides its own test APIs (which PhantomCSS uses), and we can write simple tests such as the following:
+
+
+[source]
+----
+this.test.assertTextDoesntExist('Invalid Link Path', 'Check for error text on page');
+this.test.assertTextDoesntExist('View Display Error', 'Check for error text on page');
+phantomcss.screenshot('div.DashboardPageContentDiv','GCBC Dashboard page 1');
+----
+
+
+So check for a couple of well-known errors, and then snapshot the page too for subsequent automatic comparison. If an assertion is failed, it shows in the console:
+
+
+image::/images/2014/05/432crt51.png[]
+
+This means that what is already be being done in Selenium (or for which Selenium is an assumed default tool) could even be brought into the same single test rig based around CasperJS/PhantomCSS.
+
+
+== Frame of Reference
+
+
+The eagle-eyed of you will have noticed that the snapshots generated by PhantomCSS above are not the entire OBIEE webpage, whereas the ones from CasperJS earlier in this article are. That is because PhantomCSS deliberately wants to focus on an area of the page to test, identified using a CSS3 selector. So if you are testing a dashboard, then considering the toolbar is irrelevant and can only lead to false-positives.
+
+
+[source]
+----
+phantomcss.screenshot('div.DashboardPageContentDiv','GCBC Dashboard page 1');
+----
+
+
+Similarly, considering the available dashboard list (to validate enforced authorisations) just needs to look at the list itself, not the rest of the page.  (and yes, that does say "Protals" - even developers have fat fingers sometimes ;-) )
+
+
+[source]
+----
+phantomcss.screenshot('div.HeaderSharedProtals','Dashboard list');
+----
+
+
+Using this functionality means that the generated snapshots used for comparison can be done to exclude things like the alerts bar (which may appear or disappear between tests).
+
+
+== The Devil's in the Detail
+
+
+I am in no doubt that the method described above has definitely got its place in the regression testing arsenal for OBIEE. What I am yet to be fully convinced of is quite to what extent. My beef with Selenium et al is the level of detail one has to get in to when writing tests - identifying strings to test for, their location in the DOM, and so on. Yet above in my CasperJS/PhantomCSS examples, I have DOM selectors too, so is this just the same problem? At the moment, I don't think so. For Selenium, to build a comprehensive test, you have to dissect the DOM _for every single test you want to build_. Whereas with CasperJS/PhantomCSS I think there is the need to write a basic framework for OBIEE (the basics of which are provided in this post; you're welcome), which can then be parameterised based on dashboard name and page only. Sure, additional _types_ of tests may need new code, but it would be more _reusable_.
+
+
+Given that OBIEE doesn't come with an out of the box test rig, whatever we build to test it is going to be bespoke, whether its nqcmd, Selenium, JMeter, LoadRunner, OATS, QTP, etc etc -- the smart money is picking the option that will be the most flexible, more scalable, easiest to maintain, and take the least effort to develop. There is no one "program to rule them all" - an accurate, comprehensive, and flexible test suite is invariably going to utilise multiple components focussing on different areas.
+
+
+In the case of regression testing – _what is the aim of the testing_? _What are you looking to validate hasn't broken after what kind of change?_  If all that’s changed in the system is the DBAs adding some indexes or partitioning to the data, I really would not be going anywhere near the front end of OBIEE. However, more complex changes affecting the Presentation Catalog and the RPD can be well covered by this technique in conjunction with nqcmd. Visual regression testing will give you a pass/fail, but then it’s up to you to decipher the images, whereas nqcmd will give you a pass/fail but also an actual set of data to show what has changed.
+
+
+Don't forget that other great tool -- you! Or rather, you and your minions, who can sit at OBIEE for 5 minutes and spot certain regressions that would take magnitudes of order greater in time to build a test to locate. Things like testing for UI/UX changes between OBIEE versions is something that is realistically handled manually. The testing of the dashboards can be automated, but faster than I can even type the requirement, let alone build a test to validate it - does clicking on the save icon bring up the save box? Well go click for yourself - done? Next test.
+
+
+== Summary
+
+
+I have just scratched the surface of what is possible with headless browser scripting for testing OBIEE. Being able to automate and capture the results of browser interactions as we've seen above is hugely powerful. You can find the link:http://docs.casperjs.org/en/latest/modules/casper.html?ref=rittmanmead.com[CasperJS API reference here] if you want to find out more about how it is possible to interact with the web page as a "user".
+
+
+I’ve put the complete PhantomCSS script link:https://gist.github.com/rmoff/81fcbce6220aeb1580f8?ref=rittmanmead.com[online here]. Let me know in the comments section or link:https://twitter.com/rmoff/?ref=rittmanmead.com[via twitter] if you do try it out!
+
+
+_Thanks to link:https://twitter.com/Nephentur?ref=rittmanmead.com[Christian Berg] and link:https://twitter.com/G_Ceresa?ref=rittmanmead.com[Gianni Ceresa] for reading drafts of this article and providing valuable feedback._
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/05/visual-regression-testing-of-obiee-with-phantomcss/[Rittman Mead blog].

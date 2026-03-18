@@ -1,0 +1,252 @@
+---
+title: 'OBIEE / FMW and networking on DHCP hosts'
+date: "2012-08-06T00:00:00+00:00"
+url: "/2012/08/06/obiee-fmw-and-networking-on-dhcp-hosts/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/08/obiee-fmw-and-networking-on-dhcp-hosts/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/08/obiee-fmw-and-networking-on-dhcp-hosts/[Rittman Mead blog].
+
+FMW can be a bit of a sensitive soul when it comes to networking. Something that always seems to antagonise it is running within a VM (both VMWare Fusion and VirtualBox, since you ask). Being on-site at clients I'll often find my laptop's network details change, and because I'm using bridged-networking, the IP of the VM will change. Result: kaput FMW until I restart everything, and carefully-tested demo in the taxi on my way to the site, out of the window.
+
+
+The reason for the complication stems from the machine (could be VM, but applies equally on a 'real' server) using DHCP. OBIEE/FMW has multiple components, which use TCP/IP to communicate. The components will need to address each other, and so that this can work in conjunction with a DHCP-assigned IP address, a *lookback adaptor* is used. The loopback adaptor has a fixed IP address (such as 127.0.0.1) which never changes, and the only purpose of the loopback adaptor is to route traffic within the local machine. The requirement for and configuration of a loopback adaptor in the installation of OBIEE is well documented. However, on a machine where the DHCP-assigned IP address does change (as it can), a problem can still arise, which is discussed below. 
+
+
+Note that on a carefully configured and static network configuration as would be found on a typical Production server, this is a non-issue, so this blog post is more aimed at those doing sandbox work on a VM, or who are having problems configuring their instance in the first place. Bear in mind that OBIEE is an enterprise server product, it's not designed for flaky or transient network configs per se.
+
+
+=== The problem
+
+
+In a nutshell, here is the problem: 
+
+
+. Start up OBIEE stack, everything works
+. The IP assigned by DHCP of the machine changes
+. OBIEE stops working when any calls are attempted between some of the components. For example, from BI Server to the security service (eg when logging in to OBIEE), as it attempts to reach it on the *original* IP (in this example, 192.168.10.87): 
+
++
+[source]
+----
+ [OracleBIServerComponent] Could not connect to the authentication web service (taking OBIS offline) 192.168.10.87: 
+[nQSError: 12002] Socket communication error at call=Connect: (Number=0) Call=NQRpc: An unknown socket communications error has occurred.
+[nQSError: 12010] Communication error connecting to remote end point: address = 192.168.10.87; port = 9704.
+[nQSError: 46119] Failed to open HTTP connection to server 192.168.10.87 at port 9704.]]
+----
++
+
+
+If it were working as intended then the loopback adaptor would be used for all the components' TCP/IP communication, and the changing DHCP-assigned IP address wouldn't make any difference to the functioning of the stack.
+
+
+=== The symptom
+
+
+One of the places that the the IP/hostname used for internal communication is stored is in NQSConfig.ini, in the *FMW_SECURITY_SERVICE_URL* setting. This defines the IP or hostname that BI Server will connect to for the security service, and is what causes the failure shown above (Could not connect to the authentication web service) when the IP changes. Ideally it should be using the hostname (and thus the loopback IP).
+
+
+[source,properties]
+----
+
+FMW_SECURITY_SERVICE_URL = "http://192.168.10.90:9704";  # This Configuration setting is managed by Oracle Business Intelligence Enterprise Manager
+----
+
+
+To make it more confusing, this option is not controlled by EM (strictly speaking) as the comment implies, but actually by an internal WebLogic process .
+
+
+Looking at NQSConfig.ini and instanceconfig.xml it looks like the hostname *is* correctly used elsewhere (for example, JAVAHOST_HOSTNAME_OR_IP_ADDRESSES is correct), so long as the hostnames file has been set up correctly (see below).
+
+
+=== The theory
+
+
+The starting point is RTFM, specifically, link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10539/c4_installing.htm?ref=rittmanmead.com#BABECHJA[Installing Oracle Business Intelligence on a DHCP Host, Non-Network Host, or Multihomed Host]. This redirects to link:http://docs.oracle.com/html/E18558_01/fusion_requirements.htm?ref=rittmanmead.com#BABCJIJD[Oracle Fusion Middleware System Configuration Requirements], which explains the necessity of having in place a loopback adaptor. On Windows, this needs to be installed; on Linux it's in place already. On both Linux and Windows, you need to update your hosts file (/etc/hosts or %SYSTEMROOT%\system32\drivers\etc\hosts respectively).
+
+
+The manual says to put the following in your Windows hosts file, after the standard 127.0.0.1 localhost entry:
+
+
+[source]
+----
+
+IP_address   hostname.domainname   hostname
+----
+
+
+Where IP_address is the IP you assigned the loopback adaptor. 127.0.0.1 on Linux or 10.10.10.10 on Windows is common. So we have a hosts file that looks something like this:
+
+
+[source]
+----
+
+127.0.0.1 localhost
+10.10.10.10 rm-win02.localdomain rm-win02
+----
+
+
+=== Random jiggling & observations
+
+
+[quote]
+____
+_This kind of "I broke things, so now I will jiggle things randomly until they unbreak" is not acceptable. +
+[…] +
+You need to understand the difference between "understanding the problem" and "put in random values until it works on one machine"._
+____
+--link:http://thread.gmane.org/gmane.linux.kernel/1126136?ref=rittmanmead.com[Linus Torvald]
+
+
+* In EM FMW, the Host field in the default landing page (Farm_bifoundation_domain) can vary depending on networking settings. Sometimes it shows the hostname, and at others it shows the DHCP-assigned IP. However, it isn't reflected in the value of FMW_SECURITY_SERVICE_URL as one might think - it always uses the IP (DHCP-assigned). 
++
+image::/images/2012/08/061251nic-ip.png[Nic ip]
++
+image::/images/2012/08/061250nic-ip-2.png[Nic ip 2]
++
+
+As suggested on a couple of articles, I tried splitting my hosts file onto one line per host entry, and I also checked on Windows network settings Advanced Settings -> Connections for the order in which connections were used. Neither made a difference to the problem.
+Putting a fully qualified domain name (FQDN) on the hostname in the hosts file made no difference
+Make sure that you have an entry in your hosts file against the loopback adaptor IP matching the value of the *hosts* attribute of the *OracleInstance* element in $FMW_HOME/user_projects/domains/bifoundation_domain/config/fmwconfig/biee-domain.xml. You can also see this value in EM under the *Scalability* tab
+If I ignore the documentation and instead set my hosts file so that the hostname matches the _IP that the LAN network adaptor reports_ (e.g. 192.168.10.87), then when starting the AdminServer, FMW picks up the hostname and shows it in Enterprise Manager. However, if the IP changes, you will need to update the hosts file, otherwise things stop working (because FMW is resolving the hostname to the external IP, not to the loopback). This seems like the wrong step, because it is the purpose of the loopback adaptor hosts entry. It does avoid having to bounce the OBIEE stack when the DHCP-IP does change though.
+Changing the type of VM network configuration (using NAT/host-only/bridged) makes no difference
+The hostname shown in EM (see screenshot above) can be influenced by the order of aliases listed in the hosts file against an IP
+The AdminServer log shows the IPs being detected, note the first line is a warning, code BEA-002611 (Hostname ... maps to multiple IP addresses)
+
+
+[source]
+----
+
+<BEA-002611> <Hostname "rm-win02", maps to multiple IP addresses: 10.10.10.10, 192.168.10.86>
+<BEA-002613> <Channel "Default[2]" is now listening on 127.0.0.1:7001 for protocols iiop, t3, ldap, snmp, http.>
+<BEA-002613> <Channel "Default" is now listening on 192.168.10.86:7001 for protocols iiop, t3, ldap, snmp, http.>
+<BEA-002613> <Channel "Default[1]" is now listening on 10.10.10.10:7001 for protocols iiop, t3, ldap, snmp, http.>
+----
+
+The same log entry appears regardless of whether IP or hostname is shown in Enterprise Manager.
+
+
+=== Workarounds & Resolution
+
+
+Here are some "workarounds" that result in FMW using up the hostname rather than DHCP-assigned IP:
+
+
+. Disable the external network adaptor, i.e. leave only loopback enabled
+. Use Host-only networking for the VM, so that the IP associated never changes
+. Use NAT networking for my VM, so that the IP associated never changes
+. Reboot each time the IP changes, or at least restart the OBIEE stack
+. Assign a fixed ListenAddress to the managed server (bi_server1)
+
+
+Options 1 and 2 are impractical - I like being able to access t'internet from within my VM (e.g. Windows Updates, etc). 
+
+Option 3 is a possibility, but I've had reasons in the past to not want to use NAT (eg you can't then access the VM from a browser or SSH on the host).
+
+
+Option 4 sounds daft, but you'd be surprised how often this is actually the most practical!
+
+
+Option 5 is the preferred option, and the one documented in part in the My Oracle Support entry link:https://support.oracle.com/epmos/faces/ui/km/DocumentDisplay.jspx?id=1410233.1&ref=rittmanmead.com[OBIEE 11g: How To Bind Components / Ports To A Specific IP Address On Multiple Network Interface (NIC) Machines &#91;ID 1410233.1&#93;]. For the purposes of my sanity, I only needed to fix the ListenAddress for bi_server1 and everything else worked fine, but it's worth being aware of this article in full as it also details binding each of the components within the OBIEE stack to a particular IP or hostname.
+
+
+=== Configuring the ListenAddress
+
+
+Login to the Administration Server Console (http://yourserver:7001/console normally). Click on the Servers link
+
+
+image::/images/2012/08/061253NIC01.png[NIC01]
+
+Assuming you have an Enterprise deployment, click on the managed server (bi_server1). If it's a Simple install, click on AdminServer
+
+
+image::/images/2012/08/061252NIC02.png[NIC02]
+
+Lock and Edit the configuration, so that you can make changes to it. If you don't, the options will be greyed out and not editable.
+
+
+image::/images/2012/08/061248NIC03.png[NIC03]
+
+Locate *Listen Address* and set it to your hostname. Click on *Save*.
+
+
+image::/images/2012/08/061249NIC04-1.png[NIC04 1]
+
+Activate your change by clicking on *Activate*.
+
+
+image::/images/2012/08/061247NIC05.png[NIC05]
+
+
+image::/images/2012/08/061245NIC06.png[NIC06]
+
+Once activated, you need to restart the server (managed server, or AdminServer, depending on which you've changed the configuration of) to pick up the change. After the restart, the NQSConfig.ini file should now have the hostname under FMW_SECURITY_SERVICE_URL: 
+
+
+image::/images/2012/08/061246nic-2.png[Nic 2]
+and EM shows the hostname instead of IP against the managed server: 
+
+
+image::/images/2012/08/061244nic_bi-server1-after-listenaddress.png[Nic bi server1 after listenaddress]
+
+Also note in the server log at startup instead of a message about multiple IPs, there is just the single - loopback - IP: 
+
+
+[source]
+----
+<BEA-002613> <Channel "Default" is now listening on 10.10.10.10:9704 for protocols iiop, t3, CLUSTER-BROADCAST, ldap, snmp, http.>
+----
+
+The above example sets the *Listen Address* for the managed server, which seems to be sufficient for causing FMW_SECURITY_SERVICE_URL to use the hostname. It does make sense to set ListenAddress for AdminServer to the hostname too though, following the same process as above. Once done, both AdminServer and the managed server show the hostname in EM: 
+
+
+image::/images/2012/08/061242nic_hostcorrect-11.png[Nic hostcorrect 1]
+
+
+=== Listen address complications
+
+
+Too good to be true? Well, there is a small gotcha to be aware of. When you specify a *Listen Address* for a WebLogic server, it will only listen for (and thus respond) to traffic on the IP of that address. We can see this in the server log when we restart after configuring a Listen Address: 
+
+
+[source]
+----
+<BEA-002613> <Channel "Default" is now listening on 10.10.10.10:9704 for protocols iiop, t3, CLUSTER-BROADCAST, ldap, snmp, http.>
+----
+
+This is fine if we are working locally on the machine, as we can use the hostname (which resolves to the loopback address, eg 10.10.10.10) for OBIEE and all is well. The problem is accessing OBIEE from a different machine. If we want to access it externally, then we obviously need the machine's external IP, which is the DHCP-assigned IP. If we *haven't* configured a Listen Address, then the Web Logic server listens (and responds) for traffic on all IPs it can find, which includes the DHCP-assigned IP. We can see this in the log too : 
+
+
+[source]
+----
+
+<BEA-002611> <Hostname "rm-win02", maps to multiple IP addresses: 10.10.10.10, 192.168.10.86>
+<BEA-002613> <Channel "Default[2]" is now listening on 127.0.0.1:7001 for protocols iiop, t3, ldap, snmp, http.>
+<BEA-002613> <Channel "Default" is now listening on 192.168.10.86:7001 for protocols iiop, t3, ldap, snmp, http.>
+<BEA-002613> <Channel "Default[1]" is now listening on 10.10.10.10:7001 for protocols iiop, t3, ldap, snmp, http.>
+----
+
+So in this case we could access OBIEE on this machine from an external machine using the address http://192.168.10.86:9704/analytics. But if we try to use that address once *Listen Address* has been configured then it won't work, because FMW resolves the hostname given as the Listen Address into the IP for the hostname found in the hosts file - which if you've followed the documentation should be the loopback address. Therefore a request coming in on a different IP (the DHCP-assigned IP) will just be ignored - you won't get an error, because to all intents and purposes, there is no server to even respond with an error page on that address.
+
+
+One way around this is to put the machine's DHCP-assigned IP in the hosts file for the hostname, but still use Listen Address. This way FMW_SECURITY_SERVICE_URL gets set correctly (to the hostname, from Listen Address) but the Web Logic server listens on the DHCP-assigned IP (which it resolves from the hosts file). If the DHCP IP changes, the host file would need to be updated.
+
+
+What we're getting to here is a long way from any kind of realistic "proper" OBIEE installation, and more into the realms of sandpit environments where it's useful to know how to force things to work together but not so relevant for a Production installation on a fixed-IP server. 
+
+
+=== Summary
+
+
+If you are installing OBIEE on a standalone server with a static IP, the above probably does not apply to you. Similarly, if you're using DHCP but on a machine where the assigned IP isn't going to change, you probably don't need the above information. 
+
+If you are using a machine with DHCP-assigned IP and this IP is changing - for example, a VM on a host laptop which switches between networks - then you probably want to understand the issue and consider configuring ListenAddress as described.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/08/obiee-fmw-and-networking-on-dhcp-hosts/[Rittman Mead blog].
