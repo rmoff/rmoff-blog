@@ -17,13 +17,13 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/07/using-sparksql-pandas-import-data-big-data-discovery/[Rittman Mead blog].
 
-link:https://www.oracle.com/big-data/big-data-discovery/index.html?ref=rittmanmead.com[Big Data Discovery] (BDD) is a great tool for exploring, transforming, and visualising data stored in your organisation’s Data Reservoir. I presented a link:https://speakerdeck.com/rmoff/unlock-the-value-in-your-big-data-reservoir-using-oracle-big-data-discovery-and-oracle-big-data-spatial-and-graph?ref=rittmanmead.com[workshop on it at a recent conference], and got an interesting question from the audience that I thought I’d explore further here. Currently the primary route for getting data into BDD requires that it be (i) in HDFS and (ii) have a Hive table defined on top of it. From there, BDD automagically ingests the Hive table, or the `data_processing_CLI` is manually called which prompts the BDD DGraph engine to go and sample (or read in full) the Hive dataset.
+link:https://www.oracle.com/big-data/big-data-discovery/index.html[Big Data Discovery] (BDD) is a great tool for exploring, transforming, and visualising data stored in your organisation’s Data Reservoir. I presented a link:https://speakerdeck.com/rmoff/unlock-the-value-in-your-big-data-reservoir-using-oracle-big-data-discovery-and-oracle-big-data-spatial-and-graph[workshop on it at a recent conference], and got an interesting question from the audience that I thought I’d explore further here. Currently the primary route for getting data into BDD requires that it be (i) in HDFS and (ii) have a Hive table defined on top of it. From there, BDD automagically ingests the Hive table, or the `data_processing_CLI` is manually called which prompts the BDD DGraph engine to go and sample (or read in full) the Hive dataset.
 
 
-This is great, and works well where the dataset is vast (this is Big Data, after all) and needs the sampling that DGraph provides. It’s also simple enough for Hive tables that have already been defined, perhaps by another team. But - and this was the gist of the question that I got - what about where the Hive table _doesn’t_ exist already? Because if it doesn’t, we now need to declare all the columns as well as choose the all-important link:https://cwiki.apache.org/confluence/display/Hive/SerDe?ref=rittmanmead.com[SerDe] in order to read the data.
+This is great, and works well where the dataset is vast (this is Big Data, after all) and needs the sampling that DGraph provides. It’s also simple enough for Hive tables that have already been defined, perhaps by another team. But - and this was the gist of the question that I got - what about where the Hive table _doesn’t_ exist already? Because if it doesn’t, we now need to declare all the columns as well as choose the all-important link:https://cwiki.apache.org/confluence/display/Hive/SerDe[SerDe] in order to read the data.
 
 
-link:https://cwiki.apache.org/confluence/display/Hive/SerDe?ref=rittmanmead.com[SerDes] are brilliant, in that they enable the application of a schema-on-read to data in many forms, but at the very early stages of a data project there are probably going to be lots of formats of data (such as TSV, CSV, JSON, as well as log files and so on) from varying sources. Choosing the relevant SerDe for each one, and making sure that BDD is also configured with the necessary `jar`, as well as manually listing each column to be defined in the table, adds overhead to the project. Wouldn’t it be nice if we could side-step this step somehow? In this article we’ll see how!
+link:https://cwiki.apache.org/confluence/display/Hive/SerDe[SerDes] are brilliant, in that they enable the application of a schema-on-read to data in many forms, but at the very early stages of a data project there are probably going to be lots of formats of data (such as TSV, CSV, JSON, as well as log files and so on) from varying sources. Choosing the relevant SerDe for each one, and making sure that BDD is also configured with the necessary `jar`, as well as manually listing each column to be defined in the table, adds overhead to the project. Wouldn’t it be nice if we could side-step this step somehow? In this article we’ll see how!
 
 
 == Importing Datasets through BDD Studio
@@ -44,13 +44,13 @@ This is great for smaller files held locally. But what about files on your BDD c
 As we’ve just seen, CSV files can be imported to Hive/BDD directly through the GUI. But perhaps you’ve got a large CSV file sat local to BDD that you want to import? Or a folder full of varying CSV files that would be too time-consuming to upload through the GUI one-by-one?
 
 
-For this we can use BDD Shell with the Python link:http://pandas.pydata.org/?ref=rittmanmead.com[Pandas] library, and I’m going to do so here through the excellent Jupyter Notebooks interface. You can read more about these link:http://www.rittmanmead.com/2016/06/using-jupyter-notebooks-big-data-discovery-1-2/?ref=rittmanmead.com[here] and details of link:http://www.rittmanmead.com/2016/06/running-big-data-discovery-shell-jupyter-notebook-big-data-lite-vm-4-5/?ref=rittmanmead.com[how to configure them on BigDataLite 4.5 here]. The great thing about notebooks, whether link:http://jupyter.org/?ref=rittmanmead.com[Jupyter] or link:https://zeppelin.apache.org/?ref=rittmanmead.com[Zeppelin], is that I don’t need to write any more blog text here - I can simply embed the notebook inline and it is self-documenting:
+For this we can use BDD Shell with the Python link:http://pandas.pydata.org/[Pandas] library, and I’m going to do so here through the excellent Jupyter Notebooks interface. You can read more about these link:http://www.rittmanmead.com/2016/06/using-jupyter-notebooks-big-data-discovery-1-2/[here] and details of link:http://www.rittmanmead.com/2016/06/running-big-data-discovery-shell-jupyter-notebook-big-data-lite-vm-4-5/[how to configure them on BigDataLite 4.5 here]. The great thing about notebooks, whether link:http://jupyter.org/[Jupyter] or link:https://zeppelin.apache.org/[Zeppelin], is that I don’t need to write any more blog text here - I can simply embed the notebook inline and it is self-documenting:
 
 
-link:https://gist.github.com/76b477f69303dd8a9d8ee460a341c445?ref=rittmanmead.com[https://gist.github.com/76b477f69303dd8a9d8ee460a341c445]
+link:https://gist.github.com/76b477f69303dd8a9d8ee460a341c445[https://gist.github.com/76b477f69303dd8a9d8ee460a341c445]
 
 
-(link:https://gist.github.com/76b477f69303dd8a9d8ee460a341c445?ref=rittmanmead.com[gist link])
+(link:https://gist.github.com/76b477f69303dd8a9d8ee460a341c445[gist link])
 
 
 Note that at end of this we call `data_processing_CLI` to automatically bring the new table into BDD’s DGraph engine for use in BDD Studio. If you’ve got BDD configured to automagically add new Hive tables, or you don’t want to run this step, you can just comment it out.
@@ -59,13 +59,13 @@ Note that at end of this we call `data_processing_CLI` to automatically bring th
 == Loading simple JSON data
 
 
-Whilst CSV files are tabular by definition, link:http://www.w3schools.com/json/json_syntax.asp?ref=rittmanmead.com[JSON] records can contain nested objects (recursively), as well as arrays. Let’s look at an example of using link:http://spark.apache.org/docs/latest/sql-programming-guide.html?ref=rittmanmead.com#json-datasets[SparkSQL] to import a simple flat JSON file, before then considering how we handle nested and array formats. Note that SparkSQL can read datasets from both local (`file://`) storage as well as HDFS (`hdfs://`):
+Whilst CSV files are tabular by definition, link:http://www.w3schools.com/json/json_syntax.asp[JSON] records can contain nested objects (recursively), as well as arrays. Let’s look at an example of using link:http://spark.apache.org/docs/latest/sql-programming-guide.html#json-datasets[SparkSQL] to import a simple flat JSON file, before then considering how we handle nested and array formats. Note that SparkSQL can read datasets from both local (`file://`) storage as well as HDFS (`hdfs://`):
 
 
-link:https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c?ref=rittmanmead.com[https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c]
+link:https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c[https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c]
 
 
-(link:https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c?ref=rittmanmead.com[gist link])
+(link:https://gist.github.com/8b7118c230f34f7d57bd9b0aa4e0c34c[gist link])
 
 
 Once loaded into Hive, it can be viewed in Hue:
@@ -216,10 +216,10 @@ image::/images/2016/07/62cbdd12-e1468420032861.png[]
 Attributes in an _array_ are a bit more tricky. Here’s an example tweet with multiple `user_mentions` and a `hashtag` too:
 
 
-link:https://twitter.com/flederbine/status/752940179569115136?ref=rittmanmead.com[https://twitter.com/flederbine/status/752940179569115136]
+link:https://twitter.com/flederbine/status/752940179569115136[https://twitter.com/flederbine/status/752940179569115136]
 
 
-Here we use the link:https://cwiki.apache.org/confluence/display/Hive/LanguageManual+LateralView?ref=rittmanmead.com[`LATERAL VIEW`] syntax, with the optional `OUTER` operator since not all tweets have these additional entities, and we want to make sure we show all tweets including those that don’t have these entities. Here’s the SQL formatted for reading:
+Here we use the link:https://cwiki.apache.org/confluence/display/Hive/LanguageManual+LateralView[`LATERAL VIEW`] syntax, with the optional `OUTER` operator since not all tweets have these additional entities, and we want to make sure we show all tweets including those that don’t have these entities. Here’s the SQL formatted for reading:
 
 
 [source,sql]
@@ -279,27 +279,27 @@ sqlContext.sql("SELECT hashtag.text,count(*) as inst_count from twitter  LATERAL
 You can find the full Jupyter Notebook with all these nested/array JSON examples here:
 
 
-link:https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff?ref=rittmanmead.com[https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff]
+link:https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff[https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff]
 
 
-(link:https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff?ref=rittmanmead.com[gist link])
+(link:https://gist.github.com/a38e853d3a7dcb48a9df99ce1e3505ff[gist link])
 
 
-You may decide after looking at this that you’d rather just go back to Hive and SerDes, and as is frequently the case in ‘data wrangling’ there’s multiple ways to achieve the same end. The route you take comes down to personal preference and familiarity with the toolsets. In this particular case I'd still go for SparkSQL for the initial exploration as it's quicker to 'poke around' the dataset than with defining and re-defining Hive tables -- link:http://dictionary.cambridge.org/dictionary/english/ymmv?ref=rittmanmead.com[YMMV]. A final point to consider before we dig in is that SparkSQL importing JSON and saving back to HDFS/Hive is a static process, and if your underlying data is changing (e.g. streaming to HDFS from Flume) then you *would* probably want a Hive table over the HDFS file so that it is live when queried.
+You may decide after looking at this that you’d rather just go back to Hive and SerDes, and as is frequently the case in ‘data wrangling’ there’s multiple ways to achieve the same end. The route you take comes down to personal preference and familiarity with the toolsets. In this particular case I'd still go for SparkSQL for the initial exploration as it's quicker to 'poke around' the dataset than with defining and re-defining Hive tables -- link:http://dictionary.cambridge.org/dictionary/english/ymmv[YMMV]. A final point to consider before we dig in is that SparkSQL importing JSON and saving back to HDFS/Hive is a static process, and if your underlying data is changing (e.g. streaming to HDFS from Flume) then you *would* probably want a Hive table over the HDFS file so that it is live when queried.
 
 
 == Loading an Excel workbook with many sheets
 
 
-This was the use-case that led me to researching programmatic import of datasets in the first place. I was doing some work with a dataset of link:https://data.gov.uk/dataset/road-accidents-safety-data?ref=rittmanmead.com[road traffic accident data], which included a single XLS file with over 30 sheets, each a lookup table for a separate set of dimension attributes. Importing each sheet one by one through the BDD GUI was tedious, and being a lazy geek, I looked to automate it.
+This was the use-case that led me to researching programmatic import of datasets in the first place. I was doing some work with a dataset of link:https://data.gov.uk/dataset/road-accidents-safety-data[road traffic accident data], which included a single XLS file with over 30 sheets, each a lookup table for a separate set of dimension attributes. Importing each sheet one by one through the BDD GUI was tedious, and being a lazy geek, I looked to automate it.
 
 
 Using Pandas `read_excel` function and a smidge of Python to loop through each sheet it was easily done. You can see the full notebook here:
 
 
-link:https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22?ref=rittmanmead.com[https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22]
+link:https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22[https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22]
 
 
-(link:https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22?ref=rittmanmead.com[gist link])
+(link:https://gist.github.com/rmoff/3fa5d857df8ca5895356c22e420f3b22[gist link])
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/07/using-sparksql-pandas-import-data-big-data-discovery/[Rittman Mead blog].

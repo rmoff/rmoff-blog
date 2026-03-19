@@ -24,10 +24,10 @@ In my link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-s
 We're going to stay with Twitter as our data source in this post, but we're going to consider a real-world requirement for processing Twitter data with low-latency. Spark Streaming will again be our processing engine, with future posts looking at other possibilities in this area.
 
 
-Twitter has come a long way from its link:https://twitter.com/jack/status/20?ref=rittmanmead.com[early days] as a SMS-driven "microblogging" site. Nowadays it's used by millions of people to link:https://twitter.com/markrittman/status/819567341977608192?ref=rittmanmead.com[discuss technology], share link:https://twitter.com/orcldoug/status/722416658598342656?ref=rittmanmead.com[food] link:https://twitter.com/rmoff/status/674146293455953920?ref=rittmanmead.com[tips], and, of course, link:https://twitter.com/markrittman/status/785763443185942529?ref=rittmanmead.com[track the progress of tea-making]. But it's also used for more nefarious purposes, including spam, and sharing of links to pirated material. The requirement we had for this proof of concept was to filter tweets for suspected copyright-infringing links in order that further action could be taken.
+Twitter has come a long way from its link:https://twitter.com/jack/status/20[early days] as a SMS-driven "microblogging" site. Nowadays it's used by millions of people to link:https://twitter.com/markrittman/status/819567341977608192[discuss technology], share link:https://twitter.com/orcldoug/status/722416658598342656[food] link:https://twitter.com/rmoff/status/674146293455953920[tips], and, of course, link:https://twitter.com/markrittman/status/785763443185942529[track the progress of tea-making]. But it's also used for more nefarious purposes, including spam, and sharing of links to pirated material. The requirement we had for this proof of concept was to filter tweets for suspected copyright-infringing links in order that further action could be taken.
 
 
-The environment I'm using is the same as link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/[before] - Spark 2.0.2 running on link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook?ref=rittmanmead.com[Docker] with Jupyter Notebooks to develop the code (and this article!). You can download the full notebook link:https://gist.github.com/rmoff/5ee715f6c2bdf7ee878de3ac1d58c0ec?ref=rittmanmead.com[here].
+The environment I'm using is the same as link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/[before] - Spark 2.0.2 running on link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook[Docker] with Jupyter Notebooks to develop the code (and this article!). You can download the full notebook link:https://gist.github.com/rmoff/5ee715f6c2bdf7ee878de3ac1d58c0ec[here].
 
 
 The inbound tweets are coming from an Apache Kafka topic. Any matched tweets will be sent to another Kafka topic. The match criteria are:
@@ -58,7 +58,7 @@ The final part of the requirement is to keep track of the number of inbound twee
 Before we get into the meat of the streaming code, let's take a step back and look at what we're wanting the code to achieve. From the link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/[previous examples] we know we can connect to a Kafka topic, pull in tweets, parse them for given fields, and do windowed counts. So far, so easy (or at least, already figured out!). Let's take a look at nub of the requirement here - the text matching.
 
 
-If we peruse the link:http://www.bbc.co.uk/radio1/chart/albums?ref=rittmanmead.com[BBC Radio 1 Charts] we can see the popular albums and artists of the moment (_Grant me a little nostalgia here; in my day people 'pirated' music from the Radio 1 chart show onto link:http://www.urban75.org/blog/c30-c60-c90-go-so-farewell-then-trusty-old-cassettes/?ref=rittmanmead.com[C90 cassettes], trying to get it without the DJ talking over the start and end. Nowadays it's done on a somewhat more technologically advanced basis_). Currently it's "Little Mix" with the album "Glory Days". A quick Wikipedia or Amazon search gives us the track listing too:
+If we peruse the link:http://www.bbc.co.uk/radio1/chart/albums[BBC Radio 1 Charts] we can see the popular albums and artists of the moment (_Grant me a little nostalgia here; in my day people 'pirated' music from the Radio 1 chart show onto link:http://www.urban75.org/blog/c30-c60-c90-go-so-farewell-then-trusty-old-cassettes/[C90 cassettes], trying to get it without the DJ talking over the start and end. Nowadays it's done on a somewhat more technologically advanced basis_). Currently it's "Little Mix" with the album "Glory Days". A quick Wikipedia or Amazon search gives us the track listing too:
 
 
 [source,python]
@@ -84,14 +84,12 @@ If we peruse the link:http://www.bbc.co.uk/radio1/chart/albums?ref=rittmanmead.c
 A quick twitter search for the first track title gives us this tweet - I have no idea if it's legit or not, but it serves as an example for our matching code requirements:
 
 
-[quote]
-____
-DOWNLOAD MP3: Little Mix – Shout Out To My Ex (CDQ) Track link:https://t.co/C30c4Fel4u?ref=rittmanmead.com[https://t.co/C30c4Fel4u] link:https://t.co/wJjyG4cdjE?ref=rittmanmead.com[pic.twitter.com/wJjyG4cdjE]
-— Ngvibes Media (@ngvibes_com) link:https://twitter.com/ngvibes_com/status/794104195922083840?ref=rittmanmead.com[November 3, 2016]
-____
+++++
+{{< x user="ngvibes_com" id="794104195922083840" >}}
+++++
 
 
-Using the link:https://dev.twitter.com/rest/reference/get/statuses/show/id?ref=rittmanmead.com[Twitter developer API] I can retrieve the JSON for this tweet directly. I'm using the excellent link:https://paw.cloud/?ref=rittmanmead.com[Paw] tool to do this.
+Using the link:https://dev.twitter.com/rest/reference/get/statuses/show/id[Twitter developer API] I can retrieve the JSON for this tweet directly. I'm using the excellent link:https://paw.cloud/[Paw] tool to do this.
 
 
 image::/images/2017/01/ssc02.png[]
@@ -201,11 +199,9 @@ In the old days retweets were simply reposting the same tweet with a `RT` prefix
 *Original* tweet:
 
 
-[quote]
-____
-Because we all know how "careful" Trump is about not being recorded when he's not aware of it. link:https://twitter.com/hashtag/BillyBush?src=hash&ref=rittmanmead.com[#BillyBush] link:https://twitter.com/hashtag/GoldenGate?src=hash&ref=rittmanmead.com[#GoldenGate]
-— George Takei (@GeorgeTakei) link:https://twitter.com/GeorgeTakei/status/819342218611728384?ref=rittmanmead.com[January 12, 2017]
-____
+++++
+{{< x user="GeorgeTakei" id="819342218611728384" >}}
+++++
 
 
 [source,json]

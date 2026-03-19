@@ -22,13 +22,13 @@ NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog
 Last month I wrote a link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[series of articles] in which I looked at the use of Spark for performing data transformation and manipulation. This was in the context of replatforming an existing Oracle-based ETL and datawarehouse solution onto cheaper and more elastic alternatives. The processing that I wrote was very much batch-focussed; read a set of files from block storage ('disk'), process and enrich the data, and write it back to block storage.
 
 
-In this article I am going to look at link:https://spark.apache.org/streaming/?ref=rittmanmead.com[Spark Streaming]. This is one of several libraries that the link:https://spark.apache.org/?ref=rittmanmead.com[Spark platform] provides (others include link:https://spark.apache.org/sql/?ref=rittmanmead.com[Spark SQL], link:https://spark.apache.org/mllib/?ref=rittmanmead.com[Spark MLlib], and link:https://spark.apache.org/graphx/?ref=rittmanmead.com[Spark GraphX]). Spark Streaming provides a way of processing "unbounded" data - commonly referred to as "streaming" data. It does this by breaking it up into microbatches, and supporting windowing capabilities for processing across multiple batches. You can read more in the excellent link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com[Streaming Programming Guide].
+In this article I am going to look at link:https://spark.apache.org/streaming/[Spark Streaming]. This is one of several libraries that the link:https://spark.apache.org/[Spark platform] provides (others include link:https://spark.apache.org/sql/[Spark SQL], link:https://spark.apache.org/mllib/[Spark MLlib], and link:https://spark.apache.org/graphx/[Spark GraphX]). Spark Streaming provides a way of processing "unbounded" data - commonly referred to as "streaming" data. It does this by breaking it up into microbatches, and supporting windowing capabilities for processing across multiple batches. You can read more in the excellent link:https://spark.apache.org/docs/latest/streaming-programming-guide.html[Streaming Programming Guide].
 
 
 image::/images/2017/01/streaming-flow.png[]
 
 
-(link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com[image src])
+(link:https://spark.apache.org/docs/latest/streaming-programming-guide.html[image src])
 
 
 == Why Stream Processing?
@@ -43,10 +43,10 @@ By taking a stream processing approach we can benefit in several ways. The most 
 For more details and discussion of streaming in depth and some of its challenges, I would recommend:
 
 
-* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101?ref=rittmanmead.com[The world beyond batch: Streaming 101]
-* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102?ref=rittmanmead.com[The world beyond batch: Streaming 102]
-* link:https://www.oreilly.com/ideas/data-architectures-for-streaming-applications?ref=rittmanmead.com[Data architectures for streaming applications]
-* link:https://www.se-radio.net/2016/10/se-radio-episode-272-frances-perry-on-apache-beam/?ref=rittmanmead.com[SE-Radio Episode 272: Frances Perry on Apache Beam]
+* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101[The world beyond batch: Streaming 101]
+* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102[The world beyond batch: Streaming 102]
+* link:https://www.oreilly.com/ideas/data-architectures-for-streaming-applications[Data architectures for streaming applications]
+* link:https://www.se-radio.net/2016/10/se-radio-episode-272-frances-perry-on-apache-beam/[SE-Radio Episode 272: Frances Perry on Apache Beam]
 
 
 == Use-Case and Development Environment
@@ -55,16 +55,16 @@ For more details and discussion of streaming in depth and some of its challenges
 So with that case made above for stream processing, I'm actually going to go back to a very modest example. The use-case I'm going to put together is - almost inevitably for a generic unbounded data example - using Twitter, read from an Apache Kafka topic.  We'll start simply, counting the number of tweets per user within each batch and doing some very simple string manipulations. After that we'll see how to do the same but over a period of time (windowing). In the link:https://www.rittmanmead.com/blog/2017/01/data-processing-and-enrichment-in-spark-streaming-with-python-and-kafka[next blog] we'll extend this further into a more useful example, still based on Twitter but demonstrating how to satisfy some real-world requirements in the processing.
 
 
-I developed all of this code using link:https://jupyter.org/?ref=rittmanmead.com[Jupyter] Notebooks. I've link:https://www.rittmanmead.com/blog/tag/jupyter/[written before] about how awesome notebooks are (along with link:https://jupyter.org/?ref=rittmanmead.com[Jupyter], there's link:https://zeppelin.apache.org/?ref=rittmanmead.com[Apache Zeppelin]). As well as providing a superb development environment in which both the code and the generated results can be seen, Jupyter gives the option to download a Notebook to link:https://en.wikipedia.org/wiki/Markdown?ref=rittmanmead.com[Markdown]. This blog runs on link:https://ghost.org/?ref=rittmanmead.com[Ghost], which uses Markdown as its native syntax for composing posts - so in fact what you're reading here comes directly from the notebook in which I developed the code. Pretty cool.
+I developed all of this code using link:https://jupyter.org/[Jupyter] Notebooks. I've link:https://www.rittmanmead.com/blog/tag/jupyter/[written before] about how awesome notebooks are (along with link:https://jupyter.org/[Jupyter], there's link:https://zeppelin.apache.org/[Apache Zeppelin]). As well as providing a superb development environment in which both the code and the generated results can be seen, Jupyter gives the option to download a Notebook to link:https://en.wikipedia.org/wiki/Markdown[Markdown]. This blog runs on link:https://ghost.org/[Ghost], which uses Markdown as its native syntax for composing posts - so in fact what you're reading here comes directly from the notebook in which I developed the code. Pretty cool.
 
 
 image::/images/2017/01/ssc01.png[]
 
 
-_If you want can view the link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf?ref=rittmanmead.com[notebook online here], and from there download it and run it live on your own Jupyter instance_.
+_If you want can view the link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[notebook online here], and from there download it and run it live on your own Jupyter instance_.
 
 
-I used the docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook?ref=rittmanmead.com[all-spark-notebook] to provide both Jupyter and the Spark runtime environment. By using Docker I don't have to really worry about provisioning the platform on which I want to develop the code - I can just dive straight in and start coding. As and when I'm ready to deploy the code to a 'real' execution environment (link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-3-running-pyspark-on-emr/[for example EMR]), _then_ I can start to worry about that. The only external aspect was an Apache Kafka cluster that I had already, with tweets from the live Twitter feed on an Apache Kafka topic imaginatively called `twitter`.
+I used the docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook[all-spark-notebook] to provide both Jupyter and the Spark runtime environment. By using Docker I don't have to really worry about provisioning the platform on which I want to develop the code - I can just dive straight in and start coding. As and when I'm ready to deploy the code to a 'real' execution environment (link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-3-running-pyspark-on-emr/[for example EMR]), _then_ I can start to worry about that. The only external aspect was an Apache Kafka cluster that I had already, with tweets from the live Twitter feed on an Apache Kafka topic imaginatively called `twitter`.
 
 
 To run the code in Jupyter, you can put the cursor in each cell and press Shift-Enter to run it each cell at a time -- or you can use menu option `Kernel` -> `Restart & Run All`. When a cell is executing you'll see a `[*]` next to it, and once the execution is complete this changes to `[y]` where `y` is execution step number. Any output from that step will be shown immediately below it.
@@ -82,7 +82,7 @@ To run the code standalone, you would download the `.py` from Jupyter, and execu
 == Preparing the Environment
 
 
-We need to make sure that the packages we're going to use are available to Spark. Instead of downloading `jar` files and worrying about paths, we can instead use the `--packages` option and specify the group/artifact/version based on what's available on link:https://search.maven.org/?ref=rittmanmead.com#search%7Cgav%7C1%7Cg%3A%22org.apache.spark%22%20AND%20a%3A%22spark-streaming-kafka-0-8-assembly_2.11%22[Maven] and Spark will handle the downloading. We specify `PYSPARK_SUBMIT_ARGS` for this to get passed correctly when executing from within Jupyter.
+We need to make sure that the packages we're going to use are available to Spark. Instead of downloading `jar` files and worrying about paths, we can instead use the `--packages` option and specify the group/artifact/version based on what's available on link:https://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.apache.spark%22%20AND%20a%3A%22spark-streaming-kafka-0-8-assembly_2.11%22[Maven] and Spark will handle the downloading. We specify `PYSPARK_SUBMIT_ARGS` for this to get passed correctly when executing from within Jupyter.
 
 
 [source,python]
@@ -130,7 +130,7 @@ sc.setLogLevel("WARN")
 We pass the Spark context (from above) along with the batch duration which here is set to 60 seconds.
 
 
-See the link:https://spark.apache.org/docs/latest/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.StreamingContext[API reference] and link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#initializing-streamingcontext[programming guide] for more details.
+See the link:https://spark.apache.org/docs/latest/api/python/pyspark.streaming.html#pyspark.streaming.StreamingContext[API reference] and link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#initializing-streamingcontext[programming guide] for more details.
 
 
 [source,python]
@@ -145,7 +145,7 @@ ssc = StreamingContext(sc, 60)
 Using the native Spark Streaming Kafka capabilities, we use the streaming context from above to connect to our Kafka cluster. The topic connected to is `twitter`, from consumer group `spark-streaming`. The latter is an arbitrary name that can be changed as required.
 
 
-For more information see the link:https://spark.apache.org/docs/latest/streaming-kafka-0-8-integration.html?ref=rittmanmead.com[documentation].
+For more information see the link:https://spark.apache.org/docs/latest/streaming-kafka-0-8-integration.html[documentation].
 
 
 [source,python]
@@ -160,7 +160,7 @@ kafkaStream = KafkaUtils.createStream(ssc, 'cdh57-01-node-01.moffatt.me:2181', '
 === Parse the inbound message as json
 
 
-The inbound stream is a link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.DStream[`DStream`], which supports various built-in link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#transformations-on-dstreams[transformations] such as `map` which is used here to parse the inbound messages from their native JSON format.
+The inbound stream is a link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[`DStream`], which supports various built-in link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#transformations-on-dstreams[transformations] such as `map` which is used here to parse the inbound messages from their native JSON format.
 
 
 Note that this will fail horribly if the inbound message _isn't_ valid JSON.
@@ -175,11 +175,11 @@ parsed = kafkaStream.map(lambda v: json.loads(v[1]))
 === Count number of tweets in the batch
 
 
-The link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.DStream[`DStream`] object provides native functions to count the number of messages in the batch, and to print them to the output:
+The link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[`DStream`] object provides native functions to count the number of messages in the batch, and to print them to the output:
 
 
-* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.DStream.count[`count`]
-* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.DStream.pprint[`pprint`]
+* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream.count[`count`]
+* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream.pprint[`pprint`]
 
 
 We use the `map` function to add in some text explaining the value printed.
@@ -200,10 +200,10 @@ If you jump ahead and try to use Windowing at this point, for example to count t
 === Extract Author name from each tweet
 
 
-Tweets come through in a JSON structure, of which you can see an link:https://gist.github.com/rmoff/3968605712f437a1f37e7be52129cade?ref=rittmanmead.com[example here]. We're going to analyse tweets by author, which is accessible in the JSON structure at `user.screen_name`.
+Tweets come through in a JSON structure, of which you can see an link:https://gist.github.com/rmoff/3968605712f437a1f37e7be52129cade[example here]. We're going to analyse tweets by author, which is accessible in the JSON structure at `user.screen_name`.
 
 
-The link:https://pythonconquerstheuniverse.wordpress.com/2011/08/29/lambda_tutorial/?ref=rittmanmead.com[`lambda`] anonymous function is used to apply the `map` to each RDD within the DStream. The result is a DStream holding just the author's screenname for each tweet in the original DStream.
+The link:https://pythonconquerstheuniverse.wordpress.com/2011/08/29/lambda_tutorial/[`lambda`] anonymous function is used to apply the `map` to each RDD within the DStream. The result is a DStream holding just the author's screenname for each tweet in the original DStream.
 
 
 [source,python]
@@ -248,7 +248,7 @@ If you try and use the `sortBy` function directly against the DStream you get an
 ----
 
 
-This is because sort is not a built-in link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html?ref=rittmanmead.com#pyspark.streaming.DStream[DStream] function. Instad we use the link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#transform-operation[`transform`] function to access link:https://spark.apache.org/docs/latest/api/python/pyspark.html?ref=rittmanmead.com#pyspark.RDD.sortBy[`sortBy`] from pySpark.
+This is because sort is not a built-in link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[DStream] function. Instad we use the link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#transform-operation[`transform`] function to access link:https://spark.apache.org/docs/latest/api/python/pyspark.html#pyspark.RDD.sortBy[`sortBy`] from pySpark.
 
 
 To use `sortBy` you specify a lambda function to define the sort order. Here we're going to do it based on the number of tweets (index 1 of the RDD) per author. You'll note this index references being used in the `sortBy` lambda function `x[1]`, negated to reverse the sort order.
@@ -274,7 +274,7 @@ author_counts_sorted_dstream.pprint()
 === Get top 5 authors by tweet count
 
 
-To display just the top five authors, based on number of tweets in the batch period, we'll using the link:https://spark.apache.org/docs/2.0.2/api/python/pyspark.html?ref=rittmanmead.com#pyspark.RDD.take[`take`] function. My first attempt at this failed with:
+To display just the top five authors, based on number of tweets in the batch period, we'll using the link:https://spark.apache.org/docs/2.0.2/api/python/pyspark.html#pyspark.RDD.take[`take`] function. My first attempt at this failed with:
 
 
 [source,scala]
@@ -283,7 +283,7 @@ AttributeError: 'list' object has no attribute '_jrdd'
 ----
 
 
-Per my link:https://stackoverflow.com/questions/41483746/transformed-dstream-in-pyspark-gives-error-when-pprint-called-on-it?ref=rittmanmead.com[woes on StackOverflow] a `parallelize` is necessary to return the values into a DStream form.
+Per my link:https://stackoverflow.com/questions/41483746/transformed-dstream-in-pyspark-gives-error-when-pprint-called-on-it[woes on StackOverflow] a `parallelize` is necessary to return the values into a DStream form.
 
 
 [source,python]
@@ -428,7 +428,7 @@ Time: 2017-01-11 15:34:00
 --------------------------------------------
 
 
-You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf?ref=rittmanmead.com[the notebook here].
+You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[the notebook here].
 
 
 So there we have it, a very simple Spark Streaming application doing some basic processing against an inbound data stream from Kafka.
@@ -443,10 +443,10 @@ Now let's have a look at how we can do windowed processing. This is where data i
 _image::/images/2017/01/streaming-dstream-window.png[]
  +
 
-Image credit, and more details about window processing, link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#window-operations[here]._
+Image credit, and more details about window processing, link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#window-operations[here]._
 
 
-The first thing to do to enable windowed processing in Spark Streaming is to launch the Streaming Context with a link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#checkpointing[checkpoint directory] configured. This is used to store information between batches if necessary, and also to recover from failures. You need to rework your code into the pattern link:https://spark.apache.org/docs/latest/streaming-programming-guide.html?ref=rittmanmead.com#how-to-configure-checkpointing[shown here]. All the code to be executed by the streaming context goes in a function - which makes it less easy to present in a step-by-step form in a notebook as I have above.
+The first thing to do to enable windowed processing in Spark Streaming is to launch the Streaming Context with a link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#checkpointing[checkpoint directory] configured. This is used to store information between batches if necessary, and also to recover from failures. You need to rework your code into the pattern link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#how-to-configure-checkpointing[shown here]. All the code to be executed by the streaming context goes in a function - which makes it less easy to present in a step-by-step form in a notebook as I have above.
 
 
 === Reset the Environment
@@ -596,7 +596,7 @@ Author counts (One minute rolling):	Value mat_lucidream	Count 1
 --------------------------------------------
 
 
-You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf?ref=rittmanmead.com[the notebook here]. Let's take some extracts and walk through them.
+You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[the notebook here]. Let's take some extracts and walk through them.
 
 
 === Total tweet counts
@@ -705,10 +705,10 @@ Author counts (One minute rolling):	Value CooleeBravo	Count 5
 == Summary
 
 
-What I've put together is a very rudimentary example, simply to get started with the concepts. In the examples in this article I used Spark Streaming because of its native support for Python, and the link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[previous work] I'd done with Spark. Jupyter Notebooks are a fantastic environment in which to prototype code, and for a local environment providing both Jupyter and Spark it all you can't beat the Docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook?ref=rittmanmead.com[all-spark-notebook].
+What I've put together is a very rudimentary example, simply to get started with the concepts. In the examples in this article I used Spark Streaming because of its native support for Python, and the link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[previous work] I'd done with Spark. Jupyter Notebooks are a fantastic environment in which to prototype code, and for a local environment providing both Jupyter and Spark it all you can't beat the Docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook[all-spark-notebook].
 
 
-There are other stream processing frameworks and languages out there, including link:https://flink.apache.org/?ref=rittmanmead.com[Apache Flink], link:https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/?ref=rittmanmead.com[Kafka Streams], and link:https://beam.apache.org/?ref=rittmanmead.com[Apache Beam], to name but three. link:https://storm.apache.org/?ref=rittmanmead.com[Apache Storm] and link:https://samza.apache.org/?ref=rittmanmead.com[Apache Samza] are also relevant, but whilst were early to the party seem to crop up less frequently in stream processing discussions and literature nowadays.
+There are other stream processing frameworks and languages out there, including link:https://flink.apache.org/[Apache Flink], link:https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/[Kafka Streams], and link:https://beam.apache.org/[Apache Beam], to name but three. link:https://storm.apache.org/[Apache Storm] and link:https://samza.apache.org/[Apache Samza] are also relevant, but whilst were early to the party seem to crop up less frequently in stream processing discussions and literature nowadays.
 
 
 In the link:https://www.rittmanmead.com/blog/2017/01/data-processing-and-enrichment-in-spark-streaming-with-python-and-kafka[next blog] we'll see how to extend this Spark Streaming further with processing that includes:

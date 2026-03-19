@@ -17,13 +17,13 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/10/streaming-data-from-oracle-using-oracle-goldengate-and-kafka-connect/[Rittman Mead blog].
 
-_This article was also posted on the link:http://www.confluent.io/blog/streaming-data-oracle-using-oracle-goldengate-kafka-connect/?ref=rittmanmead.com[Confluent blog], head over there for more great Kafka-related content!_
+_This article was also posted on the link:http://www.confluent.io/blog/streaming-data-oracle-using-oracle-goldengate-kafka-connect/[Confluent blog], head over there for more great Kafka-related content!_
 
 
 '''
 
 
-link:http://docs.confluent.io/3.0.0/connect/index.html?ref=rittmanmead.com[Kafka Connect] is part of the link:http://www.confluent.io/product?ref=rittmanmead.com[Confluent Platform], providing a set of connectors and a standard interface with which to ingest data to Kafka, and store or process it the other end. link:http://www.confluent.io/blog/how-to-build-a-scalable-etl-pipeline-with-kafka-connect?ref=rittmanmead.com[Initially launched] with a JDBC source and HDFS sink, the link:http://www.confluent.io/product/connectors?ref=rittmanmead.com[list of connectors] has grown to include a dozen certified connectors, and twice as many again 'community' connectors. These cover technologies such as MongoDB, InfluxDB, Kudu, MySQL - and of course as with any streaming technology, twitter, the de-facto source for any streaming how-to. Two connectors of note that were recently released are for Oracle GoldenGate as a source, and Elasticsearch as a sink. In this article I'm going to walk through how to set these up, and demonstrate how the flexibility and power of the Kafka Connect platform can enable rapid changes and evolutions to the data pipeline.
+link:http://docs.confluent.io/3.0.0/connect/index.html[Kafka Connect] is part of the link:http://www.confluent.io/product[Confluent Platform], providing a set of connectors and a standard interface with which to ingest data to Kafka, and store or process it the other end. link:http://www.confluent.io/blog/how-to-build-a-scalable-etl-pipeline-with-kafka-connect[Initially launched] with a JDBC source and HDFS sink, the link:http://www.confluent.io/product/connectors[list of connectors] has grown to include a dozen certified connectors, and twice as many again 'community' connectors. These cover technologies such as MongoDB, InfluxDB, Kudu, MySQL - and of course as with any streaming technology, twitter, the de-facto source for any streaming how-to. Two connectors of note that were recently released are for Oracle GoldenGate as a source, and Elasticsearch as a sink. In this article I'm going to walk through how to set these up, and demonstrate how the flexibility and power of the Kafka Connect platform can enable rapid changes and evolutions to the data pipeline.
 
 
 image::/images/2016/10/ogges20.png[]
@@ -38,19 +38,19 @@ image::/images/2016/10/ogges14.png[]
 image::/images/2016/10/ogges21.png[]
 
 
-link:http://www.oracle.com/technetwork/middleware/goldengate/overview/index.html?ref=rittmanmead.com[Oracle GoldenGate] (OGG) is a realtime data replication tool, falling under the broad umbrella of Change Data Capture (CDC) software, albeit at the high end in terms of functionality. It supports multiple RDBMS platforms, including - obviously - Oracle, as well as DB2, MySQL, and SQL Server. You can find the link:http://www.oracle.com/technetwork/middleware/data-integration/goldengate12-2-x-cert-matrix-2769360.xls?ref=rittmanmead.com[full certification list here]. It uses log-based technology to stream all changes to a database from source, to target - which may be another database of the same type, or a different one. It is commonly used for data integration, as well as replication of data for availability purposes.
+link:http://www.oracle.com/technetwork/middleware/goldengate/overview/index.html[Oracle GoldenGate] (OGG) is a realtime data replication tool, falling under the broad umbrella of Change Data Capture (CDC) software, albeit at the high end in terms of functionality. It supports multiple RDBMS platforms, including - obviously - Oracle, as well as DB2, MySQL, and SQL Server. You can find the link:http://www.oracle.com/technetwork/middleware/data-integration/goldengate12-2-x-cert-matrix-2769360.xls[full certification list here]. It uses log-based technology to stream all changes to a database from source, to target - which may be another database of the same type, or a different one. It is commonly used for data integration, as well as replication of data for availability purposes.
 
 
 In the context of Kafka, Oracle GoldenGate provides a way of streaming _all changes made to a table_, or set of tables, and making them available to other processes in our data pipeline. These processes could include microservices relying on an up-to-date feed of data from a particular table, as well as persisting a replica copy of the data from the source system into a common datastore for analysis alongside data from other systems.
 
 
-link:https://www.elastic.co/products/elasticsearch?ref=rittmanmead.com[Elasticsearch] is an open-source distributed document store, link:https://www.elastic.co/use-cases?ref=rittmanmead.com[used heavily] for both search, and analytics. It comes with some great tools including link:https://www.elastic.co/products/kibana?ref=rittmanmead.com[Kibana] for data discovery and analysis, as well as a link:https://www.rittmanmead.com/blog/2016/04/experiments-with-elastics-graph-tool/[Graph] tool. Whilst Elasticsearch is capable of being a primary data store in its own right, it is also commonly used as a secondary store in order to take advantage of its rapid search and analytics capabilities. It is the latter use-case that we're interested in here - using Elasticsearch to store a copy of data produced in Oracle.
+link:https://www.elastic.co/products/elasticsearch[Elasticsearch] is an open-source distributed document store, link:https://www.elastic.co/use-cases[used heavily] for both search, and analytics. It comes with some great tools including link:https://www.elastic.co/products/kibana[Kibana] for data discovery and analysis, as well as a link:https://www.rittmanmead.com/blog/2016/04/experiments-with-elastics-graph-tool/[Graph] tool. Whilst Elasticsearch is capable of being a primary data store in its own right, it is also commonly used as a secondary store in order to take advantage of its rapid search and analytics capabilities. It is the latter use-case that we're interested in here - using Elasticsearch to store a copy of data produced in Oracle.
 
 
-Confluent's Elasticsearch Connector is an open source connector plug-in for Kafka Connect that sends data from Kafka to Elasticsearch. It is highly efficient, utilising Elasticsearch's link:https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html?ref=rittmanmead.com[bulk API]. It also supports all Elasticsearch's data types which it automatically infers, and evolves the Elasticsearch mappings from the schema stored in Kafka records.
+Confluent's Elasticsearch Connector is an open source connector plug-in for Kafka Connect that sends data from Kafka to Elasticsearch. It is highly efficient, utilising Elasticsearch's link:https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html[bulk API]. It also supports all Elasticsearch's data types which it automatically infers, and evolves the Elasticsearch mappings from the schema stored in Kafka records.
 
 
-Oracle GoldenGate can be used with Kafka to directly stream _every single change made to your database_. Everything that happens in the database gets recorded in the transaction log (OGG or not), and OGG takes that ands sends it to Kafka. In this blog we're using Oracle as the source database, but don't forget that Oracle GoldenGate supports link:http://www.oracle.com/technetwork/middleware/data-integration/goldengate12-2-x-cert-matrix-2769360.xls?ref=rittmanmead.com[many sources]. To use Oracle GoldenGate with Kafka, we use the "link:https://www.oracle.com/goldengate/big-data/index.html?ref=rittmanmead.com[Oracle GoldenGate for Big Data]" version (which has different binaries). Oracle GoldenGate has a significant advantage over the link:http://docs.confluent.io/3.0.0/connect/connect-jdbc/docs/index.html?ref=rittmanmead.com[JDBC Source Connector for Kafka Connect] in that it is a 'push' rather than periodic 'pull' from the source, thus it :
+Oracle GoldenGate can be used with Kafka to directly stream _every single change made to your database_. Everything that happens in the database gets recorded in the transaction log (OGG or not), and OGG takes that ands sends it to Kafka. In this blog we're using Oracle as the source database, but don't forget that Oracle GoldenGate supports link:http://www.oracle.com/technetwork/middleware/data-integration/goldengate12-2-x-cert-matrix-2769360.xls[many sources]. To use Oracle GoldenGate with Kafka, we use the "link:https://www.oracle.com/goldengate/big-data/index.html[Oracle GoldenGate for Big Data]" version (which has different binaries). Oracle GoldenGate has a significant advantage over the link:http://docs.confluent.io/3.0.0/connect/connect-jdbc/docs/index.html[JDBC Source Connector for Kafka Connect] in that it is a 'push' rather than periodic 'pull' from the source, thus it :
 
 
 . Has much lower latency
@@ -58,13 +58,13 @@ Oracle GoldenGate can be used with Kafka to directly stream _every single change
 . Scales better, since entire schemas or whole databases can be replicated with minimal configuration changes. The JDBC connector requires each table, or SQL statement, to be specified.
 
 
-Note that Oracle Golden Gate for Big Data also has its own link:http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm?ref=rittmanmead.com#GADBD449[native Kafka Handler], which can produce data in various formats directly to Kafka (rather than integrating with the Kafka Connect framework).
+Note that Oracle Golden Gate for Big Data also has its own link:http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm#GADBD449[native Kafka Handler], which can produce data in various formats directly to Kafka (rather than integrating with the Kafka Connect framework).
 
 
 == Environment
 
 
-I'm using the link:http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html?ref=rittmanmead.com[Oracle BigDataLite VM 4.5] as the base machine for this. It includes Oracle 12c, Oracle GoldenGate for Big Data, as well as a CDH installation which provides HDFS and Hive for us to also integrate with later on.
+I'm using the link:http://www.oracle.com/technetwork/database/bigdata-appliance/oracle-bigdatalite-2104726.html[Oracle BigDataLite VM 4.5] as the base machine for this. It includes Oracle 12c, Oracle GoldenGate for Big Data, as well as a CDH installation which provides HDFS and Hive for us to also integrate with later on.
 
 
 On to the VM you need to also install:
@@ -76,10 +76,10 @@ On to the VM you need to also install:
 * Elasticsearch 2.4
 
 
-To generate the schema and continuous workload, I used link:http://dominicgiles.com/swingbench.html?ref=rittmanmead.com[Swingbench] 2.5.
+To generate the schema and continuous workload, I used link:http://dominicgiles.com/swingbench.html[Swingbench] 2.5.
 
 
-For a step-by-step guide on how to set up these additional components, see link:https://gist.github.com/rmoff/c3813ec709d66d9a471e2a7f79fc3819?ref=rittmanmead.com[this gist].
+For a step-by-step guide on how to set up these additional components, see link:https://gist.github.com/rmoff/c3813ec709d66d9a471e2a7f79fc3819[this gist].
 
 
 == Starting Confluent Platform
@@ -151,10 +151,10 @@ In this example we'll be running the Extract against Oracle database, specifical
 The Replicat will be sending the transactions from the trail file over to Kafka Connect.
 
 
-I'm assuming here that you've already successfully defined and set running an extract against the Swingbench schema (SOE), with a trail file being delivered to `/u01/ogg-bd/dirdat`. For a step-by-step guide on how to do this all from scratch, link:https://gist.github.com/rmoff/5a78bdcd0cf24941ed4b30b604fb44ad?ref=rittmanmead.com[see here].
+I'm assuming here that you've already successfully defined and set running an extract against the Swingbench schema (SOE), with a trail file being delivered to `/u01/ogg-bd/dirdat`. For a step-by-step guide on how to do this all from scratch, link:https://gist.github.com/rmoff/5a78bdcd0cf24941ed4b30b604fb44ad[see here].
 
 
-You can find information about the OGG-Kafka Connect adapter in the link:https://java.net/downloads/oracledi/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20Kafka%20Connect/README.txt?ref=rittmanmead.com[README here].
+You can find information about the OGG-Kafka Connect adapter in the link:https://java.net/downloads/oracledi/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20Kafka%20Connect/README.txt[README here].
 
 
 To use it, first configure the replicat and supporting files as shown.
@@ -179,7 +179,7 @@ Create `/u01/ogg-bd/dirprm/rconf.prm` with the following contents:
 . Handler configuration
 
 
-Edit the existing `/u01/ogg-bd/dirprm/conf.props` and amend `gg.classpath` as shown below. The classpath shown works for BigDataLite - on your own environment you need to make the necessary jar files available per the dependencies listed in the link:https://java.net/downloads/oracledi/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20Kafka%20Connect/README.txt?ref=rittmanmead.com[README].
+Edit the existing `/u01/ogg-bd/dirprm/conf.props` and amend `gg.classpath` as shown below. The classpath shown works for BigDataLite - on your own environment you need to make the necessary jar files available per the dependencies listed in the link:https://java.net/downloads/oracledi/GoldenGate/Oracle%20GoldenGate%20Adapter%20for%20Kafka%20Connect/README.txt[README].
 
 
 +
@@ -353,7 +353,7 @@ and you can view the record:
 Hit Ctrl-C to cancel the consumer -- otherwise it'll sit there and wait for additional messages to be sent to the topic. Useful for monitoring when we've got lots of records flowing through, but not so useful now.
 
 
-The message is JSON, so a useful tool to install is link:https://stedolan.github.io/jq/?ref=rittmanmead.com[`jq`]:
+The message is JSON, so a useful tool to install is link:https://stedolan.github.io/jq/[`jq`]:
 
 
 [source,shell]
@@ -384,7 +384,7 @@ You can then pipe the output of `kafka-console-consumer` through `jq` to pretty-
 ----
 
 
-or even show just sections of the message using jq's syntax (explore it link:https://jqplay.org/?ref=rittmanmead.com[here]):
+or even show just sections of the message using jq's syntax (explore it link:https://jqplay.org/[here]):
 
 
 [source]
@@ -464,7 +464,7 @@ topic.key.ignore = ORCL.SOE.LOGON
 ----
 
 
-Note that the global `key.ignore` link:https://github.com/confluentinc/kafka-connect-elasticsearch/issues/23?ref=rittmanmead.com[is currently ignored] if you are also overriding another `topic` parameter. If you don't set this flag for the topic, you'll get `org.apache.kafka.connect.errors.DataException: STRUCT is not supported as the document id.`.
+Note that the global `key.ignore` link:https://github.com/confluentinc/kafka-connect-elasticsearch/issues/23[is currently ignored] if you are also overriding another `topic` parameter. If you don't set this flag for the topic, you'll get `org.apache.kafka.connect.errors.DataException: STRUCT is not supported as the document id.`.
 
 
 Now we can run our connector. I'm setting the `CLASSPATH` necessary to pick up the connector itself, as well as the dependecies. I also set `JMX_PORT` so that the metrics are exposed on JMX for helping with debug/monitoring.
@@ -612,16 +612,16 @@ $ kafka-console-consumer --zookeeper localhost:2181 --topic ORCL.SOE.LOGON --fro
 This string-based schema is actually coming through from the OGG replicat itself - whilst the Kafka Connect handler interprets and assumes the datatypes of columns such as numbers, it doesn't for timestamps.
 
 
-So - how do we fix these data types in Elasticsearch so that we can make good use of the data? Enter link:https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html?ref=rittmanmead.com[Dynamic Templates]. These enable you to specify the mapping (similar to a schema) of an index prior to it being created for a field for the first time, and you can wildcard field names too so that, for example, anything with a `_ts` suffix is treated as a timestamp data type.
+So - how do we fix these data types in Elasticsearch so that we can make good use of the data? Enter link:https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html[Dynamic Templates]. These enable you to specify the mapping (similar to a schema) of an index prior to it being created for a field for the first time, and you can wildcard field names too so that, for example, anything with a `_ts` suffix is treated as a timestamp data type.
 
 
-To configure the dynamic template we'll use the REST API again, and whilst `curl` is fine for simple and repeated command line work, we'll switch to the web-based Elasticsearch REST API client, link:https://www.elastic.co/guide/en/sense/current/introduction.html?ref=rittmanmead.com[Sense]. Assuming that you installed it following the process above you can access it at `http://<server>:5601/app/sense`.
+To configure the dynamic template we'll use the REST API again, and whilst `curl` is fine for simple and repeated command line work, we'll switch to the web-based Elasticsearch REST API client, link:https://www.elastic.co/guide/en/sense/current/introduction.html[Sense]. Assuming that you installed it following the process above you can access it at `http://<server>:5601/app/sense`.
 
 
 image::/images/2016/10/ogges10.png[]
 
 
-Click *Get to work* to close the intro banner, and in the main editor paste the following JSON (link:https://gist.github.com/rmoff/4d57a815a539b9f34eeec1ed4cdf8ede?ref=rittmanmead.com[gist here])
+Click *Get to work* to close the intro banner, and in the main editor paste the following JSON (link:https://gist.github.com/rmoff/4d57a815a539b9f34eeec1ed4cdf8ede[gist here])
 
 
 [source]
@@ -973,7 +973,7 @@ COUNT(*)
 ------------
 
 
-But, this includes the records that were *pre-seeded* by Swingbench _before_ we set up the OGG extract. How do we know how many have been read by GoldenGate since, and should therefore be downstream on Kafka, and Elasticsearch? Enter *logdump*. This is a GoldenGate tool that gives a commandline interface to analysing the OGG trail file itself. You can read more about it link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/wu_logdump.htm?ref=rittmanmead.com#GLOGD107[here], link:http://www.ateam-oracle.com/oracle-goldengate-logdump/?ref=rittmanmead.com[here], and link:https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/[here].
+But, this includes the records that were *pre-seeded* by Swingbench _before_ we set up the OGG extract. How do we know how many have been read by GoldenGate since, and should therefore be downstream on Kafka, and Elasticsearch? Enter *logdump*. This is a GoldenGate tool that gives a commandline interface to analysing the OGG trail file itself. You can read more about it link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/wu_logdump.htm#GLOGD107[here], link:http://www.ateam-oracle.com/oracle-goldengate-logdump/[here], and link:https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/[here].
 
 
 First, determine the trail file name:
@@ -1115,7 +1115,7 @@ Here we've proved that the number of records written by Oracle are making it all
 === Monitoring the Pipeline
 
 
-Kafka and Kafka Connect expose metrics through JMX. There's a variety of tools for capturing, persisting, and visualising this, link:https://softwaremill.com/monitoring-apache-kafka-with-influxdb-grafana/?ref=rittmanmead.com[such as detailed here]. For now, we'll just use JConsole to inspect the metrics and get an idea of what's available.
+Kafka and Kafka Connect expose metrics through JMX. There's a variety of tools for capturing, persisting, and visualising this, link:https://softwaremill.com/monitoring-apache-kafka-with-influxdb-grafana/[such as detailed here]. For now, we'll just use JConsole to inspect the metrics and get an idea of what's available.
 
 
 You'll need a GUI for jconsole, so either a desktop session on the server itself, X11 forwarded, or you can also run JConsole from a local machine (it's bundled with any JDK) and connect to the remote JMX. In this example I simply connected to the VM's desktop and ran JConsole locally there. You launch it by running it from the shell prompt:
@@ -1178,6 +1178,6 @@ In this article we've seen how stream transactions from a RDBMS such as Oracle i
 '''
 
 
-_This article was also posted on the link:http://www.confluent.io/blog/streaming-data-oracle-using-oracle-goldengate-kafka-connect/?ref=rittmanmead.com[Confluent blog], head over there for more great Kafka-related content!_
+_This article was also posted on the link:http://www.confluent.io/blog/streaming-data-oracle-using-oracle-goldengate-kafka-connect/[Confluent blog], head over there for more great Kafka-related content!_
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/10/streaming-data-from-oracle-using-oracle-goldengate-and-kafka-connect/[Rittman Mead blog].

@@ -14,10 +14,10 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/11/using-sql-to-query-json-files-with-apache-drill/[Rittman Mead blog].
 
-I wrote recently about what link:https://www.rittmanmead.com/blog/2016/08/an-introduction-to-apache-drill/[Apache Drill is], and link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[how to use it with OBIEE]. In this post I wanted to demonstrate its great power in action for a requirement that came up recently. We wanted to analyse our blog traffic, broken down by blog author. Whilst we have Google Analytics to provide the traffic, it doesn't include the blog author. This is held within the blog platform, which is Ghost. The common field between the two datasets is the post "slug". From Ghost we could get a link:https://help.ghost.org/hc/en-us/articles/224112927-Import-Export-Data?ref=rittmanmead.com[dump of the data] in JSON format. We needed to find a quick way to analyse and extract from this JSON a list of post slugs and associated author.
+I wrote recently about what link:https://www.rittmanmead.com/blog/2016/08/an-introduction-to-apache-drill/[Apache Drill is], and link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[how to use it with OBIEE]. In this post I wanted to demonstrate its great power in action for a requirement that came up recently. We wanted to analyse our blog traffic, broken down by blog author. Whilst we have Google Analytics to provide the traffic, it doesn't include the blog author. This is held within the blog platform, which is Ghost. The common field between the two datasets is the post "slug". From Ghost we could get a link:https://help.ghost.org/hc/en-us/articles/224112927-Import-Export-Data[dump of the data] in JSON format. We needed to find a quick way to analyse and extract from this JSON a list of post slugs and associated author.
 
 
-One option would be to load the JSON into a RDBMS and process it from within there, running SQL queries to extract the data required. For a long-term large-scale solution, maybe this would be appropriate. But all we wanted to do here was query a single file, initially just as a one-off. Enter link:https://drill.apache.org/?ref=rittmanmead.com[Apache Drill]. Drill can run on a single laptop (or massively clustered, if you need it). It provides a SQL engine on top of various data sources, including text data on local or distributed file systems (such as HDFS).
+One option would be to load the JSON into a RDBMS and process it from within there, running SQL queries to extract the data required. For a long-term large-scale solution, maybe this would be appropriate. But all we wanted to do here was query a single file, initially just as a one-off. Enter link:https://drill.apache.org/[Apache Drill]. Drill can run on a single laptop (or massively clustered, if you need it). It provides a SQL engine on top of various data sources, including text data on local or distributed file systems (such as HDFS).
 
 
 You can use Drill to dive straight into the json:
@@ -40,7 +40,7 @@ You can use Drill to dive straight into the json:
 ------------------------------------
 
 
-But from this we can see the JSON object is a single column `db` of array type. Let's take a brief detour into one of my favourite commandline tools - link:https://stedolan.github.io/jq/?ref=rittmanmead.com[`jq`]. This let's you format, filter, and extract values from JSON. Here we can use it to get an idea of how the data's structured. We _can_ do this in Drill, but `jq` gives us a headstart:
+But from this we can see the JSON object is a single column `db` of array type. Let's take a brief detour into one of my favourite commandline tools - link:https://stedolan.github.io/jq/[`jq`]. This let's you format, filter, and extract values from JSON. Here we can use it to get an idea of how the data's structured. We _can_ do this in Drill, but `jq` gives us a headstart:
 
 
 image::/images/2016/11/gjson01.png[]
@@ -49,7 +49,7 @@ image::/images/2016/11/gjson01.png[]
 We can see that under the `db` array are two elements; `meta` and `data`. Let's take `meta` as a simple example to expose through Drill, and then build from there into the user data that we're actually after.
 
 
-Since the root data element (`db`) is an array, we need to link:https://drill.apache.org/docs/flatten/?ref=rittmanmead.com[`FLATTEN`] it:
+Since the root data element (`db`) is an array, we need to link:https://drill.apache.org/docs/flatten/[`FLATTEN`] it:
 
 
 [source,sql]
@@ -172,7 +172,7 @@ Error: VALIDATION ERROR: From line 1, column 8 to line 1, column 11: Table 'meta
 So having understood how to isolate and query the `meta` element in the JSON, let's progress onto what we're actually after - the name of the author of each post, and associated 'slug'.
 
 
-Using `jq` again we can see the structure of the JSON file, with the code taken link:https://github.com/stedolan/jq/issues/243?ref=rittmanmead.com#issuecomment-45460474[from here]:
+Using `jq` again we can see the structure of the JSON file, with the code taken link:https://github.com/stedolan/jq/issues/243#issuecomment-45460474[from here]:
 
 
 [source,json]
@@ -255,6 +255,6 @@ to being able to query it with standard SQL like this:
 image::/images/2016/11/2016-11-01_15-35-00.png[]
 
 
-all with a single tool that can run on a laptop or desktop, and link:https://drill.apache.org/docs/interfaces-introduction/?ref=rittmanmead.com[supports ODBC and JDBC] for use with your favourite BI tools. For data exploration and understanding new datasets, Apache Drill really does rock!
+all with a single tool that can run on a laptop or desktop, and link:https://drill.apache.org/docs/interfaces-introduction/[supports ODBC and JDBC] for use with your favourite BI tools. For data exploration and understanding new datasets, Apache Drill really does rock!
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/11/using-sql-to-query-json-files-with-apache-drill/[Rittman Mead blog].

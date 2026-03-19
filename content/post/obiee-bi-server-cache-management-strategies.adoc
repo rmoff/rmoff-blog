@@ -23,7 +23,7 @@ The OBIEE BI Server cache can be one of the most effective ways of improving res
 Should you be using it? I always describe it as the “icing on the cake” – it’s not a fix for a badly-designed OBIEE system, but it does make a lot of sense to use once you’re happy that the foundations for the system are in place. If the foundations are not not in place? Then you’re just papering over the cracks and at some point it’s probably going to come back to bite you. As Mark Rittman put it nearly seven years ago, it’s “link:https://www.rittmanmead.com/blog/2008/11/thoughts-on-obiee-performance-optimization-diagnostics/[&#91;…&#93;usually the last desperate throw of the dice]”. The phrase “technical debt”? Yeh, that. But, BI Server caching used _after_ performance review and optimisation rather than _instead of_ - then it’s a Good Thing.
 
 
-So you’ve decided to use the BI Server cache, and merrily trotted over to link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG241[Enterprise Manager to enable it], restarted the BI Server, and now your work is done, right? Not quite. Because the BI Server cache will start to store data from all the queries that you run, and use it to satisfy subsequent queries. Not only will it match on a direct hit for the same query, it will use a subset of an existing cache entry where appropriate, and can even aggregate up from what’s in the cache to satisfy a query at a higher level. Clever stuff. But, what happens when you load new data into your data warehouse? Well, the BI Server continues to serve requests out of the cache, because why shouldn’t it? And herein lies the problem with “just turn caching on”. *You have to have a cache management strategy*.
+So you’ve decided to use the BI Server cache, and merrily trotted over to link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG241[Enterprise Manager to enable it], restarted the BI Server, and now your work is done, right? Not quite. Because the BI Server cache will start to store data from all the queries that you run, and use it to satisfy subsequent queries. Not only will it match on a direct hit for the same query, it will use a subset of an existing cache entry where appropriate, and can even aggregate up from what’s in the cache to satisfy a query at a higher level. Clever stuff. But, what happens when you load new data into your data warehouse? Well, the BI Server continues to serve requests out of the cache, because why shouldn’t it? And herein lies the problem with “just turn caching on”. *You have to have a cache management strategy*.
 
 
 A cache management strategy sounds grand doesn’t it? But it boils down to two things:
@@ -74,7 +74,7 @@ Which one is correct depends on
 If you are heavily dependant on the cache and have large amounts of data in it, you are probably going to need to invest time in a precise and potentially complex cache purge strategy. Conversely if you use caching as the ‘icing on the cake’ and/or it’s quick to seed new content then the simplest option is to purge the entire cache. Simple is good; OBIEE has enough moving parts without adding to its complexity unnecessarily.
 
 
-Note that OBIEE itself will perform cache purges in some situations including link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG281[if a dynamic repository variable] used by a Business Model (e.g. in a Logical Column) gets a new value through a scheduled initialisation block.
+Note that OBIEE itself will perform cache purges in some situations including link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG281[if a dynamic repository variable] used by a Business Model (e.g. in a Logical Column) gets a new value through a scheduled initialisation block.
 
 
 === Performing the Purge
@@ -84,7 +84,7 @@ There are several ways in which we can purge the cache. First I’ll discuss the
 
 
 . Administration Tool -> Manage -> Cache -> Purge. Doing this every time your ETL runs is not a sensible idea unless you enjoy watching paint dry (or need to manually purge it as part of a deployment of a new RPD etc).
-. In the Physical table, setting link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10540/physicallayer.htm?ref=rittmanmead.com#BABEAGGF[*Cache persistence time*]. Why not? Because this time period starts from _when the data was loaded into the cache_, *not* _when the data was loaded into your database_.  +
+. In the Physical table, setting link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10540/physicallayer.htm#BABEAGGF[*Cache persistence time*]. Why not? Because this time period starts from _when the data was loaded into the cache_, *not* _when the data was loaded into your database_.  +
 An easy mistake to make would be to think that with a *daily* ETL run, setting the Cache persistence time to *1 day* might be a good idea. It’s not, because if your ETL runs at 06:00 and someone runs a report at 05:00, there is a going to be a stale cache entry present for another 23 hours. Even if you use cache seeding, you’re still relinquishing control of the data accuracy in your cache. What happens if the ETL batch overruns or underruns? +
 
  The only scenario in which I _would_ use this option is if I was querying directly against a transactional system and wanted to minimise the number of hits OBIEE made against it - the trade-off being users would deliberately be seeing stale data (but sometimes this is an acceptable compromise, so long as it’s made clear in the presentation of the data).
@@ -93,8 +93,8 @@ An easy mistake to make would be to think that with a *daily* ETL run, setting t
 So the two viable options for cache purging are:
 
 
-. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG248[BI Server Cache Purge Procedures]
-. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG274[Event Polling Table]
+. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG248[BI Server Cache Purge Procedures]
+. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG274[Event Polling Table]
 
 
 ==== BI Server Cache Purge Procedures
@@ -103,7 +103,7 @@ So the two viable options for cache purging are:
 _These are often called “ODBC” Procedures but technically ODBC is just one - of several - ways that the commands can be sent to the BI Server to invoke._
 
 
-As well as supporting queries for data from clients (such as Presentation Services) sent as Logical SQL, the BI Server also has its own set of procedures. Many of these are internal and mostly undocumented (link:https://oracleus.activeevents.com/2014/connect/fileDownload/session/75F302D730BDB9CA14ADAB3477574D4D/UGF9144_Berg-OOW_Neos_Voyage_2014.pdf?ref=rittmanmead.com[Christian Berg does a great job of explaining them here], and they do creep into link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/bi_server_web_services.htm?ref=rittmanmead.com#BIEIT3248[the documentation here] and link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/logging.htm?ref=rittmanmead.com#BIESG3823[here]), but there are some cache management ones that are link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG248[fully supported and documented]. They are:
+As well as supporting queries for data from clients (such as Presentation Services) sent as Logical SQL, the BI Server also has its own set of procedures. Many of these are internal and mostly undocumented (link:https://oracleus.activeevents.com/2014/connect/fileDownload/session/75F302D730BDB9CA14ADAB3477574D4D/UGF9144_Berg-OOW_Neos_Voyage_2014.pdf[Christian Berg does a great job of explaining them here], and they do creep into link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/bi_server_web_services.htm#BIEIT3248[the documentation here] and link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/logging.htm#BIESG3823[here]), but there are some cache management ones that are link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG248[fully supported and documented]. They are:
 
 
 * `SAPurgeCacheByQuery`
@@ -122,7 +122,7 @@ You can call these procedures in the several ways, including:
 
 . nqcmd - one of the most common ways, repeated on many a blog, but requires nqcmd/OBIEE to be installed on the machine running it. nqcmd is a command-line ODBC client for connecting to the BI Server
 . ODBC - requires BI to be installed on the machine running it in order to make the OBIEE ODBC driver available
-. JDBC - just requires the link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/logging.htm?ref=rittmanmead.com#BABJEDDF[OBIEE JDBC driver], which is a single `.jar` file and thus portable
+. JDBC - just requires the link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/logging.htm#BABJEDDF[OBIEE JDBC driver], which is a single `.jar` file and thus portable
 . Web Service - the link:https://www.rittmanmead.com/blog/2015/09/using-the-bi-server-metadata-web-service-for-automated-rpd-modifications/[OBIEE BI Server Web Service] can be used to invoke these procedures from any machine with no dependencies other than some WSM configuration on the OBIEE server side.
 
 
@@ -161,7 +161,7 @@ The second viable approach to automated cache purging is EPT, which is a decoupl
 . The BI Server polls (hence the name) the `S_NQ_EPT` table periodically, and if it finds entries in it, purges the cache of data that is from those tables.
 
 
-So EPT is in a sense the equivalent of using `SAPurgeCacheByTable`, but in a manner that is not tightly coupled. It relies on configuring the BI Server for EPT, and there is no easy way to know from your ETL if the cache purge has actually happened. It also means that the cache remains stale potentially as long as the polling interval that you’ve configured. Depending on when you’re running your ETL and the usage patterns of your users this may not be an issue, but if you are running ETL whilst users are on the system (for example intra-day micro ETL batches) you could end up with users seeing stale data. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG278[Oracle themselves recommend not setting the polling interval any lower than 10 minutes]. +
+So EPT is in a sense the equivalent of using `SAPurgeCacheByTable`, but in a manner that is not tightly coupled. It relies on configuring the BI Server for EPT, and there is no easy way to know from your ETL if the cache purge has actually happened. It also means that the cache remains stale potentially as long as the polling interval that you’ve configured. Depending on when you’re running your ETL and the usage patterns of your users this may not be an issue, but if you are running ETL whilst users are on the system (for example intra-day micro ETL batches) you could end up with users seeing stale data. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG278[Oracle themselves recommend not setting the polling interval any lower than 10 minutes]. +
 
 EPT has the benefit of being very easy to implement on the ETL side, because it is simply a database table into which the ETL developers need to insert a row for each table that they update during the ETL.
 
@@ -169,7 +169,7 @@ EPT has the benefit of being very easy to implement on the ETL side, because it 
 == Seeding the Cache
 
 
-Bob runs an OBIEE dashboard, and the results are added to the cache so that when Bill runs the same dashboard Bill gets a great response rate because his dashboard runs straight from cache. Kinda sucks for Bob though, because his query ran slow as it wasn’t in the cache yet. What’d be nice would be that for  the first user on a dashboard the results were already in cache. This is known as seeding the cache, or ‘priming’ it. Because the BI Server cache is not dumb and will hit the cache for queries that aren’t necessarily direct replicas of what previously ran working out the optimal way to seed the cache can take some [line-through]##trial and error## careful research. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm?ref=rittmanmead.com#BIESG254[The documentation does a good job] of explaining what will and won’t qualify for a cache hit, and it’s worth reading this first.
+Bob runs an OBIEE dashboard, and the results are added to the cache so that when Bill runs the same dashboard Bill gets a great response rate because his dashboard runs straight from cache. Kinda sucks for Bob though, because his query ran slow as it wasn’t in the cache yet. What’d be nice would be that for  the first user on a dashboard the results were already in cache. This is known as seeding the cache, or ‘priming’ it. Because the BI Server cache is not dumb and will hit the cache for queries that aren’t necessarily direct replicas of what previously ran working out the optimal way to seed the cache can take some [line-through]##trial and error## careful research. link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/querycaching.htm#BIESG254[The documentation does a good job] of explaining what will and won’t qualify for a cache hit, and it’s worth reading this first.
 
 
 There are several options for seeding the cache. These all assume you’ve figured out the queries that you want to run in order to load the results into cache.
@@ -180,7 +180,7 @@ There are several options for seeding the cache. These all assume you’ve figur
 
 +
 . Schedule the analysis to run from an Agent on a schedule
-. Trigger it from a link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/soa_overview.htm?ref=rittmanmead.com#BIEIT3171[Web Service] in order to couple it to your ETL data load / cache purge batch steps.
+. Trigger it from a link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/soa_overview.htm#BIEIT3171[Web Service] in order to couple it to your ETL data load / cache purge batch steps.
 +
 . Use the BI Server Procedure *SASeedQuery* (which is what the Agent does in the background) to load the given query into cache without returning the data to the client. This is useful for doing over JDBC/ODBC/Web Service (as discussed for purging above). You could just run the Logical SQL itself, but you probably don’t want to pull the actual data back to the client, hence using the procedure call instead.
 
@@ -200,7 +200,7 @@ image::/images/2015/09/127ccache03.png[]
 == Day in the Life of an OBIEE Cache Entry (Who Said BI Was Boring?)
 
 
-In this example here I’m running a very simple report from link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[SampleApp v406]:
+In this example here I’m running a very simple report from link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[SampleApp v406]:
 
 
 image::/images/2015/09/131ccache06.png[]
@@ -239,7 +239,7 @@ The filename is '/app/oracle/biee/instances/instance1/bifoundation/OracleBIServe
 ----------------------
 
 
-We see it in Usage Tracking (again, if you don’t have this enabled, link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/usage_track.htm?ref=rittmanmead.com#BIESG189[go and enable it now]):
+We see it in Usage Tracking (again, if you don’t have this enabled, link:https://docs.oracle.com/cd/E28280_01/bi.1111/e10541/usage_track.htm#BIESG189[go and enable it now]):
 
 
 [source,sql]

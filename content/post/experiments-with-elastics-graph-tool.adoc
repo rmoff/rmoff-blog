@@ -17,21 +17,21 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/04/experiments-with-elastics-graph-tool/[Rittman Mead blog].
 
-Elastic announced their link:https://www.elastic.co/products/graph?ref=rittmanmead.com[Graph] tool at ElastiCON 2016 (link:https://www.elastic.co/elasticon/conf/2016/sf/graph-capabilities-in-the-elastic-stack?ref=rittmanmead.com[see presentation here]). It’s part of the forthcoming link:https://www.elastic.co/v5?ref=rittmanmead.com[X-Pack] which bundles Graph along with other helper tools such as Shield and Marvel. Graph itself is two things; an extension of Elasticsearch’s capabilities, enabling the user to *explore how items indexed in Elasticsearch are related*, and a plugin for Kibana that acts as an optional front-end for this new functionality.
+Elastic announced their link:https://www.elastic.co/products/graph[Graph] tool at ElastiCON 2016 (link:https://www.elastic.co/elasticon/conf/2016/sf/graph-capabilities-in-the-elastic-stack[see presentation here]). It’s part of the forthcoming link:https://www.elastic.co/v5[X-Pack] which bundles Graph along with other helper tools such as Shield and Marvel. Graph itself is two things; an extension of Elasticsearch’s capabilities, enabling the user to *explore how items indexed in Elasticsearch are related*, and a plugin for Kibana that acts as an optional front-end for this new functionality.
 
 
-You can find a good introduction to Graph and the purpose and theory behind it in the link:https://www.elastic.co/guide/en/graph/current/graph-introduction.html?ref=rittmanmead.com[documentation here]. The installation of the components themselves is simple and link:https://www.elastic.co/guide/en/graph/current/graph-getting-started.html?ref=rittmanmead.com[documented here].
+You can find a good introduction to Graph and the purpose and theory behind it in the link:https://www.elastic.co/guide/en/graph/current/graph-introduction.html[documentation here]. The installation of the components themselves is simple and link:https://www.elastic.co/guide/en/graph/current/graph-getting-started.html[documented here].
 
 
 == First Graph
 
 
-To use Graph, you just point it at your existing data in Elasticsearch. The first data set I’m going to explore is one of the standard ones that everyone uses; Twitter. I'm streaming it in through Logstash (via link:http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/?ref=rittmanmead.com[Kafka for flexibility]), but if you wanted you could link:https://www.elastic.co/blog/visualising-oracle-performance-data-with-the-elastic-stack?ref=rittmanmead.com[ship it in via JDBC] from any RDBMS, or from link:https://www.rittmanmead.com/blog/2014/11/analytics-with-kibana-and-elasticsearch-through-hadoop-part-2-getting-data-into-elasticsearch/[HDFS] too. +
+To use Graph, you just point it at your existing data in Elasticsearch. The first data set I’m going to explore is one of the standard ones that everyone uses; Twitter. I'm streaming it in through Logstash (via link:http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/[Kafka for flexibility]), but if you wanted you could link:https://www.elastic.co/blog/visualising-oracle-performance-data-with-the-elastic-stack[ship it in via JDBC] from any RDBMS, or from link:https://www.rittmanmead.com/blog/2014/11/analytics-with-kibana-and-elasticsearch-through-hadoop-part-2-getting-data-into-elasticsearch/[HDFS] too. +
 
 _See an important note at the end of this article about the slice of data within it, because it affects how the relationships visualised here should be viewed._
 
 
-On launching Kibana’s Graph plugin (`http://localhost:5601/app/graph`) I choose the index (note that index patterns, e.g. when partitioning by date, link:https://www.elastic.co/guide/en/graph/current/graph-limitations.html?ref=rittmanmead.com[are not supported yet]), and the field in the data that I want to use as my vertices. A point to note here - “vertices” are usually called “nodes” in Graph terminology, but since Elasticsearch already uses “link:https://www.elastic.co/guide/en/elasticsearch/reference/current/glossary.html?ref=rittmanmead.com#glossary-node[nodes]” as part of its infrastructure topology terminology, they had to pick a different term.
+On launching Kibana’s Graph plugin (`http://localhost:5601/app/graph`) I choose the index (note that index patterns, e.g. when partitioning by date, link:https://www.elastic.co/guide/en/graph/current/graph-limitations.html[are not supported yet]), and the field in the data that I want to use as my vertices. A point to note here - “vertices” are usually called “nodes” in Graph terminology, but since Elasticsearch already uses “link:https://www.elastic.co/guide/en/elasticsearch/reference/current/glossary.html#glossary-node[nodes]” as part of its infrastructure topology terminology, they had to pick a different term.
 
 
 In the search box, I can put my search term from which I’m interested to see the related ‘vertices’.
@@ -44,7 +44,7 @@ Sounds baffling? It is, kinda - right up until you run it (hit enter from the se
 
 image::/images/2016/04/graph02.png[]
 
-Here we’re seeing the hashtags used in tweets that mention Kibana. The “connections” (Elastic term) or “edges” (general Graph term) show which vertices (nodes) are related, and the width indicates the strength of that relationship (based on link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html?ref=rittmanmead.com[Elasticsearch's significant terms] and link:https://www.elastic.co/guide/en/elasticsearch/guide/current/scoring-theory.html?ref=rittmanmead.com[scoring] algorithm). For more details, see the "Behind the Scenes" section towards the end of this article.
+Here we’re seeing the hashtags used in tweets that mention Kibana. The “connections” (Elastic term) or “edges” (general Graph term) show which vertices (nodes) are related, and the width indicates the strength of that relationship (based on link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html[Elasticsearch's significant terms] and link:https://www.elastic.co/guide/en/elasticsearch/guide/current/scoring-theory.html[scoring] algorithm). For more details, see the "Behind the Scenes" section towards the end of this article.
 
 
 We can add in a second set of vertices by running a second search (“Elasticsearch”) - the results for these are, in effect, appended to the existing ones:
@@ -116,7 +116,7 @@ image::/images/2016/04/graph14.png[]
 == Expand Selection
 
 
-One of the points of Graph analysis is visualising the relationships in your data in a way that standard relational methods may not lend themselves to so easily. We can now start to explore this further, by digging into the Graph that we’ve got so far. This process, along with the add links seen above, is often called "link:https://www.elastic.co/guide/en/graph/current/graph-api-rest.html?ref=rittmanmead.com#spider-search[spidering]". By selecting the elasticsearch node and clicking on *Expand selection* we can see additional (by default, five) vertices related to this one:
+One of the points of Graph analysis is visualising the relationships in your data in a way that standard relational methods may not lend themselves to so easily. We can now start to explore this further, by digging into the Graph that we’ve got so far. This process, along with the add links seen above, is often called "link:https://www.elastic.co/guide/en/graph/current/graph-api-rest.html#spider-search[spidering]". By selecting the elasticsearch node and clicking on *Expand selection* we can see additional (by default, five) vertices related to this one:
 
 
 image::/images/2016/04/graph11.png[]
@@ -150,7 +150,7 @@ image::/images/2016/04/graph18.png[]
 == Knob Twiddling
 
 
-Let’s start with a blank canvas, in basic mode, showing hashtags related to … me (link:https://twitter.com/rmoff?ref=rittmanmead.com[@rmoff])!
+Let’s start with a blank canvas, in basic mode, showing hashtags related to … me (link:https://twitter.com/rmoff[@rmoff])!
 
 
 image::/images/2016/04/graph19.png[]
@@ -175,7 +175,7 @@ I reset the workspace (undo to blank, or just reload), and run the search again,
 
 image::/images/2016/04/graph24.png[]
 
-At this point I’m into “fiddling” territory, twiddling with the ‘Number of terms’, ‘Significant’ and ‘Certainty’ knobs to see how the results vary. You can read more about the link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html?ref=rittmanmead.com[algorithm behind the Significance setting] here, and more about the link:https://www.elastic.co/guide/en/graph/current/graph-api-rest.html?ref=rittmanmead.com[Graph API here]. The *certainty* setting is simply _"The min number of documents that are required as evidence before introducing a related term"_, so by lowering it we see more links, but potentially with more "noise" too, of terms that aren't really related.
+At this point I’m into “fiddling” territory, twiddling with the ‘Number of terms’, ‘Significant’ and ‘Certainty’ knobs to see how the results vary. You can read more about the link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html[algorithm behind the Significance setting] here, and more about the link:https://www.elastic.co/guide/en/graph/current/graph-api-rest.html[Graph API here]. The *certainty* setting is simply _"The min number of documents that are required as evidence before introducing a related term"_, so by lowering it we see more links, but potentially with more "noise" too, of terms that aren't really related.
 
 
 An important point to note here is the dataset that I’m using is *already biased* because of the terms I’m including in my twitter feed search, therefore I’d expect to see this skew in the results below. See the section at the end of this article for more details of the dataset.
@@ -342,7 +342,7 @@ Now I’m more interested in digging into the terms (hashtags) that are related 
 
 image::/images/2016/04/graph46.png[]
 
-Note the width of the connections - a strong relationship between Mark Rittman, “Hadoop” and “SQL”, which is presumably from the tweets around the presentation he did recently on the subject of… link:http://blog.tanelpoder.com/2016/04/07/gluent-new-world-02-sql-on-hadoop/?ref=rittmanmead.com[SQL on Hadoop]. Other terms, including Hive and Impala, are also related, as you’d expect.
+Note the width of the connections - a strong relationship between Mark Rittman, “Hadoop” and “SQL”, which is presumably from the tweets around the presentation he did recently on the subject of… link:http://blog.tanelpoder.com/2016/04/07/gluent-new-world-02-sql-on-hadoop/[SQL on Hadoop]. Other terms, including Hive and Impala, are also related, as you’d expect.
 
 
 == Graphing Tweet Text Contents
@@ -592,7 +592,7 @@ and the response not too complex either, just long.
 ----
 
 
-Note how the connections are described using the relative (zero-based) instance number of the vertices. You can also see that the width of a connection is based on the *weight* (calculated from the link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html?ref=rittmanmead.com[significant terms algorithm]), rather than document count. Compare the connection width of timelion/kibana (vertices 1 and 5 respectively), with a weighting of 0.33 (kibana -> timelion) and 0.045 (timelion -> kibana) but overlapping document count of 29:
+Note how the connections are described using the relative (zero-based) instance number of the vertices. You can also see that the width of a connection is based on the *weight* (calculated from the link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html[significant terms algorithm]), rather than document count. Compare the connection width of timelion/kibana (vertices 1 and 5 respectively), with a weighting of 0.33 (kibana -> timelion) and 0.045 (timelion -> kibana) but overlapping document count of 29:
 
 
 image::/images/2016/04/0746graph52.png[]
@@ -604,7 +604,7 @@ with elasticsearch -> kibana that has an overlapping document count of 80 but on
 image::/images/2016/04/0745graph51.png[]
 
 
-link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html?ref=rittmanmead.com[Elasticsearch's documentation] describes the significant terms algorithm thus, using the example of suggesting "H5N1" when users search for "bird flu" in text:
+link:https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-significantterms-aggregation.html[Elasticsearch's documentation] describes the significant terms algorithm thus, using the example of suggesting "H5N1" when users search for "bird flu" in text:
 
 
 [quote]
@@ -619,13 +619,13 @@ So from this, we can roughly say that Graph is looking at the number of document
 image::/images/2016/04/0744graph53.png[]
 
 
-More information about the scoring can be link:https://www.elastic.co/guide/en/elasticsearch/guide/current/scoring-theory.html?ref=rittmanmead.com[found here], which includes the fact that the scoring is, in part, based on link:https://en.wikipedia.org/wiki/Tf%E2%80%93idf?ref=rittmanmead.com[TF-IDF] (Term Frequency-Inverse Document Frequency).
+More information about the scoring can be link:https://www.elastic.co/guide/en/elasticsearch/guide/current/scoring-theory.html[found here], which includes the fact that the scoring is, in part, based on link:https://en.wikipedia.org/wiki/Tf%E2%80%93idf[TF-IDF] (Term Frequency-Inverse Document Frequency).
 
 
 == Licensing
 
 
-Graph requires a licence - link:https://www.elastic.co/subscriptions?ref=rittmanmead.com[see here for details].
+Graph requires a licence - link:https://www.elastic.co/subscriptions[see here for details].
 
 
 == Conclusion
@@ -637,13 +637,13 @@ This tool is a great way to dip one's toe into the waters of Graph analysis and 
 I'll not profess to be a Graph theory expert, so can't pass much comment on the theoretical rigour of the results and techniques seen. One thing that struck me with it was that there's no (apparent) way to manually influence the weight of connections and vertices - for example, based on the number of followers someone has one twitter consider them more (or less) relevant when determining relationships.
 
 
-For a well-informed view on Graph theory and Social Network Analysis (SNA), see Jordan Meyer's link:https://s3.amazonaws.com/rmc_docs/RMOUG2013%20-%20SNA%20with%20Oracle.pdf?ref=rittmanmead.com[presentation here] (and link:https://github.com/jordanmeyer/oracle-sna-hol?ref=rittmanmead.com[associated R code]), as well as Mark Rittman's link:http://www.slideshare.net/rittmanmead/oracle-big-data-spatial-graph-social-media-analysis-case-study?ref=rittmanmead.com[presentation from BIWA this year.]
+For a well-informed view on Graph theory and Social Network Analysis (SNA), see Jordan Meyer's link:https://s3.amazonaws.com/rmc_docs/RMOUG2013%20-%20SNA%20with%20Oracle.pdf[presentation here] (and link:https://github.com/jordanmeyer/oracle-sna-hol[associated R code]), as well as Mark Rittman's link:http://www.slideshare.net/rittmanmead/oracle-big-data-spatial-graph-social-media-analysis-case-study[presentation from BIWA this year.]
 
 
 == Footnote: The Twitter Dataset
 
 
-The dataset I’m using is a live stream from Twitter, via Logstash link:http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/?ref=rittmanmead.com[and Kafka], searching for a set of terms related to me and the field I work in. Therefore, there’s going to be a bunch of relationships missing (if I’ve not included the relevant term in my tweet search), and relationships over-stated (because as a proportion of all the records the terms I’ve selected will dominate). +
+The dataset I’m using is a live stream from Twitter, via Logstash link:http://rmoff.net/2016/04/12/decoupling-the-data-pipeline-with-kafka-a-very-simple-real-life-example/[and Kafka], searching for a set of terms related to me and the field I work in. Therefore, there’s going to be a bunch of relationships missing (if I’ve not included the relevant term in my tweet search), and relationships over-stated (because as a proportion of all the records the terms I’ve selected will dominate). +
 
 An interesting use of Graph (or Elasticsearch's significant terms aggregation in general) could be to identify all the relevant terms that I _should_ be including in my twitter search, by sampling an ‘unpolluted’ feed for relationships. For example, if I’m interested in capturing Kafka tweets, perhaps I should also be capturing those related to Samza, Spark, and so on.
 

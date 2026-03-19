@@ -19,7 +19,7 @@ NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog
 
 One of the several elements of Exalytics' power comes from it holding pre-calculated (aggregated) data in the TimesTen for Exalytics In-Memory Database. Exalytics comes with a tool called the link:https://www.rittmanmead.com/blog/2012/03/oracle-exalytics-week-the-summary-advisor/[Summary Advisor (which Mark Rittman has written about previously here)] which suggests aggregates to build based on the reports which have been run on the system. It analyses which will benefit most from aggregation and at what level(s) of granularity. 
 
-The output from the Summary Advisor is a aggregate creation script, which is something that can also be generated in other ways, either through the standard OBIEE link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm?ref=rittmanmead.com#i1021796[Aggregate Persistence Wizard], or link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm?ref=rittmanmead.com#i1028060[just by hand].
+The output from the Summary Advisor is a aggregate creation script, which is something that can also be generated in other ways, either through the standard OBIEE link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#i1021796[Aggregate Persistence Wizard], or link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#i1028060[just by hand].
 
 Whichever way the aggregate script is created, it will look something like this:
 
@@ -46,7 +46,7 @@ This script is then executed via the *nqcmd* command line utility, and invokes t
 image::/images/2012/09/061129a1a.png[A1]
 There are two things in particular to note here which seem to be overlooked in some of the general understanding of Exalytics:
 
-. The base data can come from link:http://www.oracle.com/technetwork/middleware/bi-enterprise-edition/bi-11gr1certmatrix-166168.xls?ref=rittmanmead.com[any source that OBIEE supports], including (but not limited to) Oracle, DB2, SQL Server, Teradata, generic ODBC, and so on.
+. The base data can come from link:http://www.oracle.com/technetwork/middleware/bi-enterprise-edition/bi-11gr1certmatrix-166168.xls[any source that OBIEE supports], including (but not limited to) Oracle, DB2, SQL Server, Teradata, generic ODBC, and so on.
 . OBIEE uses *Aggregate Navigation* to _automatically determine_ the most appropriate source to use for a user's query. The user does not need to specify where their data comes from; OBIEE determines the grain and then decides from which of the tables it will be most efficient to fetch it.
 
 
@@ -59,7 +59,7 @@ Lightening fast data from TimesTen aggregates is only useful when it's correct. 
 ==== Aggregate Persistence
 
 
-Out of the box, link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm?ref=rittmanmead.com#CHDIBICC[the method suggested] for keeping aggregates refreshed with the correct data is to do a complete refresh of the aggregate. What this does is: 
+Out of the box, link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#CHDIBICC[the method suggested] for keeping aggregates refreshed with the correct data is to do a complete refresh of the aggregate. What this does is: 
 
 
 . Delete the existing aggregate:
@@ -163,7 +163,7 @@ Looking at this in a bit more detail, it works like this:
 * GoldenGate replicates any changes made to the base data to the staging area
 * ODI's CDC functionality is used to examine the changes and apply them incrementally to the TimesTen aggregates
 
-ODI includes a Knowledge Module (KM) to enable the use of GoldenGate, link:http://docs.oracle.com/cd/E23943_01/integrate.1111/e12644/ogg.htm?ref=rittmanmead.com#CHDJBBAD[documented here], and this KM supports one of *Oracle, DB2, Sybase or SQL Server* as a source, and either Oracle or Teradata as the staging (where changes are captured for subsequent processing). In the diagram above, I've only illustrated Oracle as the staging database. Michael Rainey has link:https://www.rittmanmead.com/blog/2012/04/capturing-change-oracle-goldengate-odi-implementation/[an excellent article here] which demonstrates the two technologies together, and there is also link:http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_11g/odi_gg_integration/odi_gg_integration.htm?ref=rittmanmead.com[an Oracle By Example tutorial]. The key thing here is that the data is modelled into ODI, and ODI helps with all of the Goldengate configuration necessary to capture changes from the base data and record it in what are known as Journal (J$ in ODI-parlance) tables on the staging database.
+ODI includes a Knowledge Module (KM) to enable the use of GoldenGate, link:http://docs.oracle.com/cd/E23943_01/integrate.1111/e12644/ogg.htm#CHDJBBAD[documented here], and this KM supports one of *Oracle, DB2, Sybase or SQL Server* as a source, and either Oracle or Teradata as the staging (where changes are captured for subsequent processing). In the diagram above, I've only illustrated Oracle as the staging database. Michael Rainey has link:https://www.rittmanmead.com/blog/2012/04/capturing-change-oracle-goldengate-odi-implementation/[an excellent article here] which demonstrates the two technologies together, and there is also link:http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_11g/odi_gg_integration/odi_gg_integration.htm[an Oracle By Example tutorial]. The key thing here is that the data is modelled into ODI, and ODI helps with all of the Goldengate configuration necessary to capture changes from the base data and record it in what are known as Journal (J$ in ODI-parlance) tables on the staging database.
 
 Once the changes from the base data are captured and available on staging, it is over to standard ODI processing. Custom interfaces are built to apply logic to the captured changes and work out how the data should be applied to the aggregates. Here consideration needs to be given to the types of aggregate measure, and how they will be affected by changes to the base data. Simple SUM measures can be updated for the particular grain and dimension values by adding or subtracting new or deleted rows respectively. More complex measures, such as COUNT DISTINCTs might well need recalculating from base, but since the changed data will include the specific dimension values only the relevant subset of the aggregate will need recalculating. 
 

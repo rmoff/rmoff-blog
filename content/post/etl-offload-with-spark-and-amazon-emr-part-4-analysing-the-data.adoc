@@ -38,7 +38,7 @@ Where do we store data for analysis? Databases, right? That's what we've always 
 But ... what if you didn't need a database per se to query your data?
 
 
-One of the things I wanted to explore during this project was the feasibility and response times that "SQL on Hadoop" engines could bring. link:https://hive.apache.org/?ref=rittmanmead.com[Hive] is probably the most well known of these, with other options including link:http://impala.apache.org/?ref=rittmanmead.com[Apache Impala (incubating)], link:https://drill.apache.org/?ref=rittmanmead.com[Apache Drill], link:https://prestodb.io/?ref=rittmanmead.com[Presto], and even link:https://www.oracle.com/database/big-data-sql/index.html?ref=rittmanmead.com[Oracle's Big Data SQL]. All these tools read data that is _not stored in a proprietory database format_ but stored in an open format, such a simple text file, on open storage platform such as HDFS. More commonly, formats (also open, non-proprietory) which are optimised for performance such as Parquet or ORC are used.
+One of the things I wanted to explore during this project was the feasibility and response times that "SQL on Hadoop" engines could bring. link:https://hive.apache.org/[Hive] is probably the most well known of these, with other options including link:http://impala.apache.org/[Apache Impala (incubating)], link:https://drill.apache.org/[Apache Drill], link:https://prestodb.io/[Presto], and even link:https://www.oracle.com/database/big-data-sql/index.html[Oracle's Big Data SQL]. All these tools read data that is _not stored in a proprietory database format_ but stored in an open format, such a simple text file, on open storage platform such as HDFS. More commonly, formats (also open, non-proprietory) which are optimised for performance such as Parquet or ORC are used.
 
 
 The advantage of these is that they provide multiple options for working with your data, starting from the same base storage place (usually HDFS, or S3). If one tool has benefits over another in a particular processing or analytics scenario we have the option to switch, without having to do anything to the actual data at rest itself. Contrast this to the implicit assumption that the data _starts_ in an RDBMS (such as Oracle). With the data in a proprietary database the only options for switching tools are which ones you use to submit workload (over JDBC/ODBC/OCI etc). If another database platform is better in a given use case you end up either duplicating the data, or re-platforming the data entirely.
@@ -60,19 +60,19 @@ Throughout this evaluation, my considerations were:
 * *Compatibility*. JDBC or ODBC interfaces are needed to be able to use the tool with BI tools such as OBIEE or Oracle's Data Visualization Desktop. As well as the interface, the SQL language support needs to be sufficient for analytical queries.
 
 
-For an overview of SQL-on-Hadoop engines see link:https://speakerdeck.com/gregrahn/oaktable-world-2014-the-current-state-of-sql-plus-hadoop?ref=rittmanmead.com[this presentation from Greg Rahn]. It's a couple of years old but pretty much still current bar the odd version and feature change.
+For an overview of SQL-on-Hadoop engines see link:https://speakerdeck.com/gregrahn/oaktable-world-2014-the-current-state-of-sql-plus-hadoop[this presentation from Greg Rahn]. It's a couple of years old but pretty much still current bar the odd version and feature change.
 
 
 == Redshift
 
 
-link:https://aws.amazon.com/redshift?ref=rittmanmead.com[Redshift] is not SQL-on-hadoop - it is a full-blown database. Specifically, it is a proprietory implementation of Postgres by Amazon, running as a service on their cloud. Just as you can provision an EMR cluster of any required size, you can do the same for Redshift. As your capacity and processing requirements change, you can scale your Redshift cluster up and down.
+link:https://aws.amazon.com/redshift[Redshift] is not SQL-on-hadoop - it is a full-blown database. Specifically, it is a proprietory implementation of Postgres by Amazon, running as a service on their cloud. Just as you can provision an EMR cluster of any required size, you can do the same for Redshift. As your capacity and processing requirements change, you can scale your Redshift cluster up and down.
 
 
 Redshift has both JDBC and ODBC drivers, making it accessible from both Data Visualization Desktop (supported) and OBIEE (works, but not supported).
 
 
-To work with Redshift you can use a tool just as link:http://docs.aws.amazon.com/redshift/latest/mgmt/connecting-using-workbench.html?ref=rittmanmead.com[SQL WorkbenchJ], or the `psql` commandline tool. I installed the latter on my Mac using link:http://brew.sh/?ref=rittmanmead.com[brew] and `brew install postgres`.
+To work with Redshift you can use a tool just as link:http://docs.aws.amazon.com/redshift/latest/mgmt/connecting-using-workbench.html[SQL WorkbenchJ], or the `psql` commandline tool. I installed the latter on my Mac using link:http://brew.sh/[brew] and `brew install postgres`.
 
 
 With the processed data held on S3, loading it into Redshift is as simple as defining the table (with standard `CREATE TABLE` DDL), and then issuing a COPY command:
@@ -196,7 +196,7 @@ Out of the box, response times were pretty good - here's a sample of the queries
 Hive enables you to run queries with SQL-like language (Hive QL) on data stored in various places including HDFS, and S3. It supports multiple formats of data, including simple delimited text files like CSV, and more advanced formats such as Parquet.
 
 
-The version of Hive that I was using on EMR was automagically configured to link:https://cwiki.apache.org/confluence/display/Hive/Hive+on+Tez?ref=rittmanmead.com[use Tez] as its execution engine, instead of the traditional map/reduce of the original Hadoop platform.
+The version of Hive that I was using on EMR was automagically configured to link:https://cwiki.apache.org/confluence/display/Hive/Hive+on+Tez[use Tez] as its execution engine, instead of the traditional map/reduce of the original Hadoop platform.
 
 
 To query the data, simply define an *`EXTERNAL`* table. Why an `EXTERNAL` table? Well if you just define a `TABLE`, and then drop it ... it will also delete the underlying data. It's one of those syntax decisions that makes brutally logical sense, but burnt me and I'm sure has burnt many others. But, you won't do it again (or at least, not for a while).
@@ -281,13 +281,13 @@ VERTICES: 00/02  [>>--------------------------] 3%    ELAPSED TIME: 442.36 s
 As with elsewhere in the exercise - I'm well aware that there are optimisations that could be made that could help with response time, such as storing the data in more optimal formats (ORC/Parquet) and layouts (partitioning) as well as compresing it.
 
 
-Don't write Hive off though - the latest versions (being developed by Hortonworks, and not on EMR yet) are moving to use link:http://hortonworks.com/blog/apache-hive-going-memory-computing/?ref=rittmanmead.com[in-memory components] and link:http://hortonworks.com/blog/apache-hive-vs-apache-impala-query-performance-comparison/?ref=rittmanmead.com[competing well against Impala].
+Don't write Hive off though - the latest versions (being developed by Hortonworks, and not on EMR yet) are moving to use link:http://hortonworks.com/blog/apache-hive-going-memory-computing/[in-memory components] and link:http://hortonworks.com/blog/apache-hive-vs-apache-impala-query-performance-comparison/[competing well against Impala].
 
 
 == Impala
 
 
-Impala is Cloudera's open-source offering in the SQL-on-Hadoop space. I was hoping to try out Impala against the data in S3, especially given link:https://blog.cloudera.com/blog/2016/08/analytics-and-bi-on-amazon-s3-with-apache-impala-incubating/?ref=rittmanmead.com[a recent post by Cloudera] with some promising performance metrics. Unfortunately this was for Impala 2.6, and the only version available prebuilt on EMR was 1.2.4. Given time, it would have been possible to build my own CDH-based Hadoop cluster (using link:http://www.cloudera.com/products/cloudera-director.html?ref=rittmanmead.com[Director] to automate it) with the latest version of Impala installed - but this will have to be for another day. The current link:http://www.cloudera.com/documentation/enterprise/5-6-x/topics/impala_s3.html?ref=rittmanmead.com[Cloudera documentation] also suggests that S3 is:
+Impala is Cloudera's open-source offering in the SQL-on-Hadoop space. I was hoping to try out Impala against the data in S3, especially given link:https://blog.cloudera.com/blog/2016/08/analytics-and-bi-on-amazon-s3-with-apache-impala-incubating/[a recent post by Cloudera] with some promising performance metrics. Unfortunately this was for Impala 2.6, and the only version available prebuilt on EMR was 1.2.4. Given time, it would have been possible to build my own CDH-based Hadoop cluster (using link:http://www.cloudera.com/products/cloudera-director.html[Director] to automate it) with the latest version of Impala installed - but this will have to be for another day. The current link:http://www.cloudera.com/documentation/enterprise/5-6-x/topics/impala_s3.html[Cloudera documentation] also suggests that S3 is:
 
 
 [quote]
@@ -296,13 +296,13 @@ ____
 ____
 
 
-although it's not clear if that's still true in the context of the latest link:https://blog.cloudera.com/blog/2016/08/analytics-and-bi-on-amazon-s3-with-apache-impala-incubating/?ref=rittmanmead.com[Impala S3 optimisations].
+although it's not clear if that's still true in the context of the latest link:https://blog.cloudera.com/blog/2016/08/analytics-and-bi-on-amazon-s3-with-apache-impala-incubating/[Impala S3 optimisations].
 
 
 == Presto
 
 
-Presto is an open source project that originated at Facebook. Similar to Apache Drill (below), it can query across data (and federate the results) from link:https://prestodb.io/docs/current/connector.html?ref=rittmanmead.com[multiple sources] including Hive (and thus S3), MongoDB, MySQL, and even Kafka.
+Presto is an open source project that originated at Facebook. Similar to Apache Drill (below), it can query across data (and federate the results) from link:https://prestodb.io/docs/current/connector.html[multiple sources] including Hive (and thus S3), MongoDB, MySQL, and even Kafka.
 
 
 For Presto to query against the data in S3, you need to define the table in Hive first. Presto uses the Hive metastore to retrieve the definition of the table, and carries out the actual query execution itself. First, a simple smoke test that we can pull back some data:
@@ -541,28 +541,28 @@ Diagnostics: Container [pid=4642,containerID=container_1476905618527_0004_01_000
 With appropriate investigation (and/or smaller chunks of data loading) this could obviously be overcome, but for now halted any further investigation into ORC's usefulness. The other major area to investigate would be partitioning of the data.
 
 
-A final note on performance - link:http://tech.marksblogg.com/billion-nyc-taxi-rides-s3-vs-hdfs.html?ref=rittmanmead.com[this blog] does a comparison of Presto querying data held in S3 vs HDFS on EMR. HDFS on EMR is quicker, generally about 1.5 times or so - but you of course need your data loaded into HDFS on a running EMR cluster, whereas S3 is there on demand whenever you want it.
+A final note on performance - link:http://tech.marksblogg.com/billion-nyc-taxi-rides-s3-vs-hdfs.html[this blog] does a comparison of Presto querying data held in S3 vs HDFS on EMR. HDFS on EMR is quicker, generally about 1.5 times or so - but you of course need your data loaded into HDFS on a running EMR cluster, whereas S3 is there on demand whenever you want it.
 
 
 == Drill
 
 
-Apache Drill is another open-source tool, similar in concept to Presto, in that it enables querying across data held in multiple sources. I've written about it previously link:https://www.mapr.com/blog/how-guide-getting-started-apache-drill?ref=rittmanmead.com[here] and link:https://www.mapr.com/blog/essential-tips-using-apache-drill-obiee-12c?ref=rittmanmead.com[here]. Whilst EMR has an option to provision a Drill cluster as part of an EMR build, it didn't seem to work when I tried it - and with Presto running I didn't spend the time digging into Drill. Given another time and project though, I'd definitely be looking to run it against this kind of data to see how it handled it. A link:https://lists.apache.org/thread.html/%3CEA6DA00B-9249-4D31-9C8C-AFFC44570F98@xhochy.com%3E?ref=rittmanmead.com[recent thread on the Drill mailing list] gave some interesting information on performance.
+Apache Drill is another open-source tool, similar in concept to Presto, in that it enables querying across data held in multiple sources. I've written about it previously link:https://www.mapr.com/blog/how-guide-getting-started-apache-drill[here] and link:https://www.mapr.com/blog/essential-tips-using-apache-drill-obiee-12c[here]. Whilst EMR has an option to provision a Drill cluster as part of an EMR build, it didn't seem to work when I tried it - and with Presto running I didn't spend the time digging into Drill. Given another time and project though, I'd definitely be looking to run it against this kind of data to see how it handled it. A link:https://lists.apache.org/thread.html/%3CEA6DA00B-9249-4D31-9C8C-AFFC44570F98@xhochy.com%3E[recent thread on the Drill mailing list] gave some interesting information on performance.
 
 
 == Athena
 
 
-Amazon's link:https://aws.amazon.com/athena/?ref=rittmanmead.com[Athena] tool was link:https://aws.amazon.com/about-aws/whats-new/2016/11/introducing-amazon-athena-a-pay-as-you-go-interactive-query-service-that-makes-it-easy-to-analyze-data-in-amazon-s3-using-standard-sql/?ref=rittmanmead.com[announced] at link:https://reinvent.awsevents.com/?ref=rittmanmead.com[re:Invent 2016]. Even though it was made GA after the client project being discussed here and therefore not evaluated, it is definitely worth mentioning. It provides "serverless" SQL querying of data held in S3. Under the covers it uses Presto (which is one of the tools I evaluated above). The benefit of Athena is that you wouldn't need to provision and configure actual servers to use Presto. You work with it through the web-based interface, or link:https://docs.aws.amazon.com/athena/latest/ug/connect-with-jdbc.html?ref=rittmanmead.com[JDBC]. This is a pretty big point to make - *you can query your data, held in an open format, on demand, using SQL, without having to move it into a database or build a server to run a query engine*.
+Amazon's link:https://aws.amazon.com/athena/[Athena] tool was link:https://aws.amazon.com/about-aws/whats-new/2016/11/introducing-amazon-athena-a-pay-as-you-go-interactive-query-service-that-makes-it-easy-to-analyze-data-in-amazon-s3-using-standard-sql/[announced] at link:https://reinvent.awsevents.com/[re:Invent 2016]. Even though it was made GA after the client project being discussed here and therefore not evaluated, it is definitely worth mentioning. It provides "serverless" SQL querying of data held in S3. Under the covers it uses Presto (which is one of the tools I evaluated above). The benefit of Athena is that you wouldn't need to provision and configure actual servers to use Presto. You work with it through the web-based interface, or link:https://docs.aws.amazon.com/athena/latest/ug/connect-with-jdbc.html[JDBC]. This is a pretty big point to make - *you can query your data, held in an open format, on demand, using SQL, without having to move it into a database or build a server to run a query engine*.
 
 
-Athena looks interesting, but one of the main things that struck me about it was that it is _not_ something you would simply point at piles of data on S3 and build your analytics systems on. The link:https://aws.amazon.com/athena/pricing/?ref=rittmanmead.com[cost] is _per query_, and is currently link:https://aws.amazon.com/athena/pricing/?ref=rittmanmead.com[$5 per TB scanned]. FIVE DOLLARS, per terabyte of data _SCANNED_. Not retrieved. Scanned. So in order to not run up big AWS bills if you've got lots of data, you're going to need to do smart things to reduce the size of data scanned. Partitioning your data, and compressing it, will both help. As it happens, these are the things that are going to increase performance too, so it's not wasted effort. There's link:http://tech.marksblogg.com/billion-nyc-taxi-rides-aws-athena.html?ref=rittmanmead.com[a good writeup here] demonstrating Athena, and the difference that using an appropriate storage format for the data makes to performance and volumes of data scanned (and thus cost).
+Athena looks interesting, but one of the main things that struck me about it was that it is _not_ something you would simply point at piles of data on S3 and build your analytics systems on. The link:https://aws.amazon.com/athena/pricing/[cost] is _per query_, and is currently link:https://aws.amazon.com/athena/pricing/[$5 per TB scanned]. FIVE DOLLARS, per terabyte of data _SCANNED_. Not retrieved. Scanned. So in order to not run up big AWS bills if you've got lots of data, you're going to need to do smart things to reduce the size of data scanned. Partitioning your data, and compressing it, will both help. As it happens, these are the things that are going to increase performance too, so it's not wasted effort. There's link:http://tech.marksblogg.com/billion-nyc-taxi-rides-aws-athena.html[a good writeup here] demonstrating Athena, and the difference that using an appropriate storage format for the data makes to performance and volumes of data scanned (and thus cost).
 
 
 The cost consideration is a crucial point, because it means that data 'engineering' is still needed in any system you plan to build Athena on top of as the query engine. Sure, you can use it for adhoc 'fishing' expeditions in your 'data lake' (sorry....). Here the benefit of sifting through vast and disparate data without having to transform and/or load it into a queryable form first will probably outweigh the ad-hoc costs (remember : $5 per TB _scanned_). But as I said, if you're engineering Athena into your system as the SQL engine of top of data at rest in S3, you'll want to invest in the necessary wrangling in order to store the data (a) partitioned and (b) compressed.
 
 
-You can read more about Athena link:https://aws.amazon.com/blogs/big-data/analyzing-data-in-s3-using-amazon-athena/?ref=rittmanmead.com[here].
+You can read more about Athena link:https://aws.amazon.com/blogs/big-data/analyzing-data-in-s3-using-amazon-athena/[here].
 
 
 == Front End Tools
@@ -577,7 +577,7 @@ image::/images/2016/12/acme09.png[]
 image::/images/2016/12/acme10.png[]
 
 
-A tool that we didn't examine, but is directly relevant given the Amazon context, is link:https://aws.amazon.com/quicksight/?ref=rittmanmead.com[Quicksight]. [line-through]##Currently in closed-preview## Released in mid-November 2017, this is a cloud-based tool that enables querying of data in link:https://aws.amazon.com/quicksight/faqs/?ref=rittmanmead.com#data_mgmt[many sources] including Redshift -- but also S3 itself.
+A tool that we didn't examine, but is directly relevant given the Amazon context, is link:https://aws.amazon.com/quicksight/[Quicksight]. [line-through]##Currently in closed-preview## Released in mid-November 2017, this is a cloud-based tool that enables querying of data in link:https://aws.amazon.com/quicksight/faqs/#data_mgmt[many sources] including Redshift -- but also S3 itself.
 
 
 == Summary

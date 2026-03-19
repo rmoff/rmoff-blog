@@ -16,10 +16,10 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/[Rittman Mead blog].
 
-link:http://www.oracle.com/technetwork/middleware/goldengate/overview/index.html?ref=rittmanmead.com[Oracle GoldenGate] for Big Data (OGG BD) supports sending transactions as messages to Kafka topics, both through the link:http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm?ref=rittmanmead.com#GADBD449[native Oracle handler] as well as a link:https://blogs.oracle.com/dataintegration/entry/oracle_goldengate_adapter_for_confluent?ref=rittmanmead.com[connector into Confluent's Kafka Connect]. In some research that I was doing with it I found an interesting problem that I am going to demonstrate here and show the troubleshooting tools that may be useful to others encountering similar issues.
+link:http://www.oracle.com/technetwork/middleware/goldengate/overview/index.html[Oracle GoldenGate] for Big Data (OGG BD) supports sending transactions as messages to Kafka topics, both through the link:http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm#GADBD449[native Oracle handler] as well as a link:https://blogs.oracle.com/dataintegration/entry/oracle_goldengate_adapter_for_confluent[connector into Confluent's Kafka Connect]. In some research that I was doing with it I found an interesting problem that I am going to demonstrate here and show the troubleshooting tools that may be useful to others encountering similar issues.
 
 
-The source for the data is link:http://dominicgiles.com/swingbench.html?ref=rittmanmead.com[Swingbench] running against Oracle 12c database (pluggable instance). OGG has been configured as follows:
+The source for the data is link:http://dominicgiles.com/swingbench.html[Swingbench] running against Oracle 12c database (pluggable instance). OGG has been configured as follows:
 
 
 * Extract
@@ -122,7 +122,7 @@ org.apache.avro.SchemaParseException: Illegal character in: SYS_NC00017$
 So from this we've got the table (`ORCL.SOE.CUSTOMERS`), log offset (`6636`), and from the stack trace even a hint at what the issue may be (something to do with the Schema, and a column called `SYS_NC00017$`).
 
 
-Now let's see if we can find out more. A colleague of mine pointed me towards link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/toc.htm?ref=rittmanmead.com[Logdump], which is link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/wu_logdump.htm?ref=rittmanmead.com[well documented] and also covered by Oracle's A-Team link:http://www.ateam-oracle.com/oracle-goldengate-logdump/?ref=rittmanmead.com[blog here].
+Now let's see if we can find out more. A colleague of mine pointed me towards link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/toc.htm[Logdump], which is link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/wu_logdump.htm[well documented] and also covered by Oracle's A-Team link:http://www.ateam-oracle.com/oracle-goldengate-logdump/[blog here].
 
 
 Launch `logdump` from the OGG BD folder, ideally using `rlwrap` so that you can scroll and search through command history:
@@ -145,7 +145,7 @@ Logdump 1 >
 Then enter the following, which will determine what information is shown:
 
 
-* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm?ref=rittmanmead.com#GLOGD182[record headers]
+* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD182[record headers]
 
 
 +
@@ -154,7 +154,7 @@ Then enter the following, which will determine what information is shown:
   GHDR ON
 ----
 +
-* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm?ref=rittmanmead.com#GLOGD159[detailed column data], in both hex and ASCII
+* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD159[detailed column data], in both hex and ASCII
 
 
 +
@@ -378,7 +378,7 @@ CUSTOMER_ID          NUMBER
 Sixteen columns. Not eighteen, as the OGG trail file Metadata record showed. Hmmm.
 
 
-Interestingly, Google link:https://dbvisit.atlassian.net/wiki/display/REPA11XE/02+-+Initialise+the+Replication?ref=rittmanmead.com[throws up a match for this very column] in which the output of link:http://www.dbvisit.com/products/dbvisit_replicate_real_time_oracle_database_replication/?ref=rittmanmead.com[Dbvisit's replicate tool] run against the Swingbench schema announces:
+Interestingly, Google link:https://dbvisit.atlassian.net/wiki/display/REPA11XE/02+-+Initialise+the+Replication[throws up a match for this very column] in which the output of link:http://www.dbvisit.com/products/dbvisit_replicate_real_time_oracle_database_replication/[Dbvisit's replicate tool] run against the Swingbench schema announces:
 
 
 [source]
@@ -409,7 +409,7 @@ CUSTOMERS        CUST_DOB_IX                      DOB
 ----------------------------------
 
 
-link:https://www.youtube.com/watch?v=uuN7kOW7iwo&ref=rittmanmead.com[Aha]! I spy system generated columns! Let's take a closer look at the `CUST_FUNC_LOWER_NAME_IX` index:
+link:https://www.youtube.com/watch?v=uuN7kOW7iwo[Aha]! I spy system generated columns! Let's take a closer look at the `CUST_FUNC_LOWER_NAME_IX` index:
 
 
 [source,sql]
@@ -425,7 +425,7 @@ CUST_FUNC_LOWER_NAME_IX          FUNCTION-BASED NORMAL
 ----------------------------------
 
 
-So we have a link:http://docs.oracle.com/cd/E11882_01/server.112/e40540/indexiot.htm?ref=rittmanmead.com#CNCPT1161[function-based index], which in the background appears to implement itself via two hidden columns. My guess is that the Kafka handler code is taking the metadata definition record of 18 columns too literally, and expecting to find a value for it in the transaction record when it reads it and falls over when it can't. Similar behaviour happens with the Kafka Connect OGG connector when it tries to process this particular record:
+So we have a link:http://docs.oracle.com/cd/E11882_01/server.112/e40540/indexiot.htm#CNCPT1161[function-based index], which in the background appears to implement itself via two hidden columns. My guess is that the Kafka handler code is taking the metadata definition record of 18 columns too literally, and expecting to find a value for it in the transaction record when it reads it and falls over when it can't. Similar behaviour happens with the Kafka Connect OGG connector when it tries to process this particular record:
 
 
 [source]
@@ -535,7 +535,7 @@ Filtering suppressed  62444 records
 --------------------------------------------------------------------
 
 
-Here's the new table metadata, for sixten columns only and minus the `SYS_[...]` columns. Its position as shown in the record above is RBA 14702330. To get the commit sequence number (CSN), which we can use to restart the replicat, we need to enable the display of OGG-generated data in the records (link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm?ref=rittmanmead.com#GLOGD235[ref]):
+Here's the new table metadata, for sixten columns only and minus the `SYS_[...]` columns. Its position as shown in the record above is RBA 14702330. To get the commit sequence number (CSN), which we can use to restart the replicat, we need to enable the display of OGG-generated data in the records (link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD235[ref]):
 
 
 [source]
@@ -635,7 +635,7 @@ ORCL.SOE.LOGONI42016-09-05 16:27:20.00018642016-09-06T15:50:52.888000(0000000000
 == A Better Workaround?
 
 
-Per link:https://docs.oracle.com/goldengate/1212/gg-winux/GIORA/additional_config.htm?ref=rittmanmead.com#GIORA382[Handling Other Database Properties], virtual columns can be handled by using the link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm?ref=rittmanmead.com[`TABLE`] link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm?ref=rittmanmead.com#CEGHBBED[`FETCHCOLS`] configuration on the extract to read the virtual values and `MAP` of the replicat to map them to actual columns on the target. Unfortunately, the system-generated column name isn't accepted by OGG in the `FETCHCOLS` syntax:
+Per link:https://docs.oracle.com/goldengate/1212/gg-winux/GIORA/additional_config.htm#GIORA382[Handling Other Database Properties], virtual columns can be handled by using the link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm[`TABLE`] link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm#CEGHBBED[`FETCHCOLS`] configuration on the extract to read the virtual values and `MAP` of the replicat to map them to actual columns on the target. Unfortunately, the system-generated column name isn't accepted by OGG in the `FETCHCOLS` syntax:
 
 
 [source]
@@ -646,7 +646,7 @@ ERROR   OGG-01668  Oracle GoldenGate Capture for Oracle, ext1.prm:  PROCESS ABEN
 ----
 
 
-Another tack to try, given that in our case we simply want to make sure the virtual columns don't get picked up at all - is to try and ignore the column altogether. Unfortunately from my experimentation with link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm?ref=rittmanmead.com#CEGICBHB[`COLSEXCEPT`] it appears that OGG excludes specified columns from record data, but not the initial metadata (which is what causes the above problems in the first place). Even if this had worked, `COLSEXCEPT` doesn't like the system-generated column name, abending the Extract process with:
+Another tack to try, given that in our case we simply want to make sure the virtual columns don't get picked up at all - is to try and ignore the column altogether. Unfortunately from my experimentation with link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm#CEGICBHB[`COLSEXCEPT`] it appears that OGG excludes specified columns from record data, but not the initial metadata (which is what causes the above problems in the first place). Even if this had worked, `COLSEXCEPT` doesn't like the system-generated column name, abending the Extract process with:
 
 
 [source]

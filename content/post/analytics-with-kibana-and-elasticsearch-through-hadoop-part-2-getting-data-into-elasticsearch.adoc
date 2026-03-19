@@ -29,13 +29,13 @@ In this article we will see how to go about doing that load into ElasticSearch, 
 == Loading data from Hive to Elasticsearch
 
 
-We need to get the data into Elasticsearch itself since that is where Kibana requires it to be for generating the visualisations. Elasticsearch holds the data and provides the analytics engine, and Kibana provides the visualisation rendering and the generation of queries into Elasticsearch. link:http://www.elasticsearch.org/overview/kibana?ref=rittmanmead.com[Kibana] and link:http://www.elasticsearch.org/overview/elasticsearch?ref=rittmanmead.com[Elasticsearch] are the ‘E’ and ‘K’ of the ELK stack, which I have written about previously (the ‘L’ being link:http://www.elasticsearch.org/overview/logstash?ref=rittmanmead.com[Logstash] but we’re not using that here).
+We need to get the data into Elasticsearch itself since that is where Kibana requires it to be for generating the visualisations. Elasticsearch holds the data and provides the analytics engine, and Kibana provides the visualisation rendering and the generation of queries into Elasticsearch. link:http://www.elasticsearch.org/overview/kibana[Kibana] and link:http://www.elasticsearch.org/overview/elasticsearch[Elasticsearch] are the ‘E’ and ‘K’ of the ELK stack, which I have written about previously (the ‘L’ being link:http://www.elasticsearch.org/overview/logstash[Logstash] but we’re not using that here).
 
 
-Using the link:https://github.com/elasticsearch/elasticsearch-hadoop?ref=rittmanmead.com[elasticsearch-hadoop] connector we can load data exposed through Hive into Elasticsearch. It’s possible to load data directly from origin into Elasticsearch (using, for example, Logstash) but here we’re wanting to bring together several sets of data using Hadoop/Hive as the common point of integration.
+Using the link:https://github.com/elasticsearch/elasticsearch-hadoop[elasticsearch-hadoop] connector we can load data exposed through Hive into Elasticsearch. It’s possible to load data directly from origin into Elasticsearch (using, for example, Logstash) but here we’re wanting to bring together several sets of data using Hadoop/Hive as the common point of integration.
 
 
-Elasticsearch has a concept of an ‘index’ within which data is stored, held under a schema known as a ‘mapping’. Each index can have multiple mappings. It’s dead easy to run Elasticsearch - simply link:http://www.elasticsearch.org/overview/elkdownloads/?ref=rittmanmead.com[download it], unpack the archive, and then run it - it really is as easy as that:
+Elasticsearch has a concept of an ‘index’ within which data is stored, held under a schema known as a ‘mapping’. Each index can have multiple mappings. It’s dead easy to run Elasticsearch - simply link:http://www.elasticsearch.org/overview/elkdownloads/[download it], unpack the archive, and then run it - it really is as easy as that:
 
 
 [source]
@@ -74,7 +74,7 @@ This means that the process is as follows:
 Steps 2 and 3 can be sidestepped by crafting the mapping by hand from the outset but it’s typically quicker not to.
 
 
-Before we can do anything in terms of shifting data around, we need to make elasticsearch-hadoop available to Hadoop. link:https://github.com/elasticsearch/elasticsearch-hadoop?ref=rittmanmead.com[Download it from the github site], and copy the jar file to `/usr/lib/hadoop` and add it to `HIVE_AUX_JARS_PATH` in `/usr/lib/hive/conf/hive-env.sh`.
+Before we can do anything in terms of shifting data around, we need to make elasticsearch-hadoop available to Hadoop. link:https://github.com/elasticsearch/elasticsearch-hadoop[Download it from the github site], and copy the jar file to `/usr/lib/hadoop` and add it to `HIVE_AUX_JARS_PATH` in `/usr/lib/hive/conf/hive-env.sh`.
 
 
 === Defining the Hive table over Elasticsearch
@@ -101,7 +101,7 @@ TBLPROPERTIES (
 ----
 
 
-The `ROW FORMAT` and `STORED BY` are standard, but the `TBLPROPERTIES` values should be explained (link:http://www.elasticsearch.org/guide/en/elasticsearch/hadoop/current/configuration.html?ref=rittmanmead.com[you’ll find full details in the manual]):
+The `ROW FORMAT` and `STORED BY` are standard, but the `TBLPROPERTIES` values should be explained (link:http://www.elasticsearch.org/guide/en/elasticsearch/hadoop/current/configuration.html[you’ll find full details in the manual]):
 
 
 . `es.nodes` - this is the hostname of the Elasticsearch server. If you have multiple nodes it will discover the others from this.
@@ -111,7 +111,7 @@ The `ROW FORMAT` and `STORED BY` are standard, but the `TBLPROPERTIES` values sh
 === Time for a tangent …
 
 
-The biggest issue I had getting data from Hive into Elasticsearch was timestamps. To cut a very long story (involving lots of link:http://thread.gmane.org/gmane.linux.kernel/1126136?ref=rittmanmead.com[random jiggling], hi link:https://twitter.com/Nephentur/status/524994565389180928?ref=rittmanmead.com[Christian!]) short, I found it was easiest to convert timestamps into link:http://en.wikipedia.org/wiki/Unix_time?ref=rittmanmead.com[Unix epoch] (number of seconds since Jan 1st 1970), rather than prat about with format strings (and prat about I did). For timestamps already matching the link:http://en.wikipedia.org/wiki/ISO_8601?ref=rittmanmead.com[ISO8601 standard] such as those in my Wordpress data, I could link:https://twitter.com/markrittman/status/517740608568311808?ref=rittmanmead.com[leverage] the Hive function `UNIX_TIMESTAMP` which returns exactly that
+The biggest issue I had getting data from Hive into Elasticsearch was timestamps. To cut a very long story (involving lots of link:http://thread.gmane.org/gmane.linux.kernel/1126136[random jiggling], hi link:https://twitter.com/Nephentur/status/524994565389180928[Christian!]) short, I found it was easiest to convert timestamps into link:http://en.wikipedia.org/wiki/Unix_time[Unix epoch] (number of seconds since Jan 1st 1970), rather than prat about with format strings (and prat about I did). For timestamps already matching the link:http://en.wikipedia.org/wiki/ISO_8601[ISO8601 standard] such as those in my Wordpress data, I could link:https://twitter.com/markrittman/status/517740608568311808[leverage] the Hive function `UNIX_TIMESTAMP` which returns exactly that
 
 
 [source,sql]
@@ -167,7 +167,7 @@ _As I’ve noted above, this feels more complex than it needed to have been, and
 We want to send a sample row of data to Elasticsearch now for two reasons:
 
 
-. As a link:http://en.wikipedia.org/wiki/Domestic_Canary?ref=rittmanmead.com#Miner.27s_canary[canary] to prove the “plumbing” - no point chucking thousands of rows across through MapReduce if it’s going to fall over for a simple problem (I learnt my lesson during the timestamp fiddling above).
+. As a link:http://en.wikipedia.org/wiki/Domestic_Canary#Miner.27s_canary[canary] to prove the “plumbing” - no point chucking thousands of rows across through MapReduce if it’s going to fall over for a simple problem (I learnt my lesson during the timestamp fiddling above).
 . Automagically generate the Elasticsearch mapping, which we subsequently need to modify by hand and is easier if it’s been created for us first.
 
 
@@ -226,10 +226,10 @@ Meaning that you need to go to the Hive log file for the full diagnostics.
 === Amending the Elasticsearch mapping
 
 
-So assuming the previous step worked (if you got the innocuous `No rows affected` from beeline then it did) you now have an index and mapping (and a couple of “documents” of data) in Elasticsearch. You can inspect the mapping in several ways, including with the GUI for Elasticsearch admin *link:https://github.com/lmenezes/elasticsearch-kopf?ref=rittmanmead.com[kopf]*.
+So assuming the previous step worked (if you got the innocuous `No rows affected` from beeline then it did) you now have an index and mapping (and a couple of “documents” of data) in Elasticsearch. You can inspect the mapping in several ways, including with the GUI for Elasticsearch admin *link:https://github.com/lmenezes/elasticsearch-kopf[kopf]*.
 
 
-You can also interogate Elasticsearch directly with its link:http://programmers.stackexchange.com/a/145655?ref=rittmanmead.com[REST API], which is what we’re going to use to update the mapping so let’s use it also to view it. I’m going to use *link:http://curl.haxx.se/?ref=rittmanmead.com[curl]* to do the HTTP call, and then pipe it `|` straight to *link:http://stedolan.github.io/jq/?ref=rittmanmead.com[jq]* to prettify the resulting JSON that Elasticsearch sends back.
+You can also interogate Elasticsearch directly with its link:http://programmers.stackexchange.com/a/145655[REST API], which is what we’re going to use to update the mapping so let’s use it also to view it. I’m going to use *link:http://curl.haxx.se/[curl]* to do the HTTP call, and then pipe it `|` straight to *link:http://stedolan.github.io/jq/[jq]* to prettify the resulting JSON that Elasticsearch sends back.
 
 
 [source,json]
@@ -273,7 +273,7 @@ We can see from this that Elasticsearch has generated the mapping to match the d
 . Fields that we don’t want broken down for analysis need marking as such. We’ll see the real difference that this makes when we get on to Kibana later.
 
 
-To amend the mapping we just take the JSON document, make the changes, and then push it back with curl again. You can use any editor with the JSON (I’ve found link:https://atom.io/?ref=rittmanmead.com[Atom] on the Mac to be great for its syntax highlighting, brace matching, etc). To change the type of the date field just change `long` to `date`. To mark a field not for analysis add `"index": "not_analyzed"` to the column definition. After these changes, the amended fields in my mapping JSON look like this:
+To amend the mapping we just take the JSON document, make the changes, and then push it back with curl again. You can use any editor with the JSON (I’ve found link:https://atom.io/[Atom] on the Mac to be great for its syntax highlighting, brace matching, etc). To change the type of the date field just change `long` to `date`. To mark a field not for analysis add `"index": "not_analyzed"` to the column definition. After these changes, the amended fields in my mapping JSON look like this:
 
 
 [source,json]
@@ -392,7 +392,7 @@ But this requires a MapReduce job to run and is fairly slow. Much faster is dire
 ----
 
 
-Here I’ve used a bit more *jq* to parse down the stats in JSON that Elasticsearch sends back. If you want to explore more of what jq can do, you’ll find link:https://jqplay.org/?ref=rittmanmead.com[https://jqplay.org/] useful.
+Here I’ve used a bit more *jq* to parse down the stats in JSON that Elasticsearch sends back. If you want to explore more of what jq can do, you’ll find link:https://jqplay.org/[https://jqplay.org/] useful.
 
 
 == Code

@@ -20,7 +20,7 @@ nqcmd is the ODBC command line tool that always has, and hopefully always will, 
 
 . Automated cache purging, by sending one of the SAPurge[…] ODBC commands to the BI Server, usually done as part of a script
 . Automated execution of Logical SQL, often done to support testing scenarios
-. link:https://www.rittmanmead.com/blog/2014/03/built-in-obiee-load-testing-with-nqcmd/[Load Testing the BI Server] (via a link:https://blogs.oracle.com/pa/entry/obiee_11_1_1_advanced?ref=rittmanmead.com[magic undocumented switch, SA_NQCMD_ADVANCED])
+. link:https://www.rittmanmead.com/blog/2014/03/built-in-obiee-load-testing-with-nqcmd/[Load Testing the BI Server] (via a link:https://blogs.oracle.com/pa/entry/obiee_11_1_1_advanced[magic undocumented switch, SA_NQCMD_ADVANCED])
 . Manual interogation of the BI Server - if you want to poke and prod nqsserver without launching a web browser, nqcmd is your friend :)
 
 
@@ -101,16 +101,16 @@ Neat! But so what? Well, I see two uses straight away:
 
 
 . In some situations you may not have access to the filesystem of the server on which the BI Server is running. For example, as a consultant I’ve been to clients where I’m given the Administration Tool client installation only. If I want to debug an RPD that I’m developing I’ll usually want to poke around in nqquery.log to see quite what physical SQL is being generated – and now I can.
-. There was a discussion on the link:https://groups.google.com/forum/?ref=rittmanmead.com#!forum/obiee-enterprise-methodology[EMG mailing list] recently about generating Physical SQL without executing it on the database. I’m going to discuss this in the next section of this article, and to do the analysis for this rapidly I’m using the inline query log.
+. There was a discussion on the link:https://groups.google.com/forum/#!forum/obiee-enterprise-methodology[EMG mailing list] recently about generating Physical SQL without executing it on the database. I’m going to discuss this in the next section of this article, and to do the analysis for this rapidly I’m using the inline query log.
 
 
 == Generating Physical SQL for OBIEE without Executing it - SKIP_PHYSICAL_QUERY_EXEC
 
 
-OBIEE generates the Physical SQL that it runs against the database dynamically, at runtime. It takes the Logical request (“Logical SQL”), runs it through the RPD and generates one or more “Physical SQL” statements to be executed on the database as required to pull back the necessary data. A question arose recently on the link:https://groups.google.com/forum/?ref=rittmanmead.com#!forum/obiee-enterprise-methodology[EMG mailing list] as to whether it is possible to get the Physical SQL - _without executing it_. You can imagine the benefits of this (namely, regression testing) since executing the database query each time is typically going to be expensive in machine resource and time consuming.
+OBIEE generates the Physical SQL that it runs against the database dynamically, at runtime. It takes the Logical request (“Logical SQL”), runs it through the RPD and generates one or more “Physical SQL” statements to be executed on the database as required to pull back the necessary data. A question arose recently on the link:https://groups.google.com/forum/#!forum/obiee-enterprise-methodology[EMG mailing list] as to whether it is possible to get the Physical SQL - _without executing it_. You can imagine the benefits of this (namely, regression testing) since executing the database query each time is typically going to be expensive in machine resource and time consuming.
 
 
-In link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html?ref=rittmanmead.com[SampleApp v406] there is a /home/oracle/scripts/PhysicalSQLGenerator, which does two things. First off it generates the Logical SQL for a given analysis, presumably using the link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/methods.htm?ref=rittmanmead.com#i1009522[generateReportSQL] web service. It then takes that and runs it through *nqcmd*, scraping the *nqquery.log* for the resulting Physical SQL. In all of this no database queries get run. Very cool. But what’s the “secret sauce” at play here - can we distill it down in order to use it ourselves?
+In link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[SampleApp v406] there is a /home/oracle/scripts/PhysicalSQLGenerator, which does two things. First off it generates the Logical SQL for a given analysis, presumably using the link:https://docs.oracle.com/cd/E28280_01/bi.1111/e16364/methods.htm#i1009522[generateReportSQL] web service. It then takes that and runs it through *nqcmd*, scraping the *nqquery.log* for the resulting Physical SQL. In all of this no database queries get run. Very cool. But what’s the “secret sauce” at play here - can we distill it down in order to use it ourselves?
 
 
 First, let’s look at how the SampleApp script does it. It sets some additional _request variables_ in the Logical SQL:

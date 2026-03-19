@@ -15,7 +15,7 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/04/incremental-refresh-of-exalytics-aggregates-using-native-bi-server-capabilities/[Rittman Mead blog].
 
-One of the key design features of the link:http://www.oracle.com/uk/solutions/ent-performance-bi/business-intelligence/exalytics-bi-machine/overview/index.html?ref=rittmanmead.com[Exalytics In-Memory Machine] is the use of aggregates (pre-calculated summary data), held in the TimesTen In-Memory database. Out of the box (“OotB”) these aggregates are built through the OBIEE tool, and when the underlying data changes they must be rebuilt from scratch.
+One of the key design features of the link:http://www.oracle.com/uk/solutions/ent-performance-bi/business-intelligence/exalytics-bi-machine/overview/index.html[Exalytics In-Memory Machine] is the use of aggregates (pre-calculated summary data), held in the TimesTen In-Memory database. Out of the box (“OotB”) these aggregates are built through the OBIEE tool, and when the underlying data changes they must be rebuilt from scratch.
 
 
 For OBIEE (Exalytics or not) to make use of aggregate tables in a manner invisible to the user, they must be mapped into the RPD as additional *Logical Table Sources* for the respective *Logical Table* in the *Business Model and Mapping* (BMM) layer. OBIEE will then choose the Logical Table Source that it thinks will give the fastest response time for a query, based on the dimension level at which the query is written.
@@ -124,7 +124,7 @@ Now, we need the a bit of *secret sauce* to complete the picture and make this m
 In side-stepping the full Aggregate Persistence sequence, we have one problem. The Logical SQL that we use in the *populate* statement is going to be parsed by the BI Server to generate the select statement(s) against the source database. However, the BI Server uses its standard query parsing on it, using the metadata defined. Because the aggregates we are loading are *already mapped into the RPD* then by default the BI Server will probably try to use the aggregate to satisfy the aggregate populate request (because it will judge it the most efficient LTS) – thus *loading data straight from the table that we are trying to populate*!
 
 
-The answer is the magical *INACTIVE_SCHEMAS* variable. What this does it tell OBIEE to ignore one or more Physical schemas in the RPD, and importantly, any associated Logical Table Sources. INACTIVE_SCHEMAS is documented as part of the link:http://docs.oracle.com/cd/E28271_01/fusionapps.1111/e20836/aggpersist.htm?ref=rittmanmead.com#CHDEGFJD[Double Buffering]. It can be used in any logical SQL statement, so is easily demonstrated in an analysis (using *Advanced SQL Clauses* -> *Prefix*):
+The answer is the magical *INACTIVE_SCHEMAS* variable. What this does it tell OBIEE to ignore one or more Physical schemas in the RPD, and importantly, any associated Logical Table Sources. INACTIVE_SCHEMAS is documented as part of the link:http://docs.oracle.com/cd/E28271_01/fusionapps.1111/e20836/aggpersist.htm#CHDEGFJD[Double Buffering]. It can be used in any logical SQL statement, so is easily demonstrated in an analysis (using *Advanced SQL Clauses* -> *Prefix*):
 
 
 image::/images/2013/04/06878ag5.png[]

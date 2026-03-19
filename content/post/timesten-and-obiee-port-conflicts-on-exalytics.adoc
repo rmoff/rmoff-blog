@@ -17,10 +17,10 @@ NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog
 == Introduction
 
 
-Whilst helping a customer set up their Exalytics server the other day I hit an interesting problem. Not interesting as in hey-this-will-cure-cancer, or oooh-big-data-buzzword interesting, or even interesting as in link:https://twitter.com/andybolton/status/359568006545809408/photo/1?ref=rittmanmead.com[someone-has-had-a-baby], but nonetheless, interesting if you like learning about the internals of the Exalytics stack.
+Whilst helping a customer set up their Exalytics server the other day I hit an interesting problem. Not interesting as in hey-this-will-cure-cancer, or oooh-big-data-buzzword interesting, or even interesting as in link:https://twitter.com/andybolton/status/359568006545809408/photo/1[someone-has-had-a-baby], but nonetheless, interesting if you like learning about the internals of the Exalytics stack.
 
 
-The installation we were doing was multiple non-production environments on bare metal, a design that we developed on our own link:https://www.rittmanmead.com/blog/2012/05/rittman-mead-take-delivery-of-our-exalytics-server/[Rittman Mead Exalytics box] early on last year, and one that Oracle describe in their link:https://blogs.oracle.com/pa/entry/exalytics_v1_exalytics_deployment_guide?ref=rittmanmead.com[Exalytics white paper] which was published recently. Part of a multiple environment install is careful planning of the port allocations. OBIEE binds to many ports per instance, and there is also TimesTen to consider. I’d been through this meticuluously, specifying ports through the link:http://docs.oracle.com/cd/E28280_01/bi.1111/e10539/c4_installing.htm?ref=rittmanmead.com#BIEIG3205[`staticports.ini`] file when building the OBIEE domain, as well as in the link:http://docs.oracle.com/cd/E41246_01/bi.1/e39709/install_procedure.htm?ref=rittmanmead.com#CHDICIHC[`bim-setup.properties`] for TimesTen.
+The installation we were doing was multiple non-production environments on bare metal, a design that we developed on our own link:https://www.rittmanmead.com/blog/2012/05/rittman-mead-take-delivery-of-our-exalytics-server/[Rittman Mead Exalytics box] early on last year, and one that Oracle describe in their link:https://blogs.oracle.com/pa/entry/exalytics_v1_exalytics_deployment_guide[Exalytics white paper] which was published recently. Part of a multiple environment install is careful planning of the port allocations. OBIEE binds to many ports per instance, and there is also TimesTen to consider. I’d been through this meticuluously, specifying ports through the link:http://docs.oracle.com/cd/E28280_01/bi.1111/e10539/c4_installing.htm#BIEIG3205[`staticports.ini`] file when building the OBIEE domain, as well as in the link:http://docs.oracle.com/cd/E41246_01/bi.1/e39709/install_procedure.htm#CHDICIHC[`bim-setup.properties`] for TimesTen.
 
 
 So, having given such careful thought to ports, imagine my surprise at seeing this error when we started up one of the OBIEE instances:
@@ -53,7 +53,7 @@ Error
 == Dynamic ports
 
 
-So it turns out that TimesTen, as well as using the two ports that are explicitly configured (deamon and server, usually 53396 and 53397 respectively), the TimesTen server processs also binds to a port chosen at random by the OS each time for the purpose of internal communication. The OS chooses this port based on the configured dynamic port range, and of that range, which ports are available. This is similar to what the Oracle Database listener does, and as my colleague link:http://www.rittmanmead.com/author/peter-scott/?ref=rittmanmead.com[Pete Scott] link:https://twitter.com/dw_pete/status/359600741494697985?ref=rittmanmead.com[pointed out] it's been known for port clashes to occur between ODI and the Oracle Database listener. What TimesTen is doing is nothing specific to TimesTen as such, and it is conforming to standard good practice in its use of the OS API calls for port allocations.
+So it turns out that TimesTen, as well as using the two ports that are explicitly configured (deamon and server, usually 53396 and 53397 respectively), the TimesTen server processs also binds to a port chosen at random by the OS each time for the purpose of internal communication. The OS chooses this port based on the configured dynamic port range, and of that range, which ports are available. This is similar to what the Oracle Database listener does, and as my colleague link:http://www.rittmanmead.com/author/peter-scott/[Pete Scott] link:https://twitter.com/dw_pete/status/359600741494697985[pointed out] it's been known for port clashes to occur between ODI and the Oracle Database listener. What TimesTen is doing is nothing specific to TimesTen as such, and it is conforming to standard good practice in its use of the OS API calls for port allocations.
 
 
 To see this in action, use the *netstat* command, with the flags *tlnp*:
@@ -108,7 +108,7 @@ So each time TimesTen starts it requests a port from the OS which will allocate 
 If there are multiple instances of TimesTen and multiple instances of OBIEE then the chances of a port collision increase. What I wanted to know was how to isolate TimesTen from the ports I’d chosen for OBIEE. Constraining the application startup order (so that OBIEE gets all its ports first, and then TimesTen can use whatever is left) is a lame solution since it artificially couples two components that don’t need to be, adding to the complexity and support overhead.
 
 
-TimesTen itself cannot be configured in its behaviour with these ports - link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1295539.1&ref=rittmanmead.com[Doc ID 1295539.1] states:
+TimesTen itself cannot be configured in its behaviour with these ports - link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1295539.1[Doc ID 1295539.1] states:
 
 
 [quote]

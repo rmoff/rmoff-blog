@@ -17,24 +17,24 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/[Rittman Mead blog].
 
-OBIEE 12c (and 11g and 10g before it) supports link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1465[three primary ways] of connecting to data sources:
+OBIEE 12c (and 11g and 10g before it) supports link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1465[three primary ways] of connecting to data sources:
 
 
-. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1179[Native Gateway], such as OCI for Oracle. This is always the preferred option as it gives the greatest support and performance.
-. link:https://www.progress.com/datadirect-connectors?ref=rittmanmead.com[Data Direct ODBC Drivers], a set of which are bundled with OBIEE for enabling connectivity to sources such as SQL Server, MySQL, Hive, and Impala. The configuration of these is link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1194[documented in the OBIEE manuals] and is generally a supported configuration.
-. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Native ODBC Drivers].
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1179[Native Gateway], such as OCI for Oracle. This is always the preferred option as it gives the greatest support and performance.
+. link:https://www.progress.com/datadirect-connectors[Data Direct ODBC Drivers], a set of which are bundled with OBIEE for enabling connectivity to sources such as SQL Server, MySQL, Hive, and Impala. The configuration of these is link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1194[documented in the OBIEE manuals] and is generally a supported configuration.
+. link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1181[Native ODBC Drivers].
 
 
-_There's also kind of a fourth option, which is link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[JDBC], as explained by link:https://twitter.com/cfiston/?ref=rittmanmead.com[Fiston] in link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[this excellent post]. It's OBIEE 12c only and not fully documented/supported._
+_There's also kind of a fourth option, which is link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html[JDBC], as explained by link:https://twitter.com/cfiston/[Fiston] in link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html[this excellent post]. It's OBIEE 12c only and not fully documented/supported._
 
 
 In this article we're going to dig into the third option (native ODBC) and look at how it can be used, and also how to troubleshoot it (and the OBIEE stack in general) on Linux.
 
 
-ODBC (link:https://en.wikipedia.org/wiki/Open_Database_Connectivity?ref=rittmanmead.com[Open Database Connectivity]) is a documented API designed to enable applications to work with databases, without one explicitly supporting the other. A comparable protocol is link:https://en.wikipedia.org/wiki/Java_Database_Connectivity?ref=rittmanmead.com[JDBC], which is also widely used (but as yet not fully supported/documented within OBIEE). To use native ODBC drivers with OBIEE on *nix, you install the driver on your OBIEE server and then configure OBIEE to use it. Mark Rittman wrote an example of how to do this link:http://www.rittmanmead.com/2013/04/obiee-odi-and-hadoop-part-2-connecting-obiee-11-1-1-7-to-hadoop-data-sources/?ref=rittmanmead.com[with the original Hive ODBC drivers here] (before they were formally bundled with OBIEE), and link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[the manual] shows how to use it with a native driver for Teradata.
+ODBC (link:https://en.wikipedia.org/wiki/Open_Database_Connectivity[Open Database Connectivity]) is a documented API designed to enable applications to work with databases, without one explicitly supporting the other. A comparable protocol is link:https://en.wikipedia.org/wiki/Java_Database_Connectivity[JDBC], which is also widely used (but as yet not fully supported/documented within OBIEE). To use native ODBC drivers with OBIEE on *nix, you install the driver on your OBIEE server and then configure OBIEE to use it. Mark Rittman wrote an example of how to do this link:http://www.rittmanmead.com/2013/04/obiee-odi-and-hadoop-part-2-connecting-obiee-11-1-1-7-to-hadoop-data-sources/[with the original Hive ODBC drivers here] (before they were formally bundled with OBIEE), and link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1181[the manual] shows how to use it with a native driver for Teradata.
 
 
-My interest in this is the link:https://drill.apache.org/?ref=rittmanmead.com[Apache Drill] tool, which enables querying with SQL against a link:https://drill.apache.org/docs/connect-a-data-source/?ref=rittmanmead.com[multitude of datasources], including things like JSON files, Hive tables, RDBMS, and more. MapR have released an link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com#step-1:-download-the-mapr-drill-odbc-driver[ODBC driver] for it, and I thought it'd be neat to get link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Apache Drill to work with OBIEE]. It link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[evidently does work] for OBIEE running on Windows, but I wanted to be able to use it on my standard environment, Linux. This blog post is a warts-and-all exploration of the process I went through to get it to work, since I thought it might be of interest to see some of the forensic methods available when trying to get things to work. For just the headlines, see link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Using Apache Drill with OBIEE 12c].
+My interest in this is the link:https://drill.apache.org/[Apache Drill] tool, which enables querying with SQL against a link:https://drill.apache.org/docs/connect-a-data-source/[multitude of datasources], including things like JSON files, Hive tables, RDBMS, and more. MapR have released an link:https://drill.apache.org/docs/installing-the-driver-on-linux/#step-1:-download-the-mapr-drill-odbc-driver[ODBC driver] for it, and I thought it'd be neat to get link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Apache Drill to work with OBIEE]. It link:https://twitter.com/cfiston/status/761269789117517824[evidently does work] for OBIEE running on Windows, but I wanted to be able to use it on my standard environment, Linux. This blog post is a warts-and-all exploration of the process I went through to get it to work, since I thought it might be of interest to see some of the forensic methods available when trying to get things to work. For just the headlines, see link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[Using Apache Drill with OBIEE 12c].
 
 
 == First Things First - Setting Up Apache Drill
@@ -54,7 +54,7 @@ cd /opt/apache-drill-1.7.0/ && bin/sqlline -u jdbc:drill:zk=local
 ----
 
 
-You need to make sure you've got a recent JDK available, and if you're running it on SampleApp, watch out for link:http://rmoff.net/2016/06/20/apache-drill-not-connected/?ref=rittmanmead.com[this odd problem that I had] which was related to classpaths and manifested itself with the error `java.lang.NoSuchMethodError: com.fasterxml.jackson.databind.JavaType.isReferenceType()Z`.
+You need to make sure you've got a recent JDK available, and if you're running it on SampleApp, watch out for link:http://rmoff.net/2016/06/20/apache-drill-not-connected/[this odd problem that I had] which was related to classpaths and manifested itself with the error `java.lang.NoSuchMethodError: com.fasterxml.jackson.databind.JavaType.isReferenceType()Z`.
 
 
 All being well, you'll now have a Drill prompt:
@@ -101,7 +101,7 @@ or query one of the built-in sample data sets:
 ----------
 
 
-For more examples of Drill, see the link:https://drill.apache.org/docs/analyzing-the-yelp-academic-dataset/?ref=rittmanmead.com[tutorials].
+For more examples of Drill, see the link:https://drill.apache.org/docs/analyzing-the-yelp-academic-dataset/[tutorials].
 
 
 == Setting up Drill ODBC on Linux
@@ -116,7 +116,7 @@ sudo rpm -i http://package.mapr.com/tools/MapR-ODBC/MapR_Drill/MapRDrill_odbc_v1
 ----
 
 
-Per the link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com#system-requirements[system requirements], we need to make sure that we're using one of the supported ODBC Driver Managers, so we'll install iODBC to start with (the other option being unixODBC):
+Per the link:https://drill.apache.org/docs/installing-the-driver-on-linux/#system-requirements[system requirements], we need to make sure that we're using one of the supported ODBC Driver Managers, so we'll install iODBC to start with (the other option being unixODBC):
 
 
 [source,shell]
@@ -125,7 +125,7 @@ sudo yum install -y unixodbc
 ----
 
 
-Now follow the link:https://drill.apache.org/docs/configuring-odbc-on-linux/?ref=rittmanmead.com[configuration instructions]. To start with we'll do this in isolation of OBIEE to check that it works, and then bring it into OBIEE's world (for example, `odbc.ini` already exists in OBIEE).
+Now follow the link:https://drill.apache.org/docs/configuring-odbc-on-linux/[configuration instructions]. To start with we'll do this in isolation of OBIEE to check that it works, and then bring it into OBIEE's world (for example, `odbc.ini` already exists in OBIEE).
 
 
 . Set environment variables
@@ -302,7 +302,7 @@ Aug 09 06:27:19.749 INFO  1148090112 CInterface::SQLFreeHandle: Freeing environm
 == Hooking it up to OBIEE
 
 
-We've shown that we can connect to Apache Drill using ODBC and query it. Let's see if we get it to work for OBIEE. Our starting point is the 12c docs, link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm?ref=rittmanmead.com#BIEMG1181[Configuring Database Connections Using Native ODBC Drivers].
+We've shown that we can connect to Apache Drill using ODBC and query it. Let's see if we get it to work for OBIEE. Our starting point is the 12c docs, link:https://docs.oracle.com/middleware/1221/biee/BIEMG/deploy_rpd.htm#BIEMG1181[Configuring Database Connections Using Native ODBC Drivers].
 
 
 . Environment variables are defined per-component in a `.properties` file, which for the BI Server (OBIS / nqsserver) is `BI_DOMAIN/config/fmwconfig/bienv/obis/obis.properties`, so on SampleApp `/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/bienv/OBIS/obis.properties`. To this file (which in 12.2.1 is empty by default) we add:
@@ -355,7 +355,7 @@ Now restart the BI Server:
 ----
 
 
-We can check that the BI Server has picked up our new environment variables by using the link:http://man7.org/linux/man-pages/man5/proc.5.html?ref=rittmanmead.com[`/proc` pseudo file-system] (you can also see an environment variable dump as part of the `obis1.out` logfile during startup):
+We can check that the BI Server has picked up our new environment variables by using the link:http://man7.org/linux/man-pages/man5/proc.5.html[`/proc` pseudo file-system] (you can also see an environment variable dump as part of the `obis1.out` logfile during startup):
 
 
 [source,properties]
@@ -488,7 +488,7 @@ BACKTRACE:
 ----
 
 
-Signal 11 is "SIGSEGV", or segmentation fault, which is bad, link:https://www.youtube.com/watch?v=KqOsrniBooQ&ref=rittmanmead.com[m'kay]?
+Signal 11 is "SIGSEGV", or segmentation fault, which is bad, link:https://www.youtube.com/watch?v=KqOsrniBooQ[m'kay]?
 
 
 == Tracing OBIEE's ODBC Connectivity with strace
@@ -540,7 +540,7 @@ Driver::Initialize: Detected Driver Manager: iODBC, 3.52.7
 ----
 
 
-So now let's do some digging. Using `strace` (link:http://www.rittmanmead.com/2015/03/lifting-the-lid-on-obiee-internals-with-linux-diagnostics-tools/?ref=rittmanmead.com[which I've written about previously]) we can see every system call that OBIEE makes, letting us audit the files that it reads and libraries that it loads. You can invoke `strace` at process startup or, easier, attach it to a running one. Since the BI Server also creates child processes, and also may crash (as here), we'll use a loop to make sure we've always got a strace running against it until we opt to cancel it:
+So now let's do some digging. Using `strace` (link:http://www.rittmanmead.com/2015/03/lifting-the-lid-on-obiee-internals-with-linux-diagnostics-tools/[which I've written about previously]) we can see every system call that OBIEE makes, letting us audit the files that it reads and libraries that it loads. You can invoke `strace` at process startup or, easier, attach it to a running one. Since the BI Server also creates child processes, and also may crash (as here), we'll use a loop to make sure we've always got a strace running against it until we opt to cancel it:
 
 
 [source]
@@ -874,7 +874,7 @@ Encountered 1  errors
 == Driver Manager
 
 
-One of the routes of investigation is the Driver Manager. This is for two reasons; one is that on Windows ODBC is native, the driver manager is built in. As mentioned, link:https://twitter.com/cfiston/?ref=rittmanmead.com[@cfiston] has link:https://twitter.com/cfiston/status/761269789117517824?ref=rittmanmead.com[got this to work] - but on Windows. So platform differences aside (he says casually), this could be something. The second reason is the difference in the driver manager that shows in the ODBC log between a successful (via `iodbctest`) request
+One of the routes of investigation is the Driver Manager. This is for two reasons; one is that on Windows ODBC is native, the driver manager is built in. As mentioned, link:https://twitter.com/cfiston/[@cfiston] has link:https://twitter.com/cfiston/status/761269789117517824[got this to work] - but on Windows. So platform differences aside (he says casually), this could be something. The second reason is the difference in the driver manager that shows in the ODBC log between a successful (via `iodbctest`) request
 
 
 [source]
@@ -968,7 +968,7 @@ ppid=24928:pid= 3bd8:754f8720   EXIT  SQLConnect  with return code 0 (SQL_SUCCES
 ----
 
 
-So back to driver managers. The DataDirect manager is not listed in the link:https://drill.apache.org/docs/installing-the-driver-on-linux/?ref=rittmanmead.com[system requirements] - perhaps it's not supported, perhaps it's not been tested. Let's see if our `iodbctest` works when we force it to use the DataDirect driver. We'll do this by setting the ODBCInst parameter in `~/.mapr.drillodbc.ini`, along with the accompanying LD_LIBRARY_PATH. The latter is necessary for dependent libraries used by the driver manager. We can use strace to verify the paths being picked up.
+So back to driver managers. The DataDirect manager is not listed in the link:https://drill.apache.org/docs/installing-the-driver-on-linux/[system requirements] - perhaps it's not supported, perhaps it's not been tested. Let's see if our `iodbctest` works when we force it to use the DataDirect driver. We'll do this by setting the ODBCInst parameter in `~/.mapr.drillodbc.ini`, along with the accompanying LD_LIBRARY_PATH. The latter is necessary for dependent libraries used by the driver manager. We can use strace to verify the paths being picked up.
 
 
 First with the unixODBC driver:
@@ -1351,7 +1351,7 @@ Hmmm. Not much conclusive from this.
 == DriverManagerEncoding
 
 
-From link:https://drill.apache.org/docs/configuring-odbc-on-linux/?ref=rittmanmead.com#configuring-.mapr.drillodbc.ini:[https://drill.apache.org/docs/configuring-odbc-on-linux/#configuring-.mapr.drillodbc.ini:]
+From link:https://drill.apache.org/docs/configuring-odbc-on-linux/#configuring-.mapr.drillodbc.ini:[https://drill.apache.org/docs/configuring-odbc-on-linux/#configuring-.mapr.drillodbc.ini:]
 
 
 [quote]
@@ -1439,6 +1439,6 @@ Hindsight is a wonderful thing - at the end of an article like this it's easy en
 The trick is to judge when to jump into the deep-end of system call tracing, and when to maybe take a step back and RTFM closely. Particularly if you're doing something that is supported, that is documented, then you probably wouldn't be reaching for `strace`. But edging away from what is supported or documented, these can be great tools to help explore how applications are running and can be made to work with other components (such as 3rd party ODBC drivers).
 
 
-And if you do want the tl;dr of getting OBIEE to work with Apache Drill, link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[it's written up using the ODBC driver over here], and with the JDBC driver in link:https://twitter.com/cfiston/?ref=rittmanmead.com[Fiston]'s link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html?ref=rittmanmead.com[blog post here].
+And if you do want the tl;dr of getting OBIEE to work with Apache Drill, link:https://www.rittmanmead.com/blog/2016/08/using-apache-drill-with-obiee-12c/[it's written up using the ODBC driver over here], and with the JDBC driver in link:https://twitter.com/cfiston/[Fiston]'s link:http://obieestuff.blogspot.co.uk/2016/08/using-apache-drill-as-jdbc-data-source.html[blog post here].
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/08/how-to-poke-around-obiee-on-linux-with-strace-working-with-unsupported-odbc-sources-in-obiee-12c/[Rittman Mead blog].
