@@ -1,0 +1,364 @@
+---
+title: 'Auditing OBIEE Presentation Catalog Activity with Custom Log Filters'
+date: "2014-11-10T00:00:00+00:00"
+url: "/2014/11/10/auditing-obiee-presentation-catalog-activity-with-custom-log-filters/"
+draft: false
+categories:
+- OBIEE
+- ODI
+- Monitoring
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/11/auditing-obiee-presentation-catalog-activity-with-custom-log-filters/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/11/auditing-obiee-presentation-catalog-activity-with-custom-log-filters/[Rittman Mead blog].
+
+A question that I’ve noticed coming up a few times on the OBIEE OTN forums goes along the lines of “How can I find out who deleted a report from the Presentation Catalog?”. And whilst the BI Server’s Usage Tracking is superb for auditing who _ran_ what report, we don’t by default have a way of seeing who _deleted_ a report.
+
+
+The Presentation Catalog (or “Web Catalog” as it was called in 10g) records who _created_ an object and when it was last modified, accessible through both OBIEE’s *Catalog* view, and the dedicated *Catalog Manager* tool itself:
+
+
+image::/images/2014/11/338cwca01.png[]
+
+
+image::/images/2014/11/339cwca02.png[]
+
+
+But if we want to find out who deleted an object, or maybe who modified it before the most recent person (that is, build up an audit trail of who modified an object) we have to dig a bit deeper.
+
+
+== Presentation Services Log Sources
+
+
+Perusing the OBIEE product manuals, one will find documented additional link:http://docs.oracle.com/cd/E21764_01/bi.1111/e10541/logging.htm#BABBJADE[Logging in Oracle BI Presentation Services] options. This is more than just turning up the log level en masse, because it also includes additional *log writers* and *filters*. What this means is that you can have your standard Presentation Services logging, but then configure a separate file to capture more detailed information about just specific goings on within Presentation Services.
+
+
+Looking at a normal Presentation Services log (in `$FMW_HOME/instances/instance1/diagnostics/logs/OracleBIPresentationServicesComponent/coreapplication_obips1/`) you’ll see various messages by default - greater or fewer depending on the health of your system - but they all use the *Location* stack track, such as this one here:
+
+
+[source,yaml]
+----
+[2014-11-10T06:33:19.000-00:00] [OBIPS] [WARNING:16] [] [saw.soap.soaphelpers.writeiteminfocontents] [ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000001ede,0:1] [tid: 2569512704] Resolving and writing full ACL for path /shared/Important stuff/Sales by brand[[
+File:soaphelpers.cpp
+Line:609
+Location:
+        saw.soap.soaphelpers.writeiteminfocontents
+        saw.soap.catalogservice
+        saw.SOAP
+        saw.httpserver.request.soaprequest
+        saw.rpc.server.responder
+        saw.rpc.server
+        saw.rpc.server.handleConnection
+        saw.rpc.server.dispatch
+        saw.threadpool.socketrpcserver
+        saw.threads
+Path: /shared/Important stuff/Sales by brand
+AuthProps: AuthSchema=UidPwd-soap|PWD=******|UID=weblogic|User=weblogic
+ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000001ede,0:1
+ThreadID: 2569512704
+----
+
+
+And it is the Location that is of interest to us here, because it’s what gives hints about the types of log messages that can be emitted and that we may want to filter. For example, the one quoted above is evidently something to do with the Presentation Catalog and SOAP, which I’d guess is a result of Catalog Manager (which uses web services/SOAP to access OBIEE).
+
+
+To get a full listing of all the possible log sources, first set up the BI command line environment with *bi-init*:
+
+
+[source]
+----
+source $FMW_HOME/instances/instance1/bifoundation/OracleBIApplication/coreapplication/setup/bi-init.sh
+----
+
+
+and then run:
+
+
+[source]
+----
+sawserver -logsources
+----
+
+
+(If you get an error, almost certainly you didn’t set up the command line environment properly with *bi-init*). You’ll get an list of over a thousand lines (which gives you an idea of quite how powerful this granular logging is). Assuming you’ll want to peruse it at your leisure, it makes sense to write it to disk which if you’re running this on *nix you can simply do thus:
+
+
+[source]
+----
+sawserver -logsources > sawserver.logsources.txt
+----
+
+
+To find what you want on the list, you can just search through it. Looking for anything related to “catalog” and narrowing it down further, I came up with these interesting sources:
+
+
+[source]
+----
+[oracle@demo ~]$ sawserver -logsources|grep catalog|grep local
+saw.catalog.item.getlocalized
+saw.catalog.local
+saw.catalog.local.checkforcatalogupgrade
+saw.catalog.local.copyItem
+saw.catalog.local.createFolder
+saw.catalog.local.createLink
+saw.catalog.local.deleteItem
+saw.catalog.local.getItemACL
+saw.catalog.local.getItemInfo
+saw.catalog.local.loadCatalog
+saw.catalog.local.moveItem
+saw.catalog.local.openObject
+saw.catalog.local.readObject
+saw.catalog.local.search
+saw.catalog.local.setItemACL
+saw.catalog.local.setItemInfo
+saw.catalog.local.setMaintenanceMode
+saw.catalog.local.setOwnership
+saw.catalog.local.writeObject
+----
+
+
+== Configuring granular Presentation Services logging
+
+
+Let us see how to go and set up this additional logging. Remember, this is not the same as just going to Enterprise Manager and bumping the log level to 11 globally - we’re going to retain the default logging level, but for just specific actions that occur within the tool, capture greater information. The documentation for this link:http://docs.oracle.com/cd/E21764_01/bi.1111/e10541/logging.htm#BABBJADE[is here].
+
+
+The configuration is found in the `instanceconfig.xml` file, so like all good sysadmins let’s take a backup first:
+
+
+[source,shell]
+----
+cd $FMW_HOME/instances/instance1/config/OracleBIPresentationServicesComponent/coreapplication_obips1/
+cp instanceconfig.xml instanceconfig.xml.20141110
+----
+
+
+Now depending on your poison, open the `instanceconfig.xml` directly in a text editor from the command line, or copy it to a desktop environment where you can open it in your favourite text editor there. Either way, these are the changes we’re going to make:
+
+
+. Locate the `<Logging>` section. Note that within it there are three child entities - `<Writers>`, `<WriterClassGroups>` and `<Filters>`. We’re going to _add_ an entry to each.
+. Under `<Writers>`, add: 
+
+
+[source]
+----
+<Writer implementation="FileLogWriter" name="RM Presentation Catalog Audit" disableCentralControl="true" writerClassId="6" dir="{%ORACLE_BIPS_INSTANCE_LOGDIR%}" filePrefix="rm_pres_cat_audit" maxFileSizeKb="10240" filesN="10" fmtName="ODL-Text"/>
+----
+
+
+This defines a new writer than will write logs to disk (*FileLogWriter*), in 100MB files of which it’ll keep 10. If you’re defining additional Writers, make sure they have a unique *writerClassId* link:http://docs.oracle.com/cd/E21764_01/bi.1111/e10541/logging.htm#g1056592[See docs for detailed syntax].
+. Under `<WriterClassGroups>` add: 
+
+
+[source]
+----
+<WriterClassGroup name="RMLog">6</WriterClassGroup>
+----
+
+
+This defines the *RMLog* class group as being associated with *writerClassId* 6 (as defined above), and is used in the Filters section to direct logs. If you wanted you could log entries to multiple logs (eg both file and console) this way.
+. Under `<Filters>` add: 
+
+
+[source]
+----
+<FilterRecord writerClassGroup="RMLog" disableCentralControl="true" path="saw.catalog.local.moveItem" information="32" warning="32" error="32" trace="32" incident_error="32"/>
+<FilterRecord writerClassGroup="RMLog" disableCentralControl="true" path="saw.catalog.local.deleteItem" information="32" warning="32" error="32" trace="32" incident_error="32"/>
+----
+
+
+Here we’re defining two event filters, with levels turned up to max (32), directing the capture of any occurences to the *RMLog* _writerClassGroup_.
+
+
+After making the changes to `instanceconfig.xml`, restart Presentation Services: 
+
+
+[source]
+----
+$FMW_HOME/instances/instance1/bin/opmnctl restartproc ias-component=coreapplication_obips1
+----
+
+
+Here’s the completed `instanceconfig.xml` from the top of the file through to the end of the `<Logging>` section, with my changes overlayed the defaults:
+
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Oracle Business Intelligence Presentation Services Configuration File -->
+<WebConfig xmlns="oracle.bi.presentation.services/config/v1.1">
+   <ServerInstance>
+
+      <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><CatalogPath>/app/oracle/biee/instances/instance1/SampleAppWebcat</CatalogPath>
+
+      <DSN>AnalyticsWeb</DSN>
+
+      <Logging>
+
+         <Writers>
+            <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><Writer implementation="FileLogWriter" name="Global File Logger" writerClassId="1" dir="{%ORACLE_BIPS_INSTANCE_LOGDIR%}" filePrefix="sawlog" maxFileSizeKb="10240" filesN="10" fmtName="ODL-Text"/>
+            <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><Writer implementation="CoutWriter" name="Console Logger" writerClassId="2" maxFileSizeKb="10240"/>
+            <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><Writer implementation="EventLogWriter" name="System Event Logger" writerClassId="3" maxFileSizeKb="10240"/>
+            <!--  The following writer is not centrally controlled -->
+            <Writer implementation="FileLogWriter" name="Webcat Upgrade Logger" disableCentralControl="true" writerClassId="5" dir="{%ORACLE_BIPS_INSTANCE_LOGDIR%}" filePrefix="webcatupgrade" maxFileSizeKb="2147483647" filesN="1" fmtName="ODL-Text"/>
+            <Writer implementation="FileLogWriter" name="RM Presentation Catalog Audit" disableCentralControl="true" writerClassId="6" dir="{%ORACLE_BIPS_INSTANCE_LOGDIR%}" filePrefix="rm_pres_cat_audit" maxFileSizeKb="10240" filesN="10" fmtName="ODL-Text"/>
+         </Writers>
+
+         <WriterClassGroups>
+            <WriterClassGroup name="All">1,2,3,5,6</WriterClassGroup>
+            <WriterClassGroup name="File">1</WriterClassGroup>
+            <WriterClassGroup name="Console">2</WriterClassGroup>
+            <WriterClassGroup name="EventLog">3</WriterClassGroup>
+            <WriterClassGroup name="UpgradeLogFile">5</WriterClassGroup>
+            <WriterClassGroup name="RMLog">6</WriterClassGroup>
+         </WriterClassGroups>
+
+         <Filters>
+            <!--  These FilterRecords are updated by centrally controlled configuration -->
+            <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><FilterRecord writerClassGroup="File" path="saw" information="1" warning="31" error="31" trace="0" incident_error="1"/>
+            <!--This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control--><FilterRecord writerClassGroup="File" path="saw.mktgsqlsubsystem.joblog" information="1" warning="31" error="31" trace="0" incident_error="1"/>
+
+            <!--  The following FilterRecords are not centrally controlled -->
+            <FilterRecord writerClassGroup="UpgradeLogFile" disableCentralControl="true" path="saw.subsystem.catalog.initialize.upgrade" information="1" warning="32" error="32" trace="1" incident_error="32"/>
+            <FilterRecord writerClassGroup="UpgradeLogFile" disableCentralControl="true" path="saw.subsystem.catalog.upgrade" information="1" warning="32" error="32" trace="1" incident_error="32"/>
+            <FilterRecord writerClassGroup="RMLog" disableCentralControl="true" path="saw.catalog.local.moveItem" information="32" warning="32" error="32" trace="32" incident_error="32"/>
+            <FilterRecord writerClassGroup="RMLog" disableCentralControl="true" path="saw.catalog.local.deleteItem" information="32" warning="32" error="32" trace="32" incident_error="32"/>
+         </Filters>
+
+      </Logging>
+
+[...]
+----
+
+
+== Granular logging in action
+
+
+Having restarted Presentation Services after making the above change, I can see in my new log file whenever an item from the Presentation Catalog is deleted, by whom, and from what IP address:
+
+
+[source,yaml]
+----
+[2014-11-10T07:13:36.000-00:00] [OBIPS] [TRACE:1] [] [saw.catalog.local.deleteItem] [ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000002cf1,0:1] [tid: 2458068736] Succeeded with '/shared/Important stuff/Sales by brand 2'[[
+File:localwebcatalog.cpp
+Line:626
+Location:
+        saw.catalog.local.deleteItem
+        saw.httpserver.processrequest
+        saw.rpc.server.responder
+        saw.rpc.server
+        saw.rpc.server.handleConnection
+        saw.rpc.server.dispatch
+        saw.threadpool.socketrpcserver
+        saw.threads
+Path: /shared/Important stuff/Sales by brand 2
+SessionID: p8n6ojs0vkh7tou0mkstmlc9me381hadm9o1fui
+AuthProps: AuthSchema=UidPwd|PWD=******|UID=r.mellie|User=r.mellie
+ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000002cf1,0:1
+ThreadID: 2458068736
+HttpCommand: CatalogTreeModel
+RemoteIP: 192.168.57.1
+HttpArgs: action='rm',_scid='QR5zMdHIL3JsW1b67P9p',icharset='utf-8',urlGenerator='qualified',paths='["/shared/Important stuff/Sales by brand 2"]'
+]]
+----
+
+
+And the same for when a file is moved/renamed:
+
+
+[source,yaml]
+----
+[2014-11-10T07:28:17.000-00:00] [OBIPS] [TRACE:1] [] [saw.catalog.local.moveItem] [ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000003265,0:1] [tid: 637863680] Source '/shared/Important stuff/copy of Sales by brand', Destination '/shared/Important stuff/Sales by brand 2': Succeeded with '/shared/Important stuff/copy of Sales by brand'[[
+File:localwebcatalog.cpp
+Line:1186
+Location:
+        saw.catalog.local.moveItem
+        saw.httpserver.processrequest
+        saw.rpc.server.responder
+        saw.rpc.server
+        saw.rpc.server.handleConnection
+        saw.rpc.server.dispatch
+        saw.threadpool.socketrpcserver
+        saw.threads
+Path: /shared/Important stuff/copy of Sales by brand
+SessionID: ddt6eo7llcm0ohs5e2oivddj7rtrhn8i41a7f32
+AuthProps: AuthSchema=UidPwd|PWD=******|UID=f.saunders|User=f.saunders
+ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000003265,0:1
+ThreadID: 637863680
+HttpCommand: CatalogTreeModel
+RemoteIP: 192.168.57.1
+HttpArgs: path='/shared/Important stuff/copy of Sales by brand',action='ren',_scid='84mO8SRViXlwJ*180HV7',name='Sales by brand 2',keepLink='f',icharset='utf-8',urlGenerator='qualified'
+]]
+----
+
+
+== Be careful with your logging
+
+
+Just because you *can* log everything, don’t be tempted to *actually* log everything. Bear in mind that we’re crossing over from simple end-user logging here into the very depths of the sawserver (Presentation Services) code, accessing logging that is extremely diagnostic in nature. Which for our specific purpose of tracking when someone deletes an object from the Presentation Catalog is handy. But as an example, if you enable *saw.catalog.local.writeObject* event logging, you may think that it will record who changed a report when, and that might be useful. But - look at what gets logged *every time someone saves a report*:
+
+
+[source,xml]
+----
+[2014-11-10T07:19:32.000-00:00] [OBIPS] [TRACE:1] [] [saw.catalog.local.writeObject] [ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000002efb,0:1] [tid: 2454759168] Succeeded with '/shared/Important stuff/Sales 01'[[
+File:localwebcatalog.cpp
+Line:1476
+Location:
+        saw.catalog.local.writeObject
+        saw.httpserver.processrequest
+        saw.rpc.server.responder
+        saw.rpc.server
+        saw.rpc.server.handleConnection
+        saw.rpc.server.dispatch
+        saw.threadpool.socketrpcserver
+        saw.threads
+Path: /shared/Important stuff/Sales 01
+SessionID: p8n6ojs0vkh7tou0mkstmlc9me381hadm9o1fui
+AuthProps: AuthSchema=UidPwd|PWD=******|UID=r.mellie|User=r.mellie
+ecid: 11d1def534ea1be0:15826b4a:14996b86fbb:-8000-0000000000002efb,0:1
+ThreadID: 2454759168
+HttpCommand: CatalogTreeModel
+RemoteIP: 192.168.57.1
+HttpArgs: path='/shared/Important stuff/Sales 01',action='wr',_scid='QR5zMdHIL3JsW1b67P9p',repl='t',followLinks='t',icharset='utf-8',modifiedTime='1415600931000',data='<saw:report xmlns:saw="com.siebel.analytics.web/report/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:sawx="com.siebel.analytics.web/expression/v1.1" xmlVersion="201201160"><saw:criteria xsi:type="saw:simpleCriteria" subjectArea="&quot;A - Sample Sales&quot;" withinHierarchy="true"><saw:columns><saw:column xsi:type="saw:regularColumn" columnID="c1dff1637cbc77948"><saw:columnFormula><sawx:expr xsi:type="sawx:sqlExpression">"Time"."T05 Per Name Year"</sawx:expr></saw:columnFormula></saw:column></saw:columns></saw:criteria><saw:views currentView="0"><saw:view xsi:type="saw:compoundView" name="compoundView!1"><saw:cvTable><saw:cvRow><saw:cvCell viewName="titleView!1"><saw:displayFormat><saw:formatSpec/></saw:displayFormat></saw:cvCell></saw:cvRow><saw:cvRow><saw:cvCell viewName="tableView!1"><saw:displayFormat><saw:formatSpec/></saw:displayFormat></saw:cvCell></saw:cvRow></saw:cvTable></saw:view><saw:view xsi:type="saw:titleView" name="titleView!1"/><saw:view xsi:type="saw:tableView" name="tableView!1" scrollingEnabled="false"><saw:edges><saw:edge axis="page" showColumnHeader="true"/><saw:edge axis="section"/><saw:edge axis="row" showColumnHeader="true"><saw:edgeLayers><saw:edgeLayer type="column" columnID="c1dff1637cbc77948"/></saw:edgeLayers></saw:edge><saw:edge axis="column" showColumnHeader="rollover"/></saw:edges></saw:view></saw:views></saw:report>',sig='queryitem1'
+]]
+----
+
+
+It’s the whole report definition! And this is a very very small report - real life reports can be page after page of XML. That is not a good level at which to be recording this information. If you want to retain this kind of control over who is saving what report, you should maybe be looking at authorisation groups for your users in terms of where they can save reports, and have trusted ‘gatekeepers’ for important areas.
+
+
+As well as the verbose report capture with the *writeObject* event, you also get this background chatter:
+
+
+[source,yaml]
+----
+[2014-11-10T07:20:27.000-00:00] [OBIPS] [TRACE:1] [] [saw.catalog.local.writeObject] [ecid: 0051rj7FmC3Fw000jzwkno0007PK000000,0:200] [tid: 3034580736] Succeeded with '/users/r.mellie/_prefs/volatileuserdata'[[
+File:localwebcatalog.cpp
+Line:1476
+Location:
+        saw.catalog.local.writeObject
+        saw.subsystem.security.cleanup
+        saw.Sessions.cache.cleanup
+        saw.taskScheduler.processJob
+        taskscheduler
+        saw.threads
+Path: /users/r.mellie/_prefs/volatileuserdata
+ecid: 0051rj7FmC3Fw000jzwkno0007PK000000,0:200
+ThreadID: 3034580736
+task: Cache/Sessions
+]]
+----
+
+
+*volatileuserdata* is presumably just that (user data that is volatile, constantly changing) and not something that it would be of interest to anyone to log - but you can’t capture actual report writes without capturing this too. On a busy system you’re going to be unnecessarily thrashing the log files if you capture this event by routine – so don’t!
+
+
+== Summary
+
+
+The detailed information is there for the taking in Presentation Services’ excellent granular log sources – just be careful what you capture lest you bite off more than you can chew.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/11/auditing-obiee-presentation-catalog-activity-with-custom-log-filters/[Rittman Mead blog].

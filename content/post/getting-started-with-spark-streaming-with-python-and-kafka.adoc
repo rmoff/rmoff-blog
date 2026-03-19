@@ -1,0 +1,722 @@
+---
+title: 'Getting Started with Spark Streaming, Python, and Kafka'
+date: "2017-01-12T00:00:00+00:00"
+url: "/2017/01/12/getting-started-with-spark-streaming-with-python-and-kafka/"
+draft: false
+categories:
+- Apache Kafka
+- Apache Spark
+- Elasticsearch
+- Docker
+- Jupyter
+- Python
+- Graph
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/[Rittman Mead blog].
+
+Last month I wrote a link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[series of articles] in which I looked at the use of Spark for performing data transformation and manipulation. This was in the context of replatforming an existing Oracle-based ETL and datawarehouse solution onto cheaper and more elastic alternatives. The processing that I wrote was very much batch-focussed; read a set of files from block storage ('disk'), process and enrich the data, and write it back to block storage.
+
+
+In this article I am going to look at link:https://spark.apache.org/streaming/[Spark Streaming]. This is one of several libraries that the link:https://spark.apache.org/[Spark platform] provides (others include link:https://spark.apache.org/sql/[Spark SQL], link:https://spark.apache.org/mllib/[Spark MLlib], and link:https://spark.apache.org/graphx/[Spark GraphX]). Spark Streaming provides a way of processing "unbounded" data - commonly referred to as "streaming" data. It does this by breaking it up into microbatches, and supporting windowing capabilities for processing across multiple batches. You can read more in the excellent link:https://spark.apache.org/docs/latest/streaming-programming-guide.html[Streaming Programming Guide].
+
+
+image::/images/2017/01/streaming-flow.png[]
+
+
+(link:https://spark.apache.org/docs/latest/streaming-programming-guide.html[image src])
+
+
+== Why Stream Processing?
+
+
+Processing unbounded data sets, or "stream processing", is a new way of looking at what has always been done as batch in the past. Whilst intra-day ETL and frequent batch executions have brought latencies down, they are still independent executions with optional bespoke code in place to handle intra-batch accumulations. With a platform such as Spark Streaming we have a framework that natively supports processing both within-batch and across-batch (windowing).
+
+
+By taking a stream processing approach we can benefit in several ways. The most obvious is reducing latency between an event occurring and taking an action driven by it, whether automatic or via analytics presented to a human. Other benefits include a more smoothed out resource consumption profile. We can avoid the very 'spiky' demands on CPU/memory/etc every time a batch runs by instead processing the same volume of data processed but in smaller intervals. Finally, given that most data we process is actually unbounded ("link:https://books.google.co.uk/books?id=EU8kDAAAQBAJ&pg=PT8&lpg=PT8&dq=life+doesn%27t+happen+in+batches+ellen+friedman&source=bl&ots=PwWHaAIypj&sig=E0u7pv2klYC-M9U-D3YzO7rDm_c&hl=en&sa=X&ved=0ahUKEwir-KjCz7zRAhWiJ8AKHdgYAr8Q6AEIIjAB#v=onepage&q=%22life%20doesn't%20happen%20in%20batches%22&f=false[life doesn't happen in batches]"), designing new systems to be batch driven - with streaming seen as an exception - is actually an anachronism with roots in technology limitations that are rapidly becoming moot. Stream processing doesn't _have_ to imply, or require, "fast data" or "big data". It can just mean processing data continually as it arrives, and not artificially splitting it into batches.
+
+
+For more details and discussion of streaming in depth and some of its challenges, I would recommend:
+
+
+* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101[The world beyond batch: Streaming 101]
+* link:https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102[The world beyond batch: Streaming 102]
+* link:https://www.oreilly.com/ideas/data-architectures-for-streaming-applications[Data architectures for streaming applications]
+* link:https://www.se-radio.net/2016/10/se-radio-episode-272-frances-perry-on-apache-beam/[SE-Radio Episode 272: Frances Perry on Apache Beam]
+
+
+== Use-Case and Development Environment
+
+
+So with that case made above for stream processing, I'm actually going to go back to a very modest example. The use-case I'm going to put together is - almost inevitably for a generic unbounded data example - using Twitter, read from an Apache Kafka topic.  We'll start simply, counting the number of tweets per user within each batch and doing some very simple string manipulations. After that we'll see how to do the same but over a period of time (windowing). In the link:https://www.rittmanmead.com/blog/2017/01/data-processing-and-enrichment-in-spark-streaming-with-python-and-kafka[next blog] we'll extend this further into a more useful example, still based on Twitter but demonstrating how to satisfy some real-world requirements in the processing.
+
+
+I developed all of this code using link:https://jupyter.org/[Jupyter] Notebooks. I've link:https://www.rittmanmead.com/blog/tag/jupyter/[written before] about how awesome notebooks are (along with link:https://jupyter.org/[Jupyter], there's link:https://zeppelin.apache.org/[Apache Zeppelin]). As well as providing a superb development environment in which both the code and the generated results can be seen, Jupyter gives the option to download a Notebook to link:https://en.wikipedia.org/wiki/Markdown[Markdown]. This blog runs on link:https://ghost.org/[Ghost], which uses Markdown as its native syntax for composing posts - so in fact what you're reading here comes directly from the notebook in which I developed the code. Pretty cool.
+
+
+image::/images/2017/01/ssc01.png[]
+
+
+_If you want can view the link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[notebook online here], and from there download it and run it live on your own Jupyter instance_.
+
+
+I used the docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook[all-spark-notebook] to provide both Jupyter and the Spark runtime environment. By using Docker I don't have to really worry about provisioning the platform on which I want to develop the code - I can just dive straight in and start coding. As and when I'm ready to deploy the code to a 'real' execution environment (link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-3-running-pyspark-on-emr/[for example EMR]), _then_ I can start to worry about that. The only external aspect was an Apache Kafka cluster that I had already, with tweets from the live Twitter feed on an Apache Kafka topic imaginatively called `twitter`.
+
+
+To run the code in Jupyter, you can put the cursor in each cell and press Shift-Enter to run it each cell at a time -- or you can use menu option `Kernel` -> `Restart & Run All`. When a cell is executing you'll see a `[*]` next to it, and once the execution is complete this changes to `[y]` where `y` is execution step number. Any output from that step will be shown immediately below it.
+
+
+To run the code standalone, you would download the `.py` from Jupyter, and execute it from the commandline using:
+
+
+[source,python]
+----
+/usr/local/spark-2.0.2-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.0.2 spark_code.py
+----
+
+
+== Preparing the Environment
+
+
+We need to make sure that the packages we're going to use are available to Spark. Instead of downloading `jar` files and worrying about paths, we can instead use the `--packages` option and specify the group/artifact/version based on what's available on link:https://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.apache.spark%22%20AND%20a%3A%22spark-streaming-kafka-0-8-assembly_2.11%22[Maven] and Spark will handle the downloading. We specify `PYSPARK_SUBMIT_ARGS` for this to get passed correctly when executing from within Jupyter.
+
+
+[source,python]
+----
+import os
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.0.2 pyspark-shell'
+----
+
+
+=== Import dependencies
+
+
+We need to import the necessary pySpark modules for Spark, Spark Streaming, and Spark Streaming with Kafka. We also need the python `json` module for parsing the inbound twitter data
+
+
+[source,python]
+----
+#    Spark
+from pyspark import SparkContext
+#    Spark Streaming
+from pyspark.streaming import StreamingContext
+#    Kafka
+from pyspark.streaming.kafka import KafkaUtils
+#    json parsing
+import json
+----
+
+
+=== Create Spark context
+
+
+The Spark context is the primary object under which everything else is called. The `setLogLevel` call is optional, but saves a lot of noise on stdout that otherwise can swamp the actual outputs from the job.
+
+
+[source,python]
+----
+sc = SparkContext(appName="PythonSparkStreamingKafka_RM_01")
+sc.setLogLevel("WARN")
+----
+
+
+=== Create Streaming Context
+
+
+We pass the Spark context (from above) along with the batch duration which here is set to 60 seconds.
+
+
+See the link:https://spark.apache.org/docs/latest/api/python/pyspark.streaming.html#pyspark.streaming.StreamingContext[API reference] and link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#initializing-streamingcontext[programming guide] for more details.
+
+
+[source,python]
+----
+ssc = StreamingContext(sc, 60)
+----
+
+
+=== Connect to Kafka
+
+
+Using the native Spark Streaming Kafka capabilities, we use the streaming context from above to connect to our Kafka cluster. The topic connected to is `twitter`, from consumer group `spark-streaming`. The latter is an arbitrary name that can be changed as required.
+
+
+For more information see the link:https://spark.apache.org/docs/latest/streaming-kafka-0-8-integration.html[documentation].
+
+
+[source,python]
+----
+kafkaStream = KafkaUtils.createStream(ssc, 'cdh57-01-node-01.moffatt.me:2181', 'spark-streaming', {'twitter':1})
+----
+
+
+== Message Processing
+
+
+=== Parse the inbound message as json
+
+
+The inbound stream is a link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[`DStream`], which supports various built-in link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#transformations-on-dstreams[transformations] such as `map` which is used here to parse the inbound messages from their native JSON format.
+
+
+Note that this will fail horribly if the inbound message _isn't_ valid JSON.
+
+
+[source,python]
+----
+parsed = kafkaStream.map(lambda v: json.loads(v[1]))
+----
+
+
+=== Count number of tweets in the batch
+
+
+The link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[`DStream`] object provides native functions to count the number of messages in the batch, and to print them to the output:
+
+
+* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream.count[`count`]
+* link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream.pprint[`pprint`]
+
+
+We use the `map` function to add in some text explaining the value printed.
+
+
+_Note that nothing gets written to output from the Spark Streaming context and descendent objects until the Spark Streaming Context is started, which happens later in the code. Also note that `pprint` by default only prints the first 10 values._
+
+
+[source,python]
+----
+parsed.count().map(lambda x:'Tweets in this batch: %s' % x).pprint()
+----
+
+
+If you jump ahead and try to use Windowing at this point, for example to count the number of tweets in the last hour using the `countByWindow` function, it'll fail. This is because we've not set up the streaming context with a checkpoint directory yet. You'll get the error: `java.lang.IllegalArgumentException: requirement failed: The checkpoint directory has not been set. Please set it by StreamingContext.checkpoint().`. See later on in the blog for details about how to do this.
+
+
+=== Extract Author name from each tweet
+
+
+Tweets come through in a JSON structure, of which you can see an link:https://gist.github.com/rmoff/3968605712f437a1f37e7be52129cade[example here]. We're going to analyse tweets by author, which is accessible in the JSON structure at `user.screen_name`.
+
+
+The link:https://pythonconquerstheuniverse.wordpress.com/2011/08/29/lambda_tutorial/[`lambda`] anonymous function is used to apply the `map` to each RDD within the DStream. The result is a DStream holding just the author's screenname for each tweet in the original DStream.
+
+
+[source,python]
+----
+authors_dstream = parsed.map(lambda tweet: tweet['user']['screen_name'])
+----
+
+
+=== Count the number of tweets per author
+
+
+With our authors DStream, we can now count them using the `countByValue` function. This is conceptually the same as this quasi-SQL statement:
+
+
+[source,sql]
+----
+SELECT   AUTHOR, COUNT(*)
+FROM     DSTREAM
+GROUP BY AUTHOR
+----
+
+
+_Using `countByValue` is a more legible way of doing the same thing that you'll see done in tutorials elsewhere with a map / reduceBy._
+
+
+[source,python]
+----
+author_counts = authors_dstream.countByValue()
+author_counts.pprint()
+----
+
+
+=== Sort the author count
+
+
+If you try and use the `sortBy` function directly against the DStream you get an error:
+
+
+[source,scala]
+----
+'TransformedDStream' object has no attribute 'sortBy'
+----
+
+
+This is because sort is not a built-in link:https://spark.apache.org/docs/2.0.0/api/python/pyspark.streaming.html#pyspark.streaming.DStream[DStream] function. Instad we use the link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#transform-operation[`transform`] function to access link:https://spark.apache.org/docs/latest/api/python/pyspark.html#pyspark.RDD.sortBy[`sortBy`] from pySpark.
+
+
+To use `sortBy` you specify a lambda function to define the sort order. Here we're going to do it based on the number of tweets (index 1 of the RDD) per author. You'll note this index references being used in the `sortBy` lambda function `x[1]`, negated to reverse the sort order.
+
+
+_Here I'm using `\` as line continuation characters to make the code more legible._
+
+
+[source,python]
+----
+author_counts_sorted_dstream = author_counts.transform(\
+  (lambda foo:foo\
+   .sortBy(lambda x:( -x[1]))))
+----
+
+
+[source,python]
+----
+author_counts_sorted_dstream.pprint()
+----
+
+
+=== Get top 5 authors by tweet count
+
+
+To display just the top five authors, based on number of tweets in the batch period, we'll using the link:https://spark.apache.org/docs/2.0.2/api/python/pyspark.html#pyspark.RDD.take[`take`] function. My first attempt at this failed with:
+
+
+[source,scala]
+----
+AttributeError: 'list' object has no attribute '_jrdd'
+----
+
+
+Per my link:https://stackoverflow.com/questions/41483746/transformed-dstream-in-pyspark-gives-error-when-pprint-called-on-it[woes on StackOverflow] a `parallelize` is necessary to return the values into a DStream form.
+
+
+[source,python]
+----
+top_five_authors = author_counts_sorted_dstream.transform\
+  (lambda rdd:sc.parallelize(rdd.take(5)))
+top_five_authors.pprint()
+----
+
+
+=== Get authors with more than one tweet, or whose username starts with 'rm'
+
+
+Let's get a bit more fancy now - filtering the resulting list of authors to only show the ones who have tweeted more than once in our batch window, or -arbitrarily- whose screenname begins with `rm`...
+
+
+[source,python]
+----
+filtered_authors = author_counts.filter(lambda x:\
+                                                x[1]>1 \
+                                                or \
+                                                x[0].lower().startswith('rm'))
+----
+
+
+We'll print this list of authors matching the criteria, sorted by the number of tweets. Note how the sort is being done inline to the calling of the `pprint` function. Assigning variables and then `pprint`ing them as I've done above is only done for clarity. It also makes sense if you're going to subsequently reuse the derived stream variable (such as with the `author_counts` in this code).
+
+
+[source,python]
+----
+filtered_authors.transform\
+  (lambda rdd:rdd\
+  .sortBy(lambda x:-x[1]))\
+  .pprint()
+----
+
+
+=== List the most common words in the tweets
+
+
+Every example has to have a version of wordcount, right? Here's an all-in-one with line continuations to make it clearer what's going on. Note that whilst it makes for tidier code, it also makes it harder to debug...
+
+
+[source,python]
+----
+parsed.\
+    flatMap(lambda tweet:tweet['text'].split(" "))\
+    .countByValue()\
+    .transform\
+      (lambda rdd:rdd.sortBy(lambda x:-x[1]))\
+    .pprint()
+----
+
+
+== Start the streaming context
+
+
+Having defined the streaming context, now we're ready to actually start it! When you run this cell, the program will start, and you'll see the result of all the `pprint` functions above appear in the output to this cell below. If you're running it outside of Jupyter (via `spark-submit`) then you'll see the output on stdout.
+
+
+[source,python]
+----
+ssc.start()
+ssc.awaitTermination()
+----
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+Tweets in this batch: 188
+
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+(u'jenniekmz', 1)
+(u'SpamNewton', 1)
+(u'ShawtieMac', 1)
+(u'niggajorge_2', 1)
+(u'agathatochetti', 1)
+(u'Tommyguns_____', 1)
+(u'zwonderwomanzzz', 1)
+(u'Blesschubstin', 1)
+(u'Prikes5', 1)
+(u'MayaParms', 1)
+...
+
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+(u'RitaBezerra12', 3)
+(u'xKYLN', 2)
+(u'yourmydw', 2)
+(u'wintersheat', 2)
+(u'biebercuzou', 2)
+(u'pchrin_', 2)
+(u'uslaybieber', 2)
+(u'rowblanchsrd', 2)
+(u'__Creammy__', 2)
+(u'jenniekmz', 1)
+...
+
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+(u'RitaBezerra12', 3)
+(u'xKYLN', 2)
+(u'yourmydw', 2)
+(u'wintersheat', 2)
+(u'biebercuzou', 2)
+
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+(u'RitaBezerra12', 3)
+(u'xKYLN', 2)
+(u'yourmydw', 2)
+(u'wintersheat', 2)
+(u'biebercuzou', 2)
+(u'pchrin_', 2)
+(u'uslaybieber', 2)
+(u'rowblanchsrd', 2)
+(u'__Creammy__', 2)
+
+-------------------------------------------
+Time: 2017-01-11 15:34:00
+-------------------------------------------
+(u'RT', 135)
+(u'Justin', 61)
+(u'Bieber', 59)
+(u'on', 41)
+(u'a', 32)
+(u'&amp;', 32)
+(u'Ros\xe9', 31)
+(u'Drake', 31)
+(u'the', 29)
+(u'Love', 28)
+...
+[...]
+--------------------------------------------
+
+
+You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[the notebook here].
+
+
+So there we have it, a very simple Spark Streaming application doing some basic processing against an inbound data stream from Kafka.
+
+
+== Windowed Stream Processing
+
+
+Now let's have a look at how we can do windowed processing. This is where data is processed based on a 'window' which is a multiple of the batch duration that we worked with above. So instead of counting how many tweets there are every batch (say, 5 seconds), we could instead count how many there are per minute. Here, a minutes (60 seconds) is the _window_ interval. We can perform this count potentially every time the batch runs; how frequently we do the count is known as the _slide_ interval.
+
+
+_image::/images/2017/01/streaming-dstream-window.png[]
+ +
+
+Image credit, and more details about window processing, link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#window-operations[here]._
+
+
+The first thing to do to enable windowed processing in Spark Streaming is to launch the Streaming Context with a link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#checkpointing[checkpoint directory] configured. This is used to store information between batches if necessary, and also to recover from failures. You need to rework your code into the pattern link:https://spark.apache.org/docs/latest/streaming-programming-guide.html#how-to-configure-checkpointing[shown here]. All the code to be executed by the streaming context goes in a function - which makes it less easy to present in a step-by-step form in a notebook as I have above.
+
+
+=== Reset the Environment
+
+
+If you're running this code in the same session as above, first go to the Jupyter *Kernel* menu and select *Restart*.
+
+
+=== Prepare the environment
+
+
+These are the same steps as above.
+
+
+[source,python]
+----
+import os
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.0.2 pyspark-shell'
+from pyspark import SparkContext
+from pyspark.streaming import StreamingContext
+from pyspark.streaming.kafka import KafkaUtils
+import json
+----
+
+
+=== Define the stream processing code
+
+
+[source,python]
+----
+def createContext():
+    sc = SparkContext(appName="PythonSparkStreamingKafka_RM_02")
+    sc.setLogLevel("WARN")
+    ssc = StreamingContext(sc, 5)
+    
+    # Define Kafka Consumer
+    kafkaStream = KafkaUtils.createStream(ssc, 'cdh57-01-node-01.moffatt.me:2181', 'spark-streaming2', {'twitter':1})
+    
+    ## --- Processing
+    # Extract tweets
+    parsed = kafkaStream.map(lambda v: json.loads(v[1]))
+    
+    # Count number of tweets in the batch
+    count_this_batch = kafkaStream.count().map(lambda x:('Tweets this batch: %s' % x))
+    
+    # Count by windowed time period
+    count_windowed = kafkaStream.countByWindow(60,5).map(lambda x:('Tweets total (One minute rolling count): %s' % x))
+
+    # Get authors
+    authors_dstream = parsed.map(lambda tweet: tweet['user']['screen_name'])
+    
+    # Count each value and number of occurences 
+    count_values_this_batch = authors_dstream.countByValue()\
+                                .transform(lambda rdd:rdd\
+                                  .sortBy(lambda x:-x[1]))\
+                              .map(lambda x:"Author counts this batch:\tValue %s\tCount %s" % (x[0],x[1]))
+
+    # Count each value and number of occurences in the batch windowed
+    count_values_windowed = authors_dstream.countByValueAndWindow(60,5)\
+                                .transform(lambda rdd:rdd\
+                                  .sortBy(lambda x:-x[1]))\
+                            .map(lambda x:"Author counts (One minute rolling):\tValue %s\tCount %s" % (x[0],x[1]))
+
+    # Write total tweet counts to stdout
+    # Done with a union here instead of two separate pprint statements just to make it cleaner to display
+    count_this_batch.union(count_windowed).pprint()
+
+    # Write tweet author counts to stdout
+    count_values_this_batch.pprint(5)
+    count_values_windowed.pprint(5)
+    
+    return ssc
+----
+
+
+=== Launch the stream processing
+
+
+This uses local disk to store the checkpoint data. In a Production deployment this would be on resilient storage such as HDFS.
+
+
+Note that, by design, if you restart this code using the same checkpoint folder, it will execute the _previous_ code - so if you need to amend the code being executed, specify a different checkpoint folder.
+
+
+[source,python]
+----
+ssc = StreamingContext.getOrCreate('/tmp/checkpoint_v01',lambda: createContext())
+ssc.start()
+ssc.awaitTermination()
+----
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Tweets this batch: 782
+Tweets total (One minute rolling count): 782
+
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Author counts this batch:	Value AnnaSabryan	Count 8
+Author counts this batch:	Value KHALILSAFADO	Count 7
+Author counts this batch:	Value socialvidpress	Count 6
+Author counts this batch:	Value SabSad_	Count 5
+Author counts this batch:	Value CooleeBravo	Count 5
+...
+
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Author counts (One minute rolling):	Value AnnaSabryan	Count 8
+Author counts (One minute rolling):	Value KHALILSAFADO	Count 7
+Author counts (One minute rolling):	Value socialvidpress	Count 6
+Author counts (One minute rolling):	Value SabSad_	Count 5
+Author counts (One minute rolling):	Value CooleeBravo	Count 5
+...
+
+[...]
+
+-------------------------------------------
+Time: 2017-01-11 17:10:10
+-------------------------------------------
+Tweets this batch: 5
+Tweets total (One minute rolling count): 245
+
+-------------------------------------------
+Time: 2017-01-11 17:10:10
+-------------------------------------------
+Author counts this batch:	Value NowOnFR	Count 1
+Author counts this batch:	Value IKeepIt2000	Count 1
+Author counts this batch:	Value PCH_Intl	Count 1
+Author counts this batch:	Value ___GlBBS	Count 1
+Author counts this batch:	Value lauracoutinho24	Count 1
+
+-------------------------------------------
+Time: 2017-01-11 17:10:10
+-------------------------------------------
+Author counts (One minute rolling):	Value OdaSethre	Count 3
+Author counts (One minute rolling):	Value CooleeBravo	Count 2
+Author counts (One minute rolling):	Value ArrezinaR	Count 2
+Author counts (One minute rolling):	Value blackpinkkot4	Count 2
+Author counts (One minute rolling):	Value mat_lucidream	Count 1
+...
+--------------------------------------------
+
+
+You can see the full output from the job in link:https://gist.github.com/rmoff/fb033086b285655ffe7f9ff0582dedbf[the notebook here]. Let's take some extracts and walk through them.
+
+
+=== Total tweet counts
+
+
+First, the total tweet counts. In the first slide window, they're the same, since we only have one batch of data so far:
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Tweets this batch: 782
+Tweets total (One minute rolling count): 782
+--------------------------------------------
+
+
+Five seconds later, we have 25 tweets in the current batch - giving us a total of 807 (782 + 25):
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:09:00
+-------------------------------------------
+Tweets this batch: 25
+Tweets total (One minute rolling count): 807
+--------------------------------------------
+
+
+Fast forward just over a minute and we see that the windowed count for a minute is not just going up - in some cases it goes down - since our window is now not simply the full duration of the inbound data stream, but is shifting along and giving a total count for the last 60 seconds only.
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:09:50
+-------------------------------------------
+Tweets this batch: 28
+Tweets total (One minute rolling count): 1012
+
+-------------------------------------------
+Time: 2017-01-11 17:09:55
+-------------------------------------------
+Tweets this batch: 24
+Tweets total (One minute rolling count): 254
+--------------------------------------------
+
+
+=== Count by Author
+
+
+In the first batch, as with the total tweets, the batch tally is the same as the windowed one:
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Author counts this batch:	Value AnnaSabryan	Count 8
+Author counts this batch:	Value KHALILSAFADO	Count 7
+Author counts this batch:	Value socialvidpress	Count 6
+Author counts this batch:	Value SabSad_	Count 5
+Author counts this batch:	Value CooleeBravo	Count 5
+...
+
+-------------------------------------------
+Time: 2017-01-11 17:08:55
+-------------------------------------------
+Author counts (One minute rolling):	Value AnnaSabryan	Count 8
+Author counts (One minute rolling):	Value KHALILSAFADO	Count 7
+Author counts (One minute rolling):	Value socialvidpress	Count 6
+Author counts (One minute rolling):	Value SabSad_	Count 5
+Author counts (One minute rolling):	Value CooleeBravo	Count 5
+--------------------------------------------
+
+
+But notice in subsequent batches the rolling totals are accumulating for each author. Here we can see `KHALILSAFADO` (with a previous rolling total of 7, as above) has another tweet in this batch, giving a rolling total of 8:
+
+
+[source,python]
+--------------------------------------------
+-------------------------------------------
+Time: 2017-01-11 17:09:00
+-------------------------------------------
+Author counts this batch:	Value DawnExperience	Count 1
+Author counts this batch:	Value KHALILSAFADO	Count 1
+Author counts this batch:	Value Alchemister5	Count 1
+Author counts this batch:	Value uused2callme	Count 1
+Author counts this batch:	Value comfyjongin	Count 1
+...
+
+-------------------------------------------
+Time: 2017-01-11 17:09:00
+-------------------------------------------
+Author counts (One minute rolling):	Value AnnaSabryan	Count 9
+Author counts (One minute rolling):	Value KHALILSAFADO	Count 8
+Author counts (One minute rolling):	Value socialvidpress	Count 6
+Author counts (One minute rolling):	Value SabSad_	Count 5
+Author counts (One minute rolling):	Value CooleeBravo	Count 5
+--------------------------------------------
+
+
+== Summary
+
+
+What I've put together is a very rudimentary example, simply to get started with the concepts. In the examples in this article I used Spark Streaming because of its native support for Python, and the link:https://www.rittmanmead.com/blog/2016/12/etl-offload-with-spark-and-amazon-emr-part-5/[previous work] I'd done with Spark. Jupyter Notebooks are a fantastic environment in which to prototype code, and for a local environment providing both Jupyter and Spark it all you can't beat the Docker image link:https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook[all-spark-notebook].
+
+
+There are other stream processing frameworks and languages out there, including link:https://flink.apache.org/[Apache Flink], link:https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/[Kafka Streams], and link:https://beam.apache.org/[Apache Beam], to name but three. link:https://storm.apache.org/[Apache Storm] and link:https://samza.apache.org/[Apache Samza] are also relevant, but whilst were early to the party seem to crop up less frequently in stream processing discussions and literature nowadays.
+
+
+In the link:https://www.rittmanmead.com/blog/2017/01/data-processing-and-enrichment-in-spark-streaming-with-python-and-kafka[next blog] we'll see how to extend this Spark Streaming further with processing that includes:
+
+
+* Matching tweet contents to predefined list of filter terms, and filtering out retweets
+* Including only tweets that include URLs, and comparing those URLs to a whitelist of domains
+* Sending tweets matching a given condition to a Kafka topic
+* Keeping a tally of tweet counts per batch and over a longer period of time, as well as counts for terms matched within the tweets
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2017/01/getting-started-with-spark-streaming-with-python-and-kafka/[Rittman Mead blog].

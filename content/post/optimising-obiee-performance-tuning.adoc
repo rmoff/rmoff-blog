@@ -1,0 +1,305 @@
+---
+title: 'Performance and OBIEE - part VII - Optimising OBIEE performance   ("Tuning")'
+date: "2013-03-18T00:00:00+00:00"
+url: "/2013/03/18/optimising-obiee-performance-tuning/"
+draft: false
+categories:
+- OBIEE
+- ODI
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/03/optimising-obiee-performance-tuning/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/03/optimising-obiee-performance-tuning/[Rittman Mead blog].
+
+== Potato potato?
+
+
+When I first drafted this blog post, I gave it the title “Tuning”, rather than “Optimising”. Tuning is the word used so often in the context of performance, but it can actually be a bit misleading. A system that has *fundamental design flaws* doesn’t need “_tuning_” - it needs *redesigning*. Tuning can end up being a catch-all phrase meaning “fix performance ”, regardless of the scale of the task.
+
+
+Why does this matter? It matters, because if you are in the performance test phase of a project with a deadline to keep to it’s useful to be honest with yourself and the project manager in describing the work that needs to be undertaken to improve performance. If your analysis has shown that the design is sound but you’re hitting bottlenecks in performance somewhere along the way, then it is “tuning” you’re doing. However, if your analysis is showing that the metadata model you’ve built in the RPD stinks, the data model on the database sucks, and the dashboard design is suspect - it’s not going to take a bit of “tuning” to fix, it’s going to take some serious redevelopment. From a point of view of time estimation and expectations management, this is important.
+
+
+image::/images/2013/03/06970perf34.jpg[]
+
+A rough analogy would be with piano tuning. A structurally sound piano needs tuning periodically to keep it from being out of tune. However, a piano with woodworm needs a lot more work doing to it than simple tuning - it needs taking to the workshop.
+
+
+The piano tuning analogy serves one more purpose too: asking a piano tuner to give you a step by step guide to tuning a piano is almost as nonsensical as it is to expect a simple checklist to provide an way to comprehensively fix (“tune”) the performance of OBIEE.
+
+
+== <rant>
+
+
+This section is deliberately at the end of a long and detailed series of articles describing how to test and analyse the performance of OBIEE. ‘Tuning’ can be a bit of a weasel word in IT, implying light-touch, silver bullet changes that magically improve a system’s performance, when actually it can mean randomly changing a bunch of things in the blind and desperate hope of making bad performance better but with no way of knowing if it worked or what ‘it’ was.
+
+
+== </rant>
+
+
+Tuning should be undertaken only as _part_ of a performance cycle. It should be approached from one of two ways:
+
+
+. A performance problem has been identified, and you need to resolve it. You should have test data showing where the problem lies, and the analysis you’ve done should have pointed to the root cause. In this case, the tuning you do ought to be nothing more than fixing the problem. It might take lots of diagnosis and investigation to establish the resolution of a diagnosed cause, but crucially all the work you do will be focussed on the *root cause* that you’ve identified.
+. You have a performance baseline, and you want to see if you can improve performance or capacity in general. There is no specific problem to resolve, but reducing the runtimes of queries would be nice. To be precise, we’re looking to *optimise* a system.
+
+
+== Anti-patterns in performance optimisation
+
+
+There are anti-patterns ("Bad Practices", if you will) to good performance troubleshooting; here are some of them. You should have your guard up if you see these, and challenge them!
+
+
+* Sacred Cows
+* Hero worship
+* Best practice!
+* Tweaking & Tinkering
+* Silver bullets
+* Golden rules
+* Cast iron guarantees
+* Never
+* Always
+* Take my word for it
+* Long bullet point lists
+
+
+++++
+{{< x user=”OracleAskTom” id=”240813515290603521” >}}
+++++
+
+
+== Generally good design principles to observe in OBIEE
+
+
+These are not *Best Practices!* These are things that can work well, but have to be done with *brain engaged!*
+
+
+_They’re not bad practices either, they’re just good practices._
+
+
+* Ensure that the RPD has a correct dimensional Star model in the Logical (BMM) layer
+* Push the dimensional Star schema into the database; don’t build against a normalised data model if performance is key requirement
+* Create aggregate tables to support user queries
+
+** Use Usage Tracking to spot dimension levels that would benefit, or Summary Advisor on Exalytics
+** Aggregate Persistence Wizard can do the initial hard work in plumbing the metadata into the RPD for you
+
+*** You still need to maintain the aggregate, unless you are happy to just drop/recreate each time the data changes
++
+** Don’t forget to create associated aggregated dimension tables. These are particularly useful for good performance of prompts where a distinct list of values at a level in a dimension are returned.
++
+* Make sure that aggregates get used when appropriate. Check the SQL that OBIEE is generating isn’t using a less-efficient source table.
+* OBIEE is not an extraction tool, especially not in the front-end.
+
+** If users really want a data dump, consider doing that for them outside of the tool, for example with sql*plus.
+** To still make use of the metadata model in the RPD, but without causing big problems in Presentation Services, use an ODBC or JDBC call into the BI Server directly to get the data dump out. Using this method, you could hook in Excel directly to the BI Server.
++
+* The fastest query is one that never runs - challenge dashboard & reports designs. Don’t just copy what an existing system does. Analyse the user’s workflow, to see if the reports you build can support and make more efficient what the user does.
+* _Generally_ you should avoid building the RPD against database views, as they can hinder OBIEE’s SQL generation with the result of sub-optimal queries. Database views can also hide inefficient or unnecessary joins and logic. Air your dirty washing in public, and put the underlying tables into the Physical layer of the RPD instead and let OBIEE work with them.
+
+** This is not a hard and fast rule, and it is not a “Best Practice” (sigh). There will be some genuine cases where a database view is a pragmatic solution to a particular data model issue.
++
+* Minimise the *work being done by the BI Server*. When using _federation_ to join data across databases it is unavoidable but _generally_ it is to be frowned upon if within the same database. Wherever possible, all work should be seen to be *pushed down* to the database.
+
+** Check how much data the BI Server pulls back from the database as a percentage of rows returned to the user (low % is bad).
+** Monitor the BI Server’s temp directory - if this is filling up with large files it means that the BI Server is having to crunch lots of data
+** How many database queries does one report trigger? (higher is generally less efficient).
+** This SQL will help identify reports for investigation, using existing Usage Tracking data:
+
++
+[source,sql]
+----
+SELECT SAW_SRC_PATH, 
+       ROW_COUNT, 
+       CUM_NUM_DB_ROW, 
+      ( ROW_COUNT / CUM_NUM_DB_ROW ) * 100 AS ROWS_PCT, 
+       TOTAL_TIME_SEC, 
+       NUM_DB_QUERY 
+FROM   S_NQ_ACCT 
+WHERE  ROW_COUNT > 0 
+       AND CUM_NUM_DB_ROW > 0 
+    -- Update these predicates to tailor your results as required
+    --   AND TOTAL_TIME_SEC > 10 
+    --   AND CUM_NUM_DB_ROW > 10000 
+ORDER  BY 4 DESC
+----
++
++
+* Size hardware correctly to support the BI Server and Presentation Server (based on past experience and/or Oracle’s link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1323646.1[documentation])
+* Make sure that there a balanced hardware configuration throughout the stack (c.f. link:http://structureddata.org/2009/12/22/the-core-performance-fundamentals-of-oracle-data-warehousing-balanced-hardware-configuration/[Greg Rahn] and link:http://docs.oracle.com/cd/E11882_01/server.112/e10578/tdpdw_system.htm#CFHFJEDD[Oracle documentation])
+
+
+== Optimising OBIEE further
+
+
+The above section outlines some of the principles you should always be aiming to follow, or have a clear reason why you're not. There are some other techniques that can be worth investigating when you're looking to optimise the performance of OBIEE further, discussed below.
+
+
+=== BI Server Caching
+
+
+How have I got this far and still not mentioned caching? To horribly mix two food metaphors, caching is the *icing on the cake*, it is not the *bread and butter* of good performance. If you are using caching as your *sole means of ensuring good performance* then you are skating on thin ice.
+
+
+That is not to say caching is bad. Caching is good, when its use is thought through and evaluated carefully. Caching has an overhead in terms of management, so you cannot just chuck it in to the mix and forget about it. You need to manage the cache to make sure you’re not serving up stale data to your end users. It might be *_fast_*, but it’ll be *wrong*.
+
+
+Caching can improve performance for several reasons:
+
+
+* It is typically faster to return the results of a query already run and stored in the cache than it is to re-execute the necessary Physical SQL against the source database(s)
+* By not executing the Physical SQL on the database(s), we reduce both the load on the database, and the amount of network traffic, freeing up these resources for non-cached queries
+* The cache stores the *results* of a Logical SQL query sent to the BI Server, not the data that the database returns. If the BI Server is doing lots of work, for example, federating and aggregating lots of data across sources, then by caching the _result_ post-processing, all of this work can be avoided by subsequent cache hits.
+
+
+The BI Server cache is more advanced than a ‘dumb’ cache where only a direct match on a previous request will result in a hit. The BI Server will parse a Logical SQL query and recognise if it is either a *direct match*, a *subset* , or an *aggregate* of an existing cache entry. So a cache entry for `sales by day` could well satisfy a subsequent Logical SQL query for `sales by year`.
+
+
+Pre-seeding the cache is a good idea, so that users _all_ benefit from the cache, not just those who come along after the first user has run a report that gets stored in the cache. There are a couple of ways to pre-seed the cache:
+
+
+. A BI Delivers *Agent* with the *Destination* set to *System Services : Oracle BI Server Cache*. This agent could optionally be set to run straight after your ETL batch has loaded the data.
+. Directly from an ETL tool via ODBC/JDBC using the *SASeedQuery* statement.
+
+
+If you don’t pre-seed the cache then only users running queries based on queries _already run by others users_ will benefit from the cache.
+
+
+The flip-side of pre-seeding the cache is *purging* it, and there are two sensible ways to do this :
+
+
+. link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10541/querycaching.htm#i1005542[Event Polling Table]
+. link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10541/querycaching.htm#i1010207[ODBC/JDBC command] to the BI Server, triggered by the completion of a data load (ETL)
+
+
+Watch out for the *Cache Persistence time* in the Physical Table - this defines how long an entry *remains in the cache*, rather than how frequently to purge it. If you have a daily data load, setting the cache persistence time to 24 hours will not do what you may think. If your data is loaded at 0300, the first user queries it and creates a cache entry at 0900, that cache entry will remain until _0900 the following day_, even though the cached data would have been stale for six hours (since the subsequent data load at 0300).
+
+
+Where *Cache persistence time* can be useful is in systems with frequent changes in the source data and you want to _deliberately_ introduce a lag in the data the user sees for the _benefit of generally faster response times_ for end-users. For example, you may have a trickle-fed ODS from which you are running OBIEE reports. If the data is being loaded in near-real-time, and the users want to see it 100% current, then evidently you cannot use caching. However, if the users would be happy with a lag in the data, for example ten minutes, then you could enable caching and set the *cache persistence time* for the relevant physical table to 10 minutes. For the ten minutes that the data is in the cache, the users get fast response times. This could be a pragmatic balance between freshness of data and response times to get the data. Bear in mind that a query taking 2 minutes to run is going to be reporting on data that is 2 minutes out of date already.
+
+
+=== Use fast disk for cache and/or temporary files
+
+
+OBIEE writes various temporary files, including cache data and work files, to disk. By default, these reside in `$FMW_HOME/instances/instance1/tmp`. You may find that using fast disk (e.g. SSD) or even RAM disk to hold some or all of these temporary files instead could improve performance. Be aware that some of the work files that OBIEE writes _can_ be very big (as big as the data being pulled back from the database, so in the order of gigabytes if you’re unlucky).
+
+
+=== Web Tier for static content caching
+
+
+In a standard OBIEE installation, WebLogic acts as both the application server (running java code, communicating with Presentation Services etc) as well as the HTTP server, handling inbound connections from the web browser, serving up static files such as CSS stylesheets.
+
+
+It can sometimes be beneficial to introduce a separate HTTP server such as Oracle HTTP Server (OHS), leaving WebLogic to just act as the application server. A dedicated HTTP server such as OHS can be configured to cache and compress static files which can improve the response time for users especially if the network is not a fast one.
+
+
+For more information, see Venkat’s article link:https://www.rittmanmead.com/blog/2012/03/anatomy-of-bi-ee-page-rendering-use-of-httpweb-server-compression/[Anatomy of BI EE Page Rendering – Use of HTTP/Web Server & Compression]
+
+
+=== Scale out / Scale up
+
+
+Increasing the number of instances of the system components can help maximise the capacity of the overall BI Domain and enable it to use the full resource of the hardware on which it is running.
+
+
+Scaling *out* is to add additional physical servers and extend the BI Domain onto them. Scaling *up* is to just increase the number of one or more of the components that are running on an _existing_ server.
+
+
+An example of where this can be useful is the Javahost component. It is configured with a default maximum number of jobs that it can handle. Certain workload types and volumes can hit this maximum with relative ease, so increasing the number of Javahosts can improve the performance by reducing contention for the process.
+
+
+In general, if you don’t have any evidence of a capacity limit being reached or in danger of being reached, I would be reluctant to ‘inoculate’ a system by scaling (adding additional component instances) ‘just in case’. You will only add to the number of moving parts to keep track of (and increase complexity of configuration such as shared presentation catalog folder), and without really a reassurance that the change you’ve made will help. It gives a false sense of security, since you’re just presuming, guessing, that the first bottleneck your system will reach is one which is resolved by scaling out/up.
+
+
+Mark Rittman wrote a post recently in which he discussed the idea of scaling the BI Server (nqsserver) component in order to take advantage of multiple CPU cores, and whether this was in fact necessary. You can read his post here : link:https://www.rittmanmead.com/blog/2013/03/does-the-bi-server-system-component-make-full-use-of-my-multi-socket-multi-core-server/[Does the BI Server System Component Make Full Use of My Multi-Socket, Multi-Core Server?]
+
+
+== Optimising the database
+
+
+_This section is most definitely not a comprehensive study; it is a set of a few pointers that I would be looking for before speaking to my honourable DBA colleagues who have longer beards than I and know this stuff inside out._
+
+
+* *DBAs* :
+
+** you _cannot_ tune the SQL that OBIEE sends to the database; it is generated by OBIEE. If there is a better way to write the SQL query then you need to get the BI Server to generate it in that way by amending the RPD. Missing joins etc indicate problem with the RPD
+* you _can_try optimising the physical implementation of the underlying database objects to make a query that OBIEE generates run faster
++
+Techniques to evaluate in your physical implementation of the data model include:
+
+
+* Appropriate use of Parallel query, including Auto DOP (link:https://www.rittmanmead.com/blog/2013/03/you-probably-need-parallel-except-when-you-dont/[as written about by my colleague Pete Scott recently])
+* Partitioning
+* Appropriate - but not excessive - indexing
+* Correct data types, particularly on join columns
+* Materialized Views for holding pre-built aggregations of your fact data
+
+** (including PCT to incrementally refresh)
++
+* Statistics
+
+** Make sure that they’re representative/accurate
+** Have a proactive statistics management strategy. Don’t just rely on the auto stats jobs.
+** Incremental statistics can be useful
++
+* Resource Manager is useful for granular control of resources such as parallelism, optionally between different groups of users. For example, power users could be given a greater DOP than normal users.
+
+
+== Oracle’s tuning document
+
+
+You can get the Oracle official OBIEE tuning document from here: link:https://support.oracle.com/epmos/faces/DocContentDisplay?id=1333049.1[Best Practices Guide for Tuning Oracle® Business Intelligence Enterprise Edition].
+
+
+When Oracle released this document in December 2012 it caused a link:https://twitter.com/Nephentur/status/278787299846795264[mini-twitter-storm] amongst some OBIEE professionals. On the one hand, publishing a list of settings to evaluate is of great help. On the other, publishing a list of settings to evaluate with no context or method with which to validate them is no help whatsoever. In my [not very humble] opinion, a supplemental list of configuration parameters - especially from the software vendor themselves - should only go hand-in-hand with *details of how to properly evaluate them*. Here is why I think that:
+
+
+. Turn the dial to 42. If Oracle says so, then that’s what we’ll do. Time is wasted *changing configuration without understanding why*.
+. Each configuration change is a move away from default, and thus increases chances of being missed in environment migrations and product upgrades
+. If there is a suggested default, with no context or caveat, then why isn’t it an instruction in the installation guide? (“For a stable / an even performance over time, you should at least set two Presentation Services per server and two Javahost per server.”)
+. The document suggests enabling BI Server caching, with no observation that this could lead to users getting wrong (stale) results
+. It propagates the idea that performance is _only_ a case of setting the correct values in configuration files. In the tuning guide there is a generic mention of “Application Design”, but in a document that discusses parameter changes throughout the OBIEE stack where is the lengthy discussion of underlying data model, appropriate RPD model, query push-down? These fundamental design principles count a thousand times over against how many tcp_listeners an OS is configured for
+. No explanation of (a) why a setting should be changed and (b) in what situation. For example, changing tcp settings will make no difference on a low-concurrency system horrendously bottlenecked on poor database queries resulting from a bad data model. If a tcp setting needs changing, which corresponding OS network stat will show a bottleneck? Or response time profile to show excessive wait times at the network layer?
+. A shopping list of parameters to change should be the *last step of performance optimisation*, but by being the only tuning document available, gives the impression that this is all there is to performance – turn some knobs and you’re done.
+. A little knowledge is a dangerous thing. By putting these low-level configuration options out as a generally available document it increases the chances of more harm than good being done by people. If someone doesn’t understand a system then it is best to leave it alone rather than tinker with some changes that have an Oracle stamp of authority on.
+If my car is running badly, I won’t start trying to remap the engine. I’ll take it to the garage. When they tell me what the problem was and what they did to fix it, I won’t take that recommendation and tell my friend whose car is running slowly to do the same.
+
+
+This isn’t to say the document isn’t useful. *It is very useful*. It’s just a shame that it is _the only OBIEE tuning document from Oracle_. It’s really useful to have at the end of a performance test once test results are in and diagnosis and resolution of the problems start. But it’s necessary to have the diagnosis and means to validate a change *first*, before throwing changes at a system.
+
+
+== Summary
+
+
+This is the penultimate article in this series about OBIEE and performance. For an overview and conclusion of my method for improving performance in OBIEE, see the final post in this series, link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-summary-and-faq[here].
+
+
+== Other articles in this series
+
+
+This article is part of a series on the subject of Performance and OBIEE:
+
+
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-introduction[Introduction]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-test-define[Test - Define]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-test-design[Test - Design]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-test-build[Test - Build]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-execute-and-measure[Execute]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-analysing-results[Analyse]
+. link:https://www.rittmanmead.com/blog/2013/03/optimising-obiee-performance-tuning[Optimise]
+. link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-summary-and-faq[Summary and FAQ]
+
+
+== Comments?
+
+
+I’d love _your_ feedback. Do you agree with this method, or is it a waste of time? What have I overlooked or overemphasised? Am I flogging a dead horse?
+
+
+Because there are several articles in this series, and I’d like to retain the thread of comments in one place, I’ve enabled comments on the link:https://www.rittmanmead.com/blog/2013/03/performance-and-obiee-summary-and-faq[summary and FAQ] post here, and disabled comments on the others.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/03/optimising-obiee-performance-tuning/[Rittman Mead blog].

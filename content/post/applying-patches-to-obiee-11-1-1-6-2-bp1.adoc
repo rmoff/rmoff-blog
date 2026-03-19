@@ -1,0 +1,431 @@
+---
+title: 'Applying patches to OBIEE :  11.1.1.6.2 BP1'
+date: "2012-07-10T00:00:00+00:00"
+url: "/2012/07/10/applying-patches-to-obiee-11-1-1-6-2-bp1/"
+draft: false
+categories:
+- OBIEE
+- Linux
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/07/applying-patches-to-obiee-11-1-1-6-2-bp1/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/07/applying-patches-to-obiee-11-1-1-6-2-bp1/[Rittman Mead blog].
+
+The link:https://www.rittmanmead.com/blog/2012/07/obiee-11-1-1-6-2-bp1-new-features-oracle-bi-mobile-hd-and-patching-upgrade-considerations/[recent release of OBIEE 11.1.1.6.2 BP1] weighs in with a hefty eight individual patches to apply. They use the standard Oracle opatch mechanism. Here we see how to apply the patches, and note any "gotchas".
+
+
+== Starting point
+
+
+To install 11.1.1.6.2 BP1, you must be on 11.1.1.6.0 first.
+
+
+This article is based on an installation on Linux (OL6), but the process should be the same across OSs. It is also based on a single-node OBIEE install. For clustered deployments, you will need to do this on each node - see the patch README for more information. 
+
+
+== Obtain the patches
+
+
+The first step is to download the patches from Oracle Support. See link:https://www.rittmanmead.com/blog/2012/07/downloading-obiee-patches-from-oracle-with-wget/[my previous post] on how to locate them and optionally download them from the command-line using wget. Don't forget the JDeveloper patch, 13952743, which doesn't show up in the standard search for 11.1.1.6.2 BP1.
+
+
+== Unzip the patches
+
+
+You can unzip them using the commandline statement
+
+
+[source]
+----
+
+unzip \*.zip
+----
+
+
+This will give you a list of folders, each containing a set of patch files. You should have the following:
+
+
+[source]
+----
+
+drwxrwxr-x  4 oracle oinstall 4096 Jul 10 17:10 13867143
+drwxr-xr-x  4 oracle oinstall 4096 Apr 12 07:10 13952743
+drwxrwxr-x  4 oracle oinstall 4096 Jun  2 03:25 13960955
+drwxr-xr-x  4 oracle oinstall 4096 Jun 14 00:53 14142868
+drwxr-xr-x  4 oracle oinstall 4096 Jul 10 17:20 14223977
+drwxrwxr-x  4 oracle oinstall 4096 Jun 22 11:06 14226980
+drwxrwxr-x  4 oracle oinstall 4096 Mar 29 03:09 14226993
+drwxrwxr-x  4 oracle oinstall 4096 Apr 19 07:22 14228505
+----
+
+
+== Read the README
+
+
+The patches come with a master README file, in 14223977/README.txt. Make sure you read through this and understand it. What I detail below are my notes based on it, but always check the README. 
+
+
+== Determine FMW_HOME
+
+
+All OBI 11g installations follow the same directory structure, but the root of this structure varies depending on where it was installed. The root is known as FMW_HOME (Fusion MiddleWare Home), and is commonly found in locations such as
+
+
+* /u01/app/oracle/product/fmw
+* /home/oracle/obiee
+* c:\oracle\middleware
+
+
+Before continuing, make sure you know where your FMW_HOME is. When you've found it, you should see the following structure within it:
+
+
+[source]
+------
+
+-rw-rw----  1 oracle oinstall   225 Jul  6 13:49 domain-registry.xml
+drwxr-x---  3 oracle oinstall  4096 Jul  6 13:44 instances
+drwxr-x---  2 oracle oinstall  4096 Jul  6 16:41 logs
+drwxr-x---  7 oracle oinstall 36864 Jul  6 13:26 modules
+-rw-r-----  1 oracle oinstall   623 Jul  6 13:26 ocm.rsp
+drwxr-x--- 65 oracle oinstall  4096 Jul 10 20:25 Oracle_BI1
+drwxr-x--- 33 oracle oinstall  4096 Jul 10 21:38 oracle_common
+-rw-r-----  1 oracle oinstall 86921 Jul  6 13:26 registry.dat
+-rw-r-----  1 oracle oinstall  1750 Jul  6 13:26 registry.xml
+drwxr-x---  4 oracle oinstall  4096 Jul  6 13:37 user_projects
+drwxr-x---  8 oracle oinstall  4096 Jul  6 13:26 utils
+drwxr-x---  9 oracle oinstall  4096 Jul  6 13:26 wlserver_10.3
+------
+
+
+For the rest of this article, I'm assuming you've set the environment variable FMW_HOME, for example using *export FMW_HOME=/u01/app/oracle/product/fmw* (on a bash shell - other shells & OSs will differ)
+
+
+== Put patch files in place
+
+
+Move your unzipped patch files into the *$FMW_HOME/Oracle_BI1* folder. It should look like this: 
+
+
+[source]
+----
+
+oracle@rnm-ol6 fmw]$ ls -l /u01/app/oracle/product/fmw/Oracle_BI1/
+total 272
+drwxrwxr-x  4 oracle oinstall 4096 Jul 10 17:10 13867143
+drwxr-xr-x  4 oracle oinstall 4096 Apr 12 07:10 13952743
+drwxrwxr-x  4 oracle oinstall 4096 Jun  2 03:25 13960955
+drwxr-xr-x  4 oracle oinstall 4096 Jun 14 00:53 14142868
+drwxr-xr-x  4 oracle oinstall 4096 Jul 10 17:20 14223977
+drwxrwxr-x  4 oracle oinstall 4096 Jun 22 11:06 14226980
+drwxrwxr-x  4 oracle oinstall 4096 Mar 29 03:09 14226993
+drwxrwxr-x  4 oracle oinstall 4096 Apr 19 07:22 14228505
+drwxr-x---  3 oracle oinstall 4096 Jul  6 12:53 admin
+drwxr-x---  3 oracle oinstall 4096 Jul  6 12:53 asoneofftool
+drwxr-x---  3 oracle oinstall 4096 Jul  6 13:08 assistants
+drwxr-x---  3 oracle oinstall 4096 Jul  6 12:53 atgpf
+drwxr-xr-x  3 oracle oinstall 4096 Jul 10 20:25 bicomposer
+drwxr-x--- 16 oracle oinstall 4096 Jul  6 13:15 bifoundation
+[…]
+----
+
+
+== Check disk space
+
+
+The patches copy files and take copies of files they are replacing, so you will need free disk space - from experience, around 10GB can be necessary
+
+
+== Backup, backup, backup
+
+
+You already take backups of your OBIEE installation, right? Well, now is definitely the time to start if you don't. Patching is a complex process, and if something goes wrong then you are at the mercy of oPatch and oraInventory. 
+
+
+And don't forget, untested backups are as good as no backups.
+
+
+See the link:http://docs.oracle.com/cd/E23943_01/core.1111/e10105/br_intro.htm[Oracle® Fusion Middleware Administrator's Guide - Introducing Backup and Recovery] for more information, and specifically link:http://docs.oracle.com/cd/E23943_01/core.1111/e10105/br_intro.htm#CHDIFFJD[Backup and Recovery Recommendations for Oracle Business Intelligence]
+
+
+== Shutdown the OBIEE processes, including WebLogic
+
+
+Shutdown OPMN, the Weblogic managed server (bi_server1), and the Weblogic Admin Server.
+
+
+== Delete catalog manager cache directories
+
+
+These may or may not exist - if they do, delete them
+
+
+[source]
+----
+
+rm -rv $FMW_HOME/Oracle_BI1/bifoundation/web/catalogmanager/configuration/org.eclipse.osgi
+rm -rv $FMW_HOME/Oracle_BI1/bifoundation/web/catalogmanager/configuration/org.eclipse.equinox.app
+----
+
+
+== Set the environment variables
+
+
+The patch README explains how to do this on Windows and a *nix C shell, here is how to do it on Bash shell: 
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1
+export ORACLE_HOME=$PWD
+export PATH=$ORACLE_HOME/bin:$PATH
+export JAVA_HOME=$ORACLE_HOME/jdk
+export PATH=$JAVA_HOME/bin:$PATH
+export PATH=$ORACLE_HOME/OPatch:$PATH
+----
+
+
+== Apply the OBI patches
+
+
+Making sure that you've set the environment variables as shown above, apply the seven OBI patches as follows: 
+*14223977 (1 of 7) Oracle Business Intelligence Installer*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/14223977
+opatch apply
+----
+
+*14226980 (2 of 7) Oracle Real Time Decisions*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/14226980
+opatch apply
+----
+
+*13960955 (3 of 7) Oracle Business Intelligence Publisher*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/13960955
+opatch apply
+----
+
+*14226993 (4 of 7) Oracle Business Intelligence ADF Components*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/14226993
+opatch apply
+----
+
+*14228505 (5 of 7) Enterprise Performance Management Components Installed from BI Installer 11.1.1.6.x*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/14228505
+opatch apply
+----
+
+*13867143 (6 of 7) Oracle Business Intelligence*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/13867143
+opatch apply
+----
+
+*14142868 (7 of 7) Oracle Business Intelligence Platform Client Installers and MapViewer*
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/14142868
+opatch apply
+----
+
+
+== Check the OBI patches have been applied
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1
+opatch lsinventory|grep applied
+----
+
+You should see the seven patches just applied, plus a bunch of others from installing 11.1.1.6.0
+
+
+[source]
+----
+
+Patch  14142868     : applied on Tue Jul 10 21:31:11 BST 2012
+Patch  13867143     : applied on Tue Jul 10 20:58:29 BST 2012
+Patch  14228505     : applied on Tue Jul 10 20:33:59 BST 2012
+Patch  14226993     : applied on Tue Jul 10 20:25:58 BST 2012
+Patch  13960955     : applied on Tue Jul 10 20:19:46 BST 2012
+Patch  14226980     : applied on Tue Jul 10 20:02:40 BST 2012
+Patch  14223977     : applied on Tue Jul 10 20:00:35 BST 2012
+Patch  6845838      : applied on Fri Jul 06 13:33:14 BST 2012
+Patch  7393921      : applied on Fri Jul 06 13:32:58 BST 2012
+Patch  7707476      : applied on Fri Jul 06 13:32:46 BST 2012
+Patch  7663342      : applied on Fri Jul 06 13:32:21 BST 2012
+Patch  6599470      : applied on Fri Jul 06 13:32:10 BST 2012
+Patch  6750400      : applied on Fri Jul 06 13:31:58 BST 2012
+Patch  7427144      : applied on Fri Jul 06 13:31:23 BST 2012
+----
+
+
+== Copy the client tool installers
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/clients/bipublisher/repository/Tools
+cp BIPublisherDesktop*.exe $FMW_HOME/user_projects/domains/bifoundation_domain/config/bipublisher/repository/Tools/
+----
+
+
+== Apply the JDeveloper patch
+
+
+This requires a different ORACLE_HOME to be set, so make sure you don't skip setting the environment variables here: 
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/oracle_common
+export ORACLE_HOME=$PWD
+export PATH=$ORACLE_HOME/bin:$PATH
+export JAVA_HOME=$ORACLE_HOME/jdk
+export PATH=$JAVA_HOME/bin:$PATH
+export PATH=$ORACLE_HOME/OPatch:$PATH
+cd $FMW_HOME/Oracle_BI1/13952743
+opatch apply
+----
+
+
+== Check the JDeveloper patch has been applied
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1
+opatch lsinventory|grep applied
+----
+
+You should see the patch just applied listed: 
+
+
+[source]
+----
+
+Patch  13952743     : applied on Tue Jul 10 21:44:19 BST 2012
+----
+
+
+== Startup the OBIEE processes, including WebLogic
+
+
+Start up the Weblogic Admin Server, Managed Server (bi_server1), and then OPMN. 
+
+
+== Validate the patching has been successful
+
+
+If all has gone well, you should now be able to login to OBIEE and from the *Administration* link see the new version listed: 
+*11.1.1.6.2 (Build 120605.2000 BP1 64-bit)*
+
+
+image::/images/2012/07/061264Untitled-4.png[Untitled 4]
+
+
+image::/images/2012/07/061263Untitled-5.png[Untitled 5]
+
+
+== Client tools
+
+
+Don't forget to update your Client Tools (Adminstration Tool, Catalog Manager, Job Manager). To do this, login to OBIEE and from the Home page go to *Get Started…* -> *Download BI Desktop Tools* -> *Oracle BI Client Installer*. This will download the client installer, which you should then run to install the tools. 
+
+
+The Admin Tool lists its version in *C:\Program Files\Oracle Business Intelligence Enterprise Edition Plus Client\oraclebi\orahome\bifoundation\version.txt*
+
+
+[source]
+----
+
+Build: 11.1.1.6.0.BIFNDN_11.1.1.6.2BP1_NT_120604.0813
+Release Version: Oracle Business Intelligence 11.1.1.6.0
+Package: 120604.0136.000
+----
+
+
+== Tidy up patch files
+
+
+If you want to save disk space, you can delete the patch folders: 
+
+
+[source,shell]
+----
+
+cd $FMW_HOME/Oracle_BI1/
+rm -rf 13867143
+rm -rf 13952743
+rm -rf 13960955
+rm -rf 14142868
+rm -rf 14223977
+rm -rf 14226980
+rm -rf 14226993
+rm -rf 14228505
+----
+
+
+== Browser Cache
+
+
+In the README for the patches, there is the following note that is worth being aware of:
+
+
+[quote]
+____
+*_NB: When the patchset installation is complete and the BI System is running again, end-users might experience unexpected behavior due to pre-existing browser sessions caching javascript from the earlier Oracle BI release. To avoid unnecessary support requests, ask all end-users to clear their browser cache._*
+____
+
+This unexpected behaviour can include the display not rendering correctly - when creating a new Analysis, only the main toolbar is shown: 
+
+
+image::/images/2012/07/061262Untitled-6.png[Untitled 6]
+
+The resolution is simple, just purge the browser cache and logout/login to OBIEE. 
+
+Another problem observed has been the dashboard tabs not displaying.
+
+For an enterprise deployment, I would imagine this might cause a few problems as not all users will necessarily be familar with clearing browser caches, or pay attention to instructions telling them to do so.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/07/applying-patches-to-obiee-11-1-1-6-2-bp1/[Rittman Mead blog].

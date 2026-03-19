@@ -1,0 +1,240 @@
+---
+title: 'Configuring OBI 11g to use port 80'
+date: "2012-01-23T00:00:00+00:00"
+url: "/2012/01/23/configuring-obi-11g-to-use-port-80/"
+draft: false
+categories:
+- OBIEE
+- Linux
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/01/configuring-obi-11g-to-use-port-80/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/01/configuring-obi-11g-to-use-port-80/[Rittman Mead blog].
+
+== Introduction
+
+
+By default, OBI 11g will listen for connections on port 7001 or port 9704 depending on your installation type. There are several reasons you may want to change this, and one of them would be to make it use port 80, the default http port. If you use port 80, then you don't have to specify it in the URL, so you can use _http://biserver/analytics/_ as your URL instead of _http://biserver*:9704*/analytics/_. 
+
+
+The port configuration is a simple change to be made to the Server configuration in Web Logic Console. However, if you want to use port 80 and are running Linux/Unix there is an additional consideration. On Linux/Unix (hereafter, I'll just refer to Linux), any port < 1024 is considered privileged and you must run the program binding to it as root.
+
+
+At this point, if you don't have root access on your box already and are beholden to a sysadmin team, I would suggest validating your reasons for wanting to run on port 80, since you are going to have to go begging for some kind of privileged access. If you're up for that, then read on. If not, then why not stick with 9704, it's a nice number anyway....
+
+
+== Overview of the change to listen on port 80
+
+
+The configuration changes are actually very simple. They are just within Web Logic Server, we don't touch the BI components at all.
+
+
+We change the *Listen Port* property of the *Server* to port 80.
+
+
+Since we are using port 80, we will have to start the server process as root. But, we can get Web Logic to revert back to the OBI user&group once the port has been bound to (since running a process as root is generally a Bad Idea)
+
+
+To do this, we configure *Post-Bind UID* in the *Machine* properties.
+
+
+== WLS - Server configuration
+
+
+Depending on whether you have a *Enterprise* or *Simple* OBI installation, the configuration will differ slightly. See link:https://www.rittmanmead.com/blog/2011/10/oow2011-obiee-11g-architecture-internals/[Mark's post here] for explanation of the difference between the two installation types. In an *Enterprise* installation, you need to modify the properties of the *bi_server1* _Managed Server_, whereas a *Simple* installation has all the bits within *AdminServer*.
+
+
+For both however, you need to login to Web Logic Admin Console, and locate the *Servers* screen. Click on either *AdminServer* (Simple installation) or *bi_server1* (Enterprise installation) to view the Server settings.
+
+
+Click on *Lock & Edit* +
+
+
+image::/images/2012/01/05166rm-oel02-27.png[]
+
+
+Locate *Listen Port* on the Server configuration (Configuration -> General, if not already displayed). Change this to 80. +
+
+
+image::/images/2012/01/05165rm-oel02-2.png[]
+
+
+Click on *Save*.
+
+
+== WLS - Machine configuration
+
+
+Still logged into Web Logic Admin Console, with the above Listen Port change pending, click on the *Machines* link under *Environment* in the *Domain Structure* menu. Click on your server name.
+
+
+image::/images/2012/01/05164skitched-20120104-155829.png[]
+
+
+Now, tick the two items *Enable Post-Bind UID* and *Enable Post-Bind GID*.
+
+
+To determine your userid and group, login with your normal OBI user, and type *id*
+
+
+[source,shell]
+----
+
+$ id
+uid=300(oracle) gid=301(oinstall)
+----
+
+
+Enter these values in *Post-Bind UID* and *Post-Bind GID* +
+
+
+image::/images/2012/01/05162rm-oel02-6.png[]
+
+
+Click on *Save*.
+
+
+== Activate the changes
+
+
+In Web Logic Admin Console, click on *Activate Changes*. +
+
+
+image::/images/2012/01/05163rm-oel02-8.png[]
+
+
+When this has completed successfully, shutdown the stack and then see below for how to start it back up.
+
+
+== Starting up the stack to listen on port 80
+
+
+You don't need to run all of the components with root privilege, only those that are binding to port 80. In addition, in an Enterprise installation you have the *Node Manager* component which is responsible for invoking Managed Servers, and since we need the Managed Server bi_server1 to be run with root privileges, *Node Manager* must be too. 
+
+
+=== 'Simple' installation
+
+
+. Start WebLogic, *as root*
+. Start OPMN and BI Components (not as root)
+
+
+=== 'Enterprise' installation
+
+
+. Start NodeManager, *as root*
++
+** If you don't start this as root, you won't be able to start up the Managed Server bi_server1 from within Web Logic Admin Console
++
+. Start WebLogic (AdminServer) (not as root)
+. Start WebLogic Managed Server (bi_server1), *as root*
+. Start OPMN and BI Components (not as root)
+
+
+== Validate the changes
+
+
+You should now be able to access OBI at port 80, which as the default HTTP port doesn't need specifying in your URL. So if previously it was *link:http://localhost:9704/analytics/[http://localhost:9704/analytics/]* you should now be able to see it at *link:http://localhost/analytics[http://localhost/analytics]* +
+
+
+image::/images/2012/01/05160rm-oel02-9.png[]
+
+
+If you look in the Web Logic server log (AdminServer.log / bi_server1.log respectively), you should see this kind of entry:
+
+
+[source]
+----
+
+<Notice> <Server> <BEA-002613> <Channel "Default[1]" is now listening on 192.168.69.0:80 for protocols iiop, t3, ldap, snmp, http.>
+<Notice> <Server> <BEA-002613> <Channel "Default[2]" is now listening on 127.0.0.1:80 for protocols iiop, t3, ldap, snmp, http.>
+----
+
+
+And link:http://en.wikipedia.org/wiki/Netstat[netstat] should show something like:
+
+
+[source,shell]
+----
+$ netstat -a|grep LISTEN|grep 80
+[…]
+biserver01.80             *.*                0      0 49152      0 LISTEN
+localhost.80               *.*                0      0 49152      0 LISTEN
+[…]
+----
+
+
+or you might see the port named instead of numbered, thus:
+
+
+[source,shell]
+----
+$ netstat -a|grep LISTEN|grep http
+tcp        0      0 rm-oel02.localdomain:http   *:*                         LISTEN      
+tcp        0      0 localhost.localdomain:http  *:*                         LISTEN
+----
+
+
+== Possible errors
+
+
+If you don't start the process as root, then it will fail to bind to port 80, and you'll see this error in the log:
+
+
+[source]
+----
+
+ <Error> <Server> <BEA-002606> <Unable to create a server socket for listening on channel "Default[1]". The address 127.0.0.1 might be incorrect or another process is using port 80: java.net.BindException: Permission denied.>
+----
+
+
+== sudo
+
+
+What is sudo? Well, any chance to quote this xkcd cartoon is a good one: 
+
+
+image::/images/2012/01/05159sandwich.png[xkcd - sudo make me a sandwich]
+
+
+What sudo does is let you run a command under root (superuser) privileges, without actually being root. This is very useful in two ways: (1) your sysadmins don't have kittens when you ask for root access, because they can give it in a very granular way which is logged every time it is used (2) you're not let loose on a server with unfettered root access where a simple slip of the keyboard can serious knacker things up (hence your sysadmin's kittens).
+
+
+sudo can be granted globally for a user, that is, any command the user wants to run as root can be done so. Alternatively, sudo can be allowed for one or many pre-specified commands. This means that in this case your sysadmins can give you the right to run the required WLS processes as root, and absolutely nothing else.
+
+
+This is an example of such an entry in the sudo configuration file, /etc/sudoers :
+
+
+[source]
+----
+
+Cmnd_Alias BISERVER = /app/fmw11115/user_projects/domains/bifoundation_domain/bin/startManagedWebLogic.sh bi_server1, /app/fmw11115/wlserver_10.3/server/bin/startNodeManager.sh 
+# This defines a command alias, BISERVER, with the web logic startup script and arguments to call, and the command to start Node Manager
+oracle     localhost=NOPASSWD BISERVER
+# user oracle, on machine localhost, can run BISERVER command alias, without being re-prompted for their password
+----
+
+
+Whenever you invoke sudo, it'll be logged in /var/log/secure, eg:
+
+
+[source]
+----
+
+Jan  3 17:07:19 rm-oel02 sudo:      rnm : TTY=pts/2 ; PWD=/home/rnm ; USER=root ; COMMAND=/app/fmw11115/user_projects/domains/bifoundation_domain/bin/startManagedWebLogic.sh bi_server1
+----
+
+
+== Alternative to running root/sudo
+
+
+An interesting alternative is to leave OBI listening on its default port, and configure the server to forward requests on port 80 to it, for example using iptables. I found this suggestion link:http://serverfault.com/questions/84360/regular-user-using-ports-below-1024[here], amongst other places. This way you'd only need a one-time privileged change made on the server, instead of needing privileged rights continually (however limited they may be)
+
+
+I've not had chance to try it, and in keeping to the link:http://en.wikipedia.org/wiki/KISS_principle[KISS principle] would probably only consider it if all other options were exhausted. Thinking of someone coming to the server after me, would their first thought around OBI port configuration really be to look at iptables? Whereas *Listen Port* is a standard configuration item within WLS.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/01/configuring-obi-11g-to-use-port-80/[Rittman Mead blog].

@@ -1,0 +1,287 @@
+---
+title: 'Event Triggers in BI Publisher 11g'
+date: "2011-12-20T00:00:00+00:00"
+url: "/2011/12/20/event-triggers-in-bi-publisher-11g/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2011/12/event-triggers-in-bi-publisher-11g/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/12/event-triggers-in-bi-publisher-11g/[Rittman Mead blog].
+
+Event Triggers in BI Publisher 11g give the facility to call a function in Oracle either before or after a data set is refreshed. The function must return a boolean (true/false), and if it returns false the data model will abort execution.
+
+
+In this article I will demonstrate how to pass a parameter through to a function in the database, and write this parameter to a table in the database. This could be useful for auditing the use of the system. The parameter that I will use is a system variable, User locale, that can be accessed through the BI Publisher System Variable *:xdo_user_report_locale*. There are several others available (link:http://docs.oracle.com/cd/E24001_01/bi.1111/e18862/T527073T527080.htm#T556760[see list here]), and you can also reference your own parameters that you define in the dataset.
+
+
+In this very simple example, we will write an entry to an audit table every time the data set is refreshed. The *table* we will use is defined as follows:
+
+
+[source]
+----
+--Create table
+CREATE  TABLE bip_audit_log  (action_desc VARCHAR(255), action_ts DATE);
+----
+
+
+The interface between the BI Publisher Event Trigger, and writing to the Database table, is a custom PL/SQL package. You can write your own depending on what you want to achieve with the Event Trigger. If you use parameters, then make sure they are declared globally (and see the note below about matching up parameter names, if you are trying to use parameters defined within the data model).
+
+
+Here is the example *package*:
+
+
+[source]
+----
+
+-- This is the package declaration.
+-- The global variable is essential if you want to pass parameters in.
+CREATE OR REPLACE PACKAGE bip_audit AS
+g_input varchar2(255);
+FUNCTION beforeDatasetRefreshWithInput(g_input IN VARCHAR2)
+  RETURN BOOLEAN;
+END;
+/
+
+-- This is the package body - the function
+CREATE OR REPLACE PACKAGE body bip_audit AS
+FUNCTION beforeDatasetRefreshWithInput(g_input IN VARCHAR2)
+  RETURN BOOLEAN AS 
+BEGIN
+  INSERT  INTO bip_audit_log
+    (
+      action_desc,
+      action_ts
+    )
+    VALUES
+    (
+      'Locale : '
+      || g_input,
+      sysdate
+    );
+  COMMIT;
+  RETURN TRUE;
+EXCEPTION
+WHEN OTHERS THEN
+  RETURN false;
+END;
+
+END;
+/
+----
+
+
+Before you use your package, you should test it:
+
+
+[source,sql]
+----
+
+-- test function
+-- Use this to invoke the function  
+DECLARE
+  result BOOLEAN;
+BEGIN
+  result := bip_audit.beforedatasetrefreshwithinput('foobar');
+END;
+/
+-- Now select from the table, and make sure we got an entry
+SELECT action_desc,         TO_CHAR(action_ts,'YYYY-MM-DD HH24:MI:SS') 
+from bip_audit_log;
+/
+----
+
+
+Once you have created the PL/SQL package, create a *New -> Data Model* in BI Publisher/OBIEE and go to the *Data Model Properties* page and set the *Oracle DB Default Package* to that which you have created. Make sure that the PL/SQL package is accessible from the *Default Data Set* connection that is defined for your Data Model.
+
+
+image::/images/2011/12/05183ss1.png[]
+
+
+Build your *Data Set* as required, and *save* the Data Model.
+
+
+Now go to *Event Triggers*, and click on *Create new Event Trigger*.
+
+
+image::/images/2011/12/05180ss2.png[]
+
+
+*Name* the event trigger _Write locale to audit log_. Set the *Type* to _Before Data_, and *Language* as _PL/SQL_.
+
+
+In the lower pane of the window, under *Available Functions* you should see the name of the package that you set in the *Properties* page. If you don't, check that the package exists as defined in Properties, and can be accessed by the user and connection defined as the Default Data Source for the Data Model.
+
+
+Underneath the package, you should see the function that you defined, listed in upper case. Highlight the function and click the right arrow to move it into the *Event Trigger box* on the right.
+
+
+image::/images/2011/12/05181ss3-1.png[]
+
+
+Now manually edit the *Event Trigger text* to replace the part in brackets: 
+
+[source]
+----
+G_INPUT:VARCHAR2
+----
+ 
+
+with
+ 
+
+[source]
+----
+:xdo_user_report_locale
+----
+
+
+(note the colon prefix)
+
+
+image::/images/2011/12/05178skitched-20111201-183820.png[]
+
+
+*Save* the changes to your data model, and then click on *view XML*, and click *Run*.
+
+
+When you clicked Run, the Event Trigger should have fired, and you'll see the results of the Data Set as normal. To confirm the success of the Event Trigger, check the contents of the audit table:
+
+
+[source,sql]
+----
+
+SELECT action_desc,         TO_CHAR(action_ts,'YYYY-MM-DD HH24:MI:SS') from bip_audit_log;
+----
+
+
+Result:
+
+
+[source]
+----------------------
+
+ACTION_DESC          TO_CHAR(ACTION_TS,'
+-------------------- -------------------
+Locale : en_US       2011-12-01 16:26:56
+----------------------
+
+
+This completes the simple example, having shown how to pass a parameter through to a function via an Event Trigger. However, read on below to see details of the problems you may expect to encounter deviating from the very narrow example above.
+
+
+== Gotcha!
+
+
+The above works fine, unless you add your own parameter to the dataset (regardless of whether you try to use it in the event trigger). 
+
+
+If you try to use the above Event Trigger, in a Data Model in which a Parameter exists, you'll get this error:
+
+
+[source]
+----
+PLS-00302: component 'NEW_PARAMETER_2' must be declared
+ORA-06550: line 2, column 1:
+PL/SQL: Statement ignored
+----
+
+
+(where New_Parameter_2 is the name of the parameter that exists in the data set).
+
+
+I would imagine that the workaround for this would be to amend the package function to also accept the parameter names also defined in the report, even if they're not used by the function.
+
+
+== Using your own parameters
+
+
+If you want to use your own parameter (rather than a system variable as above), then from my testing it appears that the issue link:https://forums.oracle.com/forums/thread.jspa?threadID=575654[described here in 2007] (link:https://supporthtml.oracle.com/ep/faces/secure/km/DocumentDisplay.jspx?id=859980.1&h=Y[MOS DocID 859980.1]) still holds: your Data Set parameter name must match the name of a global parameter defined in your package function.
+
+
+So in the above example, a parameter defined in the data set as g_input would work as input to the Event Trigger :
+
+
+[source]
+----
+BIP_AUDIT.BEFOREDATASETREFRESHWITHINPUT(:g_input)
+----
+
+But changing the parameter name in the Data Set, and its corresponding reference in the Event Trigger, would not: 
+
+
+[source]
+----
+BIP_AUDIT.BEFOREDATASETREFRESHWITHINPUT(:my_new_parm_name)
+----
+
+This throws the error :
+
+
+[source]
+----
+Message	oracle.xdo.XDOException: oracle.xdo.XDOException: oracle.xdo.XDOException: java.sql.SQLException: ORA-06550: line 2, column 11:
+Supplemental Detail	PLS-00302: component 'MY_NEW_PARM_NAME' must be declared
+ORA-06550: line 2, column 1:
+PL/SQL: Statement ignored
+----
+
+
+Why this doesn't apply to passing through system variables (for example, xdo_user_report_locale seen above), I don't know.
+
+
+== Troubleshooting
+
+
+Watch out for unhelpful error handling within BI Publisher. If there's a problem with the XML generation (for example - but not limited to - the Event Trigger call being incorrect), expect to get this kind of thing: 
+
+
+image::/images/2011/12/05179skitched-20111201-184528.png[]
+
+
+[source]
+----
+
+XML Parsing Error: mismatched tag. Expected: </img>.
+Location: http://rm-win01:9704/xmlpserver/servlet/xdo
+Line Number 2, Column 580:<table style='background=c[...]
+----
+
+
+The annoying thing about this is that the actual error is tantalisingly close -  if you scroll to the end of the line, you'll see that it truncates:
+
+
+[source]
+----
+
+oracle.xdo.XDOException: java.sql.SQLException: ORA-06550: line 4, column 51:
+----
+
+
+So to find out the actual error, go to *Enterprise Manager* (FMC) and under your *Web Logic Domain*, navigate to your bi_server and right-click, *Logs -> View Logs*
+
+
+image::/images/2011/12/05176skitched-20111201-184853.png[]
+
+Within here you should find the error, and by taking advantage of the *ECID* (Execution Context ID), you can drill through to related log entries. In this instance, that includes both the error at the BI Publisher level and that reported back from the database.
+
+
+image::/images/2011/12/05177skitched-20111201-211100.png[]
+
+
+== Version
+
+
+The above was all tested on BI Publisher 11.1.1.5.
+
+
+== Documentation
+
+
+Event Triggers are covered in link:http://docs.oracle.com/cd/E21764_01/bi.1111/e18862/T527073T560158.htm[the documentation here]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2011/12/event-triggers-in-bi-publisher-11g/[Rittman Mead blog].

@@ -1,0 +1,184 @@
+---
+title: 'Alternatives to the Summary Advisor for Refreshing Exalytics Aggregates'
+date: "2012-09-29T00:00:00+00:00"
+url: "/2012/09/29/alternatives-to-the-summary-advisor-for-refreshing-exalytics-aggregates/"
+draft: false
+categories:
+- Oracle GoldenGate
+- OBIEE
+- ODI
+- Exalytics
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/09/alternatives-to-the-summary-advisor-for-refreshing-exalytics-aggregates/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/alternatives-to-the-summary-advisor-for-refreshing-exalytics-aggregates/[Rittman Mead blog].
+
+One of the several elements of Exalytics' power comes from it holding pre-calculated (aggregated) data in the TimesTen for Exalytics In-Memory Database. Exalytics comes with a tool called the link:https://www.rittmanmead.com/blog/2012/03/oracle-exalytics-week-the-summary-advisor/[Summary Advisor (which Mark Rittman has written about previously here)] which suggests aggregates to build based on the reports which have been run on the system. It analyses which will benefit most from aggregation and at what level(s) of granularity. 
+
+The output from the Summary Advisor is a aggregate creation script, which is something that can also be generated in other ways, either through the standard OBIEE link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#i1021796[Aggregate Persistence Wizard], or link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#i1028060[just by hand].
+
+Whichever way the aggregate script is created, it will look something like this:
+
+
+[source]
+----
+
+delete aggregates "TT_AGGR_STORE".."DW_AGG"."ag_3110279699";
+create aggregates "ag_3110279699"
+for "Sales"."Fact Sales"("Sale Amount","Quantity")
+at levels ("Sales"."Times (Level-Based, Time)"."Month")
+using connection pool "TT_AGGR_STORE"."Connection Pool"
+in "TT_AGGR_STORE".."DW_AGG";
+----
+
+This script is then executed via the *nqcmd* command line utility, and invokes the OBIEE *Aggregate Persistence* function. This function does three things: 
+
+
+. Create the physical aggregate table on the target database (TimesTen, in the case of Exalytics)
+. Loads the data from the source into the aggregate
+. Updates the RPD to include the new aggregate
+
+
+image::/images/2012/09/061129a1a.png[A1]
+There are two things in particular to note here which seem to be overlooked in some of the general understanding of Exalytics:
+
+. The base data can come from link:http://www.oracle.com/technetwork/middleware/bi-enterprise-edition/bi-11gr1certmatrix-166168.xls[any source that OBIEE supports], including (but not limited to) Oracle, DB2, SQL Server, Teradata, generic ODBC, and so on.
+. OBIEE uses *Aggregate Navigation* to _automatically determine_ the most appropriate source to use for a user's query. The user does not need to specify where their data comes from; OBIEE determines the grain and then decides from which of the tables it will be most efficient to fetch it.
+
+
+=== Refreshing aggregates
+
+
+Lightening fast data from TimesTen aggregates is only useful when it's correct. When the source data changes - for example, a new day's data is loaded - the aggregates must also reflect this. 
+
+
+==== Aggregate Persistence
+
+
+Out of the box, link:http://docs.oracle.com/cd/E23943_01/bi.1111/e10540/aggpersist.htm#CHDIBICC[the method suggested] for keeping aggregates refreshed with the correct data is to do a complete refresh of the aggregate. What this does is: 
+
+
+. Delete the existing aggregate:
+. Create the aggregate from scratch:
+
+
+==== Alternatives
+
+
+OBIEE's Aggregate Persistence functionality (whether used through the Summary Advisor, or Aggregate Persistence Wizard) is a very useful tool for getting started with building aggregates and particularly in understanding how they are integrated into the RPD. Release 11.1.1.6.2 BP1 of OBIEE included the Model Checker in the Administration Tool which is very useful alongside the existing Consistency Checker, but instances can still arise when Aggregate Persistence fails with more complex RPDs and data models.
+
+In addition, as we've seen above, when OBIEE's Aggregate Persistence runs it modifies the RPD (online, i.e. in-place). In terms of minimising the number of moving parts (and thus scope for problems), it can make sense to leave the RPD untouched if possible.
+
+
+An alternative approach is to instead to manually update the TimesTen aggregate with a complete refresh of data from base, using other methods. This could be options such as: 
+
+* Build the aggregate refresh into the base data ETL load
+* Extract the Aggregate Persistence aggregate creation SQL and execute it manually through ODI
+
+
+Aggregate Persistence can then be used either as an accelerator, to get the initial aggregates defined and built, or not at all. The best approach is to try using it, as it does speed things up, and then evaluate the different options for refreshing the aggregates that suit your particular RPD and deployment.
+
+
+==== Limitations
+
+
+However you implement it, doing a complete refresh of aggregates each time the base data changes is only viable if: 
+
+
+* Your data volumes are small enough
+
+
+and/or
+
+
+* your time window in which to update the aggregates is large enough
+
+
+The calculation of the aggregates will typically be pushed down on to your source database, so this also needs to have the resource capacity to recalculate the entire aggregates each time the base data has changed.
+
+
+=== Incremental refresh
+
+
+Consider an aggregate table which holds sales data as a weekly level instead of its source day level.
+
+
+image::/images/2012/09/061127a2a.png[A2]
+
+
+If a new day's data for an _existing_ week is loaded, just that week in the aggregate needs updating:
+
+
+image::/images/2012/09/061126a3a.png[A3]
+
+
+When a new day's data for a _new_ week is loaded, a new row needs adding to the aggregate and the existing rows are untouched:
+
+
+image::/images/2012/09/061125a4a.png[A4]
+
+
+NB The above illustration is excluding consideration of late and updated data.
+
+
+This approach is known as *incremental refresh*, and if you are working with any kind of serious data volumes it is the only properly scalable strategy for aggregates.
+
+
+There are at least two ways in which we can implement incremental refresh of aggregates on Exalytics:
+
+
+. Changed Data Capture (CDC) using Oracle GoldenGate (OGG)
+. Custom ETL embedded in the base data load design
+
+
+=== Incremental refresh using GoldenGate
+
+
+Oracle's Fusion Middleware stack includes two components which we can utilise for incremental refresh: 
+
+
+* Oracle GoldenGate (OGG) - Oracle's strategic real-time replication and change-data-capture tool
+* Oracle Data Integrator (ODI) - Oracle's strategic ELT/ETL tool
+
+
+The design looks like this:
+
+
+image::/images/2012/09/061124a5a.png[A5]
+or if the source is Oracle already (and there is capacity on the server) it could be simplified to this: 
+
+
+image::/images/2012/09/061123a6a.png[A6]
+One key point to note in this design is that the impact on the source system holding the base data is almost none - simply the addition of GoldenGate to pick up the changes to the base data in the database logs.
+
+
+Looking at this in a bit more detail, it works like this: 
+
+
+* The initial aggregate creation is still done using the Summary Advisor (although doesn't have to be)
+* GoldenGate replicates any changes made to the base data to the staging area
+* ODI's CDC functionality is used to examine the changes and apply them incrementally to the TimesTen aggregates
+
+ODI includes a Knowledge Module (KM) to enable the use of GoldenGate, link:http://docs.oracle.com/cd/E23943_01/integrate.1111/e12644/ogg.htm#CHDJBBAD[documented here], and this KM supports one of *Oracle, DB2, Sybase or SQL Server* as a source, and either Oracle or Teradata as the staging (where changes are captured for subsequent processing). In the diagram above, I've only illustrated Oracle as the staging database. Michael Rainey has link:https://www.rittmanmead.com/blog/2012/04/capturing-change-oracle-goldengate-odi-implementation/[an excellent article here] which demonstrates the two technologies together, and there is also link:http://www.oracle.com/webfolder/technetwork/tutorials/obe/fmw/odi/odi_11g/odi_gg_integration/odi_gg_integration.htm[an Oracle By Example tutorial]. The key thing here is that the data is modelled into ODI, and ODI helps with all of the Goldengate configuration necessary to capture changes from the base data and record it in what are known as Journal (J$ in ODI-parlance) tables on the staging database.
+
+Once the changes from the base data are captured and available on staging, it is over to standard ODI processing. Custom interfaces are built to apply logic to the captured changes and work out how the data should be applied to the aggregates. Here consideration needs to be given to the types of aggregate measure, and how they will be affected by changes to the base data. Simple SUM measures can be updated for the particular grain and dimension values by adding or subtracting new or deleted rows respectively. More complex measures, such as COUNT DISTINCTs might well need recalculating from base, but since the changed data will include the specific dimension values only the relevant subset of the aggregate will need recalculating. 
+
+To round off the implementation, use ODI's support for a Model in CDC by adding it into a package to handle the CDC subscriber lock/unlock and journal purging.
+
+image::/images/2012/09/061122a7.png[A7]
+
+
+=== Custom ETL incremental refresh
+
+
+I mentioned that there are at least two options for incrementally refreshing aggregates held in TimesTen. An alternative to using GoldenGate/ODI would be a more invasive approach with the system that loads the base data. This in itself may be a non-starter for some implementations, and certainly detracts from the idea of Exalytics being a plug & play option. 
+
+Since TimesTen support a variety of interfaces, including JDBC, ODBC, and load from flat file (ttBulkCp), whatever tool you use to load your base datawarehouse could be extended to also load the TimesTen aggregate. The key would be some form of custom control table and logic which records what dimension values have been updated in the base data, so that the corresponding aggregates can also be updated.
+
+This is not a solution for the light-hearted, and would be best utilised in a new implementation where it could be designed in from the beginning. Retrofitting it to an existing datawarehouse may prove troublesome, and is why the above solution using GoldenGate may be a better option. Using GoldenGate, the source system is virtually untouched - only the installation of the GoldenGate agent is needed, and this operates at the low level of database logs.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/alternatives-to-the-summary-advisor-for-refreshing-exalytics-aggregates/[Rittman Mead blog].

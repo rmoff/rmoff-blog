@@ -1,0 +1,144 @@
+---
+title: 'Patch OBIEE the quicker way - with OPatch napply'
+date: "2013-07-04T00:00:00+00:00"
+url: "/2013/07/04/patch-obiee-the-quicker-way-with-opatch-napply/"
+draft: false
+categories:
+- OBIEE
+- Linux
+- Data Visualisation
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/07/patch-obiee-the-quicker-way-with-opatch-napply/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/07/patch-obiee-the-quicker-way-with-opatch-napply/[Rittman Mead blog].
+
+Since 2012, Oracle's patching strategy for OBIEE has been Bundle Patches released approximately once a month. These bundle patches are usually cumulative ones, applied on top of the .0 version of the product. Patching is done through Oracle’s standard `OPatch` tool, which manages the application of patches along with an inventory of them and rollback if necessary.
+
+
+I've previously written about the overall patching process link:https://www.rittmanmead.com/blog/2012/07/applying-patches-to-obiee-11-1-1-6-2-bp1/[here]. OPatch is part and parcel of an OBIEE sysadmin's life, so I wanted to share this short article to show the quicker way to apply the PSUs. It uses a more direct way than the patch documentation describes, taking advantage of the *`napply`* option of OPatch (link:http://docs.oracle.com/cd/B28359_01/em.111/b31207/oui7_opatch.htm#CHDCIGJC[documented here)]. By using this option `OPatch` will apply all listed patches in one go, rather than one at a time. As well as this, we can use the `silent` flag to stop `OPatch` from prompting to apply each patch in turn.
+
+
+. Download the necessary patches - for 11.1.1.7.1 this is link:https://support.oracle.com/epmos/faces/ui/patch/PatchDetail.jspx?patchId=16569379[16569379] and link:https://support.oracle.com/epmos/faces/ui/patch/PatchDetail.jspx?patchId=16556157[16556157]. In a server environment you can use link:https://www.rittmanmead.com/blog/2012/07/downloading-obiee-patches-from-oracle-with-wget/[wget to download the patches as detailed here].
+. Validate the checksums for the downloaded files, to make sure they didn’t get corrupted during download. Use the *Digest* link when downloading to view the checksums. For example, the Linux x86-64 checksums are :
+
++
+[source]
+----
+p16556157_111170_Linux-x86-64.zip   2673750617 bytes 
+MD5 D3DDDEC4CB189A53B2681BA6522A0035
+p16569379_111170_Linux-x86-64.zip   93617 bytes
+MD5 2BC0E8B903A10311C5CBE6F0D4871E31
+----
++
+. Unzip the patches. Within the main patch (16556157) there are a series of further zip archives - unzip these too
+. Put all the patch folders in a single folder, so it looks something like this:
+
+
+[caption id="" align="alignnone" width="250"]
+
+image::/images/2013/07/598cpatch01.png[]
+ Patches on Linux[/caption]
+
+
+[caption id="" align="alignnone" width="250"]
+
+image::/images/2013/07/597cpatch02.png[]
+ Patches on Windows[/caption]
+. Take backups, as described in the patch documentation.
+. Set your environment variables, setting `PATCH_FOLDER` to the folder you unzipped the patches to in step 4 above, and `ORACLE_HOME` to your `FMW_HOME/Oracle_BI1` folder
+
++
+. Windows:
+
++
+[source]
+----
+set PATCH_FOLDER=Y:\installers\OBI\11.1.1.7\win-x86-64_11.1.1.7.1
+set ORACLE_HOME=c:\oracle\middleware\Oracle_BI1
+set JAVA_HOME=%ORACLE_HOME%\jdk
+set PATH=%ORACLE_HOME%\OPatch;%JAVA_HOME%\bin;%ORACLE_HOME\bin%;%PATH%
+----
++
+. Linux:
+
++
+[source]
+----
+export PATCH_FOLDER=/mnt/hgfs/installers/OBI/11.1.1.7/linux-x86-64_11.1.1.7.1
+export ORACLE_HOME=/home/oracle/obiee/Oracle_BI1
+export JAVA_HOME=$ORACLE_HOME/jdk
+export PATH=$ORACLE_HOME/OPatch:$JAVA_HOME/bin:$ORACLE_HOME/bin:$PATH
+----
++
++
+. Shut down OPMN, the Managed Server and the Admin Server
+. Apply all the patches in one go, with no prompting:
+
++
+. Windows:
+
++
+[source]
+----
+opatch napply -silent %PATCH_FOLDER% -id 16453010,16842070,16849017,16850553,16869578,16916026,16569379
+----
++
+. Linux:
+
++
+[source]
+----
+opatch napply -silent $PATCH_FOLDER -id 16453010,16842070,16849017,16850553,16869578,16916026,16569379
+----
++
++
+. Validate that they’ve been applied - the following should list all seven patches plus the bugs they fix:
+
++
+[source]
+----
+opatch lsinventory
+----
++
+. Per the instructions in the README.html for patch `16453010` for post-patch actions:
+
++
+. Windows:
+
++
+[source]
+----
+del %ORACLE_HOME%\bifoundation\web\catalogmanager\configuration\org.eclipse.osgi
+del %ORACLE_HOME%\bifoundation\web\catalogmanager\configuration\org.eclipse.equinox.app
+
+copy %ORACLE_HOME%\clients\bipublisher\repository\Tools\BIPublisherDesktop*.exe %ORACLE_HOME%\..\user_projects\domains\bifoundation_domain\config\bipublisher\repository\Tools
+copy %ORACLE_HOME%\clients\bipublisher\repository\Admin\DataSource\msmdacc64.dll %ORACLE_HOME%..\user_projects\domains\bifoundation_domain\config\bipublisher\repository\Admin\DataSource
+for /d /r %ORACLE_HOME%..\user_projects\domains\bifoundation_domain\servers\bi_server1\tmp_WL_user\bipublisher_11.1.1 %d in (jsp_servlet) do @if exist "%d" rd /s/q "%d"
+----
++
+. Linux:
+
++
+[source]
+----
+rm -rv $ORACLE_HOME/bifoundation/web/catalogmanager/configuration/org.eclipse.osgi
+rm -rv $ORACLE_HOME/bifoundation/web/catalogmanager/configuration/org.eclipse.equinox.app
+cp $ORACLE_HOME/clients/bipublisher/repository/Tools/BIPublisherDesktop*.exe $ORACLE_HOME/../user_projects/domains/bifoundation_domain/config/bipublisher/repository/Tools/
+cp $ORACLE_HOME/clients/bipublisher/repository/Admin/DataSource/msmdacc64.dll $ORACLE_HOME/../user_projects/domains/bifoundation_domain/config/bipublisher/repository/Admin/DataSource
+rm -rfv $ORACLE_HOME/../user_projects/domains/bifoundation_domain/servers/bi_server1/tmp/_WL_user/bipublisher_11.1.1/*/jsp_servlet
+----
++
++
+
+_(NB the `msmdacc64.dll` didn’t exist on either of my installations that I’ve tried this on)_
+. Start up Admin Server, Managed Server, and OPMN. Login to OBIEE and check the new version:
+
++
+image::/images/2013/07/596cpatch03.png[]
++
+. Don't forget to check the README.html for patch 16453010 for full instructions on updating the client, customised skins, mapviewer config, etc.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/07/patch-obiee-the-quicker-way-with-opatch-napply/[Rittman Mead blog].

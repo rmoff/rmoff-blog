@@ -1,0 +1,271 @@
+---
+title: 'Advanced Presentation Services settings for OBIEE testing & development'
+date: "2012-08-07T00:00:00+00:00"
+url: "/2012/08/07/advanced-presentation-services-settings-for-obiee-testing-development/"
+draft: false
+categories:
+- OBIEE
+- ODI
+- Performance
+- Data Visualisation
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/08/advanced-presentation-services-settings-for-obiee-testing-development/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/08/advanced-presentation-services-settings-for-obiee-testing-development/[Rittman Mead blog].
+
+As link:http://obiee101.blogspot.co.uk/2011/10/obiee-obipsconfigbasexsd.html[John Minkjan pointed out] a while ago, the XSD (XML Schema) for the OBIEE configuration files can yield some interesting things. I've been looking at obips_config_base.xsd and found the following bits of information which I think could help certain testing and development work with OBIEE.
+
+
+First off, the standard disclaimer about undocumented functionality goes here. None of this is documented, therefore I would imagine completely unsupported, and I can't think of a valid reason for it to ever be used anywhere other than a sandbox/development installation.
+
+
+The options below (except where indicated) come within the *TestAutomation* element of the Presentation Services *instanceconfig.xml* configuration. TestAutomation is nested within ServerInstance, thus:
+
+
+[source,xml]
+----
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <!-- Oracle Business Intelligence Presentation Services Configuration File -->
+    <WebConfig xmlns="oracle.bi.presentation.services/config/v1.1">
+    <ServerInstance>
+        [...]
+        <TestAutomation>
+            <OutputLogicalSQL>true</OutputLogicalSQL>
+        </TestAutomation>
+        [...]
+    </ServerInstance>
+</WebConfig>
+----
+
+
+Always make a backup copy of instanceconfig.xml before making changes to it. To activate the changes, restart Presentation Services either from EM or the command line:
+
+
+[source]
+----
+
+./opmnctl restartproc ias-component=coreapplication_obips1
+----
+
+
+Keep an eye on sawlog0.log and console~coreapplication_obips1~1.log as any errors in your instanceconfig.xml will prevent Presentation Services from starting up.
+
+
+=== OutputLogicalSQL
+
+
+This adds a textbox to all reports with the Logical SQL for that report. The Logical SQL is obviously available in other places (Advanced Tab, Logical SQL view type, Usage Tracking, nqquery.log), but if you often need it to hand then this looks like the easiest option. It's not much good if you need to present the reports to users though, since it's a global setting for the whole Presentation Services and the Logical SQL box will be there on every single report.
+
+
+[source]
+----
+
+<TestAutomation>
+        <OutputLogicalSQL>true</OutputLogicalSQL>
+</TestAutomation>
+----
+
+
+image::/images/2012/08/061243OBIEE-dashboard-with-Searching_E2_80_A6-textOBIEEOutputLogicalSQL.png[OBIEE report with inline Logical SQL]
+
+
+=== Artificially delay report response times
+
+
+Three uses for this spring to mind, only one of them serious:
+
+
+. Friday afternoon and you want to drive your report developers round the bend. Suddenly, all reports take a long time to run!
+. Enable this setting on Production, and then do lots of beard-stroking and brow-furrowing and impress your boss with your "Performance Tuning" prowess by quietly disabling it. Hey presto, performance improved!
+. Perhaps more usefully, you can also simulate a delay in report response times to validate your performance test measurements.
+
+Note that if the query is already in the presentation services cache then the delay won't be honoured, so include the request parameter Action=RefreshAll if you are using a URL call, or see *ForceRefresh* below.
+
+
+You need to make sure you have both Min and Max elements defined, otherwise it won't work.
+
+
+[source]
+----
+
+     <!-- delay reports by between 15 and 25 seconds) -->
+        <TestAutomation>
+                <RandomQueryDelayMinMilliseconds>15000</RandomQueryDelayMinMilliseconds>
+                <RandomQueryDelayMaxMilliseconds>25000</RandomQueryDelayMaxMilliseconds>
+        </TestAutomation>
+----
+
+
+=== NewCursorWaitSeconds - support for automated load test tools with OBIEE
+
+
+We can use *NewCursorWaitSeconds* (which comes under *Cursors*, not TestAutomation) to delay how long before "Searching…" is returned to the user - very handy if the user is a tool (Jmeter, LoadRunner, etc) which would take "Searching…" as erroneously indicating that the report had completed running and so record an invalid response time.
+
+
+If all your reports are so fast you never see this (congrats!) you can still simulate this, using the above *RandomQueryDelay* settings. +
+
+
+image::/images/2012/08/061238OBIEE-dashboard-with-Searching_E2_80_A6-textta07-3-12.png[OBIEE Searching...]
+
+
+[source,xml]
+----
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <!-- Oracle Business Intelligence Presentation Services Configuration File -->
+    <WebConfig xmlns="oracle.bi.presentation.services/config/v1.1">
+    <ServerInstance>
+        [...]
+        <Cursors>
+                <NewCursorWaitSeconds>60</NewCursorWaitSeconds>
+        </Cursors>
+        [...]
+    </ServerInstance>
+</WebConfig>
+----
+
+
+When set, a report will appear to do nothing until the data is returned, or the NewCursorWaitSeconds is exceeded. If the data has not returned by the time NewCursorWaitSeconds is exceeded, then a Searching… will be shown. From a user experience (UX) point of view, this is absolutely the last thing we want, as a user must always get feedback from their actions and see that a report is running - hence the Searching… text. So, use this option to help with performance testing, but always make sure it is never present in an environment where "real" users have access to the system.
+
+
+Also within *Cursors* you can use *ForceRefresh* to always bypass the Presentation Services cache. Combining both of these gives us:
+
+
+[source]
+----
+
+        <Cursors>
+              <NewCursorWaitSeconds>60</NewCursorWaitSeconds>
+              <ForceRefresh>True</ForceRefresh>
+        </Cursors>
+----
+
+
+=== InstrumentDashboardPageLoad
+
+
+This is a really interesting one for understanding the time profile of a page load. When enabled, it adds instrumentation into the page sourcecode for various actions that take place whilst the page is loading. For example: 
+
+
+[source]
+----
+
+obips_profile.logPointInTime("HTML Head","Start")
+----
+
+
+At the top of each page is a set of links which open up the time profile. +
+
+
+image::/images/2012/08/061240OBIEE-dashboard-with-Searching_E2_80_A6-textta01-1.png[Ta01 1]
+ +
+
+The links give different options for viewing the data, including download to CSV.
+
+
+* +
+image::/images/2012/08/061239OBIEE-dashboard-with-Searching_E2_80_A6-textta02-11.png[Ta02 1]
++
+* CSV file for download
++
+image::/images/2012/08/061241OBIEE-dashboard-with-Searching_E2_80_A6-textta04-1.png[Ta04 1]
++
+
+
+The volume and density of the data here suggests to me that this function is more useful for examining the isolated performance of an individual report or dashboard. It is not something that you'd use for volume testing particularly given the inevitable overhead.
+
+
+Enabling InstrumentDashboardPageLoad is a bit more involved that the other options, because you also have to configure Presentation Services for the supporting resource files (javascript and css) through the *URL* element. On my installation the supporting files are located in this path +
+
+*$FMW_HOME/user_projects/domains/bifoundation_domain/servers/bi_server1/tmp/_WL_user/analytics_11.1.1/7dezjl/war/res/b_mozilla/common/test/pageprofileutils.js* +
+
+The path might vary - if you have a single WLS server (Simple) installation, it will be AdminServer instead of bi_server1, and the 7dezjl string may differ too. You need to determine the correct path for your installation and specify it in *CustomerResourcePhysicalPath*.
+
+
+[source]
+----
+
+<ServerInstance>
+    […]
+    <TestAutomation>
+        <InstrumentDashboardPageLoad>true</InstrumentDashboardPageLoad>
+    </TestAutomation>
+ 
+    <URL>
+        <CustomerResourcePhysicalPath>/u01/app/oracle/product/fmw/user_projects/domains/bifoundation_domain/servers/bi_server1/tmp/_WL_user/analytics_11.1.1/7dezjl/war/res/b_mozilla/</CustomerResourcePhysicalPath>
+        <CustomerResourceVirtualPath>/analytics/res/b_mozilla</CustomerResourceVirtualPath>
+    </URL>
+    […]
+</ServerInstance>
+----
+
+
+NB if URL / CustomerResourcePhysicalPath and URL/ CustomerResourceVirtualPath aren't set correctly then the instrumentation won't work, and you'll see the "Display Log" links at the bottom of the page, instead of the top-left overlaying the Oracle logo. If you examine the source code for the page, you'll see *Missing* in the paths:
+
+
+[source]
+----
+
+<link href="Missing_common/test/pageprofileutils.css" type="text/css" rel="stylesheet">
+<script type="text/javascript" src="Missing_common/test/pageprofileutils.js"></script>
+----
+
+
+=== Other available options
+
+
+There are some interesting options, such as integration with the link:http://people.apache.org/~pmuellr/weinre/docs/latest/[Weinre] (WEb INspector REmote) development tool which could be very useful if developing advanced content for use with the new Oracle BI Mobile HD app. Other options I doubt are of use to those outside the product's development team. Here is the list:
+
+
+[source]
+----
+
+<TestAutomation>
+        <InstrumentDashboardPageLoad>true</InstrumentDashboardPageLoad>
+
+        <!-- Artificially delay reports by between 15 and 25 seconds -->
+        <!-- Both parameters (Min & Max) must be present for it to work -->
+        <!-- Also requires Presentation Services cache to be disabled, see Cursors/ForceRefresh -->
+        <RandomQueryDelayMinMilliseconds>15000</RandomQueryDelayMinMilliseconds>
+        <RandomQueryDelayMaxMilliseconds>25000</RandomQueryDelayMaxMilliseconds>
+ 
+        <!-- Output options -->
+        <OutputLogicalSQL>true</OutputLogicalSQL>
+        <OutputReportXML>true</OutputReportXML>
+        <OutputChartXML>true</OutputChartXML>
+        <OutputXSLFO>true</OutputXSLFO>
+        <OutputErrors>true</OutputErrors>
+ 
+        <!-- disable prompt for unsaved objects - does exactly that - use with caution! -->
+        <DisablePromptsForUnsavedObjects>true</DisablePromptsForUnsavedObjects>
+ 
+        <!-- Warns when a page loads if the number of CSS is greater than that specified -->
+        <MaxStylesheets>30</MaxStylesheets>
+ 
+        <!-- Use/function of these is unclear, other than the obvious based on their name -->
+        <SeleniumTest>false</SeleniumTest>
+        <QTPTestMode>false</QTPTestMode>
+ 
+        <!-- Uses Weinre technology, useful for debugging mobile -->
+        <!-- See http://people.apache.org/~pmuellr/weinre/docs/latest/ -->
+        <WebInspectorRemote>
+                <Enabled>true</Enabled>
+                <URL>http://weinre.server</URL>
+        </WebInspectorRemote>
+</TestAutomation>
+----
+
+
+=== Possible errors
+
+
+If you use these options, watch out that *they are not documented or supported*! Don't be surprised if you get errors like this: 
+
+
+image::/images/2012/08/061237OBIEE-dashboard-with-Searching_E2_80_A6-textta07-4.png[Error loading XML Document from /analytics/saw.dll/uicomponents/obips.UberBar/obips.UberBar.xml?fmapId=b5a9zg. The response given was:]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/08/advanced-presentation-services-settings-for-obiee-testing-development/[Rittman Mead blog].

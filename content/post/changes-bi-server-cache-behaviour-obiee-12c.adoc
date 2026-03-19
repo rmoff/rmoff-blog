@@ -1,0 +1,294 @@
+---
+title: 'Changes in BI Server Cache Behaviour in OBIEE 12c : OBIS_REFRESH_CACHE'
+date: "2016-05-31T00:00:00+00:00"
+url: "/2016/05/31/changes-bi-server-cache-behaviour-obiee-12c/"
+draft: false
+categories:
+- OBIEE
+- Performance
+- Data Visualisation
+image: "/images/2016/05/favicon.jpg"
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/05/changes-bi-server-cache-behaviour-obiee-12c/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/05/changes-bi-server-cache-behaviour-obiee-12c/[Rittman Mead blog].
+
+The OBIEE BI Server cache can be a great way of providing a performance boost to response times for end users - so long as it's implemented carefully. Done wrong, and you're papering over the cracks and heading for doom; done right, and it's the 'icing on the cake'. You can read more about how to use it link:https://www.rittmanmead.com/blog/2015/09/obiee-bi-server-cache-management-strategies/[properly here], and watch a video I did about link:https://community.oracle.com/docs/DOC-931467[it here]. In this article we'll see how the BI Server cache has changed in OBIEE 12c in a way that could prove somewhat perplexing to developers used to OBIEE 11g.
+
+
+The BI Server cache works by inspecting queries as they are sent to the BI Server, and deciding if an existing cache entry can be used to provide the data. This can include direct hits (i.e. the same query being run again), or more advanced cases, where a subset or aggregation of an existing cache entry could be used. If a cache entry is used then a trip to the database is avoided and response times will typically be better - particularly if more than one database query would have been involved, or lots of additional post-processing on the BI Server.
+
+
+When an analysis or dashboard is run, Presentation Services generates the necessary _Logical SQL_ to return the data needed, and sends this to the BI Server. It's at this point that the cache will, or won't, kick in. The BI Server will accept Logical SQL from other sources than Presentation Services - in fact, any JDBC or ODBC client. This is useful as it enables us to validate behaviour that we're observing and see how it can apply elsewhere.
+
+
+When you build an Analysis in OBIEE 11g (and before), the cache will be used if applicable. Each time you add a column, or hit refresh, you'll get an entry back from the cache if one exists. This has benefits - speed - but disadvantages too. When the data in the database changes, you will still get a cache hit, regardless. The only way to force OBIEE to show you the latest version of the data is to purge the cache first. You can target cache purges based on databases, tables, or even specific queries - but you do need to purge it.
+
+
+What's changed in OBIEE 12c is that when you click "Refresh" on an Analysis or Dashboard, *the query is re-run against the source* and the cache re-populated. Even if you have an existing cache entry, and even if the underlying data has not changed, *if you hit Refresh, the cache will not be used*. Which kind of makes sense, since "refresh" probably should indeed mean that.
+
+
+== Digging into OBIEE Cache Behaviour
+
+
+Let's prove this out. I've got link:http://www.oracle.com/technetwork/middleware/bi-foundation/167534-v506-copy-2798097.html[SampleApp v506] (OBIEE 11.1.1.9), and link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[SampleApp v511] (OBIEE 12.2.1). First off, I'll clear the cache on each, using `call saPurgeAllCache();`, run via link:https://docs.oracle.com/middleware/1221/biee/BIEUG/appuir.htm#BIEUG848[*Issue SQL*]:
+
+
+image::/images/2016/05/cache16.png[]
+
+
+image::/images/2016/05/cache17.png[]
+
+
+Then I can use another BI Server procedure call to view the current cache contents (new in 11.1.1.9), `call NQS_GetAllCacheEntries()`. For this one particularly make sure you've un-ticked "Use Oracle BI Presentation Services Cache". This is different from the BI Server cache which is the subject of this article, and as the name implies is a cache that Presentation Services keeps.
+
+
+image::/images/2016/05/cache18.png[]
+
+
+I've confirmed that the BI Server cache is enabled on both servers, in `NQSConfig.INI`
+
+
+[source]
+----
+###############################################################################
+#
+#  Query Result Cache Section
+#
+###############################################################################
+
+
+[CACHE]
+
+ENABLE = YES;  # This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control
+----
+
+
+Now I create a very simple analysis in both 11g and 12c, showing a list of Airline Carriers and their Codes:
+
+
+image::/images/2016/05/cache19.png[]
+
+
+After clicking *Results*, a cache entry is inserted on each respective system:
+
+
+image::/images/2016/05/cache20.png[]
+
+
+image::/images/2016/05/cache21.png[]
+
+
+Of particular interest is the create time, last used time, and number of times used:
+
+
+image::/images/2016/05/cache22.png[]
+
+
+If I now click *Refresh* in the Analysis window:
+
+
+image::/images/2016/05/cache23.png[]
+
+
+We see this happen to the caches:
+
+
+image::/images/2016/05/cache24.png[]
+
+
+In OBIEE 11g the cache entry is used - but in OBIEE 12c it's not. The `CreatedTime` is evidently not populated correctly, so instead let's dive over to the query log (nqquery/obis1-query in 11g/12c respectively). In OBIEE 11g we've got:
+
+
+[source,sql]
+----
+-- SQL Request, logical request hash:
+7c365697
+SET VARIABLE QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT
+   0 s_0,
+   "X - Airlines Delay"."Carrier"."Carrier Code" s_1,
+   "X - Airlines Delay"."Carrier"."Carrier" s_2
+FROM "X - Airlines Delay"
+ORDER BY 1, 3 ASC NULLS LAST, 2 ASC NULLS LAST
+FETCH FIRST 5000001 ROWS ONLY
+
+-- Cache Hit on query: [[
+Matching Query: SET VARIABLE QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT
+   0 s_0,
+   "X - Airlines Delay"."Carrier"."Carrier Code" s_1,
+   "X - Airlines Delay"."Carrier"."Carrier" s_2
+FROM "X - Airlines Delay"
+ORDER BY 1, 3 ASC NULLS LAST, 2 ASC NULLS LAST
+FETCH FIRST 5000001 ROWS ONLY
+----
+
+
+Whereas 12c is:
+
+
+[source,sql]
+----
+-- SQL Request, logical request hash:
+d53f813c
+SET VARIABLE OBIS_REFRESH_CACHE=1,QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT
+   0 s_0,
+   "X - Airlines Delay"."Carrier"."Carrier Code" s_1,
+   "X - Airlines Delay"."Carrier"."Carrier" s_2
+FROM "X - Airlines Delay"
+ORDER BY 3 ASC NULLS LAST, 2 ASC NULLS LAST
+FETCH FIRST 5000001 ROWS ONLY
+
+-- Sending query to database named X0 - Airlines Demo Dbs (ORCL) (id: <<320369>>), connection pool named Aggr Connection, logical request hash d53f813c, physical request hash a46c069c: [[
+WITH
+SAWITH0 AS (select T243.CODE as c1,
+     T243.DESCRIPTION as c2
+from
+     BI_AIRLINES.UNIQUE_CARRIERS T243 /* 30 UNIQUE_CARRIERS */ )
+select D1.c1 as c1, D1.c2 as c2, D1.c3 as c3 from ( select 0 as c1,
+     D1.c1 as c2,
+     D1.c2 as c3
+from
+     SAWITH0 D1
+order by c3, c2 ) D1 where rownum <= 5000001
+
+-- Query Result Cache: [59124] The query for user 'prodney' was inserted into the query result cache. The filename is '/app/oracle/biee/user_projects/domains/bi/servers/obis1/cache/NQS__736117_52416_27.TBL'.
+----
+
+
+Looking closely at the 12c output shows three things:
+
+
+. OBIEE has run a database query for this request, and not hit the cache
+. A cache entry has clearly been created again as a result of this query
+. The Logical SQL has a request variable set: `OBIS_REFRESH_CACHE=1`
+
+
+This is evidently added it by Presentation Services at runtime, since the Advanced tab of the analysis shows no such variable being set:
+
+
+image::/images/2016/05/cache25.png[]
+
+
+Let's save the analysis, and experiment further. Evidently, the cache is being deliberately bypassed when the *Refresh* button is clicked when building an analysis - but what about when it is opened from the Catalog? We should see a cache hit here too:
+
+
+image::/images/2016/05/cache27.png[]
+
+
+Nope, no hit.
+
+
+image::/images/2016/05/15239r.jpg[15239r]
+
+
+But, in the BI Server query log, no entry either - and the same on 11g. The reason being .... *Presentation Service's cache*. D'oh!
+
+
+From *Administration > Manage Sessions* I select *Close All Cursors* which forces a purge of the Presentation Services cache. When I reopen the analysis from the Catalog view, *now* I get a cache hit, in both 11g and 12c:
+
+
+image::/images/2016/05/cache28.png[]
+
+
+The same happens (successful cache hit) for the analysis used in a Dashboard being opened, having purged the Presentation Services cache first.
+
+
+image::/images/2016/05/cache29.png[]
+
+
+So at this point, we can say that OBIEE 11g and 12c both behave the same with the cache when _opening_ analyses/dashboards, but differ when _refreshing_ the analysis. In OBIEE 12c when an analysis is refreshed the cache is deliberately bypassed. Let's check on refreshing a dashboard:
+
+
+image::/images/2016/05/cache30.png[]
+
+
+Same behaviour as with analyses - in 11g the cache is hit, in 12c the cache is bypassed and repopulated
+
+
+image::/images/2016/05/cache31.png[]
+
+
+To round this off, let's doublecheck the behaviour of the new request variable that we've found, `OBIS_REFRESH_CACHE`. Since it appears that Presentation Services is adding it in at runtime, let's step over to a more basic way of interfacing with the BI Server - `nqcmd`. Whilst we could probably use *Issue SQL* (as we did above for querying the cache) I want to avoid any more behind-the-scenes funny business from Presentation Services.
+
+
+In OBIEE 12c, I run `nqcmd`:
+
+
+[source]
+----
+/app/oracle/biee/user_projects/domains/bi/bitools/bin/nqcmd.sh -d AnalyticsWeb -u prodney -p Admin123
+----
+
+
+Enter *Q* to enter a query, as follows:
+
+
+[source,sql]
+----
+SET VARIABLE OBIS_REFRESH_CACHE=1,QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT    0 s_0,    "X - Airlines Delay"."Carrier"."Carrier Code" s_1,    "X - Airlines Delay"."Carrier"."Carrier" s_2 FROM "X - Airlines Delay" ORDER BY 3 ASC NULLS LAST, 2 ASC NULLS LAST FETCH FIRST 5000001 ROWS ONLY
+----
+
+
+In `obis1-query.log' there's the cache bypass and populate:
+
+
+[source]
+----
+Query Result Cache: [59124] The query for user 'prodney' was inserted into the query result cache. The filename is '/app/oracle/biee/user_projects/domains/bi/servers/obis1/cache/NQS__736117_53779_29.TBL'.
+----
+
+
+If I run it again *without* the `OBIS_REFRESH_CACHE` variable:
+
+
+[source,sql]
+----
+SET VARIABLE QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT    0 s_0,    "X - Airlines Delay"."Carrier"."Carrier Code" s_1,    "X - Airlines Delay"."Carrier"."Carrier" s_2 FROM "X - Airlines Delay" ORDER BY 3 ASC NULLS LAST, 2 ASC NULLS LAST FETCH FIRST 5000001 ROWS ONLY
+----
+
+
+We get the cache hit as expected:
+
+
+[source,sql]
+----------------------
+-------------------- Cache Hit on query: [[
+Matching Query: SET VARIABLE OBIS_REFRESH_CACHE=1,QUERY_SRC_CD='Report',PREFERRED_CURRENCY='USD';SELECT    0 s_0,    "X - Airlines Delay"."Carrier"."Carrier Code" s_1,    "X - Airlines Delay"."Carrier"."Carrier" s_2 FROM "X - Airlines Delay" ORDER BY 3 ASC NULLS LAST, 2 ASC NULLS LAST FETCH FIRST 5000001 ROWS ONLY
+Created by:     prodney
+----------------------
+
+
+Out of interest I ran the same two tests on 11g -- both resulted in a cache *hit*, since it presumably ignores the unrecognised variable.
+
+
+== Summary
+
+
+In OBIEE 12c, if you click "Refresh" on an analysis or dashboard, OBIEE Presentation Services forces a cache-bypass and cache-reseed, ensuring that you really do see the latest version of the data from source. It does this using the request variable, new in OBIEE 12c, `OBIS_REFRESH_CACHE`.
+
+
+== Footnote
+
+
+link:https://www.linkedin.com/groups/47239/47239-6143435575979503616[Courtesy of Steve Fitzgerald]:
+
+
+[quote]
+____
+As per the presentation server xsd, you can also revert the behavior (not sure why one would, but you can) in the instanceconfig.xml
+
+
+[source]
+----
+<Cache>
+<Query>
+<RefreshIncludeBIServerCache>false</RefreshIncludeBIServerCache>
+</Query>
+</Cache>
+----
+____
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/05/changes-bi-server-cache-behaviour-obiee-12c/[Rittman Mead blog].
