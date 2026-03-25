@@ -1,0 +1,105 @@
+---
+draft: false
+title: 'Trying Out Harbor'
+date: "2026-03-18T17:53:41Z"
+image: "/images/2026/03/"
+thumbnail: "/images/2026/03/"
+#socialimage: "/images/2026/03/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- AI
+- Claude
+- Harbor
+---
+
+After link:/2026/03/13/evaluating-claudes-dbt-skills-building-an-eval-from-scratch/[cobbling together my own eval for Claude], I was interested to discover https://harborframework.com/[harbor].
+It's described as:
+
+[quote]
+A framework for evaluating and optimizing agents and models in container environments.
+
+Which sounds kinda cool, right?
+<!--more-->
+
+It ships with a bunch of https://harborframework.com/registry[pre-created tests and benchmarks], such as the mandatory https://harborframework.com/registry/hello-world/1.0[hello-world] to more complex and multi-task examples such as https://harborframework.com/registry/terminal-bench/2.0[terminal-bench].
+
+Harbor's unit of execution is a _task_, which is basically a prompt for a coding agent (such as Claude Code).
+Harbor works with multiple coding agents, and multiple models.
+Which is basically what it says on the tin above, right?
+
+Here's an https://github.com/harbor-framework/harbor/blob/3a945a028b850066f5dde6c4e542d9097cf64870/examples/tasks/hello-world/instruction.md[example task]:
+
+[source]
+----
+Create a file called hello.txt with "Hello, world!" as the content.
+----
+
+== Trying it out
+
+Let's try out https://harborframework.com/registry/hello-world/1.0[hello-world]:
+
+[source,bash]
+----
+harbor run  --model anthropic/claude-sonnet-4-6 \ <1>
+            --agent claude-code \                 <2>
+            --dataset hello-world                 <3>
+----
+<1> Use Sonnet 4.6 model
+<2> Run the test using Claude Code
+<3> Run the pre-packaged "Hello, World" test
+
+After a short time this completes:
+
+[source,bash]
+----
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Metric              ┃ Value                           ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Agent               │ claude-code (claude-sonnet-4-6) │
+│ Dataset             │ hello-world                     │
+│ Trials              │ 1                               │
+│ Errors              │ 0                               │
+│                     │                                 │
+│ Mean                │ 1.000                           │
+│                     │                                 │
+│ Reward Distribution │                                 │
+│   reward = 1.0      │ 1                               │
+└─────────────────────┴─────────────────────────────────┘
+----
+
+Harbor ships (see what I did there? 😉) with a nice dashboard for exploring test runs.
+Spin it up by pointing it at the output folder (`jobs`, in this case):
+
+[source,bash]
+----
+harbor view jobs
+----
+
+Status and timing breakdown:
+
+image:/images/2026/03/harbor01.png[]
+
+Agent step-by-step details:
+
+image:/images/2026/03/harbor02.png[]
+
+There's also all of the output from the test run captured to disk:
+
+[source,bash]
+----
+❯ tree jobs -L3
+jobs
+└── 2026-03-19__11-40-40
+    ├── config.json
+    ├── hello-world__kCB5fAr
+    │   ├── agent
+    │   ├── artifacts
+    │   ├── config.json
+    │   ├── result.json
+    │   ├── trial.log
+    │   └── verifier
+    ├── job.log
+    └── result.json
+----
+
+== What's it do under the covers?
