@@ -5,9 +5,10 @@
 <div class="container">
 	<div class="layout-with-sidebar">
 		<div>
-			{{- $pages := where (where .Paginator.Pages ".Section" "post") ".Params.skip" "ne" "true" -}}
-			{{/* Featured post */}}
-			{{- $firstPage := index $pages 0 -}}
+			{{- $allPages := where (where .Site.RegularPages ".Section" "post") ".Params.skip" "ne" "true" -}}
+
+			{{/* Featured post — most recent */}}
+			{{- $firstPage := index $allPages 0 -}}
 			{{- if $firstPage -}}
 			<article class="featured-post">
 				<a href="{{ $firstPage.RelPermalink }}" class="featured-post-thumb-link">
@@ -23,23 +24,64 @@
 			</article>
 			{{- end -}}
 
-			{{/* Remaining posts as rows */}}
-			<ul class="post-list">
-				{{- range after 1 $pages }}
-				{{ partial "li-row.html" . }}
+			{{/* Year-grouped posts */}}
+			{{- $pages := after 1 $allPages -}}
+			{{- $currentYear := now.Format "2006" -}}
+			{{- $.Scratch.Set "currentYear" "" -}}
+			{{- range $pages -}}
+				{{- $year := .Date.Format "2006" -}}
+				{{- if ne $year ($.Scratch.Get "currentYear") -}}
+					{{- if ne ($.Scratch.Get "currentYear") "" -}}
+						</ul>
+						</details>
+					{{- end -}}
+					{{- $.Scratch.Set "currentYear" $year -}}
+					{{- $yearPages := where $pages "Date" "ge" (time (printf "%s-01-01" $year)) -}}
+					{{- $yearPages = where $yearPages "Date" "lt" (time (printf "%s-01-01" (string (add (int $year) 1)))) -}}
+			<details class="year-group" data-year="{{ $year }}"{{ if eq $year $currentYear }} open{{ end }}>
+				<summary class="year-group-header">{{ $year }} <span class="year-group-count">({{ len $yearPages }})</span></summary>
+				<ul class="post-list">
 				{{- end }}
-			</ul>
+				{{ partial "li-row.html" . }}
+			{{- end }}
+			{{- if ne ($.Scratch.Get "currentYear") "" -}}
+				</ul>
+				</details>
+			{{- end }}
 		</div>
 
 		{{ partial "sidebar.html" . }}
 	</div>
 </div>
+
+<script>
+// Year-group expand/collapse state persistence
+(function() {
+	const storeKey = 'year-expand:/';
+	const groups = document.querySelectorAll('details.year-group[data-year]');
+	if (!groups.length) return;
+
+	// Restore saved state (if any) from sessionStorage
+	const saved = sessionStorage.getItem(storeKey);
+	if (saved) {
+		try {
+			const openYears = JSON.parse(saved);
+			groups.forEach(d => {
+				d.open = openYears.includes(d.dataset.year);
+			});
+		} catch(e) {}
+	}
+
+	// Save state on every toggle
+	function saveState() {
+		const openYears = [];
+		groups.forEach(d => { if (d.open) openYears.push(d.dataset.year); });
+		sessionStorage.setItem(storeKey, JSON.stringify(openYears));
+	}
+	groups.forEach(d => d.addEventListener('toggle', saveState));
+})();
+</script>
 {{ end }}
 
 {{ define "pagination" }}
-<footer class="hide-print" role="contentinfo">
-	<nav class="sans-serif pb3 f6 center db" style="max-width: 1200px; padding: 0 2rem;" role="navigation">
-		{{- template "_internal/pagination.html" . -}}
-	</nav>
-</footer>
 {{ end }}
