@@ -2,7 +2,7 @@
 name: proofread-blog
 description: Proofread blog articles for typos, errors, readability, and logical consistency. Use when reviewing blog posts before publication.
 disable-model-invocation: false
-allowed-tools: Read, Grep, Glob, Edit
+allowed-tools: Read, Grep, Glob, Edit, Bash
 ---
 
 # Blog Article Proofreading
@@ -58,7 +58,15 @@ Ignore the header and footer content.
 
 Report any hardcoded links to rmoff.net; prefer relative links.
 
+7. **Image alt text** - Check all images for missing or empty alt text. For each image without alt text, suggest concise, descriptive alt text based on the image content and surrounding context. In AsciiDoc, images without alt text look like `image:/path/to/image.png[]` — the alt text goes inside the brackets: `image:/path/to/image.png[Description of the image]`. Read the image files to see what they contain before suggesting alt text.
+
 6. **AsciiDoc markup pitfalls** - Check for common AsciiDoc rendering issues:
    - **Underscore mangling in link anchors**: `link:/path/#_some_anchor[text]` — AsciiDoc interprets `_word_` sequences as italic markup, turning anchors like `#_joining_the_data` into `#<em>joining_the_data`. Fix with `pass:[]`: `link:/path/#pass:[_some_anchor][text]`
    - **Underscore mangling in inline content**: Backtick-quoted identifiers containing underscores (e.g., `` `_fieldName` ``) can get italic-mangled if not properly escaped. Watch for any `_text_` patterns inside or adjacent to inline code that might be misinterpreted as emphasis.
    - **SQL query + results in code blocks**: When a code block contains both a SQL statement and its tabular output, they should be split into two consecutive blocks: `[source,sql]` for the query and `[source,text]` for the results. The CSS will visually join them with a dashed separator. Never combine a SQL statement and its table output in a single `[source,sql]` block — the syntax highlighting mangles the box-drawing characters. Remove any `> ` shell prompts from the SQL when splitting.
+
+8. **Category taxonomy** - Check the post's categories are consistent with existing usage:
+   - Run: `grep -h -A 20 '^categories:' content/post/*.adoc content/post/*.md | grep '^- ' | sed 's/^- //' | sort | uniq -c | sort -rn`
+   - Compare the current post's categories against that list
+   - Flag categories that have never been used before — ask if intentional or a typo
+   - Flag categories that look like near-duplicates of existing ones (e.g., "Claude" vs "Claude Code", "kafka" vs "Kafka", "VisiData" vs "visidata")

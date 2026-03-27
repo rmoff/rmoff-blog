@@ -1,0 +1,469 @@
+---
+draft: false
+title: 'Look Ma, I made a JAR! (Building a connector for Kafka Connect with Claude Code)'
+date: "2026-03-27T09:26:27Z"
+image: "/images/2026/03/h_IMG_4517.webp"
+thumbnail: "/images/2026/03/t_IMG_4537.webp"
+socialimage: "/images/2026/03/kafka-connect-ais-q80.webp"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- Kafka Connect
+- Claude Code
+- visidata
+---
+
+As a non-Java coder, for the last ten years I've stumbled my way through the JVM-centric world of "big data" (as it was called then), relying on my wits with SQL and config files to just about muddle through.
+One of the things that drew me to Kafka Connect was that I could build integrations between Kafka and other systems without needing to write Java, and the same again for ksqlDB and Flink SQL—now stream processing was available to mere RDBMS mortals and not just the Java adonises.
+
+One thing defeated me though; if a connector _didn't exist_ for Kafka Connect, then I was stuck.
+I'd resort to cobbled-together pipelines leaning heavily on +++<del>kafkacat</del>+++ kcat, such as I did in https://www.confluent.io/blog/streaming-etl-and-analytics-for-real-time-location-tracking/[this blog post].
+I built some cool analytics on top of maritime AIS data about ships' locations, but the foundations were shaky at best:
+
+[source,bash]
+----
+nc ais.host.com 5631 | gpsdecode | kafkacat -b broker:9092 -P
+----
+
+No failure logic, no schema handling, no bueno.
+
+What I really needed was a connector for Kafka Connect.
+However for that, you need Java.
+
+I don't write Java.
+
+But Claude can write Java.
+
+<!--more-->
+
+I've already link:/2026/01/27/cosplaying-as-a-webdev-with-claude-code-in-january-2026/[waxed lyrical about the power of LLMs for coding], and written about the link:/2026/03/06/ai-will-fuck-you-up-if-youre-not-on-board/[risks of not keeping up] with this revolution in how we build things, and the link:/2026/03/11/claude-code-isnt-going-to-replace-data-engineers-yet/[limitations of what they can currently do].
+So far all this work with coding agents was generally within the realm of something I could eyeball (HTML/CSS), or actually debug and validate (dbt/SQL).
+
+But what about getting a coding agent to build a connector for me?
+
+== Skillin Up
+
+There were two things I wanted to get out of this experiment - a working connector for Kafka Connect, and a skill that I could use to have Claude build more in the future.
+Simply prompting it to build a connector throws away a lot of useful context and knowledge that it builds up in the process.
+
+Since I don't know anything about building connectors, I figured I'd just get Claude to figure it out:
+
+[.human]
+****
+inspect the Kafka Connect API and prepare a Claude skill. Use source available repos on GitHub from Confluent to inform good design practice, as well as their docs:
+https://docs.confluent.io/platform/current/connect/devguide.html
+https://www.confluent.io/blog/how-build-custom-kafka-connector/
+Make no mistakes ;)
+****
+
+Claude went away and busily set fire to a bunch of tokens.
+It came back like a proud six year old, having _completely missed the point_.
+
+[.assistant]
+****
+# Plan: Kafka Connect REST API Skill
+
+Robin needs a Claude skill that provides deep knowledge of the Kafka Connect REST API and common connector configuration patterns.
+[…]
+****
+
+Wait, what?
+`provides deep knowledge of the Kafka Connect REST API and common connector configuration patterns`?
+
+[.human]
+****
+[rejected tool — user feedback:] wow, you completely screwed up the brief. I want a skill for _building new connectors for Kafka Connect_.
+****
+
+[.assistant]
+****
+You're right, I misread the brief completely. The docs you linked are about *developing* custom Kafka Connect connectors (Java implementation of SourceConnector/SinkConnector), not using the REST API. Let me restart the research properly.
+****
+
+Once back on course, it came up with a plan.
+I may not code Java, but I know enough to nudge Claude to really do a thorough job learning as much as it can, as well as reminding it about security.
+As a side note, this is one of the fundamental beauties of source-available code: people, and now agents, can _learn_ from it.
+
+[.human]
+****
+does this plan include security (not logging passwords, etc)? Can it learn anything from other source-available connectors of note such as Debezium?
+****
+
+After that, it was full-stream ahead, and Claude duly wrote the skill, nbd pass:[¯\_(ツ)_/¯]
+
+[source]
+----
+# Kafka Connect — Connector Development
+
+Build production-grade Kafka Connect source and sink connector plugins in Java.
+
+## Workflow
+
+1. **Gather requirements** — source or sink? external system? schema? auth? offset model?
+2. **Scaffold** — Maven project, directory layout, POM dependencies
+3. **Implement Connector** — config validation, task partitioning
+4. **Implement Task** — data movement (poll or put), offset tracking
+5. **Define configuration** — ConfigDef with types, validators, groups
+6. **Handle schemas** — SchemaBuilder, Struct, logical types
+7. **Security review** — credentials, logging, SSL, error sanitization
+8. **Test** — unit, integration (Testcontainers), failure scenarios
+9. **Package & deploy** — plugin directory or uber-JAR, install to plugin.path
+[…]
+----
+
+You can see the complete skill https://github.com/rmoff/kafka-connect-ais/tree/master/claude-code-skill[here].
+
+WARNING: This is a *proof of concept*.
+Literally that.
+Proving a concept.
+Don't use it unless you know what gaps might exist with it, both in the skill and the code that it creates.
+
+== Claude, build me a connector
+
+As I mentioned above, a few years ago I wrote https://www.confluent.io/blog/streaming-etl-and-analytics-for-real-time-location-tracking/[a blog post] about stream processing using AIS data as the source.
+This data is emitted from ships, with information about their heading etc.
+Unless you have an AIS receiver, you need to find a service that emits this relayed AIS data, which fortunately the https://www.kystverket.no/en/sea-transport-and-ports/ais/access-to-ais-data/[Norwegian government provides for free], including a map viewer:
+
+image:/images/2026/03/e62eeb746e78263088733fbd2d9cf9787c70ebdabf7f6e47edbbaa26878be410-q80.webp[Norwegian AIS map viewer showing vessel positions near Kråkerøy with ship details popup]
+
+There's also a TCP endpoint, which I figured Claude could use to test and validate a connector.
+
+[.human]
+****
+build a source connector for AIS data. there is a live endpoint at 153.44.253.27 5631 that you can test with
+****
+
+[%collapsible]
+.Claude's thinking
+====
+[.thinking]
+The user wants to build a Kafka Connect source connector for AIS (Automatic Identification System) data. AIS is a maritime tracking system used by ships. The endpoint at 153.44.253.27:5631 appears to be a live AIS data feed.
+
+Let me first understand what AIS data looks like and explore the codebase to see if there's any existing work. Let me also test the endpoint to understand the data format.
+
+I should:
+1. Explore what AIS data format looks like (NMEA sentences typically)
+2. Test the endpoint to see what data comes through
+3. Check if there's any existing connector or project structure
+
+Let me start with Phase 1 - understanding.
+====
+
+[.assistant]
+****
+Let me explore the AIS data format and test the live endpoint to understand what we're working with.
+****
+
+If you're interested in how Claude works, using Simon Willison's https://github.com/simonw/tools/blob/main/claude-code-timeline.html[claude-code-timeline] tool is a great way to see quite what it gets up to.
+Poking around through the JSONL file that Claude writes to, you get an insight into its "thought" process:
+
+[%collapsible%open]
+.Claude's thinking
+====
+[.thinking]
+Now I have real AIS data from the endpoint. Let me analyze what I see:
+
+[…]
+
+Now I'm ready to design the connector architecture. I need to build a source connector that can handle this tag block format, parse the Norwegian station identifiers, and manage multi-sentence message reassembly.
+
+*The key architectural decisions are whether to decode AIS messages internally using a Java library or pass raw NMEA downstream, how to organize the output topic structure, and how to handle the offset model for a live stream with no meaningful replay capability.*
+
+*Actually, let me think about this more carefully. The user said "a source connector for AIS data" - they want a proper Kafka Connect connector. Given their existing experience with the nc+gpsdecode+kcat pipeline, they probably want something more robust and native.*
+====
+
+How did it know about my existing `nc+gpsdecode+kcat pipeline`?
+If you look at the prompt above, I just told it the AIS endpoint.
+Turns out it had a good rummage around my _existing_ projects!
+
+[.tool-action]
+****
+Check if there are any existing AIS or Kafka Connect connector projects in /Users/rmoff/git/. Look for:
+
+1. Any directories with "ais" or "connect" or "connector" in the name
+2. Any pom.xml or build.gradle files related to Kafka Connect connectors
+3. Any NMEA or maritime-related code
+
+Just do a quick search - this is a brief reconnaissance task.
+****
+
+From that it found its way to my local clone of https://github.com/confluentinc/demo-scene/tree/master/maritime-ais[demo-scene] which includes the code it references.
+Clever stuff.
+
+Its first iteration of the plan is pretty good:
+
+[.assistant]
+****
+The plan is written. Summary:
+
+- **What**: A Kafka Connect source connector that connects to AIS TCP endpoints, decodes NMEA/AIS messages using AisLib (Apache 2.0), and produces structured Kafka records keyed by MMSI (vessel ID)
+- **Where**: `/Users/rmoff/git/kafka-connect-ais`
+- **Output**: Single topic with a flat schema — common fields (mmsi, msg_type, timestamp) plus nullable type-specific fields (lat/lon/speed for position reports, ship_name/callsign for static data)
+- **Replaces**: The `nc | gpsdecode | kafkacat` pipeline from your existing demos
+
+8 implementation steps: Maven skeleton → config → TCP manager → NMEA parser → schema/converter → connector/task → tests → build & verify.
+****
+
+Now comes the bit that Claude (or a real developer, without domain knowledge) can't do: does it actually make sense what's being proposed?
+
+I picked up on its plan to write one single topic.
+AIS data has different record types, with different fields across them.
+I also wanted it to "make no mistakes" a.k.a. sense-check its architecture that it wasn't going to bug-out on a flaky TCP connection.
+
+[.human]
+****
+check the conceptual architecture is right. usually KC would be reading from a finite source such as RDBMS. does anything change for sucking on a TCP pipe?
+
+also topics; what about 1:N design to split by type? is that idiomatic or not? config option maybe?
+****
+
+Other than the ass-kissing ("Great questions!") its reply is useful:
+
+[.assistant]
+****
+Great questions. Let me address both.
+
+**TCP pipe architecture**: Yes, this changes things meaningfully. Most source connectors follow a request/response pattern (query DB → get rows → return records). A live TCP stream is fundamentally different:
+
+- **No replay**: If the connector is down, messages are lost. The offset is for observability only, not resume.
+- **Long-lived connection**: The TCP socket persists across `poll()` calls (opened in `start()`, read in `poll()`, closed in `stop()`). This is similar to MQTT or syslog source connectors.
+- **No backoff needed**: Data flows continuously — `poll()` just reads whatever's buffered on the socket. No "sleep when no data" pattern (though `SO_TIMEOUT` handles the case where the stream pauses).
+- **No snapshot phase**: No existing data to catch up on.
+- **Reconnection is critical**: TCP connections drop. This is the main failure mode to handle well.
+
+The architecture is sound — it's just a different *flavor* of source connector. The Connect framework handles this fine.
+
+**Topic strategy**: You're right, 1:N is worth considering. With separate topics, each gets a tighter schema (no nullable fields from other types). Let me think through the options:
+
+- **Single topic** (`ais`): simpler, matches your existing ksqlDB pipeline
+- **Split by category** (`ais.position`, `ais.static`, `ais.base_station`, `ais.other`): cleaner schemas, easier for consumers that only care about one type
+- **Configurable**: best of both worlds
+****
+
+At this point, I am full of sheer joy.
+As an end user of Kafka Connect and its connectors for many years I've often thought _wouldn't it be nice if the connector had config option <x>_.
+And now, they can!
+
+Claude enables you to write tools that work as _you_ want them, not make do and adapt your workflow to fit _them_.
+For example: one topic would be fine if that's all I could get.
+But I'd probably need some post-processing (e.g. Flink SQL) to split out records of interest.
+Or a Single Message Transform to filter and route particular message types to a sink.
+
+[.human]
+****
+also Kafka message headers - anything clever to do there? And talk to me more about the reconnection of TCP, how are we gonna handle this well and not stall?
+****
+
+[.assistant]
+****
+Good questions. Let me address both.
+
+**Message headers**: Yes, headers are useful here. The key win is `ais.msg_type` — consumers can filter/route by header without deserializing the value. Also useful for provenance (source station, raw NMEA for debugging).
+
+**TCP reconnection/stall prevention**: The critical insight is that `poll()` must never block indefinitely. Here's the layered defense:
+
+1. **`SO_TIMEOUT`** on the socket (e.g., 1000ms) — `readLine()` throws `SocketTimeoutException` after 1s of no data, so `poll()` always returns
+2. **`stop()` closes the socket** from another thread — immediately unblocks any pending `readLine()` with an IOException
+3. **Volatile `stopping` flag** — `poll()` checks it on each iteration
+4. **Backoff on reconnect** — avoids hammering a down endpoint
+
+Let me update the plan with both.
+****
+
+Is this TCP reconnection logic good enough?
+No idea.
+But I have the—potentially dangerous—feeling of reassurance that at least Claude "understands" the requirement and is going to code for it.
+
+After some more back-and-forth with Claude over how it handled particular AIS message types, and making sure that the connector was going to be ergonomic to work with overall, we settled on a plan.
+
+[%collapsible%open]
+.Claude's thinking
+====
+[.thinking]
+The user wants me to implement a Kafka Connect AIS Source Connector based on a detailed plan. Let me start by setting up the project structure and implementing each component step by step.
+
+This is a big implementation task.
+====
+
+Claude then merrily chugs away and…builds the connector.
+In case you're not familiar with coding agents, the key thing here is that it doesn't just churn out code and stop.
+It'll write code, and then build it and test it, and fix problems, and test it again, until it works.
+
+[.assistant]
+****
+Several issues: invalid checksums in test data, and the talker ID normalization is likely breaking NMEA checksums. Let me investigate and fix.
+****
+
+[.assistant]
+****
+Got live data. Now let me write a quick Java test to check if AisLib can parse `!BSVDM` directly without normalization.
+****
+
+And then there it was, done:
+
+[.assistant]
+****
+All clean — 13 files, no target/ artifacts. Here's what was built:
+
+**Project: `kafka-connect-ais`** — Kafka Connect source connector for AIS maritime data
+
+[…]
+****
+
+[.human]
+****
+commit this then add a really good, non AI-stinky README, and full docker compose and quickstart
+****
+
+And there we have it:
+
+[source]
+----
+kafka-connect-ais
+├── docker-compose.yml
+├── README.adoc
+├── src
+│   ├── main
+│   └── test
+└── target
+    └── kafka-connect-ais-0.1.0-SNAPSHOT.jar <1>
+----
+<1> Look ma, I just made my own JAR!
+
+== The Connector
+
+GitHub repo: https://github.com/rmoff/kafka-connect-ais
+
+image:/images/2026/03/kafka-connect-ais-q80.webp[Architecture diagram showing AIS data flow from vessels through TCP feed to the Kafka Connect AIS Source Connector and into Apache Kafka topics]
+
+(Credit: Claude, obvs)
+
+Let's start up Kafka, Kafka Connect, and Schema Registry:
+
+[source,bash]
+----
+❯ docker compose up -d --build
+[+] Running 4/4
+ ✔ Network kafka-connect-ais_default  Created   0.0s
+ ✔ Container broker                   Started   0.4s
+ ✔ Container schema-registry          Started   0.4s
+ ✔ Container kafka-connect            Started   0.4s
+----
+
+Configure https://github.com/kcctl/kcctl[kcctl] for easy working with Kafka Connect:
+
+[source,bash]
+----
+kcctl config set-context --cluster=http://localhost:8083 local
+----
+
+Check that the connector plugin has loaded (my connector! that I 'wrote'! omg!!):
+
+[source,bash]
+----
+❯ kcctl get plugins | grep -i ais
+ source             net.rmoff.connect.ais.AisSourceConnector                           0.1.0
+----
+
+The bare config is very simple:
+
+[source,json]
+----
+{
+  "name": "ais-source-per-type",
+  "config": {
+    "connector.class": "net.rmoff.connect.ais.AisSourceConnector",
+    "ais.hosts": "153.44.253.27:5631",
+    "topic": "ais",
+    "topic.per.type": "true",
+    "tasks.max": "1"
+  }
+}
+----
+
+Create an instance of the connector using this config:
+
+[source,bash]
+----
+kcctl apply -f connector-ais-per-type.json
+----
+
+Check the connector is working:
+
+[source,bash]
+----
+❯ kcctl get connectors
+
+ NAME                  TYPE     STATE     TASKS
+ ais-source-per-type   source   RUNNING   0: RUNNING <1>
+----
+<1> Honestly thought it would be `FAILED`.
+Maybe this AI thing has legs.
+
+Now the litmus test…do we have data?
+
+[source,bash]
+----
+❯ kcat -b localhost:9092 -L | grep ais
+  topic "ais.position" with 1 partitions:
+  topic "ais.binary" with 1 partitions:
+  topic "ais.aton" with 1 partitions:
+  topic "ais.static" with 1 partitions:
+  topic "ais.safety" with 1 partitions:
+----
+
+Well, we have _topics_…
+
+[source,bash]
+----
+❯ kcat -b localhost:9092 -t ais.static -C -s value=avro -r http://localhost:8081 | jq '.'
+{
+  "mmsi": 258503000,
+  "msg_type": 5,
+  "receive_timestamp": 1774612034000,
+  "source_station": {
+    "string": "2573555"
+  },
+  "raw_nmea": "\\s:2573555,c:1774612034*0D\\!BSVDM,2,1,5,A,53nQiF000000hiLH000I9DPthlDr22222222220N2H633400000000000000,0*0E\n\\s:2573555,c:1774612034*0D\\!BSVDM,2,2,5,A,00000000000,2*38",
+  "callsign": {
+    "string": "LLWF"
+  },
+  "ship_name": {
+    "string": "FRUHOLMEN"
+  },
+[…]
+----
+
+and OMG we have data! 🙀
+
+You can start to poke around the data itself and also do fun things from the terminal with https://www.visidata.org/[visidata]:
+
+[source,bash]
+----
+kcat -b localhost:9092 -t ais.static -C -s value=avro -r http://localhost:8081 -c 2000 | \
+jq -c '{mmsi, ship_name: .ship_name.string, ship_type: .ship_type_text.string, dest: .destination.string}' | \
+vd -f jsonl
+----
+
+image:/images/2026/03/ef4b1df1382dadd902fff851ec4b21452d87f16dc9a4025f28820c6ee87906dd-l.webp[Visidata terminal showing AIS ship type frequency distribution]
+
+---
+
+Regarding this connector itself, I'll reiterate the same as I did with the skill:
+
+WARNING: This is a *proof of concept*.
+Literally that.
+Proving a concept.
+Don't use it unless you know what gaps might exist with it, both in the skill and the code that it creates.
+
+== y u hate java tho?
+
+This is _not_ a Java-bashing post, in the slightest.
+
+It's a "_I don't know this language but AI enables me to work with it_".
+
+It could just as well be a "_I'm a Java programmer who doesn't know SQL and look at what Claude wrote and wtf is this `PIVOT` doing_"
+
+I don't hate Java.
+Language 'wars' are for imbeciles.
+
+TIP: You can find the connector and the skill that I built in this process here: https://github.com/rmoff/kafka-connect-ais.
