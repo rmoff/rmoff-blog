@@ -58,6 +58,8 @@ Ignore the header and footer content.
 
 Report any hardcoded links to rmoff.net; prefer relative links.
 
+7. **Image alt text** - Check all images for missing or empty alt text. For each image without alt text, suggest concise, descriptive alt text based on the image content and surrounding context. In AsciiDoc, images without alt text look like `image:/path/to/image.png[]` — the alt text goes inside the brackets: `image:/path/to/image.png[Description of the image]`. Read the image files to see what they contain before suggesting alt text.
+
 6. **AsciiDoc markup pitfalls** - Check for common AsciiDoc rendering issues:
    - **Underscore mangling in link anchors**: `link:/path/#_some_anchor[text]` — AsciiDoc interprets `_word_` sequences as italic markup, turning anchors like `#_joining_the_data` into `#<em>joining_the_data`. Fix with `pass:[]`: `link:/path/#pass:[_some_anchor][text]`
    - **Underscore mangling in inline content**: Backtick-quoted identifiers containing underscores (e.g., `` `_fieldName` ``) can get italic-mangled if not properly escaped. Watch for any `_text_` patterns inside or adjacent to inline code that might be misinterpreted as emphasis.
