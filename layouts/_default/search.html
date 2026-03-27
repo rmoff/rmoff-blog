@@ -12,12 +12,6 @@
 
     <div class="search-wrapper">
         <div id="search"></div>
-        <div id="search-sort" class="search-sort hidden">
-            <span class="search-sort-label">Sort by:</span>
-            <button class="search-sort-btn active" data-sort="relevance">Relevance</button>
-            <button class="search-sort-btn" data-sort="newest">Newest</button>
-            <button class="search-sort-btn" data-sort="oldest">Oldest</button>
-        </div>
     </div>
 
     <!-- Popular categories -->
@@ -45,19 +39,9 @@
 
     window.addEventListener('DOMContentLoaded', (event) => {
         const searchContainer = document.getElementById('search');
-        const sortContainer = document.getElementById('search-sort');
         const suggestions = document.getElementById('search-suggestions');
         let currentSort = 'relevance';
         let currentQuery = '';
-
-        function getProcessResult() {
-            return function(result) {
-                if (result.meta && result.meta.date) {
-                    result.excerpt = '<span class="search-result-date">' + result.meta.date + '</span>' + result.excerpt;
-                }
-                return result;
-            };
-        }
 
         function getSortOption(sort) {
             if (sort === 'newest') return { date: 'desc' };
@@ -71,8 +55,7 @@
                 element: "#search",
                 showImages: true,
                 showSubResults: false,
-                excerptLength: 10,
-                processResult: getProcessResult()
+                excerptLength: 10
             };
             var sortOpt = getSortOption(sort);
             if (sortOpt.date) opts.sort = sortOpt;
@@ -98,6 +81,59 @@
         const injectCategory = setInterval(() => {
             if (injectCategoryDiv()) clearInterval(injectCategory);
         }, 50);
+
+        // Inject sort controls next to the results message
+        function injectSortControls() {
+            const msg = searchContainer.querySelector('.pagefind-ui__message');
+            if (!msg || msg.querySelector('.search-sort')) return;
+
+            const sortHTML = '<span class="search-sort">' +
+                '<span class="search-sort-label">Sort:</span>' +
+                '<button class="search-sort-btn' + (currentSort === 'relevance' ? ' active' : '') + '" data-sort="relevance">Relevance</button>' +
+                '<button class="search-sort-btn' + (currentSort === 'newest' ? ' active' : '') + '" data-sort="newest">Newest</button>' +
+                '<button class="search-sort-btn' + (currentSort === 'oldest' ? ' active' : '') + '" data-sort="oldest">Oldest</button>' +
+                '</span>';
+            msg.insertAdjacentHTML('beforeend', sortHTML);
+
+            msg.querySelector('.search-sort').addEventListener('click', (e) => {
+                const btn = e.target.closest('.search-sort-btn');
+                if (!btn || btn.dataset.sort === currentSort) return;
+
+                currentSort = btn.dataset.sort;
+                updateURL(currentQuery, currentSort);
+
+                // Recreate PagefindUI with new sort
+                pf = createPagefindUI(currentSort);
+                const restoreQuery = setInterval(() => {
+                    const input = document.querySelector('.pagefind-ui__search-input');
+                    if (input) {
+                        clearInterval(restoreQuery);
+                        injectCategoryDiv();
+                        input.value = currentQuery;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.focus();
+                        setupSearchInput();
+                    }
+                }, 50);
+            });
+        }
+
+        // Inject date after title in each result
+        function injectDates() {
+            searchContainer.querySelectorAll('.pagefind-ui__result-inner').forEach(inner => {
+                if (inner.querySelector('.search-result-date')) return;
+                const tag = inner.querySelector('.pagefind-ui__result-tag[data-pagefind-ui-meta="date"]');
+                if (!tag) return;
+                const dateText = tag.textContent.replace(/^Date:\s*/, '').trim();
+                const title = inner.querySelector('.pagefind-ui__result-title');
+                if (title) {
+                    const dateEl = document.createElement('span');
+                    dateEl.className = 'search-result-date';
+                    dateEl.textContent = dateText;
+                    title.after(dateEl);
+                }
+            });
+        }
 
         // URL state management
         function getQueryFromURL() {
@@ -135,7 +171,6 @@
                 searchInput.value = currentQuery;
                 searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                 suggestions.classList.add('hidden');
-                sortContainer.classList.remove('hidden');
                 updateCategoryResults(currentQuery.toLowerCase());
             }
 
@@ -146,10 +181,8 @@
                 updateURL(currentQuery, currentSort);
                 if (query.length > 0) {
                     suggestions.classList.add('hidden');
-                    sortContainer.classList.remove('hidden');
                 } else {
                     suggestions.classList.remove('hidden');
-                    sortContainer.classList.add('hidden');
                 }
             });
             return true;
@@ -159,41 +192,12 @@
             if (setupSearchInput()) clearInterval(checkForInput);
         }, 100);
 
-        // Sort button handling
-        sortContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('.search-sort-btn');
-            if (!btn || btn.dataset.sort === currentSort) return;
-
-            currentSort = btn.dataset.sort;
-            sortContainer.querySelectorAll('.search-sort-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            updateURL(currentQuery, currentSort);
-
-            // Recreate PagefindUI with new sort
-            pf = createPagefindUI(currentSort);
-            // Wait for new instance to render, then restore query
-            const restoreQuery = setInterval(() => {
-                const input = document.querySelector('.pagefind-ui__search-input');
-                if (input) {
-                    clearInterval(restoreQuery);
-                    injectCategoryDiv();
-                    input.value = currentQuery;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.focus();
-                    setupSearchInput();
-                }
-            }, 50);
-        });
-
         // Restore sort from URL
         const initialSort = getSortFromURL();
         const initialQuery = getQueryFromURL();
         if (initialQuery) currentQuery = initialQuery;
         if (initialSort !== 'relevance') {
             currentSort = initialSort;
-            sortContainer.querySelectorAll('.search-sort-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.sort === currentSort);
-            });
             pf = createPagefindUI(currentSort);
             const restoreInit = setInterval(() => {
                 if (setupSearchInput()) {
@@ -240,7 +244,10 @@
             });
         }, { rootMargin: '200px', threshold: 0 });
 
+        // MutationObserver: inject sort controls, dates, and infinite scroll
         const mutationObserver = new MutationObserver(() => {
+            injectSortControls();
+            injectDates();
             const loadMoreBtn = searchContainer.querySelector('.pagefind-ui__button');
             if (loadMoreBtn && !loadMoreBtn.dataset.observed) {
                 loadMoreBtn.dataset.observed = 'true';
@@ -324,6 +331,11 @@
     gap: 0.4rem;
 }
 
+/* Fix empty space from category-results when empty */
+#category-results:empty {
+    display: none;
+}
+
 /* Pagefind overrides for redesign */
 .pagefind-ui {
     --pagefind-ui-scale: 0.9;
@@ -370,40 +382,48 @@
     font-family: var(--font-ui) !important;
 }
 
+/* Hide Pagefind's auto-generated date tag */
+.pagefind-ui__result-tag[data-pagefind-ui-meta="date"] {
+    display: none !important;
+}
+
+/* Date shown between title and excerpt */
 .search-result-date {
     display: block;
     font-family: var(--font-ui);
     font-size: 0.75rem;
     color: var(--color-text-muted);
-    margin-bottom: 0.25rem;
+    margin: 0.15rem 0 0.3rem;
     letter-spacing: 0.02em;
 }
 
-.search-sort {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.75rem;
+/* Sort controls — inline with results message */
+.pagefind-ui__message {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
 }
 
-.search-sort.hidden {
-    display: none;
+.search-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
 .search-sort-label {
     font-family: var(--font-ui);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--color-text-muted);
     font-weight: 600;
-    margin-right: 0.25rem;
+    margin-right: 0.15rem;
 }
 
 .search-sort-btn {
     font-family: var(--font-ui);
-    font-size: 0.8rem;
-    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text-muted);
