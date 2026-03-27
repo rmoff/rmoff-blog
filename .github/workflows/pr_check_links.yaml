@@ -30,12 +30,12 @@ jobs:
         # Run hyperlink and filter out known false positives (JavaScript string concatenation parsed as URLs)
         ./hyperlink public 2>&1 | tee /tmp/hyperlink-output.txt || true
         # Filter out false positives (JS string concatenation in search/category pages) and count real errors
-        REAL=$(grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\." | wc -l)
+        REAL=$(grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\." | grep -v "' + (" | grep -v "' + imgSrc" | wc -l)
         if [ "$REAL" -gt 0 ]; then
           TOTAL=$(grep -c -E '^\s*error:' /tmp/hyperlink-output.txt || echo 0)
           FILTERED=$((TOTAL - REAL))
           echo "Found $REAL real bad links (filtered $FILTERED false positives):"
-          grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\."
+          grep -E '^\s*error:' /tmp/hyperlink-output.txt | grep -v 'elem.attr("href")' | grep -v '" + href + "' | grep -v '\${cat\.url}' | grep -v '\${r\.' | grep -v "' + r\." | grep -v "' + (" | grep -v "' + imgSrc"
           exit 1
         else
           echo "No real bad links found (all detected issues were JS string concatenation false positives)"
