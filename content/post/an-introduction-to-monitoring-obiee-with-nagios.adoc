@@ -14,19 +14,19 @@ classes:
 
 NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios/[Rittman Mead blog].
 
-=== Introduction
+== Introduction
 
 
 This is the second post in a mini-series on monitoring OBIEE. The previous post, link:https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview[Automated Monitoring of OBIEE in the Enterprise – an overview], looked at the overview and theory to why and what we should be monitoring. In this post I am going to walk through implementing a set of automated checks on OBIEE using the Systems Management tool link:http://www.nagios.org/[Nagios]
 
 
-==== Nagios
+=== Nagios
 
 
 There are at least three different flavours of Nagios, and only one of them is free (open source), called *Nagios Core*. The others listed link:http://www.nagios.com/products[here] are Nagios XI and Nagios Fusion.
 
 
-==== Brace yourself
+=== Brace yourself
 
 
 One of the formal pre-requisites of open source software is either no documentation, or a vast swath of densely written documentation with no overview or map. OK, I'm kidding. But, be aware that with open source you have to be a bit more self-sufficient and prepared to roll up your sleeves than is normally the case with commercially produced software. I'm not trolling here, and there are exceptions on either side - but if you want to get Nagios working with OBIEE, be aware that it's not simply click-click-done. :)
@@ -35,13 +35,13 @@ One of the formal pre-requisites of open source software is either no documentat
 Nagios has a thriving community of plugins, addons, and companion applications such as alternative frontends. This is both a blessing and a curse. It's great, because whatever you want to do with it, you probably can. It can be troublesome though because it means there's no single point of reference to lookup how something is done -- it could be done in many different ways. Some plugins will be excellent, others may be a bit ropey - you may find yourself navigating this with just your google-fu to guide you.
 
 
-==== Right tool for the right job
+=== Right tool for the right job
 
 
 As with any bit of software, make sure you're not trying to hit the proverbial nail with a pick axe. Plugins and so on are great for extending a product, but always keep an eye on the product's core purpose and whether you're straying too far from it to be sensible. Something which works now might not in future product upgrades. Also sense-check whether two complementary tools might be better suited than trying to do everything within one.
 
 
-=== Getting started
+== Getting started
 
 
 I'm working with two servers, both Oracle Linux 6.3. 
@@ -53,7 +53,7 @@ I'm working with two servers, both Oracle Linux 6.3.
 In theory you could install Nagios on the OBIEE server, but that's not a great idea for Production usage as you'd be subject to all of the bad things which could happen to the OBIEE server and won't be able to alert for them if the monitoring is from the same server.
 
 
-==== Installing Nagios
+=== Installing Nagios
 
 
 There is documentation provided on how to link:http://assets.nagios.com/downloads/nagioscore/docs/Installing_Nagios_Core_From_Source.pdf[install Nagios from source] which looks comprehensive and easy to follow.
@@ -73,7 +73,7 @@ Alternatively, using the link:http://fedoraproject.org/wiki/EPEL[EPEL repository
 ----
 
 
-==== Testing the installation
+=== Testing the installation
 
 
 If the installation has worked, you should be able to go to the address *http://[server]/nagios* and login using the credentials you created or the default *nagiosadmin*/*nagiosadmin*: 
@@ -118,7 +118,7 @@ service https start
 * If the firewall's enabled, is port 80 open?
 
 
-=== Nagios configuration
+== Nagios configuration
 
 
 Nagios is configured, by default, through a series of files held on the server. There are GUI front ends for these files, but in order to properly understand what's going on under the covers I am working with the files themselves here.
@@ -127,7 +127,7 @@ Nagios is configured, by default, through a series of files held on the server. 
 _The documentation refers to Nagios config being in */usr/local/nagios*, but on my install it put it in */etc/nagios/*_
 
 
-==== Object types
+=== Object types
 
 
 To successfully work with Nagios it is necessary to understand some of the terminology and object types used. For a complete list with proper definitions, see link:http://nagios.sourceforge.net/docs/3_0/objectdefinitions.html[the documentation].
@@ -142,7 +142,7 @@ To successfully work with Nagios it is necessary to understand some of the termi
 For a detailed explanation of Nagios' plugin architecture, see link:http://nagios.sourceforge.net/docs/3_0/plugins.html[here]
 
 
-==== Examining the existing configuration
+=== Examining the existing configuration
 
 
 From your Nagios installation home page, click on *Hosts* and you should see *localhost* listed. Click on *Services* and you'll see eight pre-configured checks ('services') for localhost. 
@@ -226,7 +226,7 @@ PING OK - Packet loss = 0%, RTA = 0.05 ms|rta=0.052000ms;100.000000;500.000000;0
 ----
 
 
-==== A picture may be worth a thousand words
+=== A picture may be worth a thousand words
 
 
 To visualise how the configuration elements relate and in which files they are located by default, see the following diagram: 
@@ -235,13 +235,13 @@ image::/images/2012/09/061183nagios03.png[Nagios03]
 *NB* this is not a fully comprehensive illustration, but a simplified one of the default configuration.
 
 
-==== tl;dr?
+=== tl;dr?
 
 
 If you're skimming through this looking for nuggets, you'd be well advised to try to digest the above section, or at least the diagram. It will save you time in the long run, as all of Nagios is based around the same design principle
 
 
-=== Adding a new host
+== Adding a new host
 
 
 Let us start our OBIEE configuration of Nagios by adding in the OBIEE server. Currently Nagios has a single host defined, localhost, which is the Nagios server itself.
@@ -320,7 +320,7 @@ Returning to the Nagios web front end (http:///nagios) you should now see the se
 image::/images/2012/09/061182nagios04.png[Nagios04]
 
 
-=== Running Nagios checks on a remote machine
+== Running Nagios checks on a remote machine
 
 
 Nagios checks are all based on a command line executable run locally on the Nagios server. This works fine for things like ping, but when it comes to checking the CPU load or for a given process, we need a way of finding this information out from the remote machine. There are several ways of doing this, including check_by_ssh, NRPE and NSCA. We're going to use NRPE here. There is a good diagram here of link:http://nagios.sourceforge.net/docs/3_0/images/nrpe.png[how it fits in the Nagios architecture], and link:http://nagios.sourceforge.net/docs/nrpe/NRPE.pdf[documentation for NRPE here].
@@ -337,7 +337,7 @@ NRPE works as follows:
 You can see from points 2 and 3 that there is installation required on the remote server, of both the NRPE daemon and the Nagios plugins that you want to be available for the remote server.
 
 
-==== Setting up NRPE
+=== Setting up NRPE
 
 
 On the remote server, install the Nagios plugins and the NRPE daemon:
@@ -390,7 +390,7 @@ NRPE v2.12
  (in this example, my remote server's IP is 192.168.56.101)
 
 
-==== NRPE, commands and plugins
+=== NRPE, commands and plugins
 
 
 In a _local_ Nagios service check, the *service* specifies a *command* which in turn calls a *plugin*. When we do a _remote_ service check using NRPE the same chain exists, except the *service* always calls the *NRPE* command and plugin. The difference is that it passes to the NRPE plugin the name of a command executed on the NRPE remote server.
@@ -406,7 +406,7 @@ So there are actually _two_ *commands* to be aware of :
 * The command on the remote server in the NRPE configuration, which specifies the actual plugin executable that is executed +
 
 
-==== An example NRPE service configuration
+=== An example NRPE service configuration
 
 
 One of the default service checks that comes with Nagios is *Check Load*. It uses the *check_load* plugin. We'll see how the same plugin can be used on the remote server through *NRPE*.
@@ -485,7 +485,7 @@ Login to your Nagios console and you should see the NRPE-based service working:
 image::/images/2012/09/061180nagios05.png[Nagios05]
 
 
-=== Nagios and OBIEE
+== Nagios and OBIEE
 
 
 Did someone say something about OBIEE? As I warned at the beginning of this article Nagios is fairly complex to configure and it is a steep learning curve. What I've written so far is hopefully sufficient to guide you through the essentials and give you a head-start in using it.
@@ -494,7 +494,7 @@ Did someone say something about OBIEE? As I warned at the beginning of this arti
 The rest of this article looks at the kinds of alerts we can build into Nagios for OBIEE
 
 
-==== Process checks
+=== Process checks
 
 
 To check for the processes in the OBIEE stack we can use the *check_proc* plugin. This is a flexible plugin with a variety of invocation approaches, but we are going to use it to raise a critical alert if there is not a process running which matches a argument or command that we specify.
@@ -576,7 +576,7 @@ image::/images/2012/09/061179nagios06.png[Nagios06]
 image::/images/2012/09/061177nagios07.png[Nagios07]
 
 
-==== Network ports
+=== Network ports
 
 
 To doublecheck that OBIEE is working, monitoring the state of the network ports is a good idea.
@@ -618,7 +618,7 @@ check_command check_nrpe!check_obis_port
 ----
 
 
-==== Log files
+=== Log files
 
 
 link:http://code.google.com/p/logwarn/[check_logwarn] is not provided by the default set of Nagios plugins, and must be downloaded and installed separately. Once installed, it can be used thus:
@@ -653,7 +653,7 @@ Be aware that this method is only really useful for alerting you that there is s
 * Make sure that the NRPE user has permissions on the OBI log files.
 
 
-==== Database
+=== Database
 
 
 The *check_oracle* plugin can check that a database is running locally, or using a TNS entry remotely. Since the OBIEE server that I'm using here is a sandpit environment the database is also running on it, so the check can be run locally on it, via NRPE
@@ -678,10 +678,10 @@ check_nrpe!check_db
 ----
 
 
-=== Final Nagios configuration
+== Final Nagios configuration
 
 
-==== Service Groups
+=== Service Groups
 
 
 Having covered the basic setup for monitoring an OBIEE server, we will now look at a couple of Nagios configuration options to improve the monitoring setup that's been built. The first is Service Groups. These are a way of grouping services together (how did you guess). For example, all the checks for OBIEE network ports. In the Nagios frontend Service Groups can be examined individually and drilled into. 
@@ -700,7 +700,7 @@ members bi1, Port: OPMN remote,bi1, Port: BI Server,bi1, Port: Javahost ,bi1, Po
 *NB*The object definition for the servicegroups is best placed in its own configuration file, or at least, not in the same as the host/service configurations. If it's in the same file as the host/service config then it's less easy to duplicate that file for new hosts.
 
 
-==== A note about templates
+=== A note about templates
 
 
 All of the objects that we have configured have included a *use* clause. This is a template object definition that specifies generic settings so that you don't have to configure them each time you create an object of that type. It also means if you want to change that setting, you can do so in once place instead of dozens.
@@ -715,7 +715,7 @@ All the templates by default are defined in*objects/templates.cfg*, but note tha
 To see the final object definitions with all their inherited values, go to the Nagios web front end and choose the *System* > *Configuration* option from the left menu.
 
 
-==== Email alerts
+=== Email alerts
 
 
 A silent alerting system is not much use if we want a hands-off approach to monitoring OBIEE. Getting Nagios to send out emails is pleasantly easy. In essence, you just need to configure a *contact* object. However I'm going to show how to set it up a bit neater, and illustrate the use of templates in the process.
@@ -751,7 +751,7 @@ You can see what alerts have been sent by looking in the Nagios web front end un
 image::/images/2012/09/061174nagios11.png[Nagios11]
 
 
-=== Deployment on other OBIEE servers
+== Deployment on other OBIEE servers
 
 
 To deploy the same setup as above, for a new OBIEE server, do the following:
@@ -800,7 +800,7 @@ image::/images/2012/09/061171nagios12.png[Nagios12]
 image::/images/2012/09/061173nagios13.png[Nagios13]
 
 
-=== Summary
+== Summary
 
 
 Nagios is a powerful but complex beast to configure. Once you get into the swing of it, it does make sense though. 
@@ -815,7 +815,7 @@ At a high-level, the way that you monitor OBIEE with Nagios is:
 The final part of this series looks at how plugins can be created to do more advanced monitoring with Nagios, including simulating user requests and alerting if they fail : link:https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/[Advanced monitoring of OBIEE with Nagios]
 
 
-==== Documentation
+=== Documentation
 
 
 link:http://nagios.sourceforge.net/docs/3_0/toc.html[Nagios Core documentation]

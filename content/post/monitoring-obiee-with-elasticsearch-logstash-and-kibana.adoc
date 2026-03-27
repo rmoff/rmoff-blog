@@ -79,7 +79,7 @@ It’s not just errors and logs we can monitor - the current and trending perfor
 image::/images/2014/10/407celk50.png[]
 
 
-=== The ELK stack
+== The ELK stack
 
 
 The ELK stack is a suite of free software made up of three tools, the first letter of each giving it its name:
@@ -104,13 +104,13 @@ image::/images/2014/10/405celk40.png[]
 In this article I’m going to show how to set up your own ELK stack to monitor OBIEE, based on link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[SampleApp v406].
 
 
-=== Who is this for?
+== Who is this for?
 
 
 As you will see below, setting up and configuring the ELK stack does involve rolling up ones sleeves and diving right in. If you’re looking for an off-the-shelf monitoring solution then you should look elsewhere (such as EM12c). But if you want to have a crack at it I think you’ll be pleasantly surprised at what is possible once you get past the initially (bumpy) learning curve. The capabilities are great, and there’s an active support community as is the case with lots of open-source tools. With a bit of work it is possible to create a monitoring environment tailored pretty much entirely to your design.
 
 
-=== Installing the stack
+== Installing the stack
 
 
 ELK runs on all common linux distributions (including Oracle Linux), as well as Mac OS. The only prerequisite is a JDK for ElasticSearch and Logstash, and web server for Kibana; here I am using Apache.
@@ -143,7 +143,7 @@ httpd is stopped
 It’s shutdown by default and that’s fine because we need to update the configuration on it anyway.
 
 
-==== ElasticSearch
+=== ElasticSearch
 
 
 The easiest way to install ElasticSearch is using the link:http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/setup-repositories.html[_yum_ repository]:
@@ -196,7 +196,7 @@ sudo ./plugin -install lmenezes/elasticsearch-kopf
 ----
 
 
-==== logstash
+=== logstash
 
 
 There’s no repository for logstash, but it’s no biggie because there’s no install as such, just a download and unpack. Grab the download archive for logstash from link:http://www.elasticsearch.org/overview/elkdownloads/[the ELK download page], and then unpack it:
@@ -213,7 +213,7 @@ sudo chown -R oracle. /opt/logstash/
 ----
 
 
-==== Kibana
+=== Kibana
 
 
 As with logstash, Kibana just needs downloading and unpacking. There’s also a wee bit of configuration to do, so that the web server (Apache, in our case) knows to talk to it, and so that Kibana knows how to find ElasticSearch.
@@ -262,7 +262,7 @@ You should be able to now point your web browser at the server and see the defau
 image::/images/2014/10/406celk03.png[]
 
 
-=== Configuring ELK end-to-end
+== Configuring ELK end-to-end
 
 
 Now that we’ve got the software installed, let’s see how it hangs together and create our first end-to-end example. There’s a good link:http://logstash.net/docs/1.4.2/tutorials/getting-started-with-logstash[logstash tutorial here] that covers a lot of the functionality. Here, I’ll just look at some of the very basics, creating a very simple logstash configuration which will prompt for input (i.e. link:http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29[stdin]) and send it straight to ElasticSearch. The _kopf_ plugin that we installed above can show that the data made it to ElasticSeach, and finally we will create a very simple Kibana dashboard to demonstrate its use.
@@ -436,7 +436,7 @@ image::/images/2014/10/394celk15.png[]
 image::/images/2014/10/393celk16.png[]
 
 
-=== Tips for using logstash
+== Tips for using logstash
 
 
 To think of the logstash `.conf` file as merely “configuration” in the same way a simple .ini is would be to underestimate it. In effect you are writing a bit of data transformation code, so brace yourself – but the silver lining is that whatever you want to do, you probably can. Logstash is a most flexible and powerful piece of software, and one in which the model of _input_, _filter_, _codec_ and _output_ work very well.
@@ -497,7 +497,7 @@ output {
 * Use the multiline codec to work with log messages that span multiple lines, and watch out for newline characters – grok does not like them so use a mutate gsub to fix them out.
 
 
-=== Building a Kibana dashboard
+== Building a Kibana dashboard
 
 
 Now that we’ve got the data streaming through nicely from logstash into ElasticSearch, let us take a look at building dashboards against it in Kibana. Kibana is a web application that runs within an existing web server such as Apache, and it builds dashboards from data stored in ElasticSearch.
@@ -611,7 +611,7 @@ image::/images/2014/10/370celk35.png[]
 Once you’ve built your dashboard save it (Kibana stores it in ElasticSearch). The dashboard is defined in _json_ and you can opt to download this too.
 
 
-=== The complete OBIEE monitoring view
+== The complete OBIEE monitoring view
 
 
 Parsing logs is a great way to get out valuable information from the text stored and build visualisations and metrics on top of it. However, for pure metrics alone (such as machine CPU, OBIEE DMS metrics, and so on) a close-relation to Kibana, Grafana, is better suited to the task. Thus we have the text-based data going into ElasticSearch and reported through Kibana, and the pure metrics into a time-based store such as whisper (graphite’s database) and reported through Grafana. Because Grafana is a fork of Kibana, the look and feel is very similar.
@@ -638,7 +638,7 @@ image::/images/2014/10/366celk38.png[]
 One other path to consider is trying to get the metrics currently sent to graphite/whisper instead into ElasticSearch so that Kibana can then report on them. The problem with this is twofold. Firstly, ElasticSearch is fundamentally a text-based store, whereas whisper fits much better for time/metric data (as would another DB such as influxDB). So trying to crow-bar the two together may not be the best solution, and instead better for it to be resolved at front end as discussed above. Secondly, Kibana’s graphing capabilities do not conceptually extend to multiple metrics in the same graph - only multiple queries - which means that graphing something that would be simple in Grafana (such as CPU wait/user/sys) would be overly complex in Kibana.
 
 
-=== Architecting an ELK deployment
+== Architecting an ELK deployment
 
 
 So far I’ve shown how to configure ELK on a single server, reading logs from that same server. But there are two extra things we should consider. First, Logstash in particular _can_ be quite a ‘heavy’ process depending on how much work you’re doing with it. If you are processing all the logs that FMW writes, and have lots of grok filters (which isn’t a bad thing; it means you’re extracting lots of good information), then you will see logstash using a lot of CPU, lots IO, possibly to the detriment of other processes on the system - a tad ironic if the purpose of using logstash is to monitor for any system problems that occur. Secondly, ELK works very well with mutiple servers. You might have a scaled out OBIEE stack, or want to monitor multiple environments. Rather than replicating the ELK stack on each server instead it’s better for each server to push its log messages to a central ELK server for processing. And since the processing takes place on the ELK server and not the server being monitored we reduce the local resource footprint too.

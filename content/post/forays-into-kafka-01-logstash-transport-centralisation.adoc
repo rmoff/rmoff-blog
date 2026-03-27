@@ -45,7 +45,7 @@ If you’re interested in reading more about Kafka, the article that really caug
 Kafka gets a lot of press in the context of “Big Data”, Spark, and the like, but it also makes a lot of sense as a “pipe” between slightly more 'mundane' systems such as Logstash…
 
 
-= Overview
+== Overview
 
 
 In this article we’re using Kafka at its very simplest - one Producer, one Topic, one Consumer. But hey, if it works and it is a good use of technology who cares if it’s not a gazillion message throughput per second to give us bragging rights on Hacker News
@@ -63,7 +63,7 @@ Once Logstash has processed the data we’ll load it into Elasticsearch, from wh
 image::/images/2015/10/120ckl10.png[]
 
 
-= Build
+== Build
 
 
 This article was written based on three servers:
@@ -80,7 +80,7 @@ In practice, Kafka could run on the ELK server if you needed it to and throughpu
 The steps below show how to get the required software installed and running.
 
 
-== Networking and Host Names
+=== Networking and Host Names
 
 
 Make sure that each host has a hostname that is proper (not ‘`demo`’) and can be resolved from all the other hosts being used. Liberal use of `/etc/hosts` hardcoding of IP/hostnames and copying to each host is one way around this in a sandbox environment. In the real world use DNS CNAMEs to resolve the static ip of each host.
@@ -119,7 +119,7 @@ Connection to ubuntu-03 9200 port [tcp/*] succeeded!
 ----
 
 
-== Application Server - log source (“sampleappv406”)
+=== Application Server - log source (“sampleappv406”)
 
 
 This is going to be the machine from which we’re collecting logs. In my example it’s OBIEE that’s generating the logs, but it could be any application. All we _need_ to install is Logstash, which is going to ship the logs - unprocessed - over to Kafka. Because we’re working with Kafka, it’s also useful to have the console scripts (that ship with the Kafka distribution) available as well, but strictly speaking, we don’t need to install Kafka on this machine.
@@ -147,7 +147,7 @@ sudo mv logstash* /opt
 +
 
 
-== Kafka host (“ubuntu-02”)
+=== Kafka host (“ubuntu-02”)
 
 
 This is our kafka server, where Zookeeper and Kafka run. Messages are stored here before being passed to the consumer.
@@ -194,7 +194,7 @@ bin/kafka-server-start.sh config/server.properties
 +
 
 
-== ELK host (“ubuntu-03”)
+=== ELK host (“ubuntu-03”)
 
 
 All the logs from the application server (“`sampleappv406`” in our example) are destined for here. We’ll do post-processing on them in Logstash to extract lots of lovely data fields, store it in Elasticsearch, and produce some funky interactive dashboards with Kibana. If, for some bizarre reason, you didn’t want to use Elasticsearch and Kibana but had some other target for your logs after Logtash had parsed them you could use one of the many other link:https://www.elastic.co/guide/en/logstash/current/output-plugins.html[output plugins] for Logstash.
@@ -239,7 +239,7 @@ Kopf is an optional, but very useful, Elasticsearch admin web GUI
 +
 
 
-= Configuring Kafka
+== Configuring Kafka
 
 
 Create the topic. This can be run from any machine with kafka console tools available. The important thing is that you specify the `--zookeeper` correctly so that it knows where to find Kafka.
@@ -252,7 +252,7 @@ bin/kafka-topics.sh --create --zookeeper ubuntu-02:2181 --replication-factor 1 -
 ----
 
 
-= Smoke test
+== Smoke test
 
 
 . Having created the topic, check that the other nodes can connect to zookeeper and see it. The point is less about viewing the topic as checking that the connectivity between the machines is working.
@@ -327,7 +327,7 @@ image::/images/2015/10/116ckl02.png[]
 If the two above tests work, then you’re good to go. If not, then you’ve got to sort this out first because the later stuff sure isn’t going to.
 
 
-= Configuring Logstash on the Application Server (Kafka Producer)
+== Configuring Logstash on the Application Server (Kafka Producer)
 
 
 Logstash has a very simple role on the application server - to track the log files that we want to collect, and pass new content in the log file straight across to Kafka. We’re not doing any fancy parsing of the files this side - we want to be as light-touch as possible. This means that our Logstash configuration is dead simple:
@@ -374,7 +374,7 @@ image::/images/2015/10/129ckafka-consumer.gif[]
 Talk about opening the floodgates!
 
 
-= Configuring Logstash on the ELK server (Kafka Consumer)
+== Configuring Logstash on the ELK server (Kafka Consumer)
 
 
 Let’s give all these lovely log messages somewhere to head. We’re going to use Logstash again, but on the ELK server this time, and with the Kafka _input_ plugin:
@@ -484,7 +484,7 @@ image::/images/2015/10/115ckl07.png[]
 (this snippet gives you an idea of the kind of data fields that can be extracted from a log file, and this is one of the _less_ interesting ones, difficult to imagine, I know).
 
 
-= Analysing OBIEE Log Data in Elasticsearch with Kibana
+== Analysing OBIEE Log Data in Elasticsearch with Kibana
 
 
 The *kopf* plugin provides a nice web frontend to some of the administrative functions of Elasticsearch, including a quick overview of the state of a cluster and number of documents. Using it we can confirm we’ve got some data that’s been loaded from our Logstash -> Kafka -> Logstash pipeline:
@@ -508,7 +508,7 @@ Using Kibana we can get a very powerful but simple view over the data we extract
 image::/images/2015/10/120ckl10.png[]
 
 
-= MOAR Application Servers
+== MOAR Application Servers
 
 
 Let’s scale this thing out a bit, and add a second application server into the mix. All we need to do is replicate the Logstash install and configuration on the second application server - everything else remains the same. Doing this we start to see the benefit of centralising the log processing, and decoupling it from the application server.
@@ -523,7 +523,7 @@ Set the Logstash ‘producer’ running on the second application server, and th
 image::/images/2015/10/106ckl13.png[]
 
 
-= Reprocessing data
+== Reprocessing data
 
 
 One of the appealing features of Kafka is that it stores data for a period of time. This means that consumers can stream or batch as they desire, and that they can also reprocess data. By acting as a durable ‘buffer’ for the data it means that recovering from a client crash, such as a Logstash failure like this:
@@ -560,7 +560,7 @@ input {
 Kafka will keep data for the length of time, or size of data, as defined in the `log.retention.minutes` and `log.retention.bytes` configuration settings respectively. This is set globally by default to 7 days (and no size limit), and can be changed globally or per topic.
 
 
-= Conclusion
+== Conclusion
 
 
 Logstash with Kafka is a powerful and easy way to stream your application log files off the application server with minimal overhead and then process them on a dedicated host. Elasticsearch and Kibana are a great way to visualise, analyse, and diagnose issues within your application’s log files.
