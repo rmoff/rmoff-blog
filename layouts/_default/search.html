@@ -12,6 +12,12 @@
 
     <div class="search-wrapper">
         <div id="search"></div>
+        <div id="search-sort" class="search-sort hidden">
+            <span class="search-sort-label">Sort by:</span>
+            <button class="search-sort-btn active" data-sort="relevance">Relevance</button>
+            <button class="search-sort-btn" data-sort="newest">Newest</button>
+            <button class="search-sort-btn" data-sort="oldest">Oldest</button>
+        </div>
     </div>
 
     <!-- Popular categories -->
@@ -39,31 +45,58 @@
 
     window.addEventListener('DOMContentLoaded', (event) => {
         const searchContainer = document.getElementById('search');
+        const sortContainer = document.getElementById('search-sort');
+        const suggestions = document.getElementById('search-suggestions');
+        let currentSort = 'relevance';
+        let currentQuery = '';
 
-        const pf = new PagefindUI({
-            element: "#search",
-            showImages: true,
-            showSubResults: false,
-            excerptLength: 10,
-            processResult: function(result) {
+        function getProcessResult() {
+            return function(result) {
                 if (result.meta && result.meta.date) {
                     result.excerpt = '<span class="search-result-date">' + result.meta.date + '</span>' + result.excerpt;
                 }
                 return result;
-            }
-        });
+            };
+        }
+
+        function getSortOption(sort) {
+            if (sort === 'newest') return { date: 'desc' };
+            if (sort === 'oldest') return { date: 'asc' };
+            return {};
+        }
+
+        function createPagefindUI(sort) {
+            searchContainer.innerHTML = '';
+            var opts = {
+                element: "#search",
+                showImages: true,
+                showSubResults: false,
+                excerptLength: 10,
+                processResult: getProcessResult()
+            };
+            var sortOpt = getSortOption(sort);
+            if (sortOpt.date) opts.sort = sortOpt;
+            return new PagefindUI(opts);
+        }
+
+        var pf = createPagefindUI(currentSort);
 
         // Create and inject category results div after the form
         const categoryResults = document.createElement('div');
         categoryResults.id = 'category-results';
 
-        const injectCategory = setInterval(() => {
+        function injectCategoryDiv() {
             const form = searchContainer.querySelector('.pagefind-ui__form');
             const resultsWrapper = searchContainer.querySelector('.pagefind-ui__results-area');
             if (form && resultsWrapper) {
-                clearInterval(injectCategory);
                 resultsWrapper.parentNode.insertBefore(categoryResults, resultsWrapper);
+                return true;
             }
+            return false;
+        }
+
+        const injectCategory = setInterval(() => {
+            if (injectCategoryDiv()) clearInterval(injectCategory);
         }, 50);
 
         // URL state management
@@ -72,45 +105,103 @@
             return params.get('q') || '';
         }
 
-        function updateURL(query) {
+        function getSortFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('sort') || 'relevance';
+        }
+
+        function updateURL(query, sort) {
             const url = new URL(window.location);
             if (query) {
                 url.searchParams.set('q', query);
             } else {
                 url.searchParams.delete('q');
             }
+            if (sort && sort !== 'relevance') {
+                url.searchParams.set('sort', sort);
+            } else {
+                url.searchParams.delete('sort');
+            }
             window.history.replaceState({}, '', url);
         }
 
-        const suggestions = document.getElementById('search-suggestions');
-        const checkForInput = setInterval(() => {
+        function setupSearchInput() {
             const searchInput = document.querySelector('.pagefind-ui__search-input');
-            if (searchInput) {
-                clearInterval(checkForInput);
+            if (!searchInput) return false;
 
-                // Auto-focus the search input
-                searchInput.focus();
+            searchInput.focus();
 
-                const initialQuery = getQueryFromURL();
-                if (initialQuery) {
-                    searchInput.value = initialQuery;
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    suggestions.classList.add('hidden');
-                    updateCategoryResults(initialQuery.toLowerCase());
-                }
-
-                searchInput.addEventListener('input', (e) => {
-                    const query = e.target.value.toLowerCase().trim();
-                    updateCategoryResults(query);
-                    updateURL(e.target.value.trim());
-                    if (query.length > 0) {
-                        suggestions.classList.add('hidden');
-                    } else {
-                        suggestions.classList.remove('hidden');
-                    }
-                });
+            if (currentQuery) {
+                searchInput.value = currentQuery;
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                suggestions.classList.add('hidden');
+                sortContainer.classList.remove('hidden');
+                updateCategoryResults(currentQuery.toLowerCase());
             }
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                currentQuery = e.target.value.trim();
+                updateCategoryResults(query);
+                updateURL(currentQuery, currentSort);
+                if (query.length > 0) {
+                    suggestions.classList.add('hidden');
+                    sortContainer.classList.remove('hidden');
+                } else {
+                    suggestions.classList.remove('hidden');
+                    sortContainer.classList.add('hidden');
+                }
+            });
+            return true;
+        }
+
+        const checkForInput = setInterval(() => {
+            if (setupSearchInput()) clearInterval(checkForInput);
         }, 100);
+
+        // Sort button handling
+        sortContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.search-sort-btn');
+            if (!btn || btn.dataset.sort === currentSort) return;
+
+            currentSort = btn.dataset.sort;
+            sortContainer.querySelectorAll('.search-sort-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateURL(currentQuery, currentSort);
+
+            // Recreate PagefindUI with new sort
+            pf = createPagefindUI(currentSort);
+            // Wait for new instance to render, then restore query
+            const restoreQuery = setInterval(() => {
+                const input = document.querySelector('.pagefind-ui__search-input');
+                if (input) {
+                    clearInterval(restoreQuery);
+                    injectCategoryDiv();
+                    input.value = currentQuery;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.focus();
+                    setupSearchInput();
+                }
+            }, 50);
+        });
+
+        // Restore sort from URL
+        const initialSort = getSortFromURL();
+        const initialQuery = getQueryFromURL();
+        if (initialQuery) currentQuery = initialQuery;
+        if (initialSort !== 'relevance') {
+            currentSort = initialSort;
+            sortContainer.querySelectorAll('.search-sort-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.sort === currentSort);
+            });
+            pf = createPagefindUI(currentSort);
+            const restoreInit = setInterval(() => {
+                if (setupSearchInput()) {
+                    clearInterval(restoreInit);
+                    injectCategoryDiv();
+                }
+            }, 50);
+        }
 
         function updateCategoryResults(query) {
             if (!query || query.length < 2) {
@@ -286,6 +377,49 @@
     color: var(--color-text-muted);
     margin-bottom: 0.25rem;
     letter-spacing: 0.02em;
+}
+
+.search-sort {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+}
+
+.search-sort.hidden {
+    display: none;
+}
+
+.search-sort-label {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
+.search-sort-btn {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.search-sort-btn:hover {
+    color: var(--color-text);
+    border-color: var(--color-text);
+}
+
+.search-sort-btn.active {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
 }
 </style>
 {{ end }}
