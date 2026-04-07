@@ -70,8 +70,8 @@
       var sectionBody = section.querySelector('.sectionbody');
       if (!sectionBody) return;
 
-      // Get all <li> in this section
-      var items = sectionBody.querySelectorAll('li');
+      // Get all <li> in this section, excluding those inside admonition/quote blocks
+      var items = sectionBody.querySelectorAll(':scope > .ulist li, :scope > .olist li');
       var sectionVisible = 0;
 
       items.forEach(function (li) {

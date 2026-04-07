@@ -97,6 +97,28 @@ test.describe('IL Filter', () => {
     expect(new URL(page.url()).searchParams.has('top')).toBe(false);
   });
 
+  test('admonition/quote list items are not hidden by fire filter', async ({ page }) => {
+    // March 2026 post has a TIP admonition with a list inside "Big Picture & Culture"
+    const MARCH_URL = 'http://localhost:1313/2026/03/25/interesting-links-march-2026/';
+    await page.goto(MARCH_URL);
+    await page.waitForSelector('.il-toolbar');
+
+    // Find list items inside admonition blocks before filtering
+    const admonitionItems = page.locator('[data-il-section="true"] .admonitionblock li');
+    const admonitionCount = await admonitionItems.count();
+    expect(admonitionCount).toBeGreaterThan(0);
+
+    await toggleFireFilter(page);
+
+    // Admonition list items should NOT have il-hidden class
+    const hiddenAdmonitionItems = page.locator('[data-il-section="true"] .admonitionblock li.il-hidden');
+    expect(await hiddenAdmonitionItems.count()).toBe(0);
+
+    // But regular link items should still be filtered
+    const hiddenItems = page.locator('[data-il-section="true"] li.il-hidden');
+    expect(await hiddenItems.count()).toBeGreaterThan(0);
+  });
+
   test('toolbar is NOT rendered on non-IL pages', async ({ page }) => {
     await page.goto('http://localhost:1313/');
     const toolbar = page.locator('.il-toolbar');
