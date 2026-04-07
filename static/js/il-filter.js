@@ -71,7 +71,13 @@
       if (!sectionBody) return;
 
       // Get all <li> in this section, excluding those inside admonition/quote blocks
-      var items = sectionBody.querySelectorAll(':scope > .ulist li, :scope > .olist li');
+      var allItems = sectionBody.querySelectorAll('li');
+      var items = [];
+      for (var j = 0; j < allItems.length; j++) {
+        if (!allItems[j].closest('.admonitionblock, .quoteblock')) {
+          items.push(allItems[j]);
+        }
+      }
       var sectionVisible = 0;
 
       items.forEach(function (li) {
