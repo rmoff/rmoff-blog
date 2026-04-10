@@ -27,6 +27,7 @@
 			{{/* Year-grouped posts */}}
 			{{- $pages := after 1 $allPages -}}
 			{{- $currentYear := now.Format "2006" -}}
+			{{- $currentMonth := sub (int (now.Format "1")) 1 -}}
 			{{- $.Scratch.Set "currentYear" "" -}}
 			{{- range $pages -}}
 				{{- $year := .Date.Format "2006" -}}
@@ -38,8 +39,22 @@
 					{{- $.Scratch.Set "currentYear" $year -}}
 					{{- $yearPages := where $pages "Date" "ge" (time (printf "%s-01-01" $year)) -}}
 					{{- $yearPages = where $yearPages "Date" "lt" (time (printf "%s-01-01" (string (add (int $year) 1)))) -}}
+					{{- $monthCounts := slice 0 0 0 0 0 0 0 0 0 0 0 0 -}}
+					{{- range $yearPages -}}
+						{{- $m := sub (int (.Date.Format "1")) 1 -}}
+						{{- $prev := index $monthCounts $m -}}
+						{{- $new := slice -}}
+						{{- range $i, $v := $monthCounts -}}
+							{{- if eq $i $m -}}
+								{{- $new = $new | append (add $prev 1) -}}
+							{{- else -}}
+								{{- $new = $new | append $v -}}
+							{{- end -}}
+						{{- end -}}
+						{{- $monthCounts = $new -}}
+					{{- end -}}
 			<details class="year-group" data-year="{{ $year }}"{{ if eq $year $currentYear }} open{{ end }}>
-				<summary class="year-group-header">{{ $year }} <span class="year-group-count">({{ len $yearPages }})</span></summary>
+				<summary class="year-group-header">{{ $year }}<span class="year-activity">{{- range $i, $c := $monthCounts -}}<span class="year-activity-block {{ if and (eq $year $currentYear) (gt $i $currentMonth) }}future{{ else }}level-{{ if eq $c 0 }}0{{ else if le $c 2 }}1{{ else if le $c 5 }}2{{ else if le $c 9 }}3{{ else }}4{{ end }}{{ end }}" title="{{ index (slice "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec") $i }}{{ if and (eq $year $currentYear) (gt $i $currentMonth) }}{{ else }}: {{ $c }} post{{ if ne $c 1 }}s{{ end }}{{ end }}"></span>{{- end -}}</span></summary>
 				<ul class="post-list">
 				{{- end }}
 				{{ partial "li-row.html" . }}
