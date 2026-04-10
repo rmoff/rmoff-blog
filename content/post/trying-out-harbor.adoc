@@ -1,0 +1,208 @@
+---
+draft: false
+title: 'Kicking the Tyres on Harbor for Agent Evals'
+date: "2026-04-09T07:53:41Z"
+image: "/images/2026/04/h_IMG_4923.webp"
+thumbnail: "/images/2026/04/t_IMG_4922.webp"
+#socialimage: "/images/2026/03/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- AI
+- Claude Code
+- Harbor
+---
+
+After link:/2026/03/13/evaluating-claudes-dbt-skills-building-an-eval-from-scratch/[cobbling together my own eval for Claude], I was interested to discover https://harborframework.com/[harbor].
+It's described as:
+
+[quote]
+A framework for evaluating and optimizing agents and models in container environments.
+
+Which sounds kinda cool, right?
+<!--more-->
+
+It ships with a bunch of https://harborframework.com/registry[pre-created tests and benchmarks], such as the mandatory https://harborframework.com/registry/hello-world/1.0[hello-world] to more complex and multi-task examples such as https://harborframework.com/registry/terminal-bench/2.0[terminal-bench].
+
+Harbor's unit of execution is a _task_, which is basically a prompt for a coding agent (such as Claude Code).
+Harbor works with multiple coding agents, and multiple models.
+Which is basically what it says on the tin above, right?
+
+Here's an https://github.com/harbor-framework/harbor/blob/3a945a028b850066f5dde6c4e542d9097cf64870/examples/tasks/hello-world/instruction.md[example task]:
+
+[source]
+----
+Create a file called hello.txt with "Hello, world!" as the content.
+----
+
+== Trying it out
+
+Let's try out https://harborframework.com/registry/hello-world/1.0[hello-world]:
+
+[source,bash]
+----
+harbor run  --model anthropic/claude-sonnet-4-6 \ <1>
+            --agent claude-code \                 <2>
+            --dataset hello-world \               <3>
+----
+<1> Use Sonnet 4.6 model
+<2> Run the test using Claude Code
+<3> Run the pre-packaged "Hello, World" test
+
+After a short time this completes:
+
+[source,text]
+----
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Metric              ┃ Value                           ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Agent               │ claude-code (claude-sonnet-4-6) │
+│ Dataset             │ hello-world                     │
+│ Trials              │ 1                               │
+│ Errors              │ 0                               │
+│                     │                                 │
+│ Mean                │ 1.000                           │
+│                     │                                 │
+│ Reward Distribution │                                 │
+│   reward = 1.0      │ 1                               │
+└─────────────────────┴─────────────────────────────────┘
+----
+
+Harbor ships (see what I did there? 😉) with a nice dashboard for exploring test runs.
+Spin it up by pointing it at the output folder (`jobs`, in this case):
+
+[source,bash]
+----
+harbor view jobs
+----
+
+Status and timing breakdown:
+
+image:/images/2026/04/harbor01.webp[Harbor dashboard showing hello-world task outcome with reward 1.00, token usage, and timing breakdown across env setup, agent setup, execution, and verifier phases]
+
+Under the covers, Harbor spins up a Docker container, within which Claude runs with `--dangerously-skip-permissions` so that it can go about its business without any of that pesky permission seeking.
+It takes the defined task or dataset prompt, and runs it, as we can see here:
+
+image:/images/2026/04/harbor02.webp[Harbor trajectory view showing the five steps Claude took to complete the hello-world task, from receiving the prompt to creating hello.txt]
+
+== Scoring
+
+A task's performance is scored using a verifier that's part of the task definition.
+For the above "hello world", all we need to do is check if the agent (a) created the file with the correct name and (b) with the correct content.
+Which is exactly what https://github.com/harbor-framework/harbor/blob/3a945a028b850066f5dde6c4e542d9097cf64870/examples/tasks/hello-world/tests/test_state.py[this Python script] does:
+
+[source,python]
+----
+def test_hello_file_exists():
+    hello_path = Path("/app/hello.txt")
+
+    assert hello_path.exists(), f"File {hello_path} does not exist"
+
+
+def test_hello_file_contents():
+    hello_path = Path("/app/hello.txt")
+
+    content = hello_path.read_text().strip()
+    expected_content = "Hello, world!"
+
+    assert content == expected_content, (
+        f"File content is '{content}', expected '{expected_content}'"
+    )
+----
+
+Its https://github.com/harbor-framework/harbor/blob/3a945a028b850066f5dde6c4e542d9097cf64870/examples/tasks/hello-world/tests/test.sh#L15-L19[wrapper script] gives it a pass/fail score—either it worked, or it didn't:
+
+[source,bash]
+----
+if [ $? -eq 0 ]; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi
+----
+
+If you run the test multiple times, you'll get scores (rewards); unsurprisingly "hello-world" doesn't pose any challenges or show variability:
+
+image:/images/2026/04/harbor03.webp[Harbor dashboard listing six hello-world trials, all scoring a perfect 1.00 reward]
+
+So that's Hello World…what about the Real World?
+
+== Using it with dbt
+
+The driver to looking at Harbor was my curiosity as to whether I could have used Harbor in place of my link:/2026/03/13/evaluating-claudes-dbt-skills-building-an-eval-from-scratch/[+++<del>hacky homebrew</del>+++ bespoke and artisanal scripts], and if so what it would look like.
+
+[NOTE]
+====
+There is an imbalance here in that I now know more about evals, deterministic testing and LLM-as-judge than I did before creating my custom harness.
+If I were to write it again, it'd be a lot cleaner I'm sure.
+So almost by definition, something like Harbor is probably going to be better.
+====
+
+As you'd expect by now, I didn't write the dbt task myself; I told Claude about my previous work, and had it build a Harbor-compliant task.
+Its key components are this:
+
+[cols="1,3a"]
+|===
+| Component | Description
+
+| `Dockerfile`
+| Installs `dbt-duckdb` and the https://github.com/dbt-labs/dbt-agent-skills[dbt-agent-skills] in the same container that Claude Code will run.
+
+| `instruction.md`
+| The same prompt https://github.com/rmoff/dbt-claude/blob/main/prompts/rich.md[as before]
+
+> […]
+> Build a dbt project using DuckDB for this data using idiomatic patterns and good practices.
+> […]
+> Run `dbt build` to verify your work. If it fails, fix the errors and re-run until it passes.
+
+| `tests/test.sh`
+| Verifier script, which does several things:
+
+1. _Deterministic_ checks (similar to the ones https://github.com/rmoff/dbt-claude/blob/main/validate.sh[I used before] - is the dbt project there, does it have models defined, etc)
+2. _Non-deterministic_ checks, via LLM-as-judge
+3. If the LLM-as-judge succeeds, uses its score for the Harbor reward; if it fails, fall back on the deterministic checks score
+
+| `tests/llm_judge.py`, `tests/rubric.md`
+| Script to call out to LLM to judge the work, using the rubric provided (similar to https://github.com/rmoff/dbt-claude/blob/main/rubric.md[the one used before])
+|===
+
+There are plenty of gaps in this, such as only using the non-deterministic score.
+The final Harbor reward value should probably be a weighted version of the deterministic and non-deterministic verification.
+However, this was more about understanding the scope of Harbor than building the perfect test.
+
+With this in place I could then run my test:
+
+[source,bash]
+----
+harbor run \
+    --agent claude-code \
+    --model "claude-sonnet-4-6" \
+    --path "tasks/f-rich-with-plugin" \ <1>
+    --artifact /app \                   <2>
+    --n-attempts 3 <3>
+----
+<1> Custom task definition
+<2> Capture the output of the agent as an artifact (i.e. don't throw it away once the test finishes)
+<3> Run the same task multiple times
+
+image:/images/2026/04/harbor04.webp[Harbor dashboard for the dbt task showing a reward of 0.96, 7.2 million tokens used, and a runtime of 1 hour 43 minutes]
+
+and see how multiple iterations of the same prompt and model scored, and the variance between them:
+
+image:/images/2026/04/harbor05.webp[Harbor results table showing three dbt task trials with scores of 0.85, 0.81, and 0.89 and varying durations]
+
+== I still Harbor some doubt…
+
+_(…and not just about the scope for so many awful puns)_
+
+I think Harbor would be extremely useful for tightly defined tasks against which one wanted to evaluate new models or agentic coding tools (for example, alternatives to Claude Code).
+In fact, it's perfect for that, and it's literally what it's designed for.
+
+Where I'm not going to be rushing to use it though is for evaluating the effectiveness of different prompts or skills, particularly as I flail around trying all the things and randomly changing lots of stuff.
+
+A lot of that is down to my inexperience in this area; Harbor _adds_ a layer of complexity, and I'm almost certain my random jiggling to unbreak things would often break my Harbor test rig (or invalidate the integrity of the test results).
+For example; to vary the _prompt_ (the task's `instruction.md`) means building another task (if I understand Harbor correctly), which then means duplicating the verifier.
+Once that's duplicated, it has the scope to get out of sync across tasks.
+Maybe there's a way to align it (_symlinks, perhaps_ - but I'd need to test it, and that's more tooling work), but maybe Harbor's not really designed to be used in this way.
+
+Anyway - an interesting tool, and definitely one to keep in mind as I continue to explore this bamboozling world of agents and AI :)
