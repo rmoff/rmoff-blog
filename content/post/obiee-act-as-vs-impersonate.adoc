@@ -1,0 +1,132 @@
+---
+title: 'OBIEE "Act As" (ActAs) vs "Impersonate"'
+date: "2013-10-16T00:00:00+00:00"
+url: "/2013/10/16/obiee-act-as-vs-impersonate/"
+draft: false
+categories:
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/10/obiee-act-as-vs-impersonate/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/10/obiee-act-as-vs-impersonate/[Rittman Mead blog].
+
+There will come a point in the lifecycle of an OBIEE deployment when one user will need to access another user’s account. This may be to cover whilst a colleague is on leave, or a support staff trying to reproduce a reported error.
+
+
+Password sharing aside (it's zero-config! but a _link:http://media.giphy.com/media/4qANoeI3g45a0/giphy.gif[really really bad idea]_), OBIEE supports two methods for one user to access the system as if they were another: *Impersonation* and *Act As*.
+
+
+This blog article is not an explanation of how to set these up (there are plenty of blogs and rip-off blogs detailing this already), but to explain the difference between the two options.
+
+
+First, a quick look at what they actually are.
+
+
+== Impersonation
+
+
+Impersonation is where a “superuser” (one with `oracle.bi.server.impersonateUser` application policy grant) can login to OBIEE as another user, without needing their password. It is achieved in the front end by constructing a URL, specifying:
+
+
+* The superuser’s login name and password (`NQUser` and `NQPasword`)
+* The login ID of the user to impersonate (`Impersonate`)
+
+For example:
+
+
+[quote]
+____
+_http://server:port/analytics/saw.dll?Logon&*NQUser*=weblogic&*NQPassword*=Password01&*Impersonate*=FSmith_FundY_
+____
+
+
+image::/images/2013/10/583cimp01.png[]
+
+
+The server will return a blank page to this request, but you can then submit another URL to OBIEE (eg the OBIEE catalog page or home page) and will already be authenticated as the Impersonate user - _without having specified their password_.
+
+
+image::/images/2013/10/582cimp02.png[]
+
+
+image::/images/2013/10/584cimp03.png[]
+
+
+From here you can view the system as they would, and carry out whatever support or troubleshooting tasks are required.
+
+
+image::/images/2013/10/581cimp04.png[]
+
+
+_Caution :  Impersonation is disabled by default, even for the weblogic Administrator user, and it is a good idea to leave it that way. If you do decide to enable it, make sure that the user to whom you grant it has a secure password that is not shared or known by anyone other than the account owner. Also, you will see from the illustration above that the *password is submitted in plain text* which is not good from a security point of view. It could be "sniffed" along the way, or more easily, extracted from the browser history._
+
+
+== Act As
+
+
+Whilst Act As is a very similar concept to Impersonation (allow one user to access OBIEE as if they were another), Act As is much more controlled in how it grants the rights. Act As requires you to specify a list of users who may use the functionality (“Proxy users”), and for each of the proxy users, a list of users (“Target users”) who they may access OBIEE as.
+
+
+Act As functionality is accessed from the user dropdown menu :
+
+
+image::/images/2013/10/580cimp05.png[]
+
+
+From where a list of users that the logged-in user (“proxy user”) has been configured to be able to access is shown :
+
+
+image::/images/2013/10/579cimp06.png[]
+
+
+Selecting a user switches straight to it:
+
+
+image::/images/2013/10/578cimp07.png[]
+
+
+In addition to this fine grained specification of user:user relationships, you can specify the level of access a Proxy user gets – full, or read-only. Target users (those others can Act As) can see from their account page who exactly has access to their account, and what level of access.
+
+
+image::/images/2013/10/576cimp08.png[]
+
+
+== So what’s the difference?
+
+
+Here’s a comparison I’ve drawn up
+
+
+image::/images/2013/10/577cimp09.png[]
+
+
+Here are a couple of examples to illustrate the point:
+
+
+image::/images/2013/10/574cimp10.png[]
+
+
+image::/images/2013/10/573cimp11.png[]
+
+
+Based on this, my guidelines for use would be :
+
+
+* As an OBIEE sysadmin, you may want to use *Impersonate* to be able to test and troubleshoot issues. However, it is functionality much more intended for systems integration than front-end user consumption. It doesn't offer anything that Act As doesn't, except fewer configuration steps. It is less secure that Act As, and could even be seen as a "backdoor" option. Particularly at companies where audit/traceability is important should be left disabled.
+* *Act As is generally the better choice in all scenarios* of an OBIEE user needing the ability to access another's account, whether between colleagues, L1/L2 support staff, or administrators.  +
+Compared to Impersonation, it is more secure, more flexible, and more granular in whose accounts can be accessed by whom. It is also fully integrated into the user interface as standard functionality of the tool.
+
+
+== Reference
+
+
+* Act As: link:http://docs.oracle.com/cd/E28280_01/bi.1111/e10543/mgrgrpsusers.htm#BIESC1617[Enabling Users to Act for Others]
+* Impersonate: link:https://blogs.oracle.com/pa/entry/how_to_use_obiee_impersonate[How to use OBIEE Impersonate parameter for quick checks]
+
+
+_Thanks to Christian Berg, Gianni Ceresa and Gianni Ceresa for reading drafts of this article and providing valuable feedback_
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/10/obiee-act-as-vs-impersonate/[Rittman Mead blog].

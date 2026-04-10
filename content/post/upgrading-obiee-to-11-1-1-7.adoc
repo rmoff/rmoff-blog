@@ -1,0 +1,328 @@
+---
+title: 'Upgrading OBIEE to 11.1.1.7'
+date: "2013-04-03T00:00:00+00:00"
+url: "/2013/04/03/upgrading-obiee-to-11-1-1-7/"
+draft: false
+categories:
+- OBIEE
+- Performance
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2013/04/upgrading-obiee-to-11-1-1-7/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/04/upgrading-obiee-to-11-1-1-7/[Rittman Mead blog].
+
+OBIEE 11.1.1.7 was released earlier this week, and brings with it the usual delights and challenges of the Fusion Middleware (FMW) platform. Because OBIEE is part of Fusion Middleware, and because it is made up of OBIEE-specific components (such as the BI Server) and FMW-generic components (such as Web Logic domains), the upgrade documentation isn’t quite so simple as it could be in a standalone product.
+
+
+There are two options for upgrading to OBIEE 11.1.1.7 from an earlier release of 11g:
+
+
+. “*Out-of-Place*”, which in the olden days of software was called “_reinstallation_”. A brand new copy of OBIEE is installed, and the relevant configuration files (RPD, web cat, and so on) are migrated to the new installation, and then the old one decommissioned.
+. “*In-Place*” - OBIEE is upgraded where it resides, and what was a 11.1.1.6 (or .3 or .5) OBIEE then becomes 11.1.1.7.
+*In-place upgrade is not possible if you installed OBI using the Simple Install option*
+
+
+There are pros and cons to each approach, including:
+
+
+. In-place upgrade are *big bang*, where as out-of-place lets you migrate in a phased manner if you want to. Depending on the scale of the changes in the upgrade, or the amount of regression testing you want to do, this may be a factor
+. In 11.1.1.3 -> 11.1.1.5 -> 11.1.1.6, the in-place upgrade was link:https://www.rittmanmead.com/blog/2011/05/in-place-upgrading-of-obiee-11-1-1-3-to-11-1-1-5/[complex] and link:https://groups.google.com/forum/?fromgroups=#!topic/obiee-enterprise-methodology/hXw1n8qxlKM[infamous for being buggy]. From what I’ve seen of two separate in-place 11.1.1.6 -> 11.1.1.7 upgrades it is simple to do and with no problems discovered _yet_.
+. An out of-place upgrade is ‘safer’ because you are just doing a reinstallation. When you do an in-place upgrade you are trusting the tools to not fail and/or damage your current installation. The counter argument to this is that you should always have backups, and in doing an out-of-place upgrade you may yourself make mistakes or have trouble migrating content
+
+
+link:http://www.artofbi.com/[Christian Screen] wrote about link:http://www.artofbi.com/index.php/2012/04/reasons-to-conduct-an-out-of-place-upgrade/[the advantages of an out of place upgrade], but I think some of these could be less relevant now. Given the simplicity of the in-place upgrade, out-of-place strikes me as more complex and risky.
+
+
+== Getting started
+
+
+Take a full backup of your OBIEE installation. You do take backups, right? If not, now is a very good time to start, upgrade or not. See the link:http://docs.oracle.com/cd/E23943_01/core.1111/e10105/br_intro.htm#ASADM11238[backup documentation, here]
+
+
+Next, regardless of upgrade method, you need to download the complete OBIEE 11.1.1.7 installers for your platform, link:http://www.oracle.com/technetwork/middleware/bi-enterprise-edition/downloads/bi-downloads-1923016.html[from here]
+
+
+== Out-of-place upgrade
+
+
+The installation process for 11.1.1.7 is identical to previous versions (except you now have the option to install Essbase too).
+
+
+Once you have installed 11.1.1.7, you migrate your RPD, web catalog, security configuration and component configuration over from your existing installation. You also need to think if you want to keep any of your RCU table content (Usage Tracking, Event Polling, etc), and manually migrate this, watching out for if the RCU table definitions have changed.
+
+
+== In-place upgrade
+
+
+An in-place upgrade will upgrade your existing 11g (whether 11.1.1.3, 11.1.1.5, or 11.1.1.6) to 11.1.1.7. It is documented here: link:http://docs.oracle.com/cd/E28280_01/upgrade.1111/e16452/bi_plan.htm#BABECJJH[Moving from 11.1.1.3, 11.1.1.5, or 11.1.1.6 to 11.1.1.7].
+
+
+*In-place upgrade is not possible if you installed OBI using the Simple Install option*
+
+
+I have tested it on Linux and Windows, *from* both 11.1.1.6.2 BP1 and 11.1.1.6.9, *to* 11.1.1.7. +
+
+Be aware that previous in-place upgrades (11.1.1.3 -> 11.1.1.5 -> 11.1.1.6) had issues, and I have not tested in-place upgrading 11.1.1.3/11.1.1.5 -> 11.1.1.7.
+
+
+The outline of an in-place upgrade is as follows:
+
+
+. Do a *Software Only Install* of 11.1.1.7, into the existing installation
+. Run the *Patch Set Assistant* to update the RCU schemas for 11.1.1.7
+. Run the *Configuration Assistant* to update the BI domain
+
+
+This can be done using the GUI tools, or scripted using response files.
+
+
+=== In-place upgrade using the GUI, step by step
+
+
+. Shutdown the BI stack (WLS Admin Server, Managed Server, Node Manager, OPMN)
+. Run 11.1.1.7 installer (`runInstaller` on Linux or `setup.exe` on Windows)
+
++
+. Select *Software Only Install*
+
++
+image::/images/2013/04/18cupg01.png[]
++
+. Specify the existing FMW_HOME (this should be pre-populated in the OUI installer screen)
+
++
+image::/images/2013/04/14cupg02.png[]
++
+. Click Next through the following screens, until the installation begins.
++
+. Run the link:http://docs.oracle.com/cd/E23943_01/doc.1111/e16793/patch_set_assistant.htm#PATCH604[Patch Set Assistant] (PSA). This is located in `oracle_common/bin/` and is called `psa` on Linux or `psa.cmd` on Windows
+
++
+. Under *Available upgrades* select *Oracle Business Intelligence*
+
++
+image::/images/2013/04/16cupg03.png[]
++
+. Before running the PSA you should make sure you’ve got a valid database backup (just as you should for the whole BI stack). You are given checkbox to tick to confirm you’ve taken the backup.
+. Enter the details of the database where your existing RCU tables reside, along with a DBA-privileged user.
+_When specifying DB credentials, note that it is different from the RCU screens - if connecting as SYSDBA you must enter_`SYSDBA AS DBA`_(as you would if connecting from sqlplus etc)_Click *Connect*. The PSA then brings back a list of RCU schemas; select the MDS one
++
+image::/images/2013/04/17cupg04.png[]
++
+. Complete the following screen for the BIPLATFORM schema, and continue through the PSA. Click *Upgrade*.
+
++
+image::/images/2013/04/15cupg05.png[]
++
++
+. Start Node Manager
+
++
+. On Windows, this is a service
+
++
+image::/images/2013/04/619cupg06.png[]
++
+. On Linux, go to your FMW home and run `./wlserver_10.3/server/bin/startNodeManager.sh`
++
+. Start the Web Logic Administration Server (AdminServer)
+
++
+. On Windows, go to your FMW home folder and then double click on `user_projects\domains\bifoundation_domain\bin\startWebLogic.cmd`
+
++
+image::/images/2013/04/618cupg07.png[]
++
+. On Linux, go to your FMW home and run `./user_projects/domains/bifoundation_domain/bin/startWebLogic.sh`
++
+
+Wait until the Admin Server is running - you should be able to login to the WLS Console at `http://<yourhost>:7001/console`, and the Admin Server command window will show `Server started in RUNNING mode`
+
++
+image::/images/2013/04/617cupg08.png[]
++
+. Run the *Configuration Assistant*
+
++
+. The script is in the `Oracle_BI1\bin` folder
+
++
+. On Windows, go to your FMW home folder and then double click on `Oracle_BI1\bin\config.bat`
+
++
+image::/images/2013/04/616cupg09.png[]
++
+. On Linux, go to your FMW home and run `./Oracle_BI1/bin/config.sh`
++
+. Select *Update BI Domain* and then enter the details of your domain.
+Note on Windows, if you are using a *loopback adaptor* (which you should on a DHCP host such as often found on a VM) make sure the hostname that you specify is the one you have in your hosts file for the loopback IP.
++
+image::/images/2013/04/615cupg10.png[]
++
+image::/images/2013/04/614cupg11.png[]
++
+image::/images/2013/04/613cupg12.png[]
++
++
+. The Configuration Assistant will [re]start AdminServer, the managed server, and OPMN components.
+. Flush your browser cache, and then login to OBIEE and enjoy the new version number and the sloping tabs of Fusion skin
+
++
+image::/images/2013/04/612cupg13.png[]
++
+
+
+=== Command-line / “Silent” in-place upgrade
+
+
+The three utilities that are run to do an in-place upgrade can all be run from the commandline only, using response files to specify the values and actions.
+
+
+To create a response file, you can run the utility in GUI mode and then choose the *Save* option on the summary screen. You can also take an existing response file and modify it to suit your target environment.
+
+
+==== Passwords in response files
+
+
+When you create a response file from the GUI, passwords are not saved in clear text.
+
+
+* In the *Patch Set Assistant* response file passwords are saved encrypted, so if you don’t need to change them you can leave this file unmodified. Alternatively, you can change `encrypted` for `cleartext`:
+
++
+[source,properties]
+----
+MDS.encryptedSchemaPassword = 0562A61E90282BD7CE8DDA04D618E53960D533DC3903301F63
+MDS.encryptedDbaPassword = 05115EE31A473F46DFCB9FB23C99C3A348DD8D3D2C4FBA68BF
+----
++
+
+would become
+
++
+[source,properties]
+----
+MDS.cleartextSchemaPassword = Password01
+MDS.cleartextDbaPassword = Password01
+----
++
+
+And do the same for the BIPLATFORM schema and DBA passwords in the file
+* For the *Configuration Assistant* response file you need to replace all instances of `<SECURE VALUE>` with the actual password
+
+
+==== Step by step silent in-place upgrade
+
+
+. Shutdown the BI stack (WLS Admin Server, Managed Server, Node Manager, OPMN)
+. Run the *Software Only* install of 11.1.1.7
+
++
+[source,shell]
+----
+cd bishiphome\Disk1\
+setup.exe -silent -responsefile c:\response_files\1_swonly.rsp
+----
++
+. Run the *Patch Set Assistant*
+
++
+[source,shell]
+----
+cd $FMW_HOME\oracle_common\bin\
+psa.bat -response c:\response_files\2_psa.rsp
+----
++
+. Start Node Manager
+. Start AdminServer
+
++
+[source,shell]
+----
+cd $FMW_HOME\user_projects\domains\bifoundation_domain\bin\
+startWebLogic.cmd
+----
++
+
+Wait until the Admin Server is running - you should be able to login to the WLS Console at `http://<yourhost>:7001/console`, and the Admin Server command window will show `Server started in RUNNING mode`
+. Run the Configuration Assistant script.
+
++
+[source,shell]
+----
+cd $FMW_HOME\Oracle_BI1\bin\
+config.bat -waitforcompletion -silent -responseFile c:\response_files\3_config_ass.rsp
+----
++
+
+The `-waitforcompletion` is optional but useful on Windows as it stops the cmd window which you launch the script from disappearing
+
+
+You can download the response files used link:https://gist.github.com/rmoff/5299950[from here], or generate them yourself using the utilities in GUI mode.
+
+
+=== In-place upgrade of a scaled-out BI domain
+
+
+If you have a scaled-out (horizontal cluster) BI domain, the in-place upgrade is simple for the additional nodes. Since the domain and RCU upgrades are handled by the Configuration Assistant and Patch Set Assistant respectively, you just need to update the binaries, using the *Software Only Install*
+
+
+On each additional node:
+
+
+. Shutdown all WLS, OPMN
+. Run 11.1.1.7 installer
+
++
+. Select *Software Only Install*
+. Specify existing FMW_HOME (should be pre-populated in OUI)
+. Takes c.10 minutes
++
+. Start up Managed Server, and OPMN
+. That’s it
+
+
+=== Known issues
+
+
+==== Common Header no longer visible
+
+
+If you don't flush your browser cache then you can expect to see the header missing from OBIEE : +
+
+
+image::/images/2013/04/06883upg14.png[upg14]
+
+
+Flush your browser cache and then refresh / relogin, and it should display correctly:
+
+
+image::/images/2013/04/06882upg15.png[upg15]
+
+
+==== INST–08112
+
+
+*Error*: `INST-08112: The Admin Server is listening on multiple network interfaces and the default listening address 192.168.248.160 cannot be accessed from the scale out host`
+
+
+*Diagnostics*: Windows machine has loopback (10.10.10.10) plus a NAT NIC (IP 192.168.248.160)
+
+
+*Resolution*: In WLS console, set the *Listen Address* for the Admin Server to 10.10.10.10
+
+
+==== Known issues from the release notes
+
+
+These are currently listed in the release notes and are related to in-place upgrades:
+
+
+* link:http://docs.oracle.com/cd/E28280_01/doc.1111/e14770/biee.htm#CACJAEBA[Configuration Assistant for Update BI Domain Steps Incorrectly Reports an OCM Configuration Error at 91% Complete when Moving from Earlier 11g Releases]
+* link:http://docs.oracle.com/cd/E28280_01/doc.1111/e14770/biee.htm#CACFGGIH[Managed Server for Oracle BI Encounters Issues After Upgrade from Release 11.1.1.3]
+* link:http://docs.oracle.com/cd/E28280_01/doc.1111/e14770/biee.htm#CHDFIJDG[SSL Configured in Oracle BI EE 11.1.1.5.x or 11.1.1.6.x Fails After Upgrading to 11.1.1.7.0]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2013/04/upgrading-obiee-to-11-1-1-7/[Rittman Mead blog].

@@ -1,0 +1,554 @@
+---
+title: 'Advanced monitoring of OBIEE with Nagios'
+date: "2012-09-14T00:00:00+00:00"
+url: "/2012/09/14/advanced-monitoring-of-obiee-with-nagios/"
+draft: false
+categories:
+- Monitoring
+- OBIEE
+- Performance
+- Data Visualisation
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/[Rittman Mead blog].
+
+== Introduction
+
+
+In the previous articles in this series, I described an link:https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview[overview of monitoring OBIEE], and then a link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios[hands-on tutorial for setting up Nagios to monitor OBIEE]. Nagios is an Enterprise Systems Management tool that can monitor multiple systems and servers, send out alerts for pre-defined criteria, and so on.
+
+
+In this article I'm going to demonstate creating custom plugins for Nagios to extend the capability of it to monitor additional elements of the OBIEE stack. The intention is not to document an exhaustive list of plugins and comprehensive configurations, but to show how the plugins can be created and get you started if you wanted to implement this yourself.
+
+
+Most of these plugins will run local to the OBIEE server and the assumption is that you are using the NRPE mechanism for communication with the Nagios server, described in the link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios[previous article]. For each plugin, I've included: 
+
+
+* The plugin code, to be located in Nagios plugins folder (default is /usr/lib64/nagios/plugins)
+* If required, an entry for the NRPE configuration file on the BI Server
+* An entry for the service definition, on the Nagios server
+
+
+Whenever you change the configuration of NRPE or Nagios, don't forget to restart the appropriate service:
+
+
+[source,shell]
+----
+sudo service nags restart
+----
+
+
+or
+
+
+[source,shell]
+----
+sudo service nags restart
+----
+
+
+== A very brief introduction to writing Nagios plugins
+
+
+There's plenty on Google, but a Nagios plugin boils down to: 
+
+* Something executable from the command line as the nagios or nrpe user
+* One or more lines of output to stdout. You can include performance data relevant to the check after a pipe | symbol too, but this is optional.The exit code reflects the check state - 0,1,2 for OK, Warning or Critical respectively
+
+
+== Application Deployments
+
+
+Here is a plugin for Nagios that will report on the state of a given Web Logic application deployment. Without several of the JEE applications that are hosted within Web Logic, OBIEE will not work properly, so it is important to monitor them.
+
+
+Because of how WLST is invoked and Nagios' use of a script's exit code to determine the service status, there are two scripts required. One is the WLST python code, the other is a wrapper to parse the output and set the exit code accordingly.
+
+
+Note that this plugin invokes WLST each time so running this for every Application Deployment at very regular intervals concurrently may not be a great idea since each invocation will spin up its own java instance on your BI Server. Using the Nagios service option *parallelize_check=0* ought to prevent this I think, but didn't seem to when I tested it. Another possibility would be to run wlst remotely from the Nagios server, but this is not a 'light touch' option.
+
+
+image::/images/2012/09/061172n4.png[N4]
+ 
+
+image::/images/2012/09/061170n5.png[N5]
+
+
+check_wls_app_deployment.sh:   (put this in the Nagios plugins folder on the BI Server)
+
+
+[source,shell]
+------------------------------------------------------------------------------------------------
+# check_wls_app_deployment.sh
+# Put this in your Nagios plugins folder on the BI Server
+#
+# Check the status of an Application Deployment
+# Takes five arguments - connection details, plus application name, and server
+#
+# This is a wrapper for check_wls_app_deployment necessary to make sure a proper exit code
+# is passed back to Nagios. Because the py is called as a parameter to wlst, it cannot set the exit
+# code itself (since it is the wlst.sh which exits).
+#
+# RNM 2012-09-03
+#
+# Set this to your FMW home path:
+FMW_HOME=/home/oracle/obiee
+#
+# No user servicable parts below this line
+# -----------------------------------------------------------------------------------------------
+if [ $# -ne 5 ]then
+        echo
+        echo &quot;ERROR : not enough parameters&quot;
+        echo &quot;USAGE: check_wls_app_deployment.sh WLS_USER WLS_PASSWORD WLS_URL app_name target_server&quot;
+        exit 255
+fi
+output=$($FMW_HOME/oracle_common/common/bin/wlst.sh /usr/lib64/nagios/plugins/check_wls_app_deployment.py $1 $2 $3 $4 $5 | tail -n1)
+echo $output
+test=$(echo $output|awk '{print $1}'|grep OK)
+ok=$?
+if [ $ok -eq 0 ]
+then
+exit 0
+else
+exit 2
+fi
+------------------------------------------------------------------------------------------------
+
+
+check_wls_app_deployment.py:    (put this in the Nagios plugins folder on the BI Server)
+
+
+[source,python]
+----
+# check_wls_app_deployment.py
+# Put this in your Nagios plugins folder on the BI Server
+#
+# Check the status of an Application Deployment
+# Takes five arguments - connection details, plus application name, and server
+# RNM 2012-09-03
+#
+# You shouldn't need to change anything in this script
+#
+import sys
+import os
+# Check the arguments to this script are as expected.
+# argv[0] is script name.
+argLen = len(sys.argv)
+if argLen -1 &amp;lt; 5:
+        print &quot;ERROR: got &quot;, argLen -1, &quot; args.&quot;
+        print &quot;USAGE: wlst.sh check_app_state.py WLS_USER WLS_PASSWORD WLS_URL app_name target_server&quot;
+        sys.exit(255)
+WLS_USER = sys.argv[1]
+WLS_PW = sys.argv[2]
+WLS_URL = sys.argv[3]
+appname = sys.argv[4]
+appserver = sys.argv[5]
+Connect to WLS
+connect(WLS_USER, WLS_PW, WLS_URL);
+Set Application run time object
+nav=getMBean('domainRuntime:/AppRuntimeStateRuntime/AppRuntimeStateRuntime')
+state=nav.getCurrentState(appname,appserver)
+if state == 'STATE_ACTIVE':
+print 'OK : %s - %s on %s' % (state,appname,appserver)
+else:
+print 'CRITICAL : State is &quot;%s&quot; for %s on %s' %  (state,appname,appserver)
+----
+
+
+NRPE configuration:
+
+
+[source]
+----
+command[check_wls_analytics]=/usr/lib64/nagios/plugins/check_wls_app_deployment.sh weblogic welcome1 t3://localhost:7001 analytics#11.1.1 bi_server1
+----
+
+
+Service configuration:
+
+
+[source]
+----
+define service{
+        use                             obi-service
+        host_name                       bi1
+        service_description             WLS Application Deployment : analytics
+        check_command                   check_nrpe_long!check_wls_analytics
+        }
+----
+
+
+By default, NRPE waits 10 seconds for a command to execute before returning a timeout error to Nagios. WLST can sometimes take a while to crank up, so I created a new command, *check_nrpe_long* which increases the timeout:
+
+
+[source]
+----
+define command{
+        command_name    check_nrpe_long
+        command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$ -t 30
+        }
+----
+
+
+== nqcmd OBIEE plugin for Nagios
+
+
+Using the OBIEE command line utility *nqcmd* it is simple to create a plugin for Nagios which will run a Logical SQL statement (as Presentation Services would pass to the BI Server). This plugin will validate that the Cluster Controller, BI Server and source database are all functioning. With a bit more coding, we can include a check for the response time on the query, raising an alert if it breaches defined thresholds.
+
+
+This script can be used to just run a Logical SQL and return pass/fail, or if you include the additional command line parameters, check for the response time. To use the plugin, you need to create a file holding the logical SQL that you want to run. You can extract it from usage tracking, nqquery.log, or from the Advanced tab of a report in Answers. In the example given below, the logical SQL was copied into a file called q1.lsql located in /usr/lib64/nagios/plugins/.
+
+
+check_obi_nqcmd.sh:    (put this in the Nagios plugins folder on the BI Server)
+
+
+[source,shell]
+------------------------------------------------------------------------------------------------
+
+# check_obi_nqcmd.sh
+# Put this in your Nagios plugins folder on the BI Server
+# 
+# Nagios plugin to check OBI status using nqcmd.
+# Assumes that your DSN is AnalyticsWeb - modify the nqcmd call in this script if it is different
+# 
+# RNM September 2012
+#
+#
+# Set this to your FMW home path:
+FMW_HOME=/home/oracle/obiee
+#
+# No user servicable parts below this line
+# -----------------------------------------------------------------------------------------------
+case $# in
+	3)
+		lsql_file=$1
+		username=$2
+		password=$3
+		checktime=0
+	;;
+	5) 
+		lsql_file=$1
+		username=$2
+		password=$3
+		checktime=1
+		warn_msec=$4
+		crit_msec=$5
+	;;
+	*)
+		echo &quot; &quot;
+		echo &quot;Usage: check_obi_nqcmd.sh &lt;lsql-filename&gt; &lt;username&gt; &lt;password&gt; [warn msec] [crit msec]&quot;
+		echo &quot; &quot;
+		echo &quot;eg: check_obi_nqcmd.sh /home/oracle/nagios/q1.lsql weblogic welcome1&quot;
+		echo &quot;eg: check_obi_nqcmd.sh /home/oracle/nagios/q1.lsql weblogic welcome1 1000 5000&quot;
+		echo &quot; &quot;
+		echo &quot; &quot;
+		exit 255
+esac
+# Initialise BI environment
+. $FMW_HOME/instances/instance1/bifoundation/OracleBIApplication/coreapplication/setup/bi-init.sh
+outfile=$(mktemp)
+errfile=$(mktemp)
+grpfile=$(mktemp)
+nqcmd -d AnalyticsWeb -u $username -p $password -s $lsql_file -q -T 1&gt;$outfile 2&gt;$errfile
+grep Cumulative $outfile &gt; /dev/null
+nqrc=echo $?
+if [ $nqrc -eq 0 ]
+then
+responsetime=$(grep Cumulative $outfile |awk '{print $8 * 1000}')
+if [ $checktime -eq 1 ]
+then
+if [ $responsetime -lt $warn_msec ]
+then
+echo &quot;OK - response time (msec) is  &quot;$responsetime&quot; |&quot;$responsetime
+exitcode=0
+elif [ $responsetime -lt $crit_msec ]
+then
+echo &quot;WARNING - response time is at or over warning threshold (&quot;$warn_msec&quot; msec). Response time is  &quot;$responsetime&quot; |&quot;$responsetime
+exitcode=1
+else
+echo &quot;CRITICAL - response time is at or over critical threshold (&quot;$crit_msec&quot; msec). Response time is  &quot;$responsetime&quot; |&quot;$responsetime
+exitcode=2
+fi
+else
+echo &quot;OK - response time (msec) is  &quot;$responsetime&quot; |&quot; $responsetime
+exitcode=0
+fi
+else
+grep -v &quot;Connection open&quot; $errfile &gt; $grpfile
+grep failed $outfile &gt;&gt; $grpfile
+echo &quot;CRITICAL - &quot; $(tail -n1 $grpfile)
+exitcode=2
+fi
+rm $outfile $errfile $grpfile
+exit $exitcode
+------------------------------------------------------------------------------------------------
+
+
+NRPE configuration:
+
+
+[source]
+----
+# Check nqcmd
+command[check_nqcmd_q1]=/usr/lib64/nagios/plugins/check_obi_nqcmd.sh /usr/lib64/nagios/plugins/q1.lsql weblogic welcome1
+command[check_nqcmd_q1_with_time_check]=/usr/lib64/nagios/plugins/check_obi_nqcmd.sh /usr/lib64/nagios/plugins/q1.lsql weblogic welcome1 500 1000
+----
+
+
+The first of the above commands runs the logical SQL file q1.lsql and will just do a pass/fail check. The second one checks how long it takes and raises a warning if it's above half a second, or a critical alert if it's over a second.
+
+
+Nagios service configuration (use either or both, if you want the time checking):
+
+
+[source]
+----
+define service{
+        use                             obi-service
+        host_name                       bi1
+        service_description             NQCmd - Q1
+        check_command                   check_nrpe!check_nqcmd_q1
+        }
+define service{
+use                             obi-service
+host_name                       bi1
+service_description             NQCmd - Q1 with time check
+check_command                   check_nrpe!check_nqcmd_q1_with_time_check
+}
+----
+
+
+image::/images/2012/09/061167n1.png[N1]
+
+
+The plugin also supports the performance data output format, returning the time it took to run the logical SQL: 
+
+image::/images/2012/09/061169n2.png[N2]
+
+
+== Test a real user with JMeter
+
+
+Of all the checks and monitors described so far, they only consider a particular aspect of the stack. The above check with NQCmd is fairly comprehensive in that it tests both BI Server and the database. What it doesn't test is the front-end into OBIEE - the web server and Presentation Services. For full confidence that OBIEE is working as it should be, we need a full end-to-end test, and to do that we simulate an actual user logging into the system and running a report.
+
+
+image::/images/2012/09/061168n6.png[N6]
+
+
+To do this, I am using JMeter plus some shell scripting. JMeter executes the actual web requests that a user would through their web browser in using OBIEE. The shell script looks at the result and sets the exit status, and how long it takes to perform the test is also recorded.
+
+This check, like the NQCmd one above, could be set as a pass/fail, or also to consider how long it takes to run and raise a warning if it is above a threshold.
+
+image::/images/2012/09/061165n7.png[N7]
+
+
+An important thing to note here is that this plugin is going to run _local to the Nagios server_, rather than on the BI Server like the two plugins above. This is deliberate, so that the network connectivity to the OBIEE server external to the host is also checked.
+
+To set this up, you need: 
+
+* JMeter (link:http://jmeter.apache.org/download_jmeter.cgi[download the Binary from here]). Unarchive it into a folder, for example /u01/app/apache-jmeter-2.7/. Set the files in the binary folder to executable
++
+[source]
+----
+chmod -R ugo+rx /u01/app/apache-jmeter-2.7/bin
+----
++
+Make sure also that the nagios user (under which this check will run) has read/execute access to the folders _above_ where jmeter is kept
+* A JMeter jmx script with the user actions that you want to test. The one I'm using does two simple things: 
++
+* Login
+* Run dashboard
++
+I'm using assertions to check that each step runs correctly.
+* The actual plugin script which Nagios will use. Put this in the plugins folder (eg */usr/lib64/nagios/plugins)*
+
+check_obi_user.sh:    (put this in the Nagios plugins folder on the Nagios server)
+
+
+[source,shell]
+------------------------------------------------------------------------------------------------
+# check_obi_user.sh
+# Put this in your Nagios plugins folder on the Nagios server
+#
+# RNM September 2012
+#
+# This script will invoke JMeter using the JMX script passed as an argument                            
+# It parses the output and sets the script exit code to 0 for a successful test                        
+# and to 2 for a failed test. 
+# 
+# Tested with jmeter 2.7 r1342410
+#
+# Set JMETER_PATH to the folder holding your jmeter files
+JMETER_PATH=/u01/app/apache-jmeter-2.7
+#
+# No user servicable parts below this line
+# -----------------------------------------------------------------------------------------------
+# You shouldnb't need to change anything below this line
+JMETER_SCRIPT=$1
+output_file=$(mktemp)
+/usr/bin/time -p $JMETER_PATH/bin/jmeter -n -t $JMETER_SCRIPT -l /dev/stdout 1&gt;/$output_file 2&gt;&amp;1
+status_of_run=$?
+realtime=$(tail -n3 $output_file|grep real|awk '{print $2}')
+if [ $status_of_run -eq 0 ]
+then
+result=$(grep &quot;&lt;failure&gt;true&quot; $output_file)
+status=$?
+if [ $status -eq 1 ]
+then
+echo &quot;OK user test run successfully |&quot;$realtime
+rc=0
+else
+failstep=$(grep --text &quot;&lt;httpSample&quot; $output_file|tail -n1|awk -F=&quot;&amp;quot;&quot; '{print $6}'|awk -F=&quot;&amp;quot;&quot; '{sub(/&amp;quot; rc/,&quot;&quot;);print $1}')
+echo &quot;CRITICAL user test failed in step: &quot;$failstep
+rc=2
+fi
+else
+echo &quot;CRITICAL user test failed&quot;
+rc=2
+fi
+echo &quot;Temp file exists : &quot;$output_file
+rm $output_file
+exit $rc
+------------------------------------------------------------------------------------------------
+* Because we want to test OBIEE as if a user were using it, we run this test from the Nagios server. If we used NRPE to run it locally on the OBIEE server we wouldn't be checking any of the network gremlins that can cause problems. On the Nagios server define a command to call the plugin, as well as the service definition as usual: 
++
+[source]
+----
+
+define command{
+command_name    check_obi_user
+command_line    $USER1$/check_obi_user.sh $ARG1$
+}
+----
++
+
+
+define service{ +
+
+use                             obi-service +
+
+host_name                       bi1 +
+
+service_description             OBI user : Sample Sales - Product Details +
+
+check_command                   check_obi_user!/u01/app/jmeter_scripts/bi1.jmx +
+
+} +
+
+
+== The proof is in the pudding
+
+
+After the configuration we've done, we now have the following checks in place for the OBIEE deployment:  +
+
+
+Now I'm going to test what happens when we start breaking things, and see if the monitoring does as it ought to. To test it, I'm using a script *pull_the_trigger.sh* which will randomly break things on an OBIEE system. It is useful for putting a support team through its paces, and for validating a monitoring setup.
+
+
+=== Strike 1
+
+
+First I run the script: 
+
+image::/images/2012/09/061164n11.png[N11]
+ then I check Nagios: 
+
+image::/images/2012/09/061163n10.png[N10]
+ Two critical errors are being reported; a network port error, and a process error -- sounds like a BI process has been killed maybe. Drilling into the Service Group shows this: 
+
+image::/images/2012/09/061162n12.png[N12]
+ and a manual check on the command line and in EM confirms it: 
+
+image::/images/2012/09/061161n13.png[N13]
+
+
+[source,shell]
+----------------------------------
+$ ./opmnctl status
+Processes in Instance: instance1
+---------------------------------+--------------------+---------+---------
+ias-component                    | process-type       |     pid | status
+---------------------------------+--------------------+---------+---------
+coreapplication_obiccs1          | OracleBIClusterCo~ |    5549 | Alive
+coreapplication_obisch1          | OracleBIScheduler~ |    5546 | Alive
+coreapplication_obijh1           | OracleBIJavaHostC~ |     N/A | Down
+coreapplication_obips1           | OracleBIPresentat~ |    5543 | Alive
+coreapplication_obis1            | OracleBIServerCom~ |    5548 | Alive
+----------------------------------
+
+
+So, 1/1, 100% so far ...
+
+
+=== Strike 2
+
+
+After restarting Javahost, I run the test script again. This time Nagios shows an alert for the user simulation: 
+
+image::/images/2012/09/061160n15.png[N15]
+ Drilling into it shows the step the failure occurs in: 
+
+image::/images/2012/09/061157n17.png[N17]
+ And verifying this manually confirms there's a problem: 
+
+image::/images/2012/09/061159n16.png[N16]
+
+
+The Nagios plugins poll at configurable intervals, so by now some of the other checks have also raised errors: 
+
+image::/images/2012/09/061158n18.png[N18]
+ We can see that a process has clearly failed, and since user logon and the NQCmd tests are failing it is probably the BI Server process itself that is down: 
+
+image::/images/2012/09/061155n19.png[N19]
+ I was almost right -- it was the Cluster Controller which was down.
+
+
+=== Strike 3
+
+
+I've manufactured a high CPU load on the BI server, to see how/if it manifests itself in the alerts. Here's how it starts to look: 
+
+image::/images/2012/09/061156n20.png[N20]
+
+
+The load average is causing a warning: 
+
+image::/images/2012/09/061154n21.png[N21]
+
+
+All the Application Deployment checks are failing with a timeout, presumably because WLST takes too long to start up because of the high CPU load: 
+
+image::/images/2012/09/061153n22.png[N22]
+
+
+And the NQCmd check is raising a warning because the BI Server is taking longer to return the test query result than it should do.
+
+
+=== Strike 4
+
+
+The last test I do is to make sure that my alerts for any problem with what the end user actually sees are picked up. Monitoring processes and ports is fine, but it's the "unknown unknowns" that will get you eventually. In this example, I've locked the database account that the report data comes from. Obviously, we could write an alert which checks each database account status and raises an error if it's locked, but the point here is that we don't need to think of all these possible errors in advance. 
+
+When the user ends up seeing this:    (which is bad, m'kay?)
+
+
+image::/images/2012/09/061152n23.png[]
+
+Our monitoring will pick up the problem: 
+
+
+image::/images/2012/09/061150n24.png[]
+
+Both the logical SQL check with nqcmd, and the end-user simulation with JMeter, are picking up the problem. 
+
+
+== Summary
+
+
+There are quite a few things that can go wrong with OBIEE, and the monitoring that we've built up in Nagios is doing a good job of picking up when things do go wrong.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/[Rittman Mead blog].

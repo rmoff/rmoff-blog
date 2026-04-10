@@ -1,0 +1,252 @@
+---
+title: 'screen and OBIEE'
+date: "2012-05-11T00:00:00+00:00"
+url: "/2012/05/11/screen-and-obiee/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+- Linux
+- Data Visualisation
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/05/screen-and-obiee/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/05/screen-and-obiee/[Rittman Mead blog].
+
+With the link:https://www.rittmanmead.com/blog/2012/05/rittman-mead-take-delivery-of-our-exalytics-server/[recent delivery of the Rittman Mead Exalytics server], I have been fortunate enough to be spending time setting it up, most of it at a Linux terminal window. One of the tools I come back to, again and again, is screen. It allows one to be so much more productive that I want to share my enthusiasm for it here. If you do any work with Linux/Unix and don't use it, then give it a go - you won't regret it!
+
+
+Screen is one of those pieces of software whose name makes it inherently difficult to Google for, so you'll often see it referred to as GNU screen. It is described as a "Screen Manager" - which for me doesn't really describe its rich functionality and goodness.
+
+
+Here are some of the many reasons why screen is great:
+
+
+== Session persistence
+
+
+Reconnect and pick up exactly where you left off. Whether you're on a dodgy wifi connection that's dropped out, or you're in the office and need to reconnect to your session when you get home, screen keeps your session running regardless of your SSH connection and lets you reconnect to it at any time. Whilst you're disconnected, the processes associated with your session are still executing. 
+
+
+You may wondering why I wouldn't just use `nohup ... &` for keeping processes running to survive a disconnect (a SIGHUP, hence NOHUP). With `nohup ... &` , you have to decide in advance that you want to run the process in the background, and you can't easily interact with it once it's there. To do the same in screen you just run the process, and then reconnect to your screen session when you want to.
+
+
+Think of it like auto-save on steroids for your ssh session. If you use no other functionality in screen, this alone is reason to use it.
+
+
+== Multiple sessions in one
+
+
+So you could run multiple copies of puTTY, but why not connect once, and have multiple sessions within that one? Often you'll want to have a WebLogic process, bi_server process, opmn, maybe top, and sqlplus. If you create five puTTY connections, and they drop, you have to reconnect all five and restart what you were doing. If you are using screen, you just reconnect and resume the screen session, and it is literally as it was when you left it. If you're halfway through a masterpiece of SQL query development or execution in sqlplus, you'll appreciate being able to go straight back into it, and not start a new sqlplus session.
+
+
+Each session can be named, with a "task bar" across the bottom of the screen to show which sessions there are and which you're currently looking at
+
+
+== Scrollback
+
+
+Most ssh clients offer scrollback history, but it's native to the client, and relies on you being connected to the session.
+
+
+With screen you can scroll up and down a session's history from the keyboard, and see whatever's been output whether you were connected to the session at the time or not
+
+
+== What's this got to do with OBIEE?
+
+
+OBIEE is not a simple beast, particularly when you are setting it up and deploying it. Being able to have multiple sessions on the server is invaluable. For example, tail the server log in one session and start up a process in the other, whilst running top to monitor system usage in a third.
+
+
+As you may well know, the WebLogic processes (AdminServer and Managed Server) do not run as daemon (background) processes when started from the command line. On Linux this means you either have to run them with `nohup ... &` or as a session within screen. If you run it with `nohup ... &` you would be sensible to redirect output to disk so that you can see the console output. So to see what's going on with the process, you need to find the output file and tail it. If you've run it with screen, you just need to switch to that session and the output's there to see. In addition, you can see at a glance what is running, without having to start looking at process lists, as you would have to for a process started using nohup.
+
+
+== Sounds good, where do I get it?
+
+
+screen is installed by default on lots of Linux distributions (including Exalytics' OEL5) - just type *screen -v* to see. If it's not, then a quick Google should turn up how to install it for your particular Linux/Unix distribution. It's almost certainly available on any Linux/Unix variant (and certainly any on which OBIEE will run!).
+
+
+== What's the catch?
+
+
+screen has a steep learning curve, there is no denying it. But when you reach the crest of that curve, the warm glow of enlightenment as the power of it dawns on you is a rewarding one ;-)
+
+
+The main thing to get your head around is the keyboard navigation. It's pretty much all based on pressing Ctrl-A following by another key sequence. If you get stuck, do Ctrl-A and press the question mark key ?.
+
+
+== So how do I use it?
+
+
+First off, I would strongly recommend setting up the .screenrc file - this configures the "toolbar" at the bottom of the window. If you don't do this, then you don't have the visual indication that screen is even running, let alone which session you are in. The file goes in your home directory (which is what the tilde ~ means). Note that the first character of the filename is a dot.
+
+
+Put the following in ~/.screenrc :
+
+
+[source]
+----
+
+# Minimal .screenrc
+# RNM 2012-05-11
+#
+hardstatus alwayslastline "%{= RY}%H %{kG}%{G} Screen(s): %{c}%w %=%{kG}%c %D, %M %d %Y "
+startup_message off
+msgwait 1
+defscrollback 100000
+----
+
+
+This is a one-time configuration step. If you look on Google you will find plenty of examples of pimped-out config files doing lots of funky things.
+
+
+So now type *screen*, and you should see something like this:
+
+
+image::/images/2012/05/061400NewImage.png[NewImage]
+
+
+Now I'm going to walk through how I would use it to start up and working with an OBIEE instance. So the first step is start WebLogic AdminServer. Note that I'm not using nohup
+
+
+[source,shell]
+----
+cd user_projects/domains/bifoundation_domain/bin
+./startWebLogic.sh
+----
+
+
+image::/images/2012/05/061401NewImage1.png[NewImage]
+
+
+At the bottom of the screen you can see it says "0* bash". This means that it is screen/window zero, and the title is bash. The title is an arbitrary name, it doesn't have to relate to the process running within. Since we're going to leave WebLogic Admin Server running in this screen, I am going to rename it.
+
+
+*Press Ctrl-A and then Shift-A. You'll be prompted to change the title.*
+
+
+image::/images/2012/05/061398NewImage13.png[NewImage]
+
+
+Enter AdminServer (or whatever you'd like). The title now changes: +
+
+
+image::/images/2012/05/061399NewImage6.png[NewImage]
+
+
+We can also see that the server has completed start up (_Server started in RUNNING mode_)
+
+
+Now, close your terminal window. Go ahead. Your WebLogic Admin Server will still be running (connect to Enterprise Manager or WLS Console to check). Now log back on to your server, and instead of typing `screen`, enter *`screen -x`*. The -x flag tells screen to attach to an existing screen session. You should now be back at your screen window as before, with the session titled AdminServer.
+
+
+To start up the Managed Server, we want a new session (window). To do this, press *Ctrl-A and then Ctrl-C to create a new session*. Your window should look like this:
+
+
+image::/images/2012/05/061395NewImage7.png[NewImage]
+
+
+You'll notice that along the bottom of the window you now have a second screen shown, number 1 (the first was number 0) with the default title of "bash". The asterisk shows that it's the currently displayed screen. Don't forget, whichever screen you're currently looking at -or none, if you've disconnected- the processes in all of the screens are still active and running.
+
+
+To switch between screens, you have several options:
+
+
+. Ctrl-A and then Ctrl-A switches between the current screen and the one you were on previously.
+. Ctrl-A and then Ctrl-N switches to the next screen (0 -> 1 -> 2, etc)
+. Ctrl-A and then Ctrl-P switches to the previous screen (2 -> 1 -> 0 etc)
+. Ctrl-A and then a number switches to the screen of the corresponding number
+
+
+This may seem like overkill, but you may have many screens, so being able to access them directly is important.
+
+ 
+So, back to OBIEE. We're going to be running the Managed Server, bi_server1, in this screen, so let's set the title of it (Ctrl-A, Shift-A) and then start the process
+
+
+[source,shell]
+----
+ cd user_projects/domains/bifoundation_domain/bin
+./startManagedWebLogic.sh bi_server1
+----
+
+
+image::/images/2012/05/061396NewImage8.png[NewImage]
+
+ 
+Now, for the purpose of this demo, let's imagine that we want to scroll back and check what command we entered. You'll notice that if you try to scroll your terminal window up, you don't see any history. That's because screen works in a different way, and you do scrollback within it natively. Press *Ctrl-A and then the square bracket key [ to enter Copy mode*, which also enables you to do scrolling. You'll notice the message "Copy mode' appear at the bottom of the screen.
+
+
+image::/images/2012/05/061394NewImage9.png[NewImage]
+
+ 
+Now you can use standard vi key mappings to navigate - *Ctrl-B to move up a page*, *Ctrl-F to move forward a page,*etc. If you first type a number, it moves that number of pages (e.g. type 50 Ctrl-B will scroll back fifty pages of history).
+ 
+From within this mode you can actually copy output into the screen buffer, but that is beyond this tutorial. For now, press *square bracket key ] to exit Copy mode*.
+ 
+Having started up the Admin Server and Managed Server, we now just need to start Node Manager and opmn plus the system components. Create two screens (*Ctrl-A then Ctrl-C*), and change the title (*Ctrl-A, Shift-A*) of each to reflect what will run in it.
+
+
+image::/images/2012/05/061391NewImage10.png[NewImage]
+
+ 
+You can now see why being able to switch between screens by number is so useful. Press *Ctrl-A and then 2*to go to the NodeManager window, and start NodeManager:
+
+
+[source,shell]
+----
+ cd wlserver_10.3/server/bin/
+./startNodeManager.sh
+----
+
+
+Switch to the opmn window, by pressing *Ctrl-A and then Ctrl-N to move to the next window*, and start opmn and the system components:
+
+
+[source,shell]
+----
+ cd instances/instance1/bin
+./opmnctl startall
+----
+
+
+Whilst opmn starts, cycle through all of your windows (*Ctrl-A and then Ctrl-N to move to the next window*) and observe that you can see the status of each process that you've started.
+
+ 
+Finally, create a fifth window (*Ctrl-A, Ctrl-C*) and call it "sar". Type `sar 1 600` which will run sar for ten minutes. Note the times on the left column, and switch to the previous screen (*Ctrl-A, Ctrl-A*). Wait a few seconds, and switch back (*Ctrl-A, Ctrl-A*). You'll see that sar has been running all the time, whether you were on the screen or not
+
+
+image::/images/2012/05/061393NewImage12.png[NewImage]
+
+
+To prove the point, close your ssh session and then reopen it, and resume your screen session (*screen -x*). You'll see that the processes have been running all the time, whether you are connected or not.
+
+
+So, to summarise, I now have a screen session with:
+
+
+* The control of each process available directly from each window
+* The output of the processes which write to stdout
+* Additional windows for monitoring (sar, collectl, etc), running sqlplus, etc
+
+I can disconnect any time, and I know that the processes are still running, and I can reconnect whenever I want. I don't have to go furtling through folders to find my nohup.out files. If a colleague needs to take over admin of the server, they too can just connect with *screen -x* and see the same session.
+
+
+== Finding out more about screen
+
+
+What I've described here is really only scratching the surface of what you can do with screen. It's a very popular tool, and hence widely written about. Some links which I've bookmarked in the past are:
+
+
+* link:http://www.gnu.org/software/screen/[http://www.gnu.org/software/screen/]
+* link:http://www.softpanorama.org/Utilities/screen.shtml[http://www.softpanorama.org/Utilities/screen.shtml]
+* link:http://aperiodic.net/screen/quick_reference[http://aperiodic.net/screen/quick_reference]
+* link:http://magazine.redhat.com/2007/09/27/a-guide-to-gnu-screen/[http://magazine.redhat.com/2007/09/27/a-guide-to-gnu-screen/]
+* link:http://www.linuxjournal.com/article/6340?page=0,0[http://www.linuxjournal.com/article/6340?page=0,0]
+* link:http://www.karan.org/blog/index.php/2010/01/06/this-is-my-screenrc-whats-yours[http://www.karan.org/blog/index.php/2010/01/06/this-is-my-screenrc-whats-yours]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/05/screen-and-obiee/[Rittman Mead blog].

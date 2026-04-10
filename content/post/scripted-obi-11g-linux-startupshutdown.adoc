@@ -1,0 +1,155 @@
+---
+title: 'Scripted OBI 11g Linux startup/shutdown'
+date: "2012-01-04T00:00:00+00:00"
+url: "/2012/01/04/scripted-obi-11g-linux-startupshutdown/"
+draft: false
+categories:
+- OBIEE
+- Linux
+- DevOps
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/01/scripted-obi-11g-linux-startupshutdown/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/01/scripted-obi-11g-linux-startupshutdown/[Rittman Mead blog].
+
+== Update - this post is now obsolete
+
+
+A much neater way of automating the startup/shutdown of OBIEE on Linux is to use the script we have published on the Rittman Mead scripts repository on github. You can see details of link:https://www.rittmanmead.com/blog/2014/06/sampleapp-v406-automatic-startup-of-obiee/[how to implement it here].
+
+
+OBI 11g ships with a one-click startup option for Windows installations, but not for Linux (*NIX). Windows users get a big shiny Click Here type button, whereas Linux users have to ferret around in the middleware folders trying to remember the paths for Node Manger, Web Logic, Managed Server and finally OPMN each time you want to start the stack up and shut it down.
+
+
+image::/images/2012/01/05172rm-win01-server.png[]
+
+
+Other than to reenforce the stereotype of the two OSs being easy/difficult to work with respectively, I don't know why Oracle didn't provide the same script for Linux. The Windows script uses a platform-agnostic, java-based tool called Ant so can easily be made to run on Linux.
+
+
+The good thing about it using Ant, an industry-standard tool, is that there's plenty of documentation on how to use it, and the code is reusable and extensible. Using this ant-based scripting, it handles dependencies and startup order, as well as graceful exit if there's a problem, and proper checking for a service being up.
+
+
+You should always aim to have as few bespoke scripts as possible, and keeping all your configuration in one place. This script achieves that, by having all the heavy lifting in the XML which is reusable across deployments (e.g. dev/test/prod), and the environment-specific configuration in the calling script.
+
+
+There is a Linux startup/stop script on t'internet already, but I believe the option below is preferable for a few reasons:
+
+
+* The ant-based script is basically that provided by Oracle for Windows, so is in keeping with the product and easier to adapt in future releases
+* It checks for actual services listening on ports, rather than fixed sleep periods or entries in log files. Log file entries may change with releases, and the script I've seen doesn't time out either (so would hang indefinitely if there were a problem)
+* Being written in Ant it is easy to extend its functionality using existing building-blocks, it avoids having to rewrite logic like checking for a listening port
+
+
+== The Script
+
+
+The script is basically that provided by Oracle (on both Windows and Linux installations, just unused in the latter), which you will find in *Oracle_BI1/bifoundation/install/*. With a few tweaks to make it work on Linux, and a bit of improvement, here is a version of the script that you can use and reuse on all your Linux OBI 11g installations. I have improved it to do the following:
+
+
+* Include *NodeManager* in the startup, if not a Simple installation.
+* Automagically determine NodeManager and OPMN *listening ports*
+* Wait for Answers to become available before launching the web browser
+** This replaces the hardcoded sleep period which is often not enough for the services to have finished starting up, causing a 500 Internal Server error in the browser.
++
+There are two files, available link:https://github.com/RittmanMead/obi-startstop[on GitHub here]. +
+
+Download the files to somewhere convenient on your server, and then do the following:
+
+
+. Make the script executable: 
+
++
+[source]
+----
+chmod u+x StartStopServices.sh
+----
++
+. Edit the script StartStopServices.sh to provide your environment details: 
++
+[source]
+----
+
+# Change these as necessary:
+export MW_HOME=/put/your/mwhome/path/here
+export WLSHOST=yourhostname
+export WLSADMINPORT=7001
+export WLSMGDPORT=9704
+----
++
+** Set *MW_HOME* to the root of your installation, in which you have the folders like "instances", "OracleBI1", "user_projects", etc.
+
+image::/images/2012/01/05173MW_HOME-e1323967038476.png[]
+** Set *WLSHOSTNAME* to your machine's hostname
+** *WLSADMINPORT* and *WLSMGDPORT* only need changing if you are using non-default ports of 7001 and 9704 respectively.
++
+Everything else in the script should not need changing, unless you have a non-default installation. You shouldn't need to change the XML file at all.
+
+
+Now all you need to do is call the script to *startup*:
+
+
+[source]
+----
+./StartStopServices.sh start_all
+----
+
+
+(the start_all is the default, and optional)
+
+
+And *shutdown*:
+
+
+[source]
+----
+./StartStopServices.sh stop_all
+----
+
+
+The first time that you start your system this way you will be prompted for the username and password, which are subsequently encrypted and saved in boot.properties file so that you don't have to supply them each time.
+
+
+This script was tested on OEL, so ought to work on that and other RHEL flavours. It might need slight tweaking for other *nix platforms.
+
+
+== You actually want a button to click?
+
+
+I would probably argue that if you're admining a linux server, you should be comfortable enough with executing a script, but if you really want a button to click like on Windows, then simply create a *Launcher* (right-click on the Desktop) to call the script :
+
+
+image::/images/2012/01/05171rm-oel02-3.png[]
+
+
+Lift the icon from a Windows installation and set that too, and you'll end up with a nice button like this:
+
+
+image::/images/2012/01/05170rm-oel02-2-1.png[]
+
+
+Watch out that once you close the window, you close all of the spawned processes, i.e. you'll shut down OBIEE :-)
+
+
+(This is on OEL 5, YMMV on other flavours of Linux)
+
+
+== Additional functionality
+
+
+This script can also do things like check for RCU connectivity at startup (and even start the DB, if you want it to), but to keep it installation-independent I have not included that version here.
+
+
+It could also be easily amended to reuse the service check sections to support a *service_status* call, which would report back on all of the listening ports and BI components.
+
+
+== Tidbit for Windows users
+
+
+If you are on Windows, and you want the *Start BI Services* script to wait until Answers is available (and not give you a 500 Internal Server error at first), then copy link:http://www.rittmanmead.com/wp-content/uploads/2011/12/StartStopServices.txt[this version of StartStopServices.xml] (rename it after download to StartStopServices.xml) into the folder *instances\instance1\bifoundation\OracleBIApplication\coreapplication*. Make a backup of the file before you overwrite it.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/01/scripted-obi-11g-linux-startupshutdown/[Rittman Mead blog].

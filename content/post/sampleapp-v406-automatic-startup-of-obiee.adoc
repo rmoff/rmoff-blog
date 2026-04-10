@@ -1,0 +1,321 @@
+---
+title: 'SampleApp v406 - Automatic startup of OBIEE'
+date: "2014-06-17T00:00:00+00:00"
+url: "/2014/06/17/sampleapp-v406-automatic-startup-of-obiee/"
+draft: false
+categories:
+- OBIEE
+- Exalytics
+- Linux
+- DevOps
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2014/06/sampleapp-v406-automatic-startup-of-obiee/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/06/sampleapp-v406-automatic-startup-of-obiee/[Rittman Mead blog].
+
+Last week Oracle released link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[v406 of SampleApp]. SampleApp is a one-stop-shop for a demonstration of pretty much any conceivable thing that OBIEE is capable of, and then some more on top of it. It is a link:https://www.virtualbox.org/[VirtualBox] appliance with everything on the one machine (Database, OBIEE, Endeca, TimesTen, Essbase, etc), and demonstrates basic analysis building techniques through to dashboarding, Mobile App Designer, analysis visualisations with D3, ADF, JavaScript, backend hackery with undocumented NQS calls (hi link:https://twitter.com/Nephentur[Christian]!), and much, much more.
+
+
+image::/images/2014/06/435csa03.png[]
+
+So, SampleApp is awesome, but … there’s no such thing as absolute perfection ;-) One of the things that is still missing from it is the automatic start/stop of OBIEE when you bootup/shutdown the machine respectively. Setting it up is easy to do, as I demonstrate below. I've also put my cheatsheet for whipping SampleApp into line for my day-to-day use, focussed on the commandline and automation (because respectively that’s where I spend most of my time on a server and because I’m lazy).
+
+
+_The OBIEE init.d service script that I demonstrate here is available for use on any Linux installation of OBIEE. For more information, see the Rittman Mead public scripts github repository here: http://ritt.md/init.d_
+
+
+Before we get started I’m assuming here that you’ve:
+
+
+* link:http://www.oracle.com/technetwork/middleware/bi-foundation/obiee-samples-167534.html[downloaded] the 28GB worth of zip files
+* Unpacked them using 7zip
+* Found 70+GB of disc space free and imported the OVF into VirtualBox
+* Started up the VM
+
+
+There’s full instructions in the SampleApp_QuickDeploymentGuide–406.pdf, available in the *SampleApp v406 Documentation* download from the same page as the SampleApp image itself.
+
+
+So to make OBIEE start automatically, the first thing we need to do is make sure that the database (where the RCU schemas are) is doing the same, by setting it up as a service (init.d). This is based on link:http://www.oracle-base.com/articles/linux/automating-database-startup-and-shutdown-on-linux.php#oracle-11gr2-update[this article] if you want more details about quite how it works, but for know you just need to copy and paste this whole code block into the command prompt on SampleApp to create the necessary files. If you can't copy & paste between your host and the Virtualbox guest, just go to this blog from Firefox within the SampleApp VM itself. +
+
+
+image::/images/2014/06/430csa08.png[sa08]
+ +
+
+(Or if you know what you're doing, SSH onto the server and paste the text into an SSH client on your host machine.)
+
+
+Copy and paste this whole code block into the command prompt:
+
+
+[source,shell]
+----
+# Create startup/shutdown script files
+mkdir -p /home/oracle/scripts
+chown oracle.oinstall /home/oracle/scripts
+cat>>/home/oracle/scripts/startup.sh<<EEOF
+#!/bin/bash
+
+# Start Listener
+lsnrctl start
+
+# Start Database
+sqlplus / as sysdba << EOF
+STARTUP;
+ALTER PLUGGABLE DATABASE ALL OPEN;
+EXIT;
+EOF
+EEOF
+
+cat>>/home/oracle/scripts/shutdown.sh<<EEOF
+#!/bin/bash
+
+# Stop Database
+sqlplus / as sysdba << EOF
+ALTER PLUGGABLE DATABASE ALL CLOSE IMMEDIATE;
+SHUTDOWN IMMEDIATE;
+EXIT;
+EOF
+
+# Stop Listener
+lsnrctl stop
+EEOF
+
+# Make them executable
+chmod u+x /home/oracle/scripts/startup.sh /home/oracle/scripts/shutdown.sh
+chown oracle.oinstall /home/oracle/scripts/startup.sh /home/oracle/scripts/shutdown.sh
+
+# Create service script
+cat>/tmp/dbora<<EOF
+#!/bin/sh
+# chkconfig: 345 90 25
+# description: Oracle auto start-stop script.
+#
+# Set ORA_OWNER to the user id of the owner of the 
+# Oracle database software.
+
+ORA_OWNER=oracle
+
+case "\$1" in
+    'start')
+        # Start the Oracle databases:
+        # The following command assumes that the oracle login 
+        # will not prompt the user for any values
+        su - \$ORA_OWNER -c "/home/oracle/scripts/startup.sh >> /home/oracle/scripts/startup_shutdown.log 2>&1"
+        touch /var/lock/subsys/dbora
+        ;;
+    'stop')
+        # Stop the Oracle databases:
+        # The following command assumes that the oracle login 
+        # will not prompt the user for any values
+        su - \$ORA_OWNER -c "/home/oracle/scripts/shutdown.sh >> /home/oracle/scripts/startup_shutdown.log 2>&1"
+        rm -f /var/lock/subsys/dbora
+        ;;
+esac
+EOF
+sudo mv /tmp/dbora /etc/init.d/dbora
+sudo chown root. /etc/init.d/dbora
+
+# Make the service script executable
+sudo chmod 750 /etc/init.d/dbora
+
+# Associate the dbora service with the appropriate run levels and set it to auto-start using the following command.
+sudo chkconfig --add dbora
+----
+
+
+On SampleApp v406 there is an Oracle 12c container database (CDB), with two "pluggable" databases (PDB) within it. Assuming you've not started the database yet, trying to connect to one of the PDBs for the RCU schema will fail:
+
+
+[source,yaml]
+----
+[oracle@demo ~]$ sqlplus BIEE_BIPLATFORM/Oracle123@localhost:1521/pdborcl
+
+SQL*Plus: Release 12.1.0.1.0 Production on Tue Jun 17 03:03:51 2014
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+ERROR:
+ORA-12541: TNS:no listener
+----
+
+
+Now run the service start (which will happen automatically at boot)
+
+
+[source,shell]
+----
+sudo service dbora start
+----
+
+
+And check the status again:
+
+
+[source]
+----
+[oracle@demo ~]$ sqlplus BIEE_BIPLATFORM/Oracle123@localhost:1521/pdborcl
+
+SQL*Plus: Release 12.1.0.1.0 Production on Tue Jun 17 03:06:12 2014
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+Last Successful login time: Tue Jun 17 2014 03:02:09 -04:00
+
+Connected to:
+Oracle Database 12c Enterprise Edition Release 12.1.0.1.0 - 64bit Production
+With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options
+
+SQL>
+----
+
+
+Now we can set up OBIEE as a *service* that can *start automatically* at boot time. This is using a script that I wrote and is shared on the Rittman Mead public scripts github repository here: http://ritt.md/init.d. To install it on SampleApp v406 needs a couple of changes for the environment paths and dependencies etc, which I’ve incorporated in this code block. Again, copy and paste the whole thing into a command prompt on SampleApp.
+
+
+[source,shell]
+----
+# lsof is used in the script and isn't installed by default, so let's install it: 
+sudo yum -y install lsof
+
+# Now fetch the init.d script itself and configuration file
+sudo wget --no-check-certificate https://raw.githubusercontent.com/RittmanMead/scripts/master/obi/service/init.d/obiee -O /etc/init.d/obiee
+sudo wget --no-check-certificate https://raw.githubusercontent.com/RittmanMead/scripts/master/obi/service/sysconfig/obiee -O /etc/sysconfig/obiee
+
+# Update the FMW_HOME path in the script
+# If you're doing this manually, you just neeed to change the line 
+# "FMW_HOME=" and put in the FMW_HOME path for your installation. 
+# In the case of SampleApp v406 it is /app/oracle/biee
+sudo sed -i -e 's/FMW_HOME=.*$/FMW_HOME=\/app\/oracle\/biee/g' /etc/sysconfig/obiee
+
+# Make the script executable
+sudo chmod 750 /etc/init.d/obiee
+----
+
+
+You should now be able to run the following `status` command to see if OBIEE is running or not:
+
+
+[source,shell]
+----
+sudo service obiee status
+----
+
+
+image::/images/2014/06/427csa05.png[]
+
+and if it’s not running, start it up:
+
+
+[source,shell]
+----
+sudo service obiee start
+----
+
+
+image::/images/2014/06/426csa06.png[]
+
+
+image::/images/2014/06/428csa04.png[]
+
+
+To shut it down:
+
+
+[source,shell]
+----
+sudo service obiee stop
+----
+
+
+You can read more about the script link:https://www.rittmanmead.com/blog/2013/07/the-rittman-mead-scripts-github-repository/[here].
+
+
+There’s one more step to run to make OBIEE start automatically at boot up:
+
+
+[source,shell]
+----
+sudo chkconfig --add obiee
+----
+
+
+Now that the service scripts are in place, restart the machine and check they work:
+
+
+[source,shell]
+----
+sudo shutdown -r now
+----
+
+
+When the VM restarts, it may appear to “hang” on boot - the progress bar will show and “Oracle Linux Server 6.5”, but no desktop. That’s because the services are starting up, and you can switch to the console view to see this. On my Mac I press Shift-Function-Backspace to do this, it may vary on other host operating systems (try ALT + d on Windows):
+
+
+image::/images/2014/06/429csa07.png[]
+
+
+Once the desktop appears you should be able to launch Firefox and go straight to OBIEE, up and running
+
+
+There are some additional tweaks I usually make to any new server I work with:
+
+
+. Install *screen* (link:https://www.rittmanmead.com/blog/2012/05/screen-and-obiee/[don't know what screen is? Read this!]):
+
++
+[source,shell]
+----
+sudo yum -y install screen
+----
++
+
+Note I’m using `sudo` which this version of SampleApp thankfully has configured for the `oracle` user - previous versions didn’t IIRC.
+. Configure screen with a nice *statusbar*:
+
++
+image::/images/2014/06/424csa01.png[]
++
+[source]
+----
+cat > ~/.screenrc <<EOF
+hardstatus alwayslastline "%{= RY}%H %{kG}%{G} Screen(s): %{c}%w %=%{kG}%c %D, %M %d %Y LD:%l"
+startup_message off
+msgwait 1
+defscrollback 100000
+nethack on
+EOF
+----
++
+
+I’m using the bash link:http://www.tldp.org/LDP/abs/html/here-docs.html[“here document”] functionality here to embed the contents of a document in a command statement. It means I can cut and paste it from my clipboard (_if you’re on a Mac, you really should check out link:http://support.alfredapp.com/features:clipboard[Alfred, which has a clipboard history manager], so I always have this screenrc and many other snippets available to paste within just a couple of key presses_). Cut and paste a single command is easier (and thus less error-prone) than explaining what content to edit into which text file with which text editor.
+. Set up *SSH keys*. I wrote about SSH keys link:https://www.rittmanmead.com/blog/2013/10/tips-and-tricks-for-the-obiee-linux-sysadmin/[previously on this blog] (in fact, all of the things on this checklist are covered there). Put simply, it makes logging in much faster and removes the problem of _fat-fingering_ the password:
+
++
+image::/images/2014/06/421csa02.png[]
++
+As with the screen configuration in the previous step, I use a snippet of code from my clipboard, pasted into the shell of any new server I’m working on:
+
++
+[source]
+----
+# setup ssh key
+mkdir ~/.ssh
+cat >> ~/.ssh/authorized_keys <<EOF
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDMvNjJ8y1a3+NR5OEZHjAd6HhPFdkOI4mDiIIegbRDG+ABhTQmE80DuDe0vp4tex7qefS1u5FG3Xf+hmKDBzKFyegpC+9oEmrtIPkuW7b1Uf/f7Dr6EjXbyA6x1LGEu3THCrGVfw5Mkakqzr43ZfGEFf8k0RiMroHQbp3vOcR+5y0Q132Tbrr0GPd0RPuj4cVOC7QQ6jXSs7TZWepzrcqEpB4M1+N3xS/jEQ5aiCY2FTDOUVj6Y4c0Ogg93bLos6JltPKznq08KXy0ZW/rWDindAmeL0ZAMuU12Qv1ehQZJsxjUwq3jz4yNMgXs5ba3nSvMAr7ZVRzbK5nLl7+eAN3 zaphod@beeblebrox
+EOF
+#
+chmod -R 700 ~/.ssh
+----
++
+
+As a side node, that’s my public SSH key there. One’s *public* ssh key is just that - public. If you want to use it, go ahead, it just means I’ll be able to login to your server. That’s because I have the other half of the _key-pair_; the *private* key, and that is the one that should not be shared, because with it you can access any server that has been configured with the public key. Private SSH keys should be treated just as your most important passwords (and indeed, you should use a passphase when creating your private SSH key, to add a layer of security to it, so that it can only be used if the passphrase is known).
+
+
+The next step is link:https://www.rittmanmead.com/blog/2014/03/installing-obi-metrics-agent-graphite-and-collectl/[Installing obi-metrics-agent, Graphite, and collectl], but that's a matter for another blog post :-)
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2014/06/sampleapp-v406-automatic-startup-of-obiee/[Rittman Mead blog].

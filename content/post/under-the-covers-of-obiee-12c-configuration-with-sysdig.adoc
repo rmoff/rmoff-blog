@@ -1,0 +1,88 @@
+---
+title: 'Under the Covers of OBIEE 12c Configuration with sysdig'
+date: "2016-05-18T00:00:00+00:00"
+url: "/2016/05/18/under-the-covers-of-obiee-12c-configuration-with-sysdig/"
+draft: false
+categories:
+- OBIEE
+- Linux
+- DevOps
+image: "/images/2016/05/favicon.jpg"
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/05/under-the-covers-of-obiee-12c-configuration-with-sysdig/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/05/under-the-covers-of-obiee-12c-configuration-with-sysdig/[Rittman Mead blog].
+
+OBIEE 12c has changed quite a lot in how it manages configuration. In OBIEE 11g configuration was based around link:https://docs.oracle.com/middleware/11119/biee/BIESG/configsettings.htm#BIESG1643[system MBeans] and the `biee-domain.xml` as the master copy of settings - and if you updated a configuration directly that was centrally managed, it would get reverted back. Now in OBIEE 12c configuration link:https://docs.oracle.com/middleware/1221/biee/BIESG/em_wls_config.htm#BIESG9332[can be managed directly in text files again] - but also link:https://docs.oracle.com/middleware/1221/biee/BIESG/em_wls_config.htm#BIESG1637[through EM] still (not to mention link:https://docs.oracle.com/middleware/1221/biee/BIESG/em_wls_config.htm#BIESG9333[WLST]). Confused? Yep, I was.
+
+
+In the configuration files such as NQSConfig.INI there are settings still marked with the ominous comment:
+
+
+[source]
+----
+# This Configuration setting is managed by Oracle Enterprise Manager Fusion Middleware Control
+----
+
+
+In 11g this meant - dragons be here; turn back all ye who don't want to have your configuration settings wiped next time the stack boots.
+
+
+Now in 12c, I can make a configuration change (such as enabling BI Server caching), restart the affected component, and the change will take affect -- _and persist through a restart of the whole OBIEE stack_. All good.
+
+
+image::/images/2016/05/1__oracle_demo____ssh__and_training-material-obiee__Git_.png[1__oracle_demo____ssh__and_training-material-obiee__Git_]
+
+But ... the fly in the ointment. If I restart _just_ the affected component (for example, BI Server for an `NQSConfig.INI` change), since I don't want to waste time bouncing the whole stack if I don't need to, then Enterprise Manager will continue to show the _old_ setting:
+
+
+image::/images/2016/05/54_170_157_117.png[54_170_157_117]
+
+
+So even though in fact the cache is enabled (and I can see entries being populated in it), Enterprise Manager suggests that it's not. Confusing.
+
+
+So ... if we're going to edit configuration files by hand (and personally I prefer to, since it saves firing up a web browser), we need to know how to make sure Enterprise Manager will to reflect the change too. Does EM poll the file whilst running? Or something direct to each component to request the configuration? Or maybe it just reads the file on startup only?
+
+
+Enter link:http://www.sysdig.org/[sysdig]! What I'm about to use it for is pretty darn trivial (and could probably be done with other standard *nix tools), but is still a useful example. What we want to know is which process reads `NQSConfig.INI`, and from there isolate the particular component that we need to restart to get it to trigger a re-read of the file and thus correctly show the value in Enterprise Manager.
+
+
+I ran sysdig with a filter for filename and custom output format to include the process PID:
+
+
+[source,shell]
+----
+sudo sysdig -A -p "%evt.num %evt.time %evt.cpu %proc.name (%proc.pid) %evt.dir %evt.info" "fd.filename=NQSConfig.INI and evt.type=open"
+----
+
+
+Nothing was written (i.e. nothing was polling the file), until I bounced the full OBIEE stack (`$DOMAIN_HOME/bitools/bin/stop.sh && $DOMAIN_HOME/bitools/bin/start.sh`). During the startup of the AdminServer, sysdig showed:
+
+
+[source]
+----
+
+32222110 12:00:49.912132008 3 java (10409) < fd=874(/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/biconfig/OBIS/NQSConfig.INI) name=/app/oracle/biee/user_projects/domains/bi/config/fmwconfig/biconfig/OBIS/NQSConfig.INI flags=1(O_RDONLY) mode=0
+----
+
+
+So - it's the java process that reads it, PID 10409. Which is that?
+
+
+[source,shell]
+----
+$ ps -ef|grep 10409
+oracle   10409 10358 99 11:59 ?        00:03:54 /usr/java/jdk1.8.0_51/bin/java -server -Xms512m -Xmx1024m -Dweblogic.Name=AdminServer [...]
+----
+
+
+It's AdminServer -- which makes sense, because Enterprise Manager is a java deployment hosted in AdminServer.
+
+
+So, if you want to hack the config files by hand, restart either the whole OBIEE stack, or the affected component plus AdminServer in order for Enterprise Manager to pick up the change.
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/05/under-the-covers-of-obiee-12c-configuration-with-sysdig/[Rittman Mead blog].

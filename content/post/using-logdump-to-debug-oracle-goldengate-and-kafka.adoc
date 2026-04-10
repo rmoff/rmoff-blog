@@ -1,0 +1,665 @@
+---
+title: 'Using logdump to Troubleshoot the Oracle GoldenGate for Big Data Kafka Handler'
+date: "2016-09-06T00:00:00+00:00"
+url: "/2016/09/06/using-logdump-to-debug-oracle-goldengate-and-kafka/"
+draft: false
+categories:
+- Kafka Connect
+- Apache Kafka
+- Oracle GoldenGate
+- Java
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/[Rittman Mead blog].
+
+link:http://www.oracle.com/technetwork/middleware/goldengate/overview/index.html[Oracle GoldenGate] for Big Data (OGG BD) supports sending transactions as messages to Kafka topics, both through the link:http://docs.oracle.com/goldengate/bd1221/gg-bd/GADBD/GUID-2561CA12-9BAC-454B-A2E3-2D36C5C60EE5.htm#GADBD449[native Oracle handler] as well as a link:https://blogs.oracle.com/dataintegration/entry/oracle_goldengate_adapter_for_confluent[connector into Confluent's Kafka Connect]. In some research that I was doing with it I found an interesting problem that I am going to demonstrate here and show the troubleshooting tools that may be useful to others encountering similar issues.
+
+
+The source for the data is link:http://dominicgiles.com/swingbench.html[Swingbench] running against Oracle 12c database (pluggable instance). OGG has been configured as follows:
+
+
+* Extract
+
+
++
+[source]
+----
+  EXTRACT EXT1
+  USERID SYSTEM, PASSWORD welcome1
+  EXTTRAIL ./dirdat/lt
+  SOURCECATALOG ORCL
+  TABLE SOE.*;
+----
++
+* Datapump (to local machine, an installation of OGG BD)
+
+
++
+[source]
+----
+  EXTRACT EXTDP1
+  RMTHOST LOCALHOST, MGRPORT 7810
+  RMTTRAIL ./dirdat/rt
+  SOURCECATALOG ORCL
+  TABLE SOE.*;
+----
++
+* Replicat
+
+
++
+[source]
+----
+  REPLICAT rkafka
+  TARGETDB LIBFILE libggjava.so SET property=dirprm/kafka.props
+  REPORTCOUNT EVERY 1 MINUTES, RATE
+  GROUPTRANSOPS 10000
+  MAP *.*.*, TARGET *.*.*;
+----
++
+
+
+When I start the replicat, it abends almost straight away. In `ggserr.log` I see:
+
+
+[source]
+----
+ERROR   OGG-15051  Oracle GoldenGate Delivery, rkafka.prm:  Java or JNI exception:
+oracle.goldengate.util.GGException: Kafka Handler failed to format and process operation: table=[ORCL.SOE.CUSTOMERS], op pos=00000000000000006636, tx pos=00000000000000002437, op ts=2016-09-06 10:59:23.000589.
+ERROR   OGG-01668  Oracle GoldenGate Delivery, rkafka.prm:  PROCESS ABENDING.
+----
+
+
+Within the properties file for the Kafka handler (`dirprm/kafka.props`) I increased the logging level
+
+
+[source,properties]
+----
+gg.log.level=DEBUG
+----
+
+
+and restart the replicat. Now we get a debug file written to `dirrpt/RKAFKA_debug_log4j.log` which includes successful work:
+
+
+[source]
+----
+[...]
+[main] DEBUG (UserExitDataSource.java:1190) - Received txInd is: WHOLE RBA is: 4939
+[main] DEBUG (KafkaHandler.java:484) - Process operation: table=[ORCL.SOE.LOGON], op pos=00000000000000004939, tx pos=00000000000000002437, op ts=2016-09-06 10:59:23.000179
+[main] DEBUG (KafkaHandler.java:529) - Creating the producer record and sending to Kafka Producer
+[main] DEBUG (NonBlockingKafkaProducer.java:64) - Sending producer record to Non Blocking kafka producer
+[main] DEBUG (NonBlockingKafkaProducer.java:76) - NBKP:send(): Returning status: OK
+[main] DEBUG (PendingOpGroup.java:316) - now ready to checkpoint? false (was ready? false): {pendingOps=18, groupSize=0, timer=0:00:00.000 [total = 0 ms ]}
+[main] DEBUG (UserExitDataSource.java:1401) - applyQueuedConfigurationChanges: on Operation? false
+[main] DEBUG (UserExitDataSource.java:2342) - UpdateActivityTime call received
+[...]
+----
+
+
+but then a failure, matching the more high-level message we got previously in `ggserr.log`:
+
+
+[source]
+----
+DEBUG 2016-09-06 15:50:52,909 [main] DEBUG (KafkaHandler.java:484) - Process operation: table=[ORCL.SOE.CUSTOMERS], op pos=00000000000000006636, tx pos=00000000000000002437, op ts=2016-09-06 10:59:23.000589
+INFO 2016-09-06 15:50:52,910 [main] INFO  (AvroOperationSchemaGenerator.java:36) - Generating the Avro schema for the table [ORCL.SOE.CUSTOMERS].
+ERROR 2016-09-06 15:50:52,914 [main] ERROR (AvroOperationFormatter.java:188) - The Avro Formatter formatOp operation failed.
+org.apache.avro.SchemaParseException: Illegal character in: SYS_NC00017$
+    at org.apache.avro.Schema.validateName(Schema.java:1083)
+    at org.apache.avro.Schema.access$200(Schema.java:79)
+    at org.apache.avro.Schema$Field.<init>(Schema.java:372)
+    at org.apache.avro.SchemaBuilder$FieldBuilder.completeField(SchemaBuilder.java:2124)
+    at org.apache.avro.SchemaBuilder$FieldBuilder.completeField(SchemaBuilder.java:2116)
+    at org.apache.avro.SchemaBuilder$FieldBuilder.access$5300(SchemaBuilder.java:2034)
+----
+
+
+So from this we've got the table (`ORCL.SOE.CUSTOMERS`), log offset (`6636`), and from the stack trace even a hint at what the issue may be (something to do with the Schema, and a column called `SYS_NC00017$`).
+
+
+Now let's see if we can find out more. A colleague of mine pointed me towards link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/toc.htm[Logdump], which is link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/wu_logdump.htm[well documented] and also covered by Oracle's A-Team link:http://www.ateam-oracle.com/oracle-goldengate-logdump/[blog here].
+
+
+Launch `logdump` from the OGG BD folder, ideally using `rlwrap` so that you can scroll and search through command history:
+
+
+[source,shell]
+----
+$ rlwrap ./logdump
+
+Oracle GoldenGate Log File Dump Utility
+Version 12.2.0.1.160419 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_160430.1401
+
+Copyright (C) 1995, 2016, Oracle and/or its affiliates. All rights reserved.
+
+
+Logdump 1 >
+----
+
+
+Then enter the following, which will determine what information is shown:
+
+
+* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD182[record headers]
+
+
++
+[source]
+----
+  GHDR ON
+----
++
+* Show link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD159[detailed column data], in both hex and ASCII
+
+
++
+[source]
+----
+  DETAIL ON
+  DETAIL DATA
+----
++
+
+
+After that, specify the trail file to be examined:
+
+
+[source]
+----
+OPEN /u01/ogg-bd/dirdat/rt000000000
+----
+
+
+You can enter `next` (or simply `n`) to view the records one at a time:
+
+
+[source,yaml]
+--------------------------------------------------------------------
+Logdump 6 >OPEN /u01/ogg-bd/dirdat/rt000000000
+Current LogTrail is /u01/ogg-bd/dirdat/rt000000000
+Logdump 7 >n
+
+2016/09/02 15:54:48.329.147 FileHeader           Len  1451 RBA 0
+Name: *FileHeader*
+3000 0338 3000 0008 4747 0d0a 544c 0a0d 3100 0002 | 0..80...GG..TL..1...
+0005 3200 0004 2000 0000 3300 0008 02f2 61ba f7c1 | ..2... ...3.....a...
+f3bb 3400 002d 002b 7572 693a 6269 6764 6174 616c | ..4..-.+uri:bigdatal
+6974 653a 6c6f 6361 6c64 6f6d 6169 6e3a 3a75 3031 | ite:localdomain::u01
+3a6f 6767 3a45 5854 4450 3135 0000 2f35 0000 2b00 | :ogg:EXTDP15../5..+.
+2975 7269 3a62 6967 6461 7461 6c69 7465 3a6c 6f63 | )uri:bigdatalite:loc
+616c 646f 6d61 696e 3a3a 7530 313a 6f67 673a 4558 | aldomain::u01:ogg:EX
+
+Logdump 8 >n
+-------------------------------------------------------------------
+Hdr-Ind    :     E  (x45)     Partition  :     .  (x00)
+UndoFlag   :     .  (x00)     BeforeAfter:     A  (x41)
+RecLength  :     0  (x0000)   IO Time    : 2016/09/02 15:54:47.562.301
+IOType     :   151  (x97)     OrigNode   :     0  (x00)
+TransInd   :     .  (x03)     FormatType :     R  (x52)
+SyskeyLen  :     0  (x00)     Incomplete :     .  (x00)
+AuditRBA   :          0       AuditPos   : 0
+Continued  :     N  (x00)     RecCount   :     0  (x00)
+
+2016/09/02 15:54:47.562.301 RestartOK            Len     0 RBA 1459
+Name:
+After  Image:                                             Partition 0   G  s
+
+GGS tokens:
+4e00 0004 4558 5431                               | N...EXT1
+--------------------------------------------------------------------
+
+
+But ploughing through the file a transaction at a time is no fun, so lets zero-in on the problem record. We can either just jump straight to the transaction offset that we got from the error log using `POSITION` (or `POS`) followed by `NEXT`:
+
+
+[source,sql]
+--------------------------------------------------------------------
+Logdump 12 >pos 6636
+Reading forward from RBA 6636
+Logdump 13 >n
+-------------------------------------------------------------------
+Hdr-Ind    :     E  (x45)     Partition  :     .  (x0c)
+UndoFlag   :     .  (x00)     BeforeAfter:     A  (x41)
+RecLength  :   256  (x0100)   IO Time    : 2016/09/06 11:59:23.000.589
+IOType     :     5  (x05)     OrigNode   :   255  (xff)
+TransInd   :     .  (x00)     FormatType :     R  (x52)
+SyskeyLen  :     0  (x00)     Incomplete :     .  (x00)
+AuditRBA   :        393       AuditPos   : 30266384
+Continued  :     N  (x00)     RecCount   :     1  (x01)
+
+2016/09/06 11:59:23.000.589 Insert               Len   256 RBA 6636
+Name: ORCL.SOE.CUSTOMERS  (TDR Index: 3)
+After  Image:                                             Partition 12   G  b
+0000 000a 0000 0000 0000 0001 86a1 0001 000a 0000 | ....................
+0006 616e 7477 616e 0002 000b 0000 0007 7361 6d70 | ..antwan........samp
+736f 6e00 0300 0600 0000 0275 7300 0400 0b00 0000 | son........us.......
+0741 4d45 5249 4341 0005 000a 0000 0000 0000 0000 | .AMERICA............
+8980 0006 001d 0000 0019 616e 7477 616e 2e73 616d | ..........antwan.sam
+7073 6f6e 406f 7261 636c 652e 636f 6d00 0700 0a00 | pson@oracle.com.....
+0000 0000 0000 0000 9500 0800 1500 0032 3031 362d | ...............2016-
+Column     0 (x0000), Len    10 (x000a)
+0000 0000 0000 0001 86a1                          | ..........
+Column     1 (x0001), Len    10 (x000a)
+0000 0006 616e 7477 616e                          | ....antwan
+Column     2 (x0002), Len    11 (x000b)
+0000 0007 7361 6d70 736f 6e                       | ....sampson
+Column     3 (x0003), Len     6 (x0006)
+0000 0002 7573                                    | ....us
+Column     4 (x0004), Len    11 (x000b)
+0000 0007 414d 4552 4943 41                       | ....AMERICA
+Column     5 (x0005), Len    10 (x000a)
+0000 0000 0000 0000 8980                          | ..........
+Column     6 (x0006), Len    29 (x001d)
+0000 0019 616e 7477 616e 2e73 616d 7073 6f6e 406f | ....antwan.sampson@o
+7261 636c 652e 636f 6d                            | racle.com
+Column     7 (x0007), Len    10 (x000a)
+0000 0000 0000 0000 0095                          | ..........
+Column     8 (x0008), Len    21 (x0015)
+0000 3230 3136 2d30 392d 3036 3a30 303a 3030 3a30 | ..2016-09-06:00:00:0
+30                                                | 0
+Column     9 (x0009), Len    14 (x000e)
+0000 000a 4f63 6361 7369 6f6e 616c                | ....Occasional
+Column    10 (x000a), Len     9 (x0009)
+0000 0005 4d75 7369 63                            | ....Music
+Column    11 (x000b), Len    21 (x0015)
+0000 3139 3635 2d30 352d 3130 3a30 303a 3030 3a30 | ..1965-05-10:00:00:0
+30                                                | 0
+Column    12 (x000c), Len     5 (x0005)
+0000 0001 59                                      | ....Y
+Column    13 (x000d), Len     5 (x0005)
+0000 0001 4e                                      | ....N
+Column    14 (x000e), Len    10 (x000a)
+0000 0000 0000 0002 49f1                          | ........I.
+Column    15 (x000f), Len    10 (x000a)
+0000 0000 0000 0002 49f1                          | ........I.
+--------------------------------------------------------------------
+
+
+or we can also use the `FILTER` command, but we'll come back to that in a moment. First let's have a look at the record in question that's causing the Kafka handler to abend. It's shown in full above.
+
+
+The table name matches - `ORCL.SOE.CUSTOMERS`, and we can see that the operation was an `INSERT` along with the values for sixteen columns. Now, since we know that the error thrown by the Kafka handler was something to do with schema and columns, let's take a step back. The record we're looking at is the actual data record, but in the trail file will also be metadata about the table itself which will have been read by the handler. We can look for all records in the trail file relating to this table using the `FILTER` command (preceeded by a `POS 0` to move the read back to the beginning of the file):
+
+
+[source]
+--------------------------------------------------------------------
+Logdump 37 >POS 0
+Reading forward from RBA 0
+Logdump 38 >FILTER INCLUDE FILENAME ORCL.SOE.CUSTOMERS
+Logdump 39 >N
+-------------------------------------------------------------------
+Hdr-Ind    :     E  (x45)     Partition  :     .  (x00)
+UndoFlag   :     .  (x00)     BeforeAfter:     A  (x41)
+RecLength  :  1464  (x05b8)   IO Time    : 2016/09/06 11:59:26.461.886
+IOType     :   170  (xaa)     OrigNode   :     2  (x02)
+TransInd   :     .  (x03)     FormatType :     R  (x52)
+SyskeyLen  :     0  (x00)     Incomplete :     .  (x00)
+DDR/TDR Idx:   (002, 003)     AuditPos   : 30266384
+Continued  :     N  (x00)     RecCount   :     1  (x01)
+
+2016/09/06 11:59:26.461.886 Metadata             Len 1464 RBA 5103
+Name: ORCL.SOE.CUSTOMERS
+*
+1)Name          2)Data Type        3)External Length  4)Fetch Offset      5)Scale         6)Level
+7)Null          8)Bump if Odd      9)Internal Length 10)Binary Length    11)Table Length 12)Most Sig DT
+13)Least Sig DT 14)High Precision  15)Low Precision   16)Elementary Item  17)Occurs       18)Key Column
+19)Sub DataType 20)Native DataType 21)Character Set   22)Character Length 23)LOB Type     24)Partial Type
+*
+TDR version: 1
+Definition for table ORCL.SOE.CUSTOMERS
+Record Length: 542
+Columns: 18
+CUSTOMER_ID        134     13        0  0  0 1 0      8      8      8 0 0 0 0 1    0 1   3    2       -1      0 0 0
+CUST_FIRST_NAME     64     40       12  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+CUST_LAST_NAME      64     40       58  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+NLS_LANGUAGE        64      3      104  0  0 1 0      3      3      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+NLS_TERRITORY       64     30      112  0  0 1 0     30     30      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+CREDIT_LIMIT       134     11      148  2  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+CUST_EMAIL          64    100      160  0  0 1 0    100    100      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+ACCOUNT_MGR_ID     134     13      266  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+CUSTOMER_SINCE     192     19      278  0  0 1 0     19     19     19 0 5 0 0 1    0 0   0   12       -1      0 0 0
+CUSTOMER_CLASS      64     40      300  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+SUGGESTIONS         64     40      346  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+DOB                192     19      392  0  0 1 0     19     19     19 0 5 0 0 1    0 0   0   12       -1      0 0 0
+MAILSHOT            64      1      414  0  0 1 0      1      1      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+PARTNER_MAILSHOT    64      1      420  0  0 1 0      1      1      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+PREFERRED_ADDRESS  134     13      426  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+PREFERRED_CARD     134     13      438  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+SYS_NC00017$        64     40      450  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+SYS_NC00018$        64     40      496  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+End of definition
+--------------------------------------------------------------------
+
+
+I spy with my little eye ... `SYS_NC00017$`, which was named in the debug log that we saw above. Also note:
+
+
+[source]
+----
+Columns: 18
+----
+
+
+So the OGG metadata for the table shows it with _eighteen_ columns, including two `SYS_[...]`. If you look at the data shown in the record at position 6636 above you'll see that there are only _sixteen_ columns of data. Let's now check out the schema for the table in question in Oracle.
+
+
+[source,sql]
+----------------------
+SQL> select COLUMN_NAME,DATA_TYPE from user_tab_columns where table_name = 'CUSTOMERS';
+
+COLUMN_NAME          DATA_TYPE
+-------------------- ----------------
+PREFERRED_CARD       NUMBER
+PREFERRED_ADDRESS    NUMBER
+PARTNER_MAILSHOT     VARCHAR2
+MAILSHOT             VARCHAR2
+DOB                  DATE
+SUGGESTIONS          VARCHAR2
+CUSTOMER_CLASS       VARCHAR2
+CUSTOMER_SINCE       DATE
+ACCOUNT_MGR_ID       NUMBER
+CUST_EMAIL           VARCHAR2
+CREDIT_LIMIT         NUMBER
+NLS_TERRITORY        VARCHAR2
+NLS_LANGUAGE         VARCHAR2
+CUST_LAST_NAME       VARCHAR2
+CUST_FIRST_NAME      VARCHAR2
+CUSTOMER_ID          NUMBER
+
+16 rows selected.
+----------------------
+
+
+Sixteen columns. Not eighteen, as the OGG trail file Metadata record showed. Hmmm.
+
+
+Interestingly, Google link:https://dbvisit.atlassian.net/wiki/display/REPA11XE/02+-+Initialise+the+Replication[throws up a match for this very column] in which the output of link:http://www.dbvisit.com/products/dbvisit_replicate_real_time_oracle_database_replication/[Dbvisit's replicate tool] run against the Swingbench schema announces:
+
+
+[source]
+----
+Column SYS_NC00017$ is special: virtual column. Excluding.
+Column SYS_NC00017$ is special: hidden column. Excluding.
+Column SYS_NC00017$ is special: system-generated column. Excluding.
+----
+
+
+That it's a hidden column we'd pretty much guessed given its elusiveness. But - virtual column? system generated? This then prompted me to look at the indices on the table:
+
+
+[source,sql]
+----------------------------------
+SQL> SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME
+     FROM USER_IND_COLUMNS 
+     WHERE TABLE_NAME = 'CUSTOMERS';
+
+TABLE_NAME       INDEX_NAME                       COLUMN_NAME
+---------------- -------------------------------- --------------------
+CUSTOMERS        CUST_ACCOUNT_MANAGER_IX          ACCOUNT_MGR_ID
+CUSTOMERS        CUST_EMAIL_IX                    CUST_EMAIL
+CUSTOMERS        CUST_FUNC_LOWER_NAME_IX          SYS_NC00017$
+CUSTOMERS        CUST_FUNC_LOWER_NAME_IX          SYS_NC00018$
+CUSTOMERS        CUSTOMERS_PK                     CUSTOMER_ID
+CUSTOMERS        CUST_DOB_IX                      DOB
+----------------------------------
+
+
+link:https://www.youtube.com/watch?v=uuN7kOW7iwo[Aha]! I spy system generated columns! Let's take a closer look at the `CUST_FUNC_LOWER_NAME_IX` index:
+
+
+[source,sql]
+----------------------------------
+SQL> SELECT INDEX_NAME, INDEX_TYPE 
+     FROM USER_INDEXES 
+     WHERE TABLE_NAME = 'CUSTOMERS' 
+       AND INDEX_NAME='CUST_FUNC_LOWER_NAME_IX';
+
+INDEX_NAME                       INDEX_TYPE
+-------------------------------- ---------------------------
+CUST_FUNC_LOWER_NAME_IX          FUNCTION-BASED NORMAL
+----------------------------------
+
+
+So we have a link:http://docs.oracle.com/cd/E11882_01/server.112/e40540/indexiot.htm#CNCPT1161[function-based index], which in the background appears to implement itself via two hidden columns. My guess is that the Kafka handler code is taking the metadata definition record of 18 columns too literally, and expecting to find a value for it in the transaction record when it reads it and falls over when it can't. Similar behaviour happens with the Kafka Connect OGG connector when it tries to process this particular record:
+
+
+[source]
+----
+ERROR 2016-08-30 17:25:09,548 [main] ERROR (KafkaConnectFormatter.java:251) - The Kafka Connect Row Formatter formatOp operation failed.
+java.lang.IndexOutOfBoundsException: Index: 16, Size: 16
+at java.util.ArrayList.rangeCheck(ArrayList.java:653)
+at java.util.ArrayList.get(ArrayList.java:429)
+at oracle.goldengate.datasource.meta.TableMetaData.getColumnMetaData(TableMetaData.java:73)
+at oracle.goldengate.kafkaconnect.formatter.KafkaConnectFormatter.formatAfterValues(KafkaConnectFormatter.java:329)
+at oracle.goldengate.kafkaconnect.formatter.KafkaConnectFormatter.formatAfterValuesOp(KafkaConnectFormatter.java:278)
+at oracle.goldengate.kafkaconnect.formatter.KafkaConnectFormatter.formatOp(KafkaConnectFormatter.java:212)
+at oracle.goldengate.kafkaconnect.KafkaConnectHandler.formatOp(KafkaConnectHandler.java:309)
+at oracle.goldengate.kafkaconnect.KafkaConnectHandler.transactionCommit(KafkaConnectHandler.java:186)
+at oracle.goldengate.datasource.DsEventManager$2.send(DsEventManager.java:414)
+at oracle.goldengate.datasource.DsEventManager$EventDispatcher.distributeEvent(DsEventManager.java:231)
+at oracle.goldengate.datasource.DsEventManager.fireTransactionCommit(DsEventManager.java:422)
+at oracle.goldengate.datasource.AbstractDataSource.fireTransactionCommit(AbstractDataSource.java:490)
+at oracle.goldengate.datasource.UserExitDataSource.commitActiveTransaction(UserExitDataSource.java:1582)
+at oracle.goldengate.datasource.UserExitDataSource.commitTx(UserExitDataSource.java:1525)
+ERROR 2016-08-30 17:25:09,550 [main] ERROR (KafkaConnectHandler.java:312) - Confluent Kafka Handler failed to format and process operation: table=[PDB.SOE.CUSTOMERS], op pos=00000000000000008091, tx pos=00000000000000003011, op ts=2016-07-29 14:59:47.000137
+java.lang.IndexOutOfBoundsException: Index: 16, Size: 16
+at java.util.ArrayList.rangeCheck(ArrayList.java:653)
+at java.util.ArrayList.get(ArrayList.java:429)
+at oracle.goldengate.datasource.meta.TableMetaData.getColumnMetaData(TableMetaData.java:73)
+----
+
+
+Note the `IndexOutOfBoundsException` error.
+
+
+== Working around the error
+
+
+I'm in the fortunate position of being in a sandbox environment in which I can modify the source schema to suit my needs - so I just dropped the function-based index. In reality this evidently would not be a good approach on the assumption that the index was there for a good reason!
+
+
+[source]
+----
+DROP INDEX "SOE"."CUST_FUNC_LOWER_NAME_IX";
+----
+
+
+Having run this, we still have the question of how to get the replicat working. To do this we could go the whole-hog and drop and recreate the extracts; or, we can get the replicat to skip the section of the trail file with the records in that we can't process. Assuming you've run the above `DROP` and then written more data to the table, there'll be a second metadata record in the OGG trail file. We can use the `FILTER` command to find this:
+
+
+[source]
+----
+Logdump 69 >FILTER INCLUDE FILENAME ORCL.SOE.CUSTOMERS;FILTER EXCLUDE RECTYPE 5,134;FILTER MATCH ALL
+----
+
+
+This shows records for just this table, and excludes record types 5 and 134 (`INSERT` and `UPDATE` respectively). We can then scan through the file with `NEXT` command and see:
+
+
+[source]
+--------------------------------------------------------------------
+Logdump 72 >n
+Scanned     10000 records, RBA    2365691, 2016/09/06 12:12:16.001.191
+Scanned     20000 records, RBA    4716374, 2016/09/06 14:48:54.971.161
+Scanned     30000 records, RBA    7067022, 2016/09/06 14:57:34.000.170
+Scanned     40000 records, RBA    9413177, 2016/09/06 15:07:41.000.186
+Scanned     50000 records, RBA   11773709, 2016/09/06 15:16:07.000.594
+Scanned     60000 records, RBA   14126750, 2016/09/06 15:24:38.001.063
+-------------------------------------------------------------------
+Hdr-Ind    :     E  (x45)     Partition  :     .  (x00)
+UndoFlag   :     .  (x00)     BeforeAfter:     A  (x41)
+RecLength  :  1308  (x051c)   IO Time    : 2016/09/06 17:11:21.717.818
+IOType     :   170  (xaa)     OrigNode   :     2  (x02)
+TransInd   :     .  (x03)     FormatType :     R  (x52)
+SyskeyLen  :     0  (x00)     Incomplete :     .  (x00)
+DDR/TDR Idx:   (002, 009)     AuditPos   : 9986576
+Continued  :     N  (x00)     RecCount   :     1  (x01)
+
+2016/09/06 17:11:21.717.818 Metadata             Len 1308 RBA 14702330
+Name: ORCL.SOE.CUSTOMERS
+*
+1)Name          2)Data Type        3)External Length  4)Fetch Offset      5)Scale         6)Level
+7)Null          8)Bump if Odd      9)Internal Length 10)Binary Length    11)Table Length 12)Most Sig DT
+13)Least Sig DT 14)High Precision  15)Low Precision   16)Elementary Item  17)Occurs       18)Key Column
+19)Sub DataType 20)Native DataType 21)Character Set   22)Character Length 23)LOB Type     24)Partial Type
+*
+TDR version: 1
+Definition for table ORCL.SOE.CUSTOMERS
+Record Length: 450
+Columns: 16
+CUSTOMER_ID        134     13        0  0  0 1 0      8      8      8 0 0 0 0 1    0 1   3    2       -1      0 0 0
+CUST_FIRST_NAME     64     40       12  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+CUST_LAST_NAME      64     40       58  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+NLS_LANGUAGE        64      3      104  0  0 1 0      3      3      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+NLS_TERRITORY       64     30      112  0  0 1 0     30     30      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+CREDIT_LIMIT       134     11      148  2  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+CUST_EMAIL          64    100      160  0  0 1 0    100    100      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+ACCOUNT_MGR_ID     134     13      266  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+CUSTOMER_SINCE     192     19      278  0  0 1 0     19     19     19 0 5 0 0 1    0 0   0   12       -1      0 0 0
+CUSTOMER_CLASS      64     40      300  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+SUGGESTIONS         64     40      346  0  0 1 0     40     40      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+DOB                192     19      392  0  0 1 0     19     19     19 0 5 0 0 1    0 0   0   12       -1      0 0 0
+MAILSHOT            64      1      414  0  0 1 0      1      1      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+PARTNER_MAILSHOT    64      1      420  0  0 1 0      1      1      0 0 0 0 0 1    0 0   0    1       -1      0 0 0
+PREFERRED_ADDRESS  134     13      426  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+PREFERRED_CARD     134     13      438  0  0 1 0      8      8      8 0 0 0 0 1    0 0   3    2       -1      0 0 0
+End of definition
+
+
+Filtering suppressed  62444 records
+--------------------------------------------------------------------
+
+
+Here's the new table metadata, for sixten columns only and minus the `SYS_[...]` columns. Its position as shown in the record above is RBA 14702330. To get the commit sequence number (CSN), which we can use to restart the replicat, we need to enable the display of OGG-generated data in the records (link:https://docs.oracle.com/goldengate/1212/gg-winux/GLOGD/logdump_commands.htm#GLOGD235[ref]):
+
+
+[source]
+----
+GGSTOKEN ON
+GGSTOKEN DETAIL
+----
+
+
+The Metadata record itself doesn't have a CSN, so disable the filtering
+
+
+[source]
+----
+FILTER OFF
+----
+
+
+and then go to the next record
+
+
+[source]
+--------------------------------------------------------------------
+Logdump 123 >FILTER OFF
+Logdump 124 >N
+-------------------------------------------------------------------
+Hdr-Ind    :     E  (x45)     Partition  :     .  (x0c)
+UndoFlag   :     .  (x00)     BeforeAfter:     A  (x41)
+RecLength  :   255  (x00ff)   IO Time    : 2016/09/06 17:11:18.000.200
+IOType     :     5  (x05)     OrigNode   :   255  (xff)
+TransInd   :     .  (x00)     FormatType :     R  (x52)
+SyskeyLen  :     0  (x00)     Incomplete :     .  (x00)
+AuditRBA   :        396       AuditPos   : 9986576
+Continued  :     N  (x00)     RecCount   :     1  (x01)
+
+2016/09/06 17:11:18.000.200 Insert               Len   255 RBA 14703707
+Name: ORCL.SOE.CUSTOMERS  (TDR Index: 9)
+After  Image:                                             Partition 12   G  b
+0000 000a 0000 0000 0000 0009 27c1 0001 000b 0000 | ............'.......
+0007 6775 7374 6176 6f00 0200 0a00 0000 0663 6173 | ..gustavo........cas
+
+[...]
+
+GGS tokens:
+TokenID x52 'R' ORAROWID         Info x00  Length   20
+4141 4166 632f 4141 4141 4141 434d 6541 4162 0001 | AAAfc/AAAAAACMeAAb..
+TokenID x4c 'L' LOGCSN           Info x00  Length    8
+3131 3637 3235 3433                               | 11672543
+TokenID x36 '6' TRANID           Info x00  Length    9
+3236 2e32 372e 3139 35                            | 26.27.195
+TokenID x69 'i' ORATHREADID      Info x01  Length    2
+0001                                              | ..
+--------------------------------------------------------------------
+
+
+It's an `INSERT` record for our table, with the `LOGCSN` shown as 11672543.
+
+
+So if we're happy to ditch all the data in the trail file since it was set up until the point at which we 'fixed' the virtual column issue, we can run in GGSCI:
+
+
+[source]
+----
+GGSCI (bigdatalite.localdomain) 44> start rkafka atcsn 0.11672543
+
+Sending START request to MANAGER ...
+REPLICAT RKAFKA starting
+
+GGSCI (bigdatalite.localdomain) 49> info rkafka
+
+REPLICAT   RKAFKA    Last Started 2016-09-06 17:32   Status RUNNING
+Checkpoint Lag       00:00:00 (updated 00:00:09 ago)
+Process ID           25860
+Log Read Checkpoint  File ./dirdat/rt000000000
+2016-09-06 17:11:22.000764  RBA 14724721
+----
+
+
+and over in Kafka itself we can now see the records coming through:
+
+
+[source,shell]
+----
+$ kafka-console-consumer --zookeeper localhost --topic ORCL.SOE.LOGON
+ORCL.SOE.LOGONI42016-09-02 14:56:26.00041142016-09-06T15:50:52.194000(00000000000000002010LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-02:15:56:25
+ORCL.SOE.LOGONI42016-09-05 14:39:02.00040942016-09-06T15:50:52.875000(00000000000000002437LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:15:39:00
+ORCL.SOE.LOGONI42016-09-05 14:44:15.00046042016-09-06T15:50:52.877000(00000000000000002593LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:15:44:13
+ORCL.SOE.LOGONI42016-09-05 14:46:16.00043642016-09-06T15:50:52.879000(00000000000000002748LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:15:46:11
+ORCL.SOE.LOGONI42016-09-05 16:17:25.00014242016-09-06T15:50:52.881000(00000000000000002903LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:17:17:24
+ORCL.SOE.LOGONI42016-09-05 16:22:38.00040142016-09-06T15:50:52.883000(00000000000000003058LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:17:22:37
+ORCL.SOE.LOGONI42016-09-05 16:25:16.00015142016-09-06T15:50:52.885000(00000000000000003215LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:17:25:16
+ORCL.SOE.LOGONI42016-09-05 16:26:25.00017542016-09-06T15:50:52.886000(00000000000000003372LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:17:26:25
+ORCL.SOE.LOGONI42016-09-05 16:27:20.00018642016-09-06T15:50:52.888000(00000000000000003527LOGON_IDCUSTOMER_IDLOGON_DATE4242&2016-09-05:17:27:19
+----
+
+
+== A Better Workaround?
+
+
+Per link:https://docs.oracle.com/goldengate/1212/gg-winux/GIORA/additional_config.htm#GIORA382[Handling Other Database Properties], virtual columns can be handled by using the link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm[`TABLE`] link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm#CEGHBBED[`FETCHCOLS`] configuration on the extract to read the virtual values and `MAP` of the replicat to map them to actual columns on the target. Unfortunately, the system-generated column name isn't accepted by OGG in the `FETCHCOLS` syntax:
+
+
+[source]
+----
+INFO    OGG-06507  Oracle GoldenGate Capture for Oracle, ext1.prm:  MAP (TABLE) resolved (entry ORCL.SOE.CUSTOMERS): TABLE "ORCL"."SOE"."CUSTOMERS", FETCHCOLS(SYS_NC00017$).
+ERROR   OGG-00366  Oracle GoldenGate Capture for Oracle, ext1.prm:  Invalid column specified in FETCHCOLS/FETCHCOLSEXCEPT: SYS_NC00017$.
+ERROR   OGG-01668  Oracle GoldenGate Capture for Oracle, ext1.prm:  PROCESS ABENDING.
+----
+
+
+Another tack to try, given that in our case we simply want to make sure the virtual columns don't get picked up at all - is to try and ignore the column altogether. Unfortunately from my experimentation with link:https://docs.oracle.com/goldengate/1212/gg-winux/GWURF/gg_parameters160.htm#CEGICBHB[`COLSEXCEPT`] it appears that OGG excludes specified columns from record data, but not the initial metadata (which is what causes the above problems in the first place). Even if this had worked, `COLSEXCEPT` doesn't like the system-generated column name, abending the Extract process with:
+
+
+[source]
+----
+INFO    OGG-06507  Oracle GoldenGate Capture for Oracle, ext1.prm:  MAP (TABLE) resolved (entry ORCL.SOE.CUSTOMERS): TABLE "ORCL"."SOE"."CUSTOMERS", COLSEXCEPT(SYS_NC00017$).
+ERROR   OGG-00366  Oracle GoldenGate Capture for Oracle, ext1.prm:  Invalid column specified in COLS/COLSEXCEPT: SYS_NC00017$.
+ERROR   OGG-01668  Oracle GoldenGate Capture for Oracle, ext1.prm:  PROCESS ABENDING.
+----
+
+
+== Conclusion
+
+
+Oracle GoldenGate is a fantastic way to stream changes from many different RDBMS to a variety of targets, including Kafka. The potential that this offers in terms of data integration and pipelines is great. This post has hopefully shed a little bit of light on how to go about troubleshooting issues that can occur when using this set of tools. Do let me know in the comments below if you have better suggestions for how to deal with the virtual columns created as a result of the function-based index!
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2016/09/using-logdump-to-debug-oracle-goldengate-and-kafka/[Rittman Mead blog].

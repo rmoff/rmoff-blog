@@ -1,0 +1,823 @@
+---
+title: 'An introduction to monitoring OBIEE with Nagios'
+date: "2012-09-13T00:00:00+00:00"
+url: "/2012/09/13/an-introduction-to-monitoring-obiee-with-nagios/"
+draft: false
+categories:
+- Monitoring
+- OBIEE
+original_source: "rittmanmead"
+original_url: "https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios/"
+classes:
+- feature-nohdr
+---
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios/[Rittman Mead blog].
+
+== Introduction
+
+
+This is the second post in a mini-series on monitoring OBIEE. The previous post, link:https://www.rittmanmead.com/blog/2012/09/automated-monitoring-of-obiee-in-the-enterprise-an-overview[Automated Monitoring of OBIEE in the Enterprise – an overview], looked at the overview and theory to why and what we should be monitoring. In this post I am going to walk through implementing a set of automated checks on OBIEE using the Systems Management tool link:http://www.nagios.org/[Nagios]
+
+
+=== Nagios
+
+
+There are at least three different flavours of Nagios, and only one of them is free (open source), called *Nagios Core*. The others listed link:http://www.nagios.com/products[here] are Nagios XI and Nagios Fusion.
+
+
+=== Brace yourself
+
+
+One of the formal pre-requisites of open source software is either no documentation, or a vast swath of densely written documentation with no overview or map. OK, I'm kidding. But, be aware that with open source you have to be a bit more self-sufficient and prepared to roll up your sleeves than is normally the case with commercially produced software. I'm not trolling here, and there are exceptions on either side - but if you want to get Nagios working with OBIEE, be aware that it's not simply click-click-done. :)
+
+
+Nagios has a thriving community of plugins, addons, and companion applications such as alternative frontends. This is both a blessing and a curse. It's great, because whatever you want to do with it, you probably can. It can be troublesome though because it means there's no single point of reference to lookup how something is done -- it could be done in many different ways. Some plugins will be excellent, others may be a bit ropey - you may find yourself navigating this with just your google-fu to guide you.
+
+
+=== Right tool for the right job
+
+
+As with any bit of software, make sure you're not trying to hit the proverbial nail with a pick axe. Plugins and so on are great for extending a product, but always keep an eye on the product's core purpose and whether you're straying too far from it to be sensible. Something which works now might not in future product upgrades. Also sense-check whether two complementary tools might be better suited than trying to do everything within one.
+
+
+== Getting started
+
+
+I'm working with two servers, both Oracle Linux 6.3. 
+
+* The first server has OBIEE 11.1.1.6.2 BP1 installed in a standard single-node cluster with two WebLogic servers (AdminServer/Managed Server).
+* The second server is going to be my Nagios monitoring server
+
+
+In theory you could install Nagios on the OBIEE server, but that's not a great idea for Production usage as you'd be subject to all of the bad things which could happen to the OBIEE server and won't be able to alert for them if the monitoring is from the same server.
+
+
+=== Installing Nagios
+
+
+There is documentation provided on how to link:http://assets.nagios.com/downloads/nagioscore/docs/Installing_Nagios_Core_From_Source.pdf[install Nagios from source] which looks comprehensive and easy to follow.
+
+
+Alternatively, using the link:http://fedoraproject.org/wiki/EPEL[EPEL repository], install nagios and the default set of nagios plugins using the package manager yum: 
+
+[source]
+----
+ yum install nagios nagios-plugins-all
+----
+ If you use the yum method, you might want to follow this step from the above PDF which will set Nagios to startup automatically at boot: 
+
+[source]
+----
+ chkconfig --level 35 nagios on
+----
+
+
+=== Testing the installation
+
+
+If the installation has worked, you should be able to go to the address *http://[server]/nagios* and login using the credentials you created or the default *nagiosadmin*/*nagiosadmin*: 
+
+image::/images/2012/09/061185nagios01.png[Nagios01]
+
+
+If you don't get this, check the following:
+
+
+* Is nagios running? 
++
+[source,shell]
+----
+$ ps -ef|grep [n]agios
+nagios 7959 1 0 14:16 ? 00:00:00 /usr/sbin/nagios -d /etc/nagios/nagios.cfg
+----
++
+If it's not, use 
++
+[source]
+----
+service nags start
+----
++
+* Is Apache web server running? 
++
+[source,shell]
+----
+$ ps -ef|grep [h]ttpd 
+root 8016 1 0 14:19 ? 00:00:00 /usr/sbin/httpd apache 8018 8016 0 14:19 ? 00:00:00 /usr/sbin/httpd 
+[…]
+----
++
+If it's not, use 
++
+[source]
+----
+service https start
+----
++
+* If the firewall's enabled, is port 80 open?
+
+
+== Nagios configuration
+
+
+Nagios is configured, by default, through a series of files held on the server. There are GUI front ends for these files, but in order to properly understand what's going on under the covers I am working with the files themselves here.
+
+
+_The documentation refers to Nagios config being in */usr/local/nagios*, but on my install it put it in */etc/nagios/*_
+
+
+=== Object types
+
+
+To successfully work with Nagios it is necessary to understand some of the terminology and object types used. For a complete list with proper definitions, see link:http://nagios.sourceforge.net/docs/3_0/objectdefinitions.html[the documentation].
+
+
+* A *host* is a physical server
+* A host has *services* defined against it
+* Each service defines a *command* to use
+* A command specifies a *plugin* to execute
+
+
+For a detailed explanation of Nagios' plugin architecture, see link:http://nagios.sourceforge.net/docs/3_0/plugins.html[here]
+
+
+=== Examining the existing configuration
+
+
+From your Nagios installation home page, click on *Hosts* and you should see *localhost* listed. Click on *Services* and you'll see eight pre-configured checks ('services') for localhost. 
+
+image::/images/2012/09/061184nagios02.png[Nagios02]
+ Let's disect this existing configuration to start with. First off, the *nagios.cfg* file (probably in /etc/nagios or /usr/local/nagios) includes the line: 
+
+[source,properties]
+----
+cfg_file=/etc/nagios/objects/localhost.cfg
+----
+ The localhost.cfg file defines the *host* and *services* for localhost.
+
+
+Open up *localhost.cfg* and you'll see the line *define host* which is the definition for the machine, including an alias, its physical address, and the name by which it is referred to in later Nagios configuration.
+
+
+Scrolling down, there is a set of *define service* statements. Taking the first one: 
+
+[source]
+----
+define service{
+use local-service ; Name of service template to use 
+host_name localhost 
+service_description PING 
+check_command check_ping!100.0,20%!500.0,60% 
+}
+----
+We can see the following:
+
+
+. It's based on a local-service template
+. The hostname to use in it is localhost, defined previously
+. The (arbitrary) name of the service is PING
+. The command to be run for this service (to determine the service's state) is in the *check_command*. The syntax here is the command (check_ping) followed by arguments separated by the ! symbol (pling/bang/exclamation mark)
+
+
+The command that a service runs (and the arguments that it accepts) is defined by default in the *commands.cfg* file. Open this up, and seach for 'check_ping' (the command we saw in the PING service definition above). We're now getting closer to the actual execution, but not quite there yet. The *define command* gives us the command name (eg. check_ping), and then the command line that is executed for it. In this case, the command line is also called check_ping, and is an executable that is installed with nagios-plugins (nagios-plugins-all if you're using a yum installation).
+
+
+In folder */usr/lib64/nagios/plugins* you will find all of the plugins that were installed by default, including check_ping. You can execute any of them from the command line, which is a good way to both test them and understand how they work with arguments passed to them. Many will support a -h help flag, including check_ping:
+
+[source,shell]
+----
+ $ cd /usr/lib64/nagios/plugins/ 
+$ ./check_ping -h
+check_ping v1.4.15 (nagios-plugins 1.4.15)
+Copyright (c) 1999 Ethan Galstad <nagios@nagios.org>
+Copyright (c) 2000-2007 Nagios Plugin Development Team
+	<nagiosplug-devel@lists.sourceforge.net>
+Use ping to check connection statistics for a remote host.
+Usage:
+check_ping -H <host_address> -w <wrta>,<wpl>% -c <crta>,<cpl>%
+[-p packets] [-t timeout] [-4|-6]
+[…]
+----
+ Note the -w and -c parameters - this is where Warning and Critical thresholds are passed to the plugin, for it to then return the necessary status code back to Nagios.
+
+
+Working back through the config, we can see the plugin is going to be executed with 
+
+[source]
+----
+command_line $USER1$/check_ping -H $HOSTADDRESS$ -w $ARG1$ -c $ARG2$ -p 5
+----
+ (from the command definition) and the arguments passed to it are 
+
+[source]
+----
+ check_command check_ping!100.0,20%!500.0,60%
+----
+ (from the service definition). Remember the arguments are separated by the ! symbol, so the first argument ($ARG1$) is 100.0,20% and the second argument ($ARG2$) is 500.00,60%. $HOSTADDRESS$ comes from the *hostname* entry in the service definition.
+
+
+So, we can now execute the plugin ourselves to see how it works and to validate what we think Nagios should be picking up:
+
+[source]
+----
+./check_ping -H localhost -w 100.0,20% -c 500,60% -p 5 
+PING OK - Packet loss = 0%, RTA = 0.05 ms|rta=0.052000ms;100.000000;500.000000;0.000000 pl=0%;20;60;0
+----
+
+
+=== A picture may be worth a thousand words
+
+
+To visualise how the configuration elements relate and in which files they are located by default, see the following diagram: 
+
+image::/images/2012/09/061183nagios03.png[Nagios03]
+*NB* this is not a fully comprehensive illustration, but a simplified one of the default configuration.
+
+
+=== tl;dr?
+
+
+If you're skimming through this looking for nuggets, you'd be well advised to try to digest the above section, or at least the diagram. It will save you time in the long run, as all of Nagios is based around the same design principle
+
+
+== Adding a new host
+
+
+Let us start our OBIEE configuration of Nagios by adding in the OBIEE server. Currently Nagios has a single host defined, localhost, which is the Nagios server itself.
+
+
+The first step is to specify where our new configuration will reside. We can either
+
+
+. bolt it on to one of the existing default config files
+. Create a new config file, and reference it in nagios.cfg with a new *cfg_file* entry
+. Create a new config file directory, and add a line to nagios.cfg for *cfg_dir*
+
+
+Option 1 is quick 'n dirty. Option 2 is fine for small modifications. Option 3 makes the most sense, as any new configuration files we create _after_ this one we just add to the directory and they will get picked up automagically. We'll also see that keeping certain configuration elements in their own file makes it easier to deploy to additional machines later on.
+
+
+First, create the configuration folder
+
+[source]
+----
+mkdir -p /etc/nagios/config
+----
+Then add the following line to nagios.cfg[
+
+[source,properties]
+----
+cfg_dir = /etc/nagios/config
+----
+
+
+Now, in the tradition of all good technology learning, we will copy the existing configuration and modify it for the new host.
+
+
+Copy objects/localhost.cfg to config/bi1.cfg, and then modify it so it resembles this: 
+
+[source]
+----
+ define host{ 
+use linux-server
+host_name bi1 
+alias DEV OBIEE server 1 
+address 192.168.56.101 
+}
+define service{
+use local-service
+host_name bi1
+service_description PING
+check_command check_ping!100.0,20%!500.0,60%
+}
+----
+Substitute your server's IP address as required. host_name is just a label, it doesn't have to match the server's hostname (although it is sensible to do so).
+
+
+So we have a very simple configuration - our host, and a single service, PING.
+
+
+Before the configuration change is activated, we need to validate the configuration, by getting Nagios to parse it and check for errors
+
+[source]
+----
+nagios -v /etc/nagios/nagios.cfg
+----
+(Remember, nagios.cfg is the main configuration file which points to all the others).
+
+
+Once the configuration has been validated, we restart nagios to pick up the new configuration:
+
+[source]
+----
+service nags restart
+----
+
+
+Returning to the Nagios web front end (http:///nagios) you should now see the second host listed: 
+
+image::/images/2012/09/061182nagios04.png[Nagios04]
+
+
+== Running Nagios checks on a remote machine
+
+
+Nagios checks are all based on a command line executable run locally on the Nagios server. This works fine for things like ping, but when it comes to checking the CPU load or for a given process, we need a way of finding this information out from the remote machine. There are several ways of doing this, including check_by_ssh, NRPE and NSCA. We're going to use NRPE here. There is a good diagram here of link:http://nagios.sourceforge.net/docs/3_0/images/nrpe.png[how it fits in the Nagios architecture], and link:http://nagios.sourceforge.net/docs/nrpe/NRPE.pdf[documentation for NRPE here].
+
+
+NRPE works as follows:
+
+
+. Nagios server calls a check_nrpe plugin locally
+. check_nrpe communicates with NRPE daemon on the remote server
+. NRPE daemon on the remote server executes the required nagios plugin locally, and passes the results back to the Nagios server
+
+
+You can see from points 2 and 3 that there is installation required on the remote server, of both the NRPE daemon and the Nagios plugins that you want to be available for the remote server.
+
+
+=== Setting up NRPE
+
+
+On the remote server, install the Nagios plugins and the NRPE daemon:
+
+[source,shell]
+----
+$ sudo yum install nagios-plugins-all nagios-plugins-nrpe nope
+----
+ If you're running a firewall, make sure you open the port for NRPE (by default, 5666).
+
+
+Amend the NRPE configuration (/etc/nagios/nrpe.cfg) to add the IP of your Nagios server (in this example, 192.168.56.102) to the *allowed_hosts* line
+
+[source,properties]
+----
+allowed_hosts=127.0.0.1,192.168.56.102
+----
+(You might need to use sudo to edit the file)
+
+
+Now set nrpe to start at boot, and restart the nrpe service to pick up the configuration changes made
+
+[source,shell]
+----
+$ sudo chkconfig --level 35 nrpe on
+$ sudo service nope restart
+----
+Normally Nagios will be running check_nrpe from the Nagios server, but before we do that, we can use the plugin locally on the remote server to check that NRPE is functioning, before we get the network involved:
+
+[source,shell]
+----
+$ cd /usr/lib64/nagios/plugins 
+$ ./check_nrpe -H localhost 
+NRPE v2.12
+----
+ If that works, then move on to testing the connection between the Nagios server and the remote server. On the Nagios server, install the check_nrpe plugin: 
+
+[source,shell]
+----
+$ sudo yum install nagios-plugins-nrpe
+----
+And then run it manually: 
+
+[source,shell]
+----
+$ cd /usr/lib64/nagios/plugins 
+$ ./check_nrpe -H 192.168.56.101 
+NRPE v2.12
+----
+ (in this example, my remote server's IP is 192.168.56.101)
+
+
+=== NRPE, commands and plugins
+
+
+In a _local_ Nagios service check, the *service* specifies a *command* which in turn calls a *plugin*. When we do a _remote_ service check using NRPE the same chain exists, except the *service* always calls the *NRPE* command and plugin. The difference is that it passes to the NRPE plugin the name of a command executed on the NRPE remote server.
+
+
+image::/images/2012/09/061181n8.png[]
+
+
+So there are actually _two_ *commands* to be aware of :
+
+
+* The command defined on the Nagios server, which is specified from the service +
+* The command on the remote server in the NRPE configuration, which specifies the actual plugin executable that is executed +
+
+
+=== An example NRPE service configuration
+
+
+One of the default service checks that comes with Nagios is *Check Load*. It uses the *check_load* plugin. We'll see how the same plugin can be used on the remote server through *NRPE*.
+
+
+. Determine the commandline call for the plugin on the remote server. In the plugins folder execute the plugin manually to determine its syntax
+
++
+[source,shell]
+----
+$ cd /usr/lib64/nagios/plugins/
+$ ./check_load -h 
+[…]
+Usage: check_load [-r] -w WLOAD1,WLOAD5,WLOAD15 -c CLOAD1,CLOAD5,CLOAD15
+----
++
+
+So for example: 
+
++
+[source]
+----
+
+./check_load -w 15,10,5 -c 30,25,20 
+OK - load average: 0.02, 0.04, 0.05|load1=0.020;15.000;30.000;0; load5=0.040;10.000;25.000;0; load15=0.050;5.000;20.000;0;
+----
++
+. Specify the NRPE command in *nrpe.cfg* file with the command line determined in the previous step:
++
+[source]
+----
+command[check_load]=/usr/lib64/nagios/plugins/check_load -w 15,10,5 -c 30,25,20
+----
++
+You'll see this in the default nrpe.cfg file. Note that "check_load" is entirely arbitrary, and "command" is a literal.
+. On the Nagios server, configure the generic *check_nrpe* command. This should be added to an existing .cfg file, or a new one in the cfg_dir folder that we configured earlier
++
+[source]
+----
+define command{
+command_name check_nrpe 
+command_line $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$ 
+}
+----
++
+Note here the -c argument, which passes $ARG1$ as the command to execute on the NRPE daemon.
+. Define a *service* which will call the plugin on the NRPE server. I've added this into the configuration file for the new host created above (config/bi1.cfg)
++
+[source]
+----
+define service{ 
+use local-service
+host_name bi1 
+service_description Check Load 
+check_command check_nrpe!check_load 
+}
+----
++
+Note that check_nrpe is the name of the command that we defined in step 3. check_load is the arbitrary command name that we've configured on the remote server in *nrpe.cfg*
+
+
+As before, validate the configuration: 
+
+[source]
+----
+nagios -v /etc/nagios/nagios.cfg
+----
+ and then restart the Nagios service: 
+
+[source,shell]
+----
+sudo service nags restart
+----
+Login to your Nagios console and you should see the NRPE-based service working:
+
+image::/images/2012/09/061180nagios05.png[Nagios05]
+
+
+== Nagios and OBIEE
+
+
+Did someone say something about OBIEE? As I warned at the beginning of this article Nagios is fairly complex to configure and it is a steep learning curve. What I've written so far is hopefully sufficient to guide you through the essentials and give you a head-start in using it.
+
+
+The rest of this article looks at the kinds of alerts we can build into Nagios for OBIEE
+
+
+=== Process checks
+
+
+To check for the processes in the OBIEE stack we can use the *check_proc* plugin. This is a flexible plugin with a variety of invocation approaches, but we are going to use it to raise a critical alert if there is not a process running which matches a argument or command that we specify.
+
+
+As with all of these checks, it is best to develop it from the ground up, so start with the plugin on the command line and work out the correct syntax. Once the syntax is determined it is simple to incorporate it into the Nagios configuration.
+
+
+The syntax for the plugin is obtained by running it with the -h flag:
+
+[source,yaml]
+----
+./check_procs -h |more 
+check_procs v1.4.15 (nagios-plugins 1.4.15)
+Copyright (c) 1999 Ethan Galstad <nagios@nagios.org>
+Copyright (c) 2000-2008 Nagios Plugin Development Team
+	<nagiosplug-devel@lists.sourceforge.net>
+Checks all processes and generates WARNING or CRITICAL states if the specified
+metric is outside the required threshold ranges. The metric defaults to number
+of processes.  Search filters can be applied to limit the processes to check.
+Usage:
+check_procs -w <range> -c <range> [-m metric] [-s state] [-p ppid]
+[-u user] [-r rss] [-z vsz] [-P %cpu] [-a argument-array]
+[-C command] [-t timeout] [-v][…]
+----
+
+
+So to check for Presentation Services, which runs as *sawserver* we would use the -C parameter to specify the process command to match. In addition, we need to specify the warning and critical thresholds. For the OBI processes these thresholds are pretty simple - if there are zero processes then sound the alarm, and if there's one process then all is OK.
+
+[source]
+----
+./check_procs -C sawserver -w 1: -c 1: 
+ PROCS OK: 1 process with command name 'saw server'
+----
+And if we bring down Presentation Services and run the same command:
+
+[source]
+----
+./check_procs -C sawserver -w 1: -c 1: 
+ PROCS CRITICAL: 0 processes with command name 'saw server'
+----
+ To add this into Nagios, do the following:
+
+
+. On the remote server, add the command into NRPE.  +
+. Because we've added a new command into NRPE, the NRPE service needs restarting:
++
+[source]
+----
+service nope restart
+----
++
+. On the Nagios server define a new service for the BI server which will use the check_obips command, via NRPE:
++
+[source]
+----
+define service{ 
+use local-service 
+host_name bi1 
+service_description Process: Presentation Services 
+check_command check_nrpe!check_obips }
+----
++
+. As before, validate the nagios configuration and if it passes, restart the service
++
+[source]
+----
+nagios -v /etc/nagios/nagios.cfg 
+service nags restart
+----
++
+
+
+Looking in the Nagios frontend, the new Presentation Services alert should be present: 
+
+image::/images/2012/09/061179nagios06.png[Nagios06]
+ In this screenshot the alert is status *Critical* because there are no Presentation Services (sawserver) processes running. If I restart it the alert will change: 
+
+image::/images/2012/09/061177nagios07.png[Nagios07]
+
+
+=== Network ports
+
+
+To doublecheck that OBIEE is working, monitoring the state of the network ports is a good idea.
+
+
+If you are using a firewall then you will need to run this check on the OBI server itself, through NRPE. If you're not firewalled, then you could run it from the Nagios server. If you are firewalled but only want to check for the public-facing ports of OBIEE (for example, 9704) then you could run it locally on Nagios too.
+
+
+Whichever way you run the alert, it is easily done using the *check_tcp* plugin
+
+[source]
+----
+./check_tcp -p 9704 
+TCP OK - 0.001 second response time on port 9704|time=0.001384s;;;0.000000;10.000000
+----
+The only parameter that we need to specify is the port, -p. As with the check_proc plugin, there are different ways to use it and check_tcp can raise warnings/alerts if there's a specified delay connecting to the port, and it can also match a send/expect string. For our purpose, it will return OK if the port we specify is connected to, and fail if not.
+
+
+The NRPE configuration:
+
+
+[source]
+----
+command[check_obis_port]=/usr/lib64/nagios/plugins/check_tcp -H localhost -p 9703
+----
+
+
+The Nagios service configuration:
+
+
+[source]
+----
+define service{
+use local-service
+host_name bi1
+service_description Port: BI Server
+check_command check_nrpe!check_obis_port
+}
+----
+
+
+=== Log files
+
+
+link:http://code.google.com/p/logwarn/[check_logwarn] is not provided by the default set of Nagios plugins, and must be downloaded and installed separately. Once installed, it can be used thus:
+
+
+NRPE command: 
+
+[source]
+----
+ command[check_log_nqserver]=/usr/lib64/nagios/plugins/check_logwarn -p -d /tmp /u01/app/oracle/product/fmw/instances/instance1/diagnostics/logs/OracleBIServerComponent/coreapplication_obis1/nqserver.log ERROR
+----
+ Service definition: 
+
+[source]
+----
+ define service{ 
+use local-service 
+host_name bi1 
+service_description Logs: BI Server nqserver.log 
+max_check_attempts 1 
+check_command check_nrpe!check_log_nqserver 
+}
+----
+ 
+
+image::/images/2012/09/061178nagios08.png[Nagios08]
+Be aware that this method is only really useful for alerting you that there is something to look at in the logs -- it doesn't give you the log to browse through. For that you would need to go to the log file on disk, or the log viewer in EM. Tips:
+
+
+* Set *max_check_attempts* in the service defintion to 1, so that an alert is raised straight away.  +
+* For this service, the *action_url* option for a service could be used to include a link through to the EM log viewer
+* Make sure that the NRPE user has permissions on the OBI log files.
+
+
+=== Database
+
+
+The *check_oracle* plugin can check that a database is running locally, or using a TNS entry remotely. Since the OBIEE server that I'm using here is a sandpit environment the database is also running on it, so the check can be run locally on it, via NRPE
+
+
+NRPE configuration: 
+
+[source]
+----
+command[check_db]=/usr/lib64/nagios/plugins/check_oracle --db ORCL
+----
+ Service definition: 
+
+[source]
+----
+define service{ 
+use local-service 
+host_name bi1 
+service_description Database check_command 
+check_nrpe!check_db 
+}
+----
+
+
+== Final Nagios configuration
+
+
+=== Service Groups
+
+
+Having covered the basic setup for monitoring an OBIEE server, we will now look at a couple of Nagios configuration options to improve the monitoring setup that's been built. The first is Service Groups. These are a way of grouping services together (how did you guess). For example, all the checks for OBIEE network ports. In the Nagios frontend Service Groups can be examined individually and drilled into. 
+
+image::/images/2012/09/061176nagios09.png[Nagios09]
+ The syntax is self-explanatory, except the *members* clause, which is a comma-separated list of host,service pairings: 
+
+[source]
+----
+ define servicegroup{ 
+servicegroup_name obiports 
+alias OBIEE network ports 
+members bi1, Port: OPMN remote,bi1, Port: BI Server,bi1, Port: Javahost ,bi1, Port: OPMN local port,bi1, Port: BI Server - monitor,bi1, Port: Cluster Controller,bi1, Port: Cluster Controller - monitor,bi1, Port: BI Scheduler - monitor,bi1, Port: BI Scheduler - Script RPC,bi1, Port: Presentation Services,bi1, Port: BI Scheduler,bi1, Port: Weblogic Managed Server - bi_server1,bi1, Port: Weblogic Admin Server 
+}
+----
+*NB*The object definition for the servicegroups is best placed in its own configuration file, or at least, not in the same as the host/service configurations. If it's in the same file as the host/service config then it's less easy to duplicate that file for new hosts.
+
+
+=== A note about templates
+
+
+All of the objects that we have configured have included a *use* clause. This is a template object definition that specifies generic settings so that you don't have to configure them each time you create an object of that type. It also means if you want to change that setting, you can do so in once place instead of dozens.
+
+
+For example, services have a *check_interval* setting, which is how often Nagios will check the service. There's also a *retry_interval* which is how many times Nagios will check the service again after the initial error, before raising an alert.
+
+
+All the templates by default are defined in*objects/templates.cfg*, but note that templates in themselves are not an object type, they are just an object (eg service) which can be inherited. Templates can inherit other templates too. Examine the *generic-service* and *local-service* default templates to see more.
+
+
+To see the final object definitions with all their inherited values, go to the Nagios web front end and choose the *System* > *Configuration* option from the left menu.
+
+
+=== Email alerts
+
+
+A silent alerting system is not much use if we want a hands-off approach to monitoring OBIEE. Getting Nagios to send out emails is pleasantly easy. In essence, you just need to configure a *contact* object. However I'm going to show how to set it up a bit neater, and illustrate the use of templates in the process.
+
+
+. First step is to test that your Nagios server can send outbound email. In an enterprise this shouldn't be too difficult, but if you're trying this at home then some ISPs do block it.  +
+. In your Nagios configuration, create a *contact* and *contactgroup* object. For ease of manageability, I've created mine as config/contacts.cfg but anywhere that Nagios will pick up your object definition is fine.
++
+[source]
+----
+define contact { 
+use generic-contact 
+contact_name rnm 
+alias Robin Moffatt 
+email foo@bar.com 
+}
+define contactgroup {
+contactgroup_name obiadmins
+alias OBI Administrators
+members rnm
+}
+----
++
+A contact group is pretty self-explanatory - it is made up of one or more contacts.
+. To associate a contact group with a service, so that it receives notifications when the service goes into error, use the *contact_groups* clause in the service defintion.  +
+. Validate the configuration and the restart Nagios
+
+All going well, you should now receive alerts when services go into error
+
+image::/images/2012/09/061175nagios10.png[Nagios10]
+You can see what alerts have been sent by looking in the Nagios web front end under *Reports* > *Notifications* on the left-hand menu
+
+image::/images/2012/09/061174nagios11.png[Nagios11]
+
+
+== Deployment on other OBIEE servers
+
+
+To deploy the same setup as above, for a new OBIEE server, do the following:
+
+
+. Install nagios plugins and nrpe daemon on the new server
++
+[source,shell]
+----
+sudo yum install nagios-plugins-all nagios-plugins-nrpe nope
+----
++
+. Add Nagios server IP to *allowed_hosts* in /etc/nagios/nrpe.cfg
+. Start NRPE service
++
+[source]
+----
+service nope start
+----
++
+. Test nrpe locally on the new OBIEE server:
++
+[source]
+----
+$/usr/lib64/nagios/plugins/check_nrpe -H localhost 
+NRPE v2.12
+----
++
+. Test nrpe from Nagios server:
++
+[source]
+----
+$/usr/lib64/nagios/plugins/check_nrpe -H bi2 
+NRPE v2.12
+----
++
+. From the first OBIEE server, copy /etc/nrpe.d/custom.cfg to the same path on the new OBIEE server. +
+. On the Nagios server, define a new host and set of services associated with it. The quick way to do this is copy the existing bi1.cfg file (which has the host and service definitions for the original OBIEE server) to bi2.cfg and do a search and replace. Amend the host definition for the new server IP.
+. Update the service group definition to include the list of bi2 services too.
+. Validate the configuration and restart Nagios
+The new host should now appear in the Nagios front end: 
+
+image::/images/2012/09/061171nagios12.png[Nagios12]
+
+
+image::/images/2012/09/061173nagios13.png[Nagios13]
+
+
+== Summary
+
+
+Nagios is a powerful but complex beast to configure. Once you get into the swing of it, it does make sense though. 
+
+At a high-level, the way that you monitor OBIEE with Nagios is: 
+
+* Define OBIEE server as a host on Nagios
+* Install and configure NRPE on the OBIEE server
+* Configure the checks (process, network port, etc) on NRPE on the OBIEE server
+* Create a corresponding set of service definitions on the Nagios server to call the NRPE commands
+
+The final part of this series looks at how plugins can be created to do more advanced monitoring with Nagios, including simulating user requests and alerting if they fail : link:https://www.rittmanmead.com/blog/2012/09/advanced-monitoring-of-obiee-with-nagios/[Advanced monitoring of OBIEE with Nagios]
+
+
+=== Documentation
+
+
+link:http://nagios.sourceforge.net/docs/3_0/toc.html[Nagios Core documentation]
+
+NOTE: This post originally appeared on the link:https://www.rittmanmead.com/blog/2012/09/an-introduction-to-monitoring-obiee-with-nagios/[Rittman Mead blog].
