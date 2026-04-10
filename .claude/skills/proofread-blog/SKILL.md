@@ -2,7 +2,7 @@
 name: proofread-blog
 description: Proofread blog articles for typos, errors, readability, and logical consistency. Use when reviewing blog posts before publication.
 disable-model-invocation: false
-allowed-tools: Read, Grep, Glob, Edit
+allowed-tools: Read, Grep, Glob, Edit, Bash
 ---
 
 # Blog Article Proofreading
@@ -62,3 +62,22 @@ Report any hardcoded links to rmoff.net; prefer relative links.
    - **Underscore mangling in link anchors**: `link:/path/#_some_anchor[text]` — AsciiDoc interprets `_word_` sequences as italic markup, turning anchors like `#_joining_the_data` into `#<em>joining_the_data`. Fix with `pass:[]`: `link:/path/#pass:[_some_anchor][text]`
    - **Underscore mangling in inline content**: Backtick-quoted identifiers containing underscores (e.g., `` `_fieldName` ``) can get italic-mangled if not properly escaped. Watch for any `_text_` patterns inside or adjacent to inline code that might be misinterpreted as emphasis.
    - **SQL query + results in code blocks**: When a code block contains both a SQL statement and its tabular output, they should be split into two consecutive blocks: `[source,sql]` for the query and `[source,text]` for the results. The CSS will visually join them with a dashed separator. Never combine a SQL statement and its table output in a single `[source,sql]` block — the syntax highlighting mangles the box-drawing characters. Remove any `> ` shell prompts from the SQL when splitting.
+
+7. **Image format and size** - All images should use WebP format for optimal file size. Check the article's frontmatter (`image`, `thumbnail`, `socialimage`) and any inline `image:` references.
+   - If any referenced images are **not** WebP (e.g., PNG, JPEG), convert them using `magick`:
+     - **Frontmatter `image`** (hero/banner image): resize to **1800px width** and convert to WebP with `h_` prefix:
+       ```bash
+       magick input.png -resize '1800x>' -quality 80 h_input.webp
+       ```
+     - **Frontmatter `thumbnail`**: resize to **800px width** and convert to WebP with `t_` prefix:
+       ```bash
+       magick input.jpg -resize '800x>' -quality 80 t_input.webp
+       ```
+     - **Inline images** (body `image:` references): convert to WebP **without resizing**:
+       ```bash
+       magick input.png -quality 80 output.webp
+       ```
+     - The `-resize '...>'` flag means "only shrink, never enlarge".
+   - After converting, update all references in the article (frontmatter and body) to point to the new `.webp` files.
+   - **Do NOT delete the original files** — keep them alongside the WebP versions.
+   - Report what was converted and the file size savings.
