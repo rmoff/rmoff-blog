@@ -303,7 +303,7 @@ INSERT INTO simple_orders VALUES  (6, 7);
 ----
 Flink SQL> SET 'sql-client.execution.result-mode' = 'table'; <1>
 
-Flink SQL> SELECT * FROM orders_mt;
+Flink SQL> SELECT * FROM orders_total_mt;
 
    total_gbp
           42
@@ -376,7 +376,7 @@ Contrast this to the Materialized Table, in which the DDL and DML are intertwine
   }
 }
 ----
-<1> Information about the refresh query, not just the table DDL
+<1> These fields all hold information about the refresh query itself, not just the standard table DDL
 
 As a simple example of the benefits, consider lifecycle management of the query.
 
@@ -492,7 +492,7 @@ Yes there's a workaround, but this is not the happy path that it could be.
 ====
 
 There are similar troubles with `CTAS`—the process (and problems) are exactly the same as I just demonstrated for `CT`/`I` above.
-As a bonus we get just with a little bit more ambiguity because of the _coupled-but-not_ issue with the `INSERT` query that it spawns (as in, `CTAS` includes the definition, but subsequently it's just an `INSERT` running on its own, for us to care for and water).
+As a bonus we get just a little bit more ambiguity because of the _coupled-but-not_ issue with the `INSERT` query that it spawns (as in, `CTAS` includes the definition, but subsequently it's just an `INSERT` running on its own, for us to care for and water).
 
 Compare all this to life with Materialized Tables:
 
@@ -534,7 +534,7 @@ Significantly, the docs do note:
 
 == Pause and Resume execution
 
-With our Materialized Table we can do suspend its execution:
+With our Materialized Table we can suspend its execution:
 
 [source,sql]
 ----
@@ -961,7 +961,7 @@ Received a total of 0 row (0.23 seconds)
 
 Oh noes!
 But wait…what did we learn above, both about `REFRESH_MODE = FULL` and the absence of `FRESHNESS`?
-With `FULL` the loading of data is done on a schedule, and without a value for `FRESHNESS` Flink will default to `materialized-table.default-freshness.full`, which is 30 minutes.
+With `FULL` the loading of data is done on a schedule, and without a value for `FRESHNESS` Flink will default to `materialized-table.default-freshness.full`, which is 1 hour.
 
 Given that we created the table at 16:56 (as we can see from its schedule being created on the SQL Gateway)…
 
@@ -1177,7 +1177,7 @@ INSERT INTO user_orders (order_id, order_date, user_id, user_name, amount) VALUE
 (1022, DATE '2026-04-28', 2, 'bob', 2300);
 ----
 
-Imagine being on-call and someone complains that the data in the aggregate table (the Materialized Table) is imcomplete.
+Imagine being on-call and someone complains that the data in the aggregate table (the Materialized Table) is incomplete.
 Bleary-eyed (it's 03:00 and you were up late studying the source code for Apache Flink, naturally) you check the table and gasp in horror as you (and your angry end-user) only see four rows of data, not five:
 
 [source,sql]
@@ -1209,7 +1209,7 @@ Flink SQL> SELECT order_date, SUM(amount) AS `total_amount`, COUNT(*) AS `order_
 ----
 <1> The missing date!
 
-You hurridly check and confirm that the scheduled refresh of the Materialized Table has run and completed successfully:
+You hurriedly check and confirm that the scheduled refresh of the Materialized Table has run and completed successfully:
 
 [source,sql]
 ----
@@ -1343,3 +1343,5 @@ However, whilst they give me warm fuzzy memories of my link:/2011/01/08/material
 That said, the schema evolution and query lifecycle management is a really good development.
 
 Definitely worth playing with and making up your own mind!
+
+If you want to try this out for yourself, you can find the Docker Compose stack on my https://github.com/rmoff/examples[examples repo on GitHub].
