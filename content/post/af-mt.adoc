@@ -14,7 +14,12 @@ Flink added support for what it calls _Materialized Tables_ in https://flink.apa
 You can read about the design and motivations in https://cwiki.apache.org/confluence/display/FLINK/FLIP-435%3A+Introduce+a+New+Materialized+Table+for+Simplifying+Data+Pipelines[FLIP-435].
 In a nutshell, Materialized Tables provide a way to _include_ the SQL to populate and refresh a table _as part of_ its definition.
 
+<!--more-->
+
 Let's take a look!
+
+== Materialized Table basics
+
 
 [TIP]
 ====
@@ -62,51 +67,7 @@ CREATE CATALOG mt_cat WITH (
 USE CATALOG mt_cat;
 ----
 
-We've got the same `simple_orders` as above, with the same data:
-
-[source,sql]
-----
-Flink SQL> SELECT * FROM simple_orders;
-
-    order_id   total_gbp
-           2           5
-           3          10
-           4           5
-           1           5
-           5          10
-           6           7
-----
-
-Now let's create a Materialized Table:
-
-[source,sql]
-----
-CREATE MATERIALIZED TABLE orders_total_mt (
-    PRIMARY KEY (total_gbp) NOT ENFORCED <1>
-)
-WITH (<2>
-  'connector' = 'upsert-kafka', 'topic' = 'orders-total-mt', 'properties.bootstrap.servers' = 'broker:9092', 'key.format' = 'json', 'value.format' = 'json'
-)
-AS SELECT COALESCE(SUM(total_gbp), 0) AS total_gbp FROM simple_orders; <3>
-----
-<1> I'm specifying a primary key because of the connector that I'm using (`'upsert-kafka' tables require to define a PRIMARY KEY constraint. The PRIMARY KEY specifies which columns should be read from or write to the Kafka message key. The PRIMARY KEY also defines records in the 'upsert-kafka' table should update or delete on which keys.`)
-<2> Configuration for the `upsert-kafka` connector here to persist the table's data to Kafka.
-<3> Because of the primary key (see <1>), this needs to be non-nullable (`Could not create a PRIMARY KEY with nullable column 'total_gbp'. A PRIMARY KEY column must be declared on non-nullable physical columns.`)
-
-So far, this is nothing extraordinary.
-In fact, it's doing pretty much the same as the `CTAS` we'll see below and with which you may already be familiar; creating a table that stores its data in Kafka, and setting a query running to populate it.
-
-You can see the query running as a job, just as you would with a regular `INSERT` or `CTAS`:
-
-image:/images/2026/04/flink03.png[]
-
-Before we get much more into Materialized Table, let's do a quick run through of the alternatives in Flink SQL for defining a table and populating it.
-
-== Without Materialized Tables: It's kinda DDL, and sorta DML
-
-Materialized Tables move in the direction of solving the sometimes-awkward situation in Flink SQL that a streaming table is part definition (data types, columns, etc) and part job (how to populate it), with the job needing managing and maintaining like any other computer program.
-
-First is the `CREATE TABLE` / `INSERT` pattern.
+Our source table for the Materialized Table is going to be a table reading data from Kafka:
 
 [source,sql]
 ----
@@ -118,7 +79,7 @@ CREATE TABLE simple_orders (
 );
 ----
 
-Then we add data to the table:
+with some data in it:
 
 [source,sql]
 ----
@@ -128,6 +89,18 @@ INSERT INTO simple_orders
             (4, 5),
             (1, 5),
             (5, 10);
+----
+
+[source,sql]
+----
+Flink SQL> SELECT * FROM simple_orders;
+
+    order_id   total_gbp
+           2           5
+           3          10
+           4           5
+           1           5
+           5          10
 ----
 
 And what about the total of these orders?
@@ -159,38 +132,28 @@ The final record (`35`) is the value we'd expect.
 2. The query doesn't complete; it keeps on running.
 That's because the source is _unbounded_, and the values shown are just as of the data that has been read so far.
 
-Let's create the `orders_total` table like we saw in batch above, using the first pattern (`CREATE`, `INSERT`):
-
-_As before, the syntax is a little bit more fiddly because of the underlying persistence_
+Now let's create a Materialized Table:
 
 [source,sql]
 ----
-CREATE TABLE orders_total (
-    total_gbp INT,
-    PRIMARY KEY (total_gbp) NOT ENFORCED
-  ) WITH (
-    'connector' = 'upsert-kafka', 'topic' = 'orders-total', 'properties.bootstrap.servers' = 'broker:9092', 'key.format' = 'json', 'value.format' = 'json'
-  );
+CREATE MATERIALIZED TABLE orders_total_mt (
+    PRIMARY KEY (total_gbp) NOT ENFORCED <1>
+)
+WITH (<2>
+  'connector' = 'upsert-kafka', 'topic' = 'orders-total-mt', 'properties.bootstrap.servers' = 'broker:9092', 'key.format' = 'json', 'value.format' = 'json'
+)
+AS SELECT COALESCE(SUM(total_gbp), 0) AS total_gbp FROM simple_orders; <3>
 ----
+<1> I'm specifying a primary key because of the connector that I'm using (`'upsert-kafka' tables require to define a PRIMARY KEY constraint. The PRIMARY KEY specifies which columns should be read from or write to the Kafka message key. The PRIMARY KEY also defines records in the 'upsert-kafka' table should update or delete on which keys.`)
+<2> Configuration for the `upsert-kafka` connector here to persist the table's data to Kafka.
+<3> Because of the primary key (see <1>), this needs to be non-nullable (`Could not create a PRIMARY KEY with nullable column 'total_gbp'. A PRIMARY KEY column must be declared on non-nullable physical columns.`)
 
-Now it gets interesting:
-
-[source,sql]
-----
-Flink SQL> INSERT INTO orders_total (SELECT SUM(total_gbp) FROM simple_orders);
-[INFO] Submitting SQL update statement to the cluster...
-[INFO] SQL update statement has been successfully submitted to the cluster:
-Job ID: 8f666e58599217ad00feab629f8a5a9c <1>
-----
-<1> Check it out ma, we've got a Job ID!
-
-This doesn't look like your regular RDBMS `INSERT`, which will return (sometimes after a while) once it's done.
-This returned straight away, but with chat about submitting statements to a cluster.
-Did it work though?
+And did it work?
+Have we got data in it?
 
 [source,sql]
 ----
-Flink SQL> SELECT * FROM orders_total;
+Flink SQL> SELECT * FROM orders_total_mt;
 +----+-------------+
 | op |   total_gbp |
 +----+-------------+
@@ -211,6 +174,48 @@ Flink SQL> SELECT * FROM orders_total;
 Well…yes.
 Again with that changelog business, but still giving us the correct answer.
 
+So far, this Materialized Table is nothing extraordinary.
+In fact, it's doing pretty much the same as the `CTAS` we'll see below and with which you may already be familiar; creating a table that stores its data in Kafka, and setting a query running to populate it.
+
+You can see the query running as a job, just as you would with a regular `INSERT` or `CTAS`:
+
+image:/images/2026/04/flink03.png[]
+
+Before we get much more into Materialized Table, let's do a quick run through of the alternatives in Flink SQL for defining a table and populating it.
+
+== Without Materialized Tables: It's kinda DDL, and sorta DML
+
+Materialized Tables move in the direction of solving the sometimes-awkward situation in Flink SQL that a table is part definition (data types, columns, etc) and part job (how to populate it), with the job needing managing and maintaining like any other code.
+
+Let's create the `orders_total` table like we saw in batch above, using the first pattern (`CREATE`, `INSERT`):
+
+_As before, the syntax is a little bit more fiddly because of the underlying persistence_
+
+[source,sql]
+----
+CREATE TABLE orders_total (
+    total_gbp INT,
+    PRIMARY KEY (total_gbp) NOT ENFORCED
+  ) WITH (
+    'connector' = 'upsert-kafka', 'topic' = 'orders-total', 'properties.bootstrap.servers' = 'broker:9092', 'key.format' = 'json', 'value.format' = 'json'
+  );
+----
+
+This is _just_ the `CREATE` statement; we've not populated it yet.
+
+Now to get data into the table:
+
+[source,sql]
+----
+Flink SQL> INSERT INTO orders_total (SELECT SUM(total_gbp) FROM simple_orders);
+[INFO] Submitting SQL update statement to the cluster...
+[INFO] SQL update statement has been successfully submitted to the cluster:
+Job ID: 8f666e58599217ad00feab629f8a5a9c <1>
+----
+<1> Check it out ma, we've got a Job ID!
+
+This doesn't look like your regular RDBMS `INSERT`, which will return (sometimes after a while) once it's done.
+This returned straight away, but with chat about submitting statements to a cluster.
 But what's going on with this "job"?
 We can see it directly in Flink SQL:
 
@@ -231,12 +236,31 @@ as well as in the Flink Web UI:
 
 image:/images/2026/04/flink01.png[]
 
-We can also go a different route from `CREATE TABLE`/`INSERT`, and use `CREATE TABLE…AS SELECT` (`CTAS`).
+And with the job running, there's data loaded to the table:
+
+[source,sql]
+----
+Flink SQL> SELECT * FROM orders_total;
++----+-------------+
+| op |   total_gbp |
++----+-------------+
+| +I |           5 |
+| -D |           5 |
+| +I |          15 |
+| -D |          15 |
+| +I |          25 |
+| -D |          25 |
+| +I |          35 |
+| +I |          20 |
+| -D |          20 |
+----
+
+Other than `CREATE TABLE`/`INSERT`, the other non-Materialized Table route is to use `CREATE TABLE…AS SELECT` (`CTAS`).
 Using the `CTAS` approach, we get a similar behaviour; a populated table, and a job running on the Flink cluster:
 
 [source,sql]
 ----
-CREATE TABLE orders_total__ctas (
+CREATE TABLE orders_total_ctas (
     total_gbp INT,
     PRIMARY KEY (total_gbp) NOT ENFORCED
 ) WITH (
@@ -257,12 +281,12 @@ Flink SQL> DESCRIBE JOB 'dfebb27cd20653d93616945966244c66';
 +----------------------------------+--------------------------------------------+---------+-------------------------+
 |                           job id |                                   job name |  status |              start time |
 +----------------------------------+--------------------------------------------+---------+-------------------------+
-| dfebb27cd20653d93616945966244c66 | insert-into_mt_cat.mydb.orders_total__ctas | RUNNING | 2026-04-24T09:58:53.895 |
+| dfebb27cd20653d93616945966244c66 | insert-into_mt_cat.mydb.orders_total_ctas  | RUNNING | 2026-04-24T09:58:53.895 |
 +----------------------------------+--------------------------------------------+---------+-------------------------+
 1 row in set
 ----
 
-Two jobs, doing the same thing:
+Now we've got a total of three jobs, all doing the same thing:
 
 image:/images/2026/04/flink02.png[]
 
@@ -273,33 +297,41 @@ When I insert a record to the source table `simple_orders`…
 INSERT INTO simple_orders VALUES  (6, 7);
 ----
 
-…the two running jobs update their respective tables, and I see the expected result on them:
+…the three running jobs update their respective tables, and I see the expected result on them:
 
 [source,sql]
 ----
 Flink SQL> SET 'sql-client.execution.result-mode' = 'table'; <1>
+
+Flink SQL> SELECT * FROM orders_mt;
+
+   total_gbp
+          42
 
 Flink SQL> SELECT * FROM orders_total;
 
    total_gbp
           42
 
-Flink SQL> SELECT * FROM orders_total__ctas;
+Flink SQL> SELECT * FROM orders_total_ctas;
 
    total_gbp
           42
 ----
-<1> This means I just see the final value, not the changelog as shown above
+<1> This means I just see the latest calculated value, not the changelog as shown above
+
+So that's the three options: `CREATE MATERIALIZED TABLE`, `CREATE TABLE`/`INSERT`, `CREATE TABLE…AS SELECT`.
+Let's now look at what makes Materialized Tables of interest to us.
 
 == Lifecycle Management
 
-With `CREATE TABLE` plus `INSERT` (hereafter noted as `CT,I`), the query to populate the table is a separate entity from the definition.
-Even with the combined `CREATE TABLE … AS SELECT` (`CTAS`), it's just a marriage of convenience; in the background a separate `INSERT` is fired off, never to be assocaited with its `CTAS` parent again.
+With `CREATE TABLE` plus `INSERT` (hereafter noted as `CT/I`), the query to populate the table is a separate entity from the definition.
+Even with the combined `CREATE TABLE … AS SELECT` (`CTAS`), it's just a marriage of convenience; in the background a separate `INSERT` is fired off, never to be associated with its `CTAS` parent again.
 
 Since we're using the `test-filesystem` catalog we can easily inspect what's in the catalog just by looking at what's on disk.
-Here's the catalog entry for both the `orders_total` (`CT`,`I`) and orders_total__ctas (`CTAS`)—it's identical for both:
+Here's the catalog entry for both the `orders_total` (`CT/I`) and `orders_total_ctas` (`CTAS`)—it's identical for both:
 
-[source,javascript]
+[source,json]
 ----
 {
   "tableKind" : "TABLE",  "catalogTableInfo" : {
@@ -318,17 +350,18 @@ Here's the catalog entry for both the `orders_total` (`CT`,`I`) and orders_total
 
 Contrast this to the Materialized Table, in which the DDL and DML are intertwined and the DML query literally persisted as part of the table definition, along with the query's execution details:
 
-[source,javascript]
+[source,json]
 ----
 {
   "tableKind" : "MATERIALIZED_TABLE",
   "catalogTableInfo" : {
     "schema.0.data-type" : "INT NOT NULL",
-    "definition-query" : "SELECT COALESCE(SUM(`simple_orders`.`total_gbp`), 0) AS `total_gbp`\nFROM `mt_cat`.`mydb`.`simple_orders` AS `simple_orders`",
+    "definition-query" : <1>
+        "SELECT COALESCE(SUM(`simple_orders`.`total_gbp`), 0) AS `total_gbp`\nFROM `mt_cat`.`mydb`.`simple_orders` AS `simple_orders`",
     "refresh-status" : "ACTIVATED",
     "refresh-handler-bytes" : "rO0ABXNyADdvcmcuYXBhY2hlLmZsaW5rLnRhYmxlLnJlZnJlc2guQ29udGludW91c1JlZnJlc2hIYW5kbGVyAAAAAAAAAAECAARMAAljbHVzdGVySWR0ABJMamF2YS9sYW5nL1N0cmluZztMAA9leGVjdXRpb25UYXJnZXRxAH4AAUwABWpvYklkcQB+AAFMAAtyZXN0b3JlUGF0aHEAfgABeHB0ABNTdGFuZGFsb25lQ2x1c3RlcklkdAAGcmVtb3RldAAgNmFlNjBjZGU5N2VlMmMxZGU2MGVjNDhjMWZmZWY1NjFw",
-    "freshness-interval" : "3",
-    "refresh-mode" : "CONTINUOUS",
+    "freshness-interval" : "3", <1>
+    "refresh-mode" : "CONTINUOUS", <1>
     "properties.bootstrap.servers" : "broker:9092",
     "connector" : "upsert-kafka",
     "value.format" : "json",
@@ -343,23 +376,25 @@ Contrast this to the Materialized Table, in which the DDL and DML are intertwine
   }
 }
 ----
+<1> Information about the refresh query, not just the table DDL
 
 As a simple example of the benefits, consider lifecycle management of the query.
 
-Here's all three methods running:
+Here are all three table population statements running:
 
-image:/images/2026/04/flink04.png[]
+image:/images/2026/04/flink02.png[]
 
 What happens if we restart the task managers?
 
 image:/images/2026/04/flink05.png[]
 
 Ooops.
+Only one left, for the Materialized Table.
 The two `INSERT` statements (one directly from `INSERT`, the other a product of the `CTAS`) got killed, and not restarted.
+
 Why would they get restarted?
 They're just `INSERT` statements, with no lifecycle guarantees attached to them.
-
-Whereas the Materialized Table includes this persistence of the definition of how it is populated, and thus Flink can resurrect the query.
+Contrast that to the Materialized Table, which includes this persistence of the definition of how it is populated, and thus Flink can resurrect the query.
 
 == Schema evolution
 
@@ -367,7 +402,7 @@ What if we want to add a new column to the table being populated?
 In this example, that could be a count of the total orders (to go with the sum of the orders which is what we've already got).
 
 With both `CT/I` and `CTAS` it gets messy.
-I've dropped and recreated both (since they got killed in the restart above).
+I've dropped and recreated both (since they got killed in the restart above), so their `INSERT` statements are running again now (as, presumably, they would be by default when we want to evolve the schema).
 Let's see how it works.
 
 [source,sql]
@@ -383,7 +418,15 @@ Flink SQL> SELECT * FROM orders_total;
           42      <NULL>
 ----
 
-No value for `order_ct` - kinda obvious really, because we're not populating it yet!
+No value for `order_ct`.
+Remember; the `INSERT` from before is still running:
+
+[source,sql]
+----
+INSERT INTO orders_total (SELECT SUM(total_gbp) FROM simple_orders);
+----
+
+And this only populates the existing `total_gbp` field.
 
 Let's kill the existing `INSERT`:
 
@@ -409,8 +452,6 @@ Cause: Incompatible types for sink column 'order_ct' at position 1.
 
 Query schema: [EXPR$0: INT, EXPR$1: BIGINT NOT NULL]
 Sink schema:  [total_gbp: INT, order_ct: INT]
-
-Flink SQL>
 ----
 
 Uh oh, schema mismatch.
@@ -431,7 +472,7 @@ Flink SQL> INSERT INTO orders_total (SELECT SUM(total_gbp),COUNT(*) FROM simple_
 Job ID: 8c197789f2b4966e97ed8d4002feb775
 ----
 
-The new `INSERT` runs, but it turns out that the table's still not happy:
+The new `INSERT` runs, but it turns out that the table's still not happy when it comes to querying it:
 
 [source,sql]
 ----
@@ -441,13 +482,17 @@ org.apache.flink.table.runtime.operators.sink.constraint.EnforcerException: Colu
 You can set job configuration 'table.exec.sink.not-null-enforcer'='DROP' to suppress this exception and drop such records silently.
 ----
 
+[TIP]
+====
 The reason is almost by-the-by here, but for completeness: the table is backed by a Kafka topic, and when we read from the table the first records fetched will be those populated by the initial `INSERT` with just one column in.
-Hence, when we try to read those back, as the error message says, it can't cope with null values for a NOT NULL field.
-Yes there's a workaround, but this is not the happy path that it could be.
+(When we `DROP` the table it doesn't touch the topic from which the table reads/writes).
+Hence, when we try to read those back, as the error message says, it can't cope with null values for a `NOT NULL` field.
 
-There are similar troubles with `CTAS`, just with a little bit more ambiguity because of the coupled-but-not issue with the `INSERT` query that it spawns.
-As in, `CTAS` includes the definition, but subsequently it's just an `INSERT` running on its own, for us to care for and water.
-So if we want to change the table definition, the process (and problems) are exactly the same as I just demonstrated for `CT`/`I` above.
+Yes there's a workaround, but this is not the happy path that it could be.
+====
+
+There are similar troubles with `CTAS`—the process (and problems) are exactly the same as I just demonstrated for `CT`/`I` above.
+As a bonus we get just with a little bit more ambiguity because of the _coupled-but-not_ issue with the `INSERT` query that it spawns (as in, `CTAS` includes the definition, but subsequently it's just an `INSERT` running on its own, for us to care for and water).
 
 Compare all this to life with Materialized Tables:
 
@@ -472,12 +517,12 @@ In the background, Flink stopped the first job, and started up a new one to incl
 [source,sql]
 ----
 Flink SQL> SHOW JOBS;
-+----------------------------------+-----------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                    job name |   status |              start time |
-+----------------------------------+-----------------------------------------------------------------------------+----------+-------------------------+
-| 6ae60cde97ee2c1de60ec48c1ffef561 | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt`_continuous_refresh_job | FINISHED | 2026-04-24T10:05:30.647 |
-| a7a77aa3f909b6debb25c25d5d3c5de0 | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt`_continuous_refresh_job |  RUNNING | 2026-04-24T11:09:07.887 |
-+----------------------------------+-----------------------------------------------------------------------------+----------+-------------------------+
++----------------------------------+----------+-----------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                    job name |              start time |
++----------------------------------+----------+-----------------------------------------------------------------------------+-------------------------+
+| 6ae60cde97ee2c1de60ec48c1ffef561 | FINISHED | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt`_continuous_refresh_job | 2026-04-24T10:05:30.647 |
+| a7a77aa3f909b6debb25c25d5d3c5de0 |  RUNNING | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt`_continuous_refresh_job | 2026-04-24T11:09:07.887 |
++----------------------------------+----------+-----------------------------------------------------------------------------+-------------------------+
 ----
 
 See https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#as-select_statement-1[the documentation] for full details of what's supported in schema evolution, as well as caveats.
@@ -489,14 +534,14 @@ Significantly, the docs do note:
 
 == Pause and Resume execution
 
-With our Materialized Table we can do this:
+With our Materialized Table we can do suspend its execution:
 
 [source,sql]
 ----
 ALTER MATERIALIZED TABLE orders_total_mt SUSPEND;
 ----
 
-If we add some data to the source table:
+Then, if we add some data to the source table:
 
 [source,sql]
 ----
@@ -533,11 +578,11 @@ Flink SQL> SELECT * FROM orders_total_mt;
 ----
 
 The key thing here is that when we `SUSPEND` the Materialized Table Flink takes a savepoint.
-This is much cleaner than stopping a job (as we'd do with `CT`->`I` / `CTAS`) and having to start a new one from the start, since Flink will use the savepoint to start its processing from where it got to before it was suspended.
+This is much easier than stopping a job (as we'd do with `CT/I` / `CTAS`) and having to start a new one from the start, since Flink will use the savepoint to start its processing from where it got to before it was suspended.
 
 This very clean, SQL-driven, way of managing a table and its job could come in handy in several ways:
 
-1. Data quality issues; rather than continuing to propagate suspect data—but without pulling the parachute cord of killing the job and losing its state—you can just suspend it whilst you investigate the problem.
+1. In the event of upstream data quality issues, rather than continuing to propagate suspect data—but without pulling the parachute cord of killing the job and losing its state—you can just suspend it whilst you investigate the problem.
 2. Server maintenance, Flink upgrades, etc.
 3. If there are availability problems with the table's source (remember, Flink tables can use connectors against numerous systems, such as RDBMS, flat files, etc etc) you can suspend reading from it rather than dealing with a flood of errors.
 
@@ -546,6 +591,7 @@ This very clean, SQL-driven, way of managing a table and its job could come in h
 One of https://www.alibabacloud.com/blog/flink-materialized-table-building-unified-stream-and-batch-etl_602184[the pitches for Materialized Tables in Flink] is that it 'unifies' batch and streaming, and dispenses with the Lambda/Kappa concept.
 By having one SQL concept (Materialized Tables) with different configuration options you can define your data manipulation logic _once_ and execute it as you want in both streaming or batch.
 This is defined by a parameter called `REFRESH_MODE`.
+
 In the example above the Materialized Table was using an implicit `REFRESH_MODE` of `CONTINUOUS`, i.e. a streaming query, per the Flink job that we saw running.
 
 To explore the other `REFRESH_MODE`, which is `FULL`, we need a source connector that supports _bounded_ reads.
@@ -604,7 +650,19 @@ Received a total of 0 row (0.18 seconds)
 Flink SQL>
 ----
 
-That's because the table only refreshes based on its `FRESHNESS`, which is bound to the epoch, so we need to wait until the next five minute interval (i.e. on the hour, five minutes past, ten minutes past, etc).
+Unlike `CONTINUOUS` refresh, which runs as a job on the task manager, `FULL` refresh is managed on a scheduler that's provided by the SQL Gateway.
+When we create the Materialized Table we see it added an entry in the scheduler on SQL Gateway:
+
+[source]
+----
+2026-04-27 10:33:06,828 INFO  org.apache.flink.table.gateway.workflow.scheduler.EmbeddedQuartzScheduler []
+Create quartz schedule job for materialized table `mt_cat`.`mydb`.`orders_total_mt_file_full` successfully,
+job info: default_group.quartz_job_`mt_cat`.`mydb`.`orders_total_mt_file_full`,
+cron expression: 0 0/5 * * * ? *.                                                                                                                              │
+----
+
+Check out the cron expression—that's driven by the `FRESHNESS = INTERVAL '5' MINUTE` configuration.
+
 We can sit tight and wait, or we can manually kick a refresh off ourselves:
 
 [source,sql]
@@ -618,10 +676,10 @@ Flink SQL> ALTER MATERIALIZED TABLE orders_total_mt_file_full REFRESH;
 1 row in set
 
 Flink SQL> SHOW JOBS;
-+----------------------------------+-------------------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                            job name |   status |              start time |
-+----------------------------------+-------------------------------------------------------------------------------------+----------+-------------------------+
-| 2215db412d0ef0551ae0704bebb978bd | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt_file_full`_one_time_refresh_job | FINISHED | 2026-04-27T11:27:32.863 |
++----------------------------------+----------+-------------------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                            job name |              start time |
++----------------------------------+----------+-------------------------------------------------------------------------------------+-------------------------+
+| 2215db412d0ef0551ae0704bebb978bd | FINISHED | Materialized_table_`mt_cat`.`mydb`.`orders_total_mt_file_full`_one_time_refresh_job | 2026-04-27T11:27:32.863 |
 ----
 
 And now we have data:
@@ -647,29 +705,27 @@ One thing that's important to note about the refresh jobs is the SQL that gets r
 [source]
 ----
 INFO  org.apache.flink.table.gateway.service.materializedtable.MaterializedTableManager [] -
-Begin to refreshing the materialized table `mt_cat`.`mydb`.`orders_total_mt_file_full`, statement:
+Begin to refreshing the materialized table
+`mt_cat`.`mydb`.`orders_total_mt_file_full`, statement:
 ----
 [source,sql]
 ----
-INSERT OVERWRITE `mt_cat`.`mydb`.`orders_total_mt_file_full`
+INSERT OVERWRITE `mt_cat`.`mydb`.`orders_total_mt_file_full` <1>
     SELECT * FROM (SELECT COALESCE(SUM(`orders_file`.`total_gbp`), 0) AS `total_gbp`
                     FROM `mt_cat`.`mydb`.`orders_file` AS `orders_file`)
 ----
+<1> `INSERT OVERWRITE` _replaces_ the contents of the target table (or partition; see below).
 
-`INSERT OVERWRITE` _replaces_ the contents of the target table (or partition; see below).
+=== Batch to Kafka? Nope.
 
-=== Batch on Kafka? Nope.
-
-In the earlier section when we used the `simple_orders` table that is reading from a Kafka topic, we didn't set a `REFRESH_MODE`.
-What happened was that Flink set an implicit value for it:
+In the earlier section when we created a Materialized Table reading and writing from Kafka topics, we didn't set a `REFRESH_MODE`.
+What happened was that Flink set an implicit value for it, which we can see if we examine the DDL that Flink reads back for the table:
 
 [source,sql]
 ----
 Flink SQL> SHOW CREATE MATERIALIZED TABLE orders_total_mt;
-+------------------------------------------------------------------------------------------------------------+
-|                                                                                                     result |
-+------------------------------------------------------------------------------------------------------------+
-| CREATE MATERIALIZED TABLE `mt_cat`.`mydb`.`orders_total_mt` (
+
+CREATE MATERIALIZED TABLE `mt_cat`.`mydb`.`orders_total_mt` (
   CONSTRAINT `PK_total_gbp` PRIMARY KEY (`total_gbp`) NOT ENFORCED
 )
 WITH (
@@ -683,13 +739,8 @@ FRESHNESS = INTERVAL '3' MINUTE <1>
 REFRESH_MODE = CONTINUOUS <1>
 AS SELECT COALESCE(SUM(`simple_orders`.`total_gbp`), 0) AS `total_gbp`, COUNT(*) AS `order_ct`
 FROM `mt_cat`.`mydb`.`simple_orders` AS `simple_orders`
-|
-+------------------------------------------------------------------------------------------------------------+
-1 row in set
-
-Flink SQL>
 ----
-<1> Flink added these
+<1> These weren't in the submitted SQL; Flink added these.
 
 This is where it gets a bit funky though, and also exposes some of the slightly rough edges on the current implementation of Materialized Tables.
 What if we decide we'd like to set the Materialized Table to refresh on a batch schedule instead?
@@ -705,10 +756,11 @@ Flink SQL> CREATE MATERIALIZED TABLE orders_total_mt__full (
                 'connector' = 'upsert-kafka', 'topic' = 'orders_total_mt__full', 'properties.bootstrap.servers' = 'broker:9092', 'key.format' = 'json', 'value.format' = 'json'
             )
             FRESHNESS = INTERVAL '5' MINUTE
-            REFRESH_MODE = FULL
+            REFRESH_MODE = FULL <1>
             AS SELECT COALESCE(SUM(total_gbp), 0) AS total_gbp FROM simple_orders;
 [INFO] Execute statement succeeded.
 ----
+<1> Use batch refresh for the Materialized Table reading and writing from Kafka.
 
 Flink tells me it's succeeded.
 But has it actually?
@@ -734,50 +786,40 @@ But…
 Flink SQL> SELECT * FROM orders_total_mt__full;
 
 [ERROR] Could not execute SQL statement. Reason:
-org.apache.flink.kafka.shaded.org.apache.kafka.common.errors.UnknownTopicOrPartitionException: This server does not host this topic-partition.
+org.apache.flink.kafka.shaded.org.apache.kafka.common.errors.UnknownTopicOrPartitionException:
+This server does not host this topic-partition. <1>
 ----
+<1> The target Kafka topic hasn't been populated (or even created). Something went wrong!
 
 So whilst the _Materialized Table_ created successfully, it looks like it's not got any data in it.
-Unlike `CONTINUOUS` refresh, which runs as a job on the task manager (that we saw above, and could inspect in the Web UI and `SHOW JOBS`), `FULL` refresh is managed on a scheduler that's provided by the SQL Gateway.
 Let's take a look at the SQL Gateway log.
-First we see it add an entry in the scheduler when we create the Materialized Table:
+As if on cue, at the next 5-minute interval since the epoch, the job kicks off:
 
 [source]
 ----
-2026-04-27 10:33:06,828 INFO  org.apache.flink.table.gateway.workflow.scheduler.EmbeddedQuartzScheduler []
-Create quartz schedule job for materialized table `mt_cat`.`mydb`.`orders_total_mt__full` successfully,
-job info: default_group.quartz_job_`mt_cat`.`mydb`.`orders_total_mt__full`, cron expression: 0 0/5 * * * ? *.                                                                                                                              │
-----
-
-Check out the cron expression—that's driven by the `FRESHNESS = INTERVAL '5' MINUTE` configuration.
-And as if on cue, at the next 5-minute interval since the epoch, the job kicks off:
-
-[source]
-----
-2026-04-27 10:35:00,001 INFO  org.apache.flink.table.gateway.workflow.scheduler.EmbeddedQuartzScheduler []
-Execute refresh operation for workflow: WorkflowInfo{materializedTableIdentifier='`mt_cat`.`mydb`.`orders_total_mt__full`', dynamicOptions={}, initConfig={sql-client.verbose=true, sql-client.execution.result-mode=tableau}, executionConfig={}, restEndpointUrl='http://0.0.0.0:8083'}.
-
-2026-04-27 10:35:00,007 INFO  org.apache.flink.table.gateway.service.materializedtable.MaterializedTableManager []
-Begin to refreshing the materialized table `mt_cat`.`mydb`.`orders_total_mt__full`,
-statement: INSERT OVERWRITE `mt_cat`.`mydb`.`orders_total_mt__full`
-SELECT * FROM (SELECT COALESCE(SUM(`simple_orders`.`total_gbp`), 0) AS `total_gbp` FROM `mt_cat`.`mydb`.`simple_orders` AS `simple_orders`)
-
-2026-04-27 10:35:00,013 ERROR org.apache.flink.table.gateway.service.operation.OperationManager [] - Failed to execute the operation 36328d6f-7bc1-4b1a-a5ad-3be329ee9aa1.                                                                                                                                │
-org.apache.flink.table.gateway.service.utils.SqlExecutionException: Refreshing the materialized table `mt_cat`.`mydb`.`orders_total_mt__full` occur exception.                                                                                                                                            │
+org.apache.flink.table.gateway.service.utils.SqlExecutionException: Refreshing the materialized table `mt_cat`.`mydb`.`orders_total_mt__full` occur exception.
 Caused by: org.apache.flink.table.api.ValidationException:
-Querying an unbounded table 'mt_cat.mydb.simple_orders' in batch mode is not allowed. The table source is unbounded.
+Querying an unbounded table 'mt_cat.mydb.simple_orders' <1>
+in batch mode is not allowed. The table source is unbounded. <1>
 ----
-
-So it fails per the reason on the final line there—the source for the table is a Flink table reading from a Kafka topic, and since Kafka topics are unbounded, Flink won't do a batch read from it.
+<1> It fails per the reason on the final line there—the source for the table is a Flink table reading from a Kafka topic, and since Kafka topics are unbounded, Flink won't do a batch read from it.
 
 Logically, this makes sense; but some kind of "canary test" of the Materialized Table's refresh query might be a useful thing to add to the `CREATE` process, instead of the silent failure and log-diving necessary to surface it.
 
 == Refresh frequency
 
 I've already trailed some of the details about the frequency with which Materialized Tables can be set to refresh above.
-For tables using `FULL` refresh, that full refresh is run on a schedule determined by the `FRESHNESS` value that you set, translated by Flink into a cron schedule.
+It's configured by the `FRESHNESS` setting, which per https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/overview/#data-freshness[the documentation] defines:
+
+> Data freshness defines the maximum amount of time that the materialized table’s content should lag behind updates to the base tables.
+
+* For tables using `FULL` refresh mode, the refresh query is run on a *schedule* determined by the `FRESHNESS` value that you set, translated by Flink into a cron schedule.
 By default, the schedule is implemented on the built-in scheduler on the SQL Gateway.
-One interesting wrinkle here is that since the schedule uses a cron expression, there are restrictions on what the value for `FRESHNESS` can be.
+It's worth noting that if it takes a long time to execute, the actual freshness may be noticeably longer than that specified.
+* For `CONTINUOUS` refresh, the `FRESHNESS` defines how often the table's refresh job will *checkpoint* the data.
+This is important for connectors (e.g. Iceberg—although perhaps a bad example as Iceberg doesn't yet support Materialized Tables) that rely on a checkpoint to flush data to cause it to be readable.
+
+One interesting sidenote for `FULL` refresh mode is that since the schedule uses a cron expression, there are restrictions on what the value for `FRESHNESS` can be.
 https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#freshness[The docs] say it must be:
 
 > a common divisor of the respective time interval unit.
@@ -788,30 +830,21 @@ If you get it wrong, Flink will tell you:
 [source,sql]
 ----
 org.apache.flink.table.api.ValidationException:
-In full refresh mode, only freshness that are factors of 60 are currently supported when the time unit is MINUTE.
+In full refresh mode, only freshness that are factors of 60 are currently
+supported when the time unit is MINUTE.
 ----
-
-So, `FRESHNESS` for `FULL` (batch) refresh is straightforward enough.
-But what about in the context of `CONTINUOUS` refresh?
-
-Per https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/overview/#data-freshness[the documentation]:
-
-> Data freshness defines the maximum amount of time that the materialized table’s content should lag behind updates to the base tables.
-
-So for a `FULL` refresh mode, this is how often it'll run.
-(It's worth noting that if it takes a long time to execute, the actual freshness may be noticably longer than that specified).
-For `CONTINUOUS` refresh, the `FRESHNESS` defines how often the table's refresh job will *checkpoint* the data.
-This is important for connectors (e.g. Iceberg—although perhaps a bad example as Iceberg doesn't yet support Materialized Tables) that rely on a checkpoint to flush data to cause it to be readable.
 
 === Defaulting on the defaults
 
-https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#freshness[(docs)]
+When I introduced the first Materialized Table query at the top of this article, I didn't specify `REFRESH_MODE` or `FRESHNESS`.
+I'm all for minimum-required defaults enabling users to get up and running with software, but here there is potential for some serious ambiguity.
+I've gone through the https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#freshness[docs] and code to try and distil down how Flink will handle the non-provision of both or either of these settings.
 
 * If you *do* specify `REFRESH_MODE` but *not* `FRESHNESS` then for `FRESHNESS` Flink uses the values of system configuration option relating to the refresh mode you've chosen:
 +
-[cols="1m,1,1"]
+[cols="1m,1,3m"]
 |===
-|REFRESH_MODE |Default|Configuration
+|REFRESH_MODE |`FRESHNESS` default|Configuration
 
 |CONTINUOUS
 |3 minutes
@@ -822,10 +855,11 @@ https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materia
 |materialized-table.default-freshness.full
 |===
 
-* If you *do* specify `FRESHNESS` but *not* `REFRESH_MODE` then Flink uses `materialized-table.refresh-mode.freshness-threshold` to determine `REFRESH_MODE`.
-By default this is 30 minutes, so if your value of `FRESHNESS` is less than the `freshness-threshold` Flink will use `CONTINUOUS`, otherwise it'll use `FULL`.
+* If you *do* specify `FRESHNESS` but *not* `REFRESH_MODE` then Flink determines `REFRESH_MODE` by comparing `FRESHNESS` to the  configuration `materialized-table.refresh-mode.freshness-threshold` (which has a default of 30 minutes).
 +
-If you want to use a different `REFRESH_MODE` than this logic sets, then just configure `REFRESH_MODE` directly.
+If your value of `FRESHNESS` is less than the `freshness-threshold` Flink will use `CONTINUOUS`, otherwise it'll use `FULL`.
++
+TIP: If you want to use a different `REFRESH_MODE` than this logic sets, then just configure `REFRESH_MODE` directly.
 
 * And finally, what happens if you don't specify a `REFRESH_MODE` or `FRESHNESS` at all?
 This is where it gets less clear :)
@@ -848,19 +882,27 @@ if (table.getLogicalRefreshMode() == LogicalRefreshMode.FULL) {
 +
 From there, now that it has a value for `FRESHNESS`, it follows the logic above using `materialized-table.refresh-mode.freshness-threshold`.
 
-My tl;dr from this is that you don't want to leave these values to the defaults for some poor sod who ends up maintaining your DDL having to try and pick through.
+*My tl;dr from this* is that you don't want to leave these values to the defaults for some poor sod who ends up maintaining your DDL having to try and pick through.
 Be deliberate and explicit in how you configure your Materialized Table `REFRESH_MODE`, that way the person operating the pipeline will have a clear handle at least on the `FRESHNESS` that will be used—and indeed, you may not want to hardcode freshness for each Materialized Table and manage it at a system level.
 
 == Partitions
 
 Let's now look at the idea of partition-specific updates and refreshes.
-This is something that's only supported by a small set of target sinks and catalogs, so don't get _too_ excited—but is a very cool idea, so I hope more technologies pick it up soon.
+
+[NOTE]
+====
+At the moment there's limited support for Materialized Tables in the ecosystem beyond Flink.
+For example, whilst it would make tons of sense in Iceberg (particularly with the partitioning stuff I'm about to show you), it's not been implemented yet.
+
+Currently (April 2026) only Paimon supports partitioned Materialized Tables (along with a `test-filesystem` catalog/connector).
+====
 
 In the examples above I took a set of transactions and aggregated them up to one single total.
 What is much more common in the real world is aggregating by one or more dimensions.
 These dimensions could be things like date, customer, product, business unit, etc.
+Sometimes the volume of data can dictate that physically partitioning this data by a dimension at the storage layer will help performance and manageability.
 
-For this example I'm going to use a base transaction table that includes customer and date dimensions, and then aggregate it up by date.
+For this example I'm going to use a base transaction table that includes customer and date dimensions, and then aggregate it up by date which I'll also partition by.
 
 Here's the source table:
 
@@ -879,30 +921,15 @@ with some data:
 
 [source,bash]
 ----
-INSERT INTO user_orders (order_id, order_date, user_id, user_name, amount) VALUES
-    (1001, DATE '2026-04-18', 1, 'alice', 1500),
-    (1002, DATE '2026-04-18', 2, 'bob', 2300),
-    (1003, DATE '2026-04-18', 3, 'carol', 800),
-    (1004, DATE '2026-04-19', 1, 'alice', 1200),
-    (1005, DATE '2026-04-19', 2, 'bob', 3100),
-    (1006, DATE '2026-04-19', 3, 'carol', 1900),
-    (1007, DATE '2026-04-20', 1, 'alice', 500),
-    (1008, DATE '2026-04-20', 4, 'dave', 4200);
-----
-
-[source,sql]
-----
-Flink SQL> SELECT * from user_orders;
-
- order_id order_date  user_id     user_name    amount
-    1001  2026-04-18        1         alice      1500
-    1002  2026-04-18        2           bob      2300
-    1003  2026-04-18        3         carol       800
-    1004  2026-04-19        1         alice      1200
-    1005  2026-04-19        2           bob      3100
-    1006  2026-04-19        3         carol      1900
-    1007  2026-04-20        1         alice       500
-    1008  2026-04-20        4          dave      4200
+INSERT INTO user_orders (order_id, order_date, user_id, user_name, amount)
+VALUES (1001, DATE '2026-04-18', 1, 'alice', 1500),
+        (1002, DATE '2026-04-18', 2, 'bob', 2300),
+        (1003, DATE '2026-04-18', 3, 'carol', 800),
+        (1004, DATE '2026-04-19', 1, 'alice', 1200),
+        (1005, DATE '2026-04-19', 2, 'bob', 3100),
+        (1006, DATE '2026-04-19', 3, 'carol', 1900),
+        (1007, DATE '2026-04-20', 1, 'alice', 500),
+        (1008, DATE '2026-04-20', 4, 'dave', 4200);
 ----
 
 Now to create the Materialized Table (using the `test-filesystem` connector)
@@ -910,7 +937,7 @@ Now to create the Materialized Table (using the `test-filesystem` connector)
 [source,sql]
 ----
 CREATE MATERIALIZED TABLE daily_order_summary
-    PARTITIONED BY (order_date)
+    PARTITIONED BY (order_date) <1>
 WITH ('format'='json')
 REFRESH_MODE = FULL
 AS SELECT   order_date,
@@ -919,13 +946,7 @@ AS SELECT   order_date,
     FROM    user_orders
     GROUP BY order_date;
 ----
-
-[NOTE]
-====
-At the moment there's limited support for Materialized Tables—whilst it would make tons of sense in Iceberg (particularly with the partitioning stuff I'm about to show you), it's not been implemented yet.
-
-Currently (2026-04-27) only Paimon supports it (along with a `test-filesystem` catalog/connector).
-====
+<1> Ooooh partitions!
 
 Check the data:
 
@@ -942,7 +963,7 @@ Oh noes!
 But wait…what did we learn above, both about `REFRESH_MODE = FULL` and the absence of `FRESHNESS`?
 With `FULL` the loading of data is done on a schedule, and without a value for `FRESHNESS` Flink will default to `materialized-table.default-freshness.full`, which is 30 minutes.
 
-Given that we created the table at 16:56, as we can see from its schedule being created on the SQL Gateway:
+Given that we created the table at 16:56 (as we can see from its schedule being created on the SQL Gateway)…
 
 [source]
 ----
@@ -951,7 +972,7 @@ Create quartz schedule job for materialized table `mt_cat`.`mydb`.`daily_order_s
 default_group.quartz_job_`mt_cat`.`mydb`.`daily_order_summary`, cron expression: 0 0 0/1 * * ? *.
 ----
 
-It means we should see the job run in the next few minutes…
+…it means we should see the job run in the next few minutes…
 
 image:/images/2026/04/a-cartoon-of-daffy-duck-sitting-at-a-kitchen-table.gif[]
 
@@ -969,12 +990,14 @@ and there it goes!
 [source,sql]
 ----
 Flink SQL> SHOW JOBS;
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                      job name |   status |              start time |
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-| 261181049fca90b15786b09e383eae18 | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_periodic_refresh_job | FINISHED | 2026-04-27T17:00:00.370 |
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                      job name |              start time |
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+| 261181049fca90b15786b09e383eae18 | FINISHED | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_periodic_refresh_job | 2026-04-27T17:00:00.370 |
 […]
 ----
+
+But, alas!
 
 [source,sql]
 ----
@@ -983,12 +1006,13 @@ Flink SQL> SELECT * FROM daily_order_summary;
 | op | order_date |         total_amount |          order_count |
 +----+------------+----------------------+----------------------+
 [ERROR] Could not execute SQL statement. Reason:
-java.time.format.DateTimeParseException: Text '20561' could not be parsed at index 0
+java.time.format.DateTimeParseException:
+Text '20561' could not be parsed at index 0
 ----
 
 image:https://media.tenor.com/m8PS2R6SOxwAAAAC/this-close-frank-tj-mackey.gif[]
 
-Under the covers Flink is writing the date as an epoch day (=`2026-04-18`), whilst read it in a different way and failing.
+Under the covers Flink is *writing* the date as an epoch day (`20561` being the epoch day for `2026-04-18`), whilst *reading* it in a different way and failing.
 Let's try again, and be explicit in how to store it:
 
 [source,sql]
@@ -1013,7 +1037,7 @@ NOTE: Specifying a _date_ as a _string_ gives me strong ick vibes.
 A date is a date, not a string.
 Date-based partitioning is cool, but ending up with a `STRING` in the target Materialized Table feels off to me (now your end users have to figure out how to handle it, what format it is, etc).
 
-So now our Materialized Table is recreated, let's force a load of it instead of waiting for the next 00/30 to roll around on the clock:
+So now our Materialized Table is recreated, let's force a load of it instead of waiting for the next `:00`/`:30` to roll around on the clock:
 
 [source,sql]
 ----
@@ -1025,19 +1049,19 @@ Flink SQL> ALTER MATERIALIZED TABLE daily_order_summary REFRESH;
 +----------------------------------+---------------------------+
 
 Flink SQL> SHOW JOBS;
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                      job name |   status |              start time |
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-| 0490ff33c9a8a530592b8451f7da43df | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_one_time_refresh_job | FINISHED | 2026-04-27T17:26:08.799 |
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                      job name |              start time |
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+| 0490ff33c9a8a530592b8451f7da43df | FINISHED | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_one_time_refresh_job | 2026-04-27T17:26:08.799 |
 
 Flink SQL> SELECT * FROM daily_order_summary;
-+----+--------------------------------+----------------------+----------------------+
-| op |                     order_date |         total_amount |          order_count |
-+----+--------------------------------+----------------------+----------------------+
-| +I |                     2026-04-20 |                 4700 |                    2 |
-| +I |                     2026-04-18 |                 4600 |                    3 |
-| +I |                     2026-04-19 |                 6200 |                    3 |
-+----+--------------------------------+----------------------+----------------------+
++----+------------+--------------+-------------+
+| op | order_date | total_amount | order_count |
++----+------------+--------------+-------------+
+| +I | 2026-04-20 |         4700 |           2 |
+| +I | 2026-04-18 |         4600 |           3 |
+| +I | 2026-04-19 |         6200 |           3 |
++----+------------+--------------+-------------+
 Received a total of 3 rows (0.22 seconds)
 ----
 
@@ -1061,7 +1085,7 @@ flink-shared/catalog/mydb/
 │       └── daily_order_summary_schema.json
 ----
 
-And since it's in partitions, we can take advantage of the functionality in Materialized Tables to https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#refresh[refresh only specific partitions]:
+And since it's in partitions, we can take advantage of the functionality in Materialized Tables to https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#refresh[only refresh a specific partition]:
 
 [source,sql]
 ----
@@ -1074,10 +1098,10 @@ Flink SQL> ALTER MATERIALIZED TABLE daily_order_summary REFRESH PARTITION (order
 1 row in set
 
 Flink SQL> SHOW JOBS;
-+----------------------------------+--------------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                       job name |   status |              start time |
-+----------------------------------+--------------------------------------------------------------------------------+----------+-------------------------+
-| f7b979f004cbf88d574bb07509ed57e8 |  Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_one_time_refresh_job | FINISHED | 2026-04-28T09:13:55.198 |
++----------------------------------+----------+--------------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                       job name |              start time |
++----------------------------------+----------+--------------------------------------------------------------------------------+-------------------------+
+| f7b979f004cbf88d574bb07509ed57e8 | FINISHED |  Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_one_time_refresh_job | 2026-04-28T09:13:55.198 |
 […]
 ----
 
@@ -1092,10 +1116,11 @@ FROM `mt_cat`.`mydb`.`user_orders` AS `user_orders`
 GROUP BY `user_orders`.`order_date`)
   WHERE order_date = '2026-04-20' <1>
 ----
-<1> Predicate on `order_date` as expected
+<1> Predicate on `order_date` as expected, matching the `[…] REFRESH PARTITION (order_date='2026-04-20')` statement that we ran
 
 So we can do partition-specific refreshes—pretty useful for things like recomputing once missing data has arrived for a date.
-The other though is this: when a regular scheduled refresh of the Materialized Table runs, it *only* refreshes the _current_ partition.
+
+The other thing that partitioned Materialized Tables gives us though is this: when a regular scheduled refresh of the Materialized Table runs, it *only* refreshes the _current_ partition.
 So given that today is 28 Apr 2026, if we inspect the SQL for the most recent scheduled refresh of the partitioned Materialized Table we see this:
 
 [source,sql]
@@ -1119,11 +1144,14 @@ If an order is placed yesterday but fulfilled today, we still need to pick that 
 In this situation you'd perhaps end up adding a new field such as `date_updated` and partitioning on that.
 2. It's still a batch-based process.
 In the example of orders changing and you wanting to reflect the latest state in your aggregate table, you'd probably be using `CONTINUOUS` mode and this batch-based partitioning refresh would be irrelevant.
++
 It's not explicitly stated in https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#partitioned-by[the docs], but so far as I can tell since you (1) must specify `date-formatter` (as we saw above) and (2) https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/materialized-table/statements/#with-options[the docs state that] `date-formatter` only works in `FULL` refresh mode, partitioned Materialized Tables won't work for streaming updates.
 
 It also means, since this is not a configurable thing, that your partitioned Materialized Table will _never_ pick up data earlier than today _unless_ *you* manually force a full refresh (`ALTER MATERIALIZED TABLE…REFRESH`) or refresh of the specific partition (as seen above).
+
 That means you could end up with holes in your data unwittingly.
-We saw above that we've got data from 18-20th April:
+Consider the following scenario.
+We saw above that we've currently got data in the Materialized Table for 18-20th April:
 
 [source,sql]
 ----
@@ -1138,7 +1166,7 @@ Flink SQL> SELECT * FROM daily_order_summary;
 Received a total of 3 rows (0.21 seconds)
 ----
 
-If we add some more to the source table for 21st April and for today (28th April):
+Some more data gets added to the source table for both 21st April (let's say it came in late) and for today (28th April):
 
 [source,sql]
 ----
@@ -1149,35 +1177,8 @@ INSERT INTO user_orders (order_id, order_date, user_id, user_name, amount) VALUE
 (1022, DATE '2026-04-28', 2, 'bob', 2300);
 ----
 
-This *never* gets picked up by the Materialized Table because today is 28th April and we just saw how it only refreshes the current partition.
-So it's neat, but imagine being on-call and wondering why the base table aggregate query shows one thing:
-
-[source,sql]
-----
-Flink SQL> SELECT order_date, SUM(amount) AS `total_amount`, COUNT(*) AS `order_count`
-            FROM user_orders
-            GROUP BY order_date;
-
- order_date         total_amount          order_count
- 2026-04-18                 4600                    3
- 2026-04-19                 6200                    3
- 2026-04-20                 4700                    2
- 2026-04-21                 3800                    2
- 2026-04-28                 3800                    2
-----
-
-but despite a scheduled refresh having just run and completed:
-
-[source,sql]
-----
-Flink SQL> SHOW JOBS;
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-|                           job id |                                                                      job name |   status |              start time |
-+----------------------------------+-------------------------------------------------------------------------------+----------+-------------------------+
-| d17cc4458346ed8cb4675cac8170b059 | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_periodic_refresh_job | FINISHED | 2026-04-28T11:00:00.157 |
-----
-
-you only see four rows of data, not five:
+Imagine being on-call and someone complains that the data in the aggregate table (the Materialized Table) is imcomplete.
+Bleary-eyed (it's 03:00 and you were up late studying the source code for Apache Flink, naturally) you check the table and gasp in horror as you (and your angry end-user) only see four rows of data, not five:
 
 [source,sql]
 ----
@@ -1190,6 +1191,36 @@ order_date         total_amount          order_count
 2026-04-28                 3800                    2 <1>
 ----
 <1> Note, no row for 2026-04-21
+
+But when you query the base table you see the full set of data:
+
+[source,sql]
+----
+Flink SQL> SELECT order_date, SUM(amount) AS `total_amount`, COUNT(*) AS `order_count`
+            FROM user_orders
+            GROUP BY order_date;
+
+ order_date         total_amount          order_count
+ 2026-04-18                 4600                    3
+ 2026-04-19                 6200                    3
+ 2026-04-20                 4700                    2
+ 2026-04-21                 3800                    2 <1>
+ 2026-04-28                 3800                    2
+----
+<1> The missing date!
+
+You hurridly check and confirm that the scheduled refresh of the Materialized Table has run and completed successfully:
+
+[source,sql]
+----
+Flink SQL> SHOW JOBS;
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+|                           job id |   status |                                                                      job name |              start time |
++----------------------------------+----------+-------------------------------------------------------------------------------+-------------------------+
+| d17cc4458346ed8cb4675cac8170b059 | FINISHED | Materialized_table_`mt_cat`.`mydb`.`daily_order_summary`_periodic_refresh_job | 2026-04-28T11:00:00.157 |
+----
+
+But then you remember: when the scheduled refresh of the Materialized Table ran, it only refreshed the _current partition_ (because it's a _partitioned_ Materialized Table).
 
 In order to see the full set of data, we need to force a full refresh:
 
@@ -1219,10 +1250,10 @@ And then you're into targetting the refresh of specific partitions, and hoping y
 
 == The scheduler that didn't
 
-The last bit to cover here is the state of Materialized Tables in Flink 2.2 as they currently stand.
+The last bit to cover here is to highlight a bit of a gap, IMHO, in the state of Materialized Tables in Flink 2.2 as they currently stand.
 
 I've already addressed the limited catalog support for Materialized Tables (necessitating the use of `test-filesystem` for the simple examples above).
-The other "fine for a blog post but only just" component is the scheduler.
+The other "_fine for a blog post but only just_" component is the *scheduler*.
 
 The scheduler is a crucial part of batch-based Materialized Tables in Flink 2.2.
 Per the https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=294816797#FLIP435:IntroduceaNewMaterializedTableforSimplifyingDataPipelines-OverallArchitecture[FLIP's design document], it's designed to be pluggable, so I bring no criticism per-se about the state of it in SQL Gateway, just a "buyer beware" note.
@@ -1231,8 +1262,7 @@ In fact, the https://nightlies.apache.org/flink/flink-docs-release-2.2/api/java/
 > This embedded scheduler is mainly used for testing scenarios and is not suitable for production environment.
 
 Here's an example of why, which had me scratching my head somewhat when I was writing this.
-If you create a Materialized Table, and then _restart_ the SQL Gateway, its refresh schedule is lost.
-
+If you create a Materialized Table, and then _restart_ the SQL Gateway, *its refresh schedule is not restored*.
 That's because the SQL Gateway is using an embedded https://nightlies.apache.org/flink/flink-docs-release-2.2/api/java/org/apache/flink/table/gateway/workflow/scheduler/EmbeddedQuartzScheduler.html[memory-based scheduler] which doesn't persist schedules to disk.
 
 When you create a Materialized Table you'll see the schedule get added:
@@ -1245,7 +1275,7 @@ job info: default_group.quartz_job_`mt_cat`.`mydb`.`order_summary_1min`, cron ex
 ----
 
 But that's the _only_ time it gets added.
-No schedule, no refresh.
+And if there's no schedule (such as after a restart), there's no refresh of your Materialized Table.
 
 If you think, aha! I can just `RESUME` the job, you're gonna have a bad time:
 
@@ -1303,3 +1333,13 @@ Flink SQL> SHOW JOBS;
 
 So it works…but I wouldn't be going anywhere near a production environment with this.
 Which, to be fair, is _literally_ what the docs say too :)
+
+https://cwiki.apache.org/confluence/display/FLINK/FLIP-448%3A+Introduce+Pluggable+Workflow+Scheduler+Interface+for+Materialized+Table[FLIP-448] does define a pluggable scheduler, but I'm only aware of Apache DolphinScheduler having added support for it (and even then, I can't find much info on how to put it into practice).
+
+== Wrapping Up
+
+Apache Flink's Materialized Tables are a solid concept.
+However, whilst they give me warm fuzzy memories of my link:/2011/01/08/materialised-views-pct-partition-truncation/[time in the trenches with Materialized Views in Oracle 11g], I think streaming complicates things, as does the issues around scheduling and partitioning—so I'm not convinced yet that the implementation is complete enough across the bits of the ecosystem that I'm working most with for me to wholeheartedly adopt them.
+That said, the schema evolution and query lifecycle management is a really good development.
+
+Definitely worth playing with and making up your own mind!
