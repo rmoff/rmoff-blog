@@ -181,7 +181,7 @@ You can see the query running as a job, just as you would with a regular `INSERT
 
 image:/images/2026/04/flink03.webp[Flink Web UI showing the Materialized Table continuous refresh job running]
 
-Before we get much more into Materialized Table, let's do a quick run through of the alternatives in Flink SQL for defining a table and populating it.
+Before we get much more into Materialized Tables, let's do a quick run through of the alternatives in Flink SQL for defining a table and populating it.
 
 == Without Materialized Tables: It's kinda DDL, and sorta DML
 
@@ -592,7 +592,7 @@ One of https://www.alibabacloud.com/blog/flink-materialized-table-building-unifi
 By having one SQL concept (Materialized Tables) with different configuration options you can define your data manipulation logic _once_ and execute it as you want in both streaming or batch.
 This is defined by a parameter called `REFRESH_MODE`.
 
-In the example above the Materialized Table was using an implicit `REFRESH_MODE` of `CONTINUOUS`, i.e. a streaming query, per the Flink job that we saw running.
+In the example above the Materialized Table was using an effective `REFRESH_MODE` of `CONTINUOUS`, i.e. a streaming query, per the Flink job that we saw running.
 
 To explore the other `REFRESH_MODE`, which is `FULL`, we need a source connector that supports _bounded_ reads.
 You can find a list of connectors within the Flink project https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/connectors/table/overview/#supported-connectors[here] which includes annotation as to what kind of source mode they support.
@@ -855,7 +855,7 @@ I've gone through the https://nightlies.apache.org/flink/flink-docs-release-2.2/
 |materialized-table.default-freshness.full
 |===
 
-* If you *do* specify `FRESHNESS` but *not* `REFRESH_MODE` then Flink determines `REFRESH_MODE` by comparing `FRESHNESS` to the  configuration `materialized-table.refresh-mode.freshness-threshold` (which has a default of 30 minutes).
+* If you *do* specify `FRESHNESS` but *not* `REFRESH_MODE` then Flink determines `REFRESH_MODE` by comparing `FRESHNESS` to the configuration `materialized-table.refresh-mode.freshness-threshold` (which has a default of 30 minutes).
 +
 If your value of `FRESHNESS` is less than the `freshness-threshold` Flink will use `CONTINUOUS`, otherwise it'll use `FULL`.
 +
@@ -865,6 +865,7 @@ TIP: If you want to use a different `REFRESH_MODE` than this logic sets, then ju
 This is where it gets less clear :)
 +
 If you don't specify a `REFRESH_MODE` *or* `FRESHNESS` then Flink https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/java/org/apache/flink/table/planner/utils/MaterializedTableUtils.java#L236[will default] to an internal value of https://nightlies.apache.org/flink/flink-docs-stable/api/java/org/apache/flink/table/catalog/CatalogMaterializedTable.LogicalRefreshMode.html#AUTOMATIC[`AUTOMATIC`] for the `REFRESH_MODE`.
+You can actually see that if you look closely at the catalog entry that I quoted above, which includes `"logical-refresh-mode" : "AUTOMATIC"`.
 +
 Flink then defaults the `FRESHNESS` to the value of `materialized-table.default-freshness.continuous` (default: 3 minutes):
 +
@@ -1246,7 +1247,7 @@ order_date         total_amount          order_count
 <1> The partition's data that was missed in the scheduled refresh because it's not the current date
 
 A full refresh is no big deal if we're aggregating a handful of rows of source data, but if this were a huge table this could be quite a consideration.
-And then you're into targetting the refresh of specific partitions, and hoping you've got them all.
+And then you're into targeting the refresh of specific partitions, and hoping you've got them all.
 
 == The scheduler that didn't
 
@@ -1256,7 +1257,7 @@ I've already addressed the limited catalog support for Materialized Tables (nece
 The other "_fine for a blog post but only just_" component is the *scheduler*.
 
 The scheduler is a crucial part of batch-based Materialized Tables in Flink 2.2.
-Per the https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=294816797#FLIP435:IntroduceaNewMaterializedTableforSimplifyingDataPipelines-OverallArchitecture[FLIP's design document], it's designed to be pluggable, so I bring no criticism per-se about the state of it in SQL Gateway, just a "buyer beware" note.
+Per the https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=294816797#FLIP435:IntroduceaNewMaterializedTableforSimplifyingDataPipelines-OverallArchitecture[FLIP's design document], it's designed to be pluggable, so I bring no criticism per se about the state of it in SQL Gateway, just a "buyer beware" note.
 In fact, the https://nightlies.apache.org/flink/flink-docs-release-2.2/api/java/org/apache/flink/table/gateway/workflow/scheduler/EmbeddedQuartzScheduler.html[docs themselves even say so]:
 
 > This embedded scheduler is mainly used for testing scenarios and is not suitable for production environment.
@@ -1339,7 +1340,7 @@ https://cwiki.apache.org/confluence/display/FLINK/FLIP-448%3A+Introduce+Pluggabl
 == Wrapping Up
 
 Apache Flink's Materialized Tables are a solid concept.
-However, whilst they give me warm fuzzy memories of my link:/2011/01/08/materialised-views-pct-partition-truncation/[time in the trenches with Materialized Views in Oracle 11g], I think streaming complicates things, as does the issues around scheduling and partitioning—so I'm not convinced yet that the implementation is complete enough across the bits of the ecosystem that I'm working most with for me to wholeheartedly adopt them.
+However, whilst they give me warm fuzzy memories of my link:/2011/01/08/materialised-views-pct-partition-truncation/[time in the trenches with Materialized Views in Oracle 11g], I think streaming complicates things, as do the issues around scheduling and partitioning—so I'm not convinced yet that the implementation is complete enough across the bits of the ecosystem that I'm working most with for me to wholeheartedly adopt them.
 That said, the schema evolution and query lifecycle management is a really good development.
 
 Definitely worth playing with and making up your own mind!
