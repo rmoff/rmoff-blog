@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
     link.classList.add('medium-mirror-processed');
 
     var originalUrl = link.getAttribute('href');
+
+    // Skip if the link is already going through a translator or freedium —
+    // the user has chosen that path deliberately, don't second-guess it.
+    if (/translate\.goog|translate\.kagi\.com|freedium-mirror\.cfd/.test(originalUrl)) return;
+
     link.setAttribute('href', FREEDIUM_BASE + originalUrl);
 
     var fallback = document.createElement('a');
