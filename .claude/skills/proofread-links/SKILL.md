@@ -10,9 +10,11 @@ disable-model-invocation: false
 
 ## Tasks
 
-1. **Extract all links** from the article
+1. **Extract all links** from the article using `grep` or similar tools directly from the file. Do NOT manually transcribe URLs — transcription errors are easy to make (e.g., confusing `3.6.0` with `3-6-0`) and will cause false positives/negatives in curl checks. Extract programmatically, then verify extracted URLs match the source file before testing.
 
 2. **Check all links are live** using a single Bash call with `curl -sI -o /dev/null -w "%{url} %{http_code}\n"` for every URL. This is cheap and fast. Report any that return 4xx/5xx or fail to connect.
+
+   **Medium links** (`medium.com`, `*.medium.com`) always return 403 to curl — even bogus URLs do, so a raw curl can't validate them. Instead, validate them through Freedium: `curl -sI -o /dev/null -w "%{http_code}\n" "https://freedium-mirror.cfd/<medium-url>"`. Freedium returns 200 for real articles and 404 for non-existent ones. If Freedium returns 200, treat the Medium link as clean.
 
 3. **Fetch fetchable links** to verify characterizations — use WebFetch and verify:
    - Does my summary/characterization accurately reflect the linked content?
