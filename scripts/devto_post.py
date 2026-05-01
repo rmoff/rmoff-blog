@@ -133,6 +133,117 @@ def convert_adoc_to_markdown(body: str) -> str:
     return clean_pandoc_markdown(pandoc_result.stdout)
 
 
+_TITLE_SENTINEL = '\x00DEVTO_TITLE\x00'
+
+# Line is a div opener if it's `^ *:{3,}\s+<something>` — pandoc always puts a
+# kind or attribute block after the colons on the opener line. A bare colon line
+# is the closer.
+_DIV_OPEN_RE = re.compile(r'^( *):{3,}\s+(\S.*?)\s*$')
+_DIV_CLOSE_RE = re.compile(r'^ *:{3,}\s*$')
+
+
+def _render_video_div(attrs: str, inner_lines: list[str]) -> str:
+    """Render a `::: {wrapper="1" opts="..." title="..."}` video div as <video>."""
+    inner = "\n".join(inner_lines).strip()
+    title_match = re.search(r'title="([^"]*)"', attrs)
+    title = title_match.group(1) if title_match else ""
+    src_match = re.search(r'!\[[^\]]*\]\(([^)]+)\)', inner)
+    if not src_match:
+        return inner  # can't parse, leave as-is
+    src = src_match.group(1)
+    if src.startswith('/'):
+        src = SITE_BASE_URL + src
+    opts = re.search(r'opts="([^"]*)"', attrs)
+    opt_list = opts.group(1).split(',') if opts else []
+    attrs_html = ' '.join(filter(None, [
+        'autoplay' if 'autoplay' in opt_list else '',
+        'loop' if 'loop' in opt_list else '',
+        'muted',  # always mute autoplay videos
+        'controls' if 'nocontrols' not in opt_list else '',
+        'playsinline',
+    ]))
+    title_attr = f' title="{title}"' if title else ''
+    return (f'<video{title_attr} {attrs_html} style="max-width:100%">\n'
+            f'  <source src="{src}" type="video/mp4">\n'
+            f'</video>')
+
+
+def _render_div(kind: str, content_lines: list[str]) -> list[str]:
+    """Render a closed div block. Returns the lines to splice into the parent."""
+    # Title block → emit a sentinel that the enclosing div can consume.
+    if kind == 'title':
+        text = '\n'.join(content_lines).strip()
+        return [f'{_TITLE_SENTINEL}{text}']
+
+    # Video div has attrs starting with `{`.
+    if kind.startswith('{') and 'wrapper=' in kind:
+        return _render_video_div(kind, content_lines).splitlines()
+
+    # Pull a leading title sentinel out of the content (if present).
+    title_text = ""
+    body_lines = list(content_lines)
+    while body_lines and body_lines[0].strip() == '':
+        body_lines.pop(0)
+    if body_lines and body_lines[0].startswith(_TITLE_SENTINEL):
+        title_text = body_lines.pop(0)[len(_TITLE_SENTINEL):]
+        while body_lines and body_lines[0].strip() == '':
+            body_lines.pop(0)
+    while body_lines and body_lines[-1].strip() == '':
+        body_lines.pop()
+
+    # Strip uniform leading whitespace (e.g. when div is inside a list item).
+    body = textwrap.dedent('\n'.join(body_lines))
+
+    # Generic/example wrappers (incl. unhandled `{}` attr blocks) → bare content.
+    if kind in ('{}', '', 'informalexample', 'example', 'formalpara') or kind.startswith('{'):
+        if title_text:
+            return [f'**{title_text}**', ''] + body.splitlines()
+        return body.splitlines()
+
+    # Admonition → blockquote
+    label = title_text or kind.capitalize()
+    quoted = [f'> {line}' if line else '>' for line in body.splitlines()]
+    return [f'> **{label}:**'] + quoted
+
+
+def _process_divs(md: str) -> str:
+    """Stack-based parser for pandoc fenced-div blocks (admonitions, video, etc).
+
+    Pandoc emits divs as `::: kind` or `:::: kind` opener lines and bare `:::`
+    or `::::` closer lines. The colon count varies between pandoc versions and
+    nesting levels, so we don't rely on it — we detect openers by whether the
+    line has content after the colons.
+    """
+    # Root frame holds the final output lines. Each frame on the stack is
+    # (kind, content_lines) for an open div.
+    root: list[str] = []
+    stack: list[tuple[str, list[str]]] = []
+
+    for line in md.splitlines():
+        m = _DIV_OPEN_RE.match(line)
+        if m:
+            kind = m.group(2).strip()
+            stack.append((kind, []))
+            continue
+        if stack and _DIV_CLOSE_RE.match(line):
+            kind, content = stack.pop()
+            rendered = _render_div(kind, content)
+            target = stack[-1][1] if stack else root
+            target.extend(rendered)
+            continue
+        target = stack[-1][1] if stack else root
+        target.append(line)
+
+    # Unclosed divs: flush their content out as-is (drop the opener marker).
+    while stack:
+        _, content = stack.pop()
+        target = stack[-1][1] if stack else root
+        target.extend(content)
+
+    # Restore any title sentinels that escaped (defensive — shouldn't happen).
+    return '\n'.join(root).replace(_TITLE_SENTINEL, '')
+
+
 def clean_pandoc_markdown(md: str) -> str:
     """Post-process pandoc's Markdown output for dev.to compatibility."""
     # Strip Hugo read-more marker. Pandoc escapes HTML comments with backslashes,
@@ -142,108 +253,7 @@ def clean_pandoc_markdown(md: str) -> str:
     # Remove section ID anchors like {#_overview} that pandoc adds
     md = re.sub(r'\s*\{#[^}]+\}', '', md)
 
-    # Convert pandoc fenced-div blocks to readable Markdown.
-    # Pandoc outputs AsciiDoc admonitions (NOTE/TIP/WARNING) as:
-    #   :::: note
-    #   ::: title
-    #   Note
-    #   :::
-    #   content
-    #   ::::
-    # And titled code blocks (listing blocks with titles) as:
-    #   :::: {}
-    #   ::: title
-    #   filename.sql
-    #   :::
-    #   ``` sql
-    #   ...
-    #   ::::
-    def replace_div(m):
-        kind = m.group(1).strip()   # e.g. "note", "tip", "{}"
-        inner = m.group(2)
-        # Strip common leading whitespace (e.g. when div is inside a list item)
-        inner = textwrap.dedent(inner)
-        # Extract the ::: title ... ::: content if present
-        title_match = re.match(r'^::: title\n(.*?)\n:::\n\n?', inner, flags=re.DOTALL)
-        if title_match:
-            title_text = title_match.group(1).strip()
-            inner = inner[title_match.end():]
-        else:
-            title_text = ""
-        inner = inner.strip()
-
-        # Generic div (e.g. titled code block) → bold label + content
-        if kind in ("{}", ""):
-            if title_text:
-                return f"**{title_text}**\n\n{inner}\n"
-            return inner + "\n"
-
-        # Admonition → blockquote
-        label = title_text or kind.capitalize()
-        quoted = "\n".join(f"> {line}" if line else ">" for line in inner.splitlines())
-        return f"> **{label}:**\n{quoted}\n"
-
-    # Convert pandoc 3-colon video divs to HTML <video> tags.
-    # Pandoc converts AsciiDoc video:: blocks to:
-    #   ::: {wrapper="1" opts="autoplay,loop,nocontrols" title="Title"}
-    #   ![](/images/file.mp4)
-    #   :::
-    def replace_video_div(m):
-        attrs = m.group(1)   # e.g. wrapper="1" opts="autoplay,loop,nocontrols" title="Title"
-        inner = m.group(2).strip()
-        # Extract title from attrs
-        title_match = re.search(r'title="([^"]*)"', attrs)
-        title = title_match.group(1) if title_match else ""
-        # Extract src from the ![](src) inside
-        src_match = re.search(r'!\[[^\]]*\]\(([^)]+)\)', inner)
-        if not src_match:
-            return inner  # can't parse, leave as-is
-        src = src_match.group(1)
-        # Make URL absolute if relative
-        if src.startswith('/'):
-            src = SITE_BASE_URL + src
-        opts = re.search(r'opts="([^"]*)"', attrs)
-        opt_list = opts.group(1).split(',') if opts else []
-        autoplay = 'autoplay' in opt_list
-        loop = 'loop' in opt_list
-        muted = True  # always mute autoplay videos
-        attrs_html = ' '.join(filter(None, [
-            'autoplay' if autoplay else '',
-            'loop' if loop else '',
-            'muted' if muted else '',
-            'controls' if 'nocontrols' not in opt_list else '',
-            'playsinline',
-        ]))
-        title_attr = f' title="{title}"' if title else ''
-        return (f'<video{title_attr} {attrs_html} style="max-width:100%">\n'
-                f'  <source src="{src}" type="video/mp4">\n'
-                f'</video>\n')
-
-    # Video divs: allow leading spaces (they appear indented inside list items)
-    md = re.sub(
-        r'^ *:::\s*\{([^}]*)\}\n(.*?)^ *:::\s*$',
-        replace_video_div,
-        md,
-        flags=re.MULTILINE | re.DOTALL,
-    )
-
-    md = re.sub(
-        r'^ *:{4}\s*(\S*)\n(.*?)^ *:{4}\s*$',
-        replace_div,
-        md,
-        flags=re.MULTILINE | re.DOTALL,
-    )
-
-    # Strip any remaining 3-colon divs (e.g. callout-list from AsciiDoc numbered callouts).
-    # These wrap already-valid Markdown content; just remove the ::: markers.
-    md = re.sub(
-        r'^ *:::[^\n]*\n(.*?)^ *:::\s*$',
-        lambda m: m.group(1),
-        md,
-        flags=re.MULTILINE | re.DOTALL,
-    )
-
-    return md
+    return _process_divs(md)
 
 
 def handle_md_shortcodes(body: str) -> str:
