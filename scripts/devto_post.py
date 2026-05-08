@@ -116,12 +116,15 @@ def convert_adoc_to_markdown(body: str) -> str:
         return f'<imagedata {ref}/>'
     docbook = re.sub(r'<imagedata [^>]*/?>', fix_imagedata, adoc_result.stdout)
 
-    # Step 2: DocBook → Markdown using pandoc
+    # Step 2: DocBook → Markdown using pandoc.
+    # `-smart` disables pandoc's smart-typography on the writer side, which
+    # otherwise emits backslash escapes around straight quotes (e.g. `\"foo\"`)
+    # and apostrophes (e.g. `it\'s`) that leak through to dev.to as literals.
     pandoc_result = subprocess.run(
         [
             "pandoc",
             "-f", "docbook",
-            "-t", "markdown+fenced_code_blocks+pipe_tables",
+            "-t", "markdown-smart+fenced_code_blocks+pipe_tables",
             "--wrap=none",
         ],
         input=docbook,
@@ -247,8 +250,9 @@ def _process_divs(md: str) -> str:
 def clean_pandoc_markdown(md: str) -> str:
     """Post-process pandoc's Markdown output for dev.to compatibility."""
     # Strip Hugo read-more marker. Pandoc escapes HTML comments with backslashes,
-    # producing \<!\--more\--\> from <!--more-->
-    md = re.sub(r'\\?<\\?!\\?-+more\\?-+\\?>', '', md)
+    # producing \<!\--more\--\> from <!--more-->. Pandoc's smart-typography
+    # also converts the trailing `-->` to a U+2192 arrow (`→`), so handle both.
+    md = re.sub(r'\\?<\\?!\\?-+more(?:\\?-+\\?>|-?→)', '', md)
 
     # Remove section ID anchors like {#_overview} that pandoc adds
     md = re.sub(r'\s*\{#[^}]+\}', '', md)
