@@ -12,15 +12,20 @@
   if (!article) return;
 
   // ── Identify link sections ──────────────────────────────────────────
-  // The il-header.adoc include renders as an admonitionblock.tip.
-  // It may be a direct child of the article (most posts) or nested
-  // inside a preceding sect1 (when there's a preamble section).
-  // Every .sect1 after the tip marker is a "link section".
+  // The il-header shortcode renders as an admonitionblock.tip somewhere
+  // inside <article>. Depending on the post's structure it may be a direct
+  // child of the article, nested inside a preceding sect1 (preamble), or
+  // nested inside a .paragraph wrapper (asciidoctor wraps standalone-line
+  // shortcode output). We want the top-level child of <article> that
+  // contains the tip block, so its nextElementSibling chain walks the
+  // sect1 link sections.
   var tipBlock = article.querySelector('.admonitionblock.tip');
   if (!tipBlock) return;
 
-  // Find the starting point: either the containing sect1 or the tip itself
-  var marker = tipBlock.closest('.sect1') || tipBlock;
+  var marker = tipBlock;
+  while (marker.parentNode && marker.parentNode !== article) {
+    marker = marker.parentNode;
+  }
 
   // Walk forward through siblings to collect link sections
   var linkSections = [];
