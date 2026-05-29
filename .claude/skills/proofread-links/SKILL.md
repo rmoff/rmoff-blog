@@ -53,7 +53,9 @@ disable-model-invocation: false
    - **And finally**: non-data content
    - Flag any links that seem miscategorised, with a suggested alternative section
 
-7. **Images** — check the frontmatter `image:` (header) and `thumbnail:` paths:
+7. **Punctuation consistency** — every bullet should end with a full stop (or other appropriate terminal punctuation, e.g. `?`, `!`, `…`). This applies even to bare "Author - [title]" entries. Flag any bullet missing terminal punctuation and offer to fix.
+
+8. **Images** — check the frontmatter `image:` (header) and `thumbnail:` paths:
    - **Format**: must be `.webp`. If the post points at a `.jpeg`/`.jpg`/`.png` source, regenerate the webp via `cwebp -q 80 -resize <width> 0 <src> -o <dest>` and update the frontmatter.
    - **Dimensions**: match the existing IL pattern in `static/images/<year>/<month>/`:
      - Header (`h_` prefix): **1800px wide**, height free (typical full crops are 1800×1350, banner crops 1800×~600)
@@ -61,12 +63,13 @@ disable-model-invocation: false
    - **File size**: header should be roughly 200KB–800KB, thumbnail 100KB–300KB. Anything ≫1MB means the source wasn't resized — regenerate.
    - Verify by sampling the previous month's `h_*.webp` / `t_*.webp` with `identify` or `ls -l` to confirm the current convention before resizing.
 
-8. **Report format**:
+9. **Report format**:
    - List any broken links (from curl check)
    - List any mischaracterized links with: what I said vs what it actually says
    - List any potentially miscategorised links with suggested section
    - List typos in text (offer to fix these)
    - List suspected typos in URLs (with validation status)
+   - List any bullets missing terminal punctuation (offer to fix)
    - Keep it concise - don't repeat back correct characterizations or correctly-placed links
 
 ## Ignore
