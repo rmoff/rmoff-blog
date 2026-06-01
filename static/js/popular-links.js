@@ -47,13 +47,16 @@
       return;
     }
     var html = headingHtml(container);
+    var max = Number(links[0].clicks) || 1; // links are sorted desc, so the first is the max
     html += '<ol class="popular-links-list">';
     links.forEach(function (item, i) {
       var domain = domainOf(item.url);
       var label = (item.text && item.text.trim()) || domain || item.url;
       var clicks = Number(item.clicks) || 0;
+      var pct = Math.max(2, Math.round((clicks / max) * 100)); // min sliver so the smallest still shows
       html +=
         '<li class="popular-links-item">' +
+          '<span class="popular-links-bar" style="width:' + pct + '%"></span>' +
           '<span class="popular-links-rank">' + (i + 1) + '</span>' +
           '<a class="popular-links-link" href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">' +
             escapeHtml(label) +
