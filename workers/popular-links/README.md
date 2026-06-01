@@ -24,8 +24,10 @@ GET /?path=/2026/05/28/foo/ → scope to clicks on one post page (site-wide if o
 oddball click — e.g. a browser auto-translating the page — can't hijack the label.
 
 Results are edge-cached for 1 hour, so PostHog is hit at most once per hour per
-`limit`, regardless of blog traffic. CORS is locked to `rmoff.net` (plus
-localhost for dev).
+`limit`, regardless of blog traffic. CORS allows `rmoff.net` (and any subdomain,
+e.g. `preview.rmoff.net`), the Cloudflare Pages preview project
+(`*.rmoff-blog-preview.pages.dev`), and localhost for dev; other origins fall
+back to `rmoff.net` (no cross-origin read).
 
 The query strips the Freedium-mirror prefix (`https://freedium-mirror.cfd/https://medium.com/…`
 → `https://medium.com/…`), which also dedupes mirrored vs. original clicks, and

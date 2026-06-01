@@ -20,11 +20,22 @@ const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 const CACHE_TTL = 3600; // edge-cache results for 1 hour
 
-const ALLOWED_ORIGINS = [
-  "https://rmoff.net",
+const EXACT_ORIGINS = [
   "http://localhost:1313",
   "http://localhost:1314",
 ];
+// Pattern-matched origins: rmoff.net (+ any subdomain, e.g. preview.rmoff.net) and
+// the Cloudflare Pages preview project (per-deploy <hash>.rmoff-blog-preview.pages.dev).
+const ORIGIN_PATTERNS = [
+  /^https:\/\/([a-z0-9-]+\.)?rmoff\.net$/,
+  /^https:\/\/([a-z0-9-]+\.)?rmoff-blog-preview\.pages\.dev$/,
+];
+
+function allowedOrigin(origin) {
+  if (EXACT_ORIGINS.includes(origin)) return origin;
+  if (ORIGIN_PATTERNS.some(function (re) { return re.test(origin); })) return origin;
+  return "https://rmoff.net";
+}
 
 // Strip the Freedium-mirror prefix so e.g.
 //   https://freedium-mirror.cfd/https://medium.com/...  ->  https://medium.com/...
@@ -50,8 +61,7 @@ function buildQuery(limit, path) {
 }
 
 function corsHeaders(origin) {
-  const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return { "Access-Control-Allow-Origin": allow, "Vary": "Origin" };
+  return { "Access-Control-Allow-Origin": allowedOrigin(origin), "Vary": "Origin" };
 }
 
 function json(body, status, cors) {
