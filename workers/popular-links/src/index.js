@@ -1,14 +1,16 @@
 /**
  * popular-links — Cloudflare Worker
  *
- * Read-only proxy in front of PostHog. Runs one fixed HogQL query against the
- * `il_link_clicked` events and returns the most-clicked outbound links from the
- * Interesting Links series as JSON. The PostHog personal API key never leaves
- * the Worker (it is a Wrangler secret); the browser only ever sees the result.
+ * Read-only proxy in front of PostHog. Keeps the PostHog personal API key
+ * server-side (a Wrangler secret); the browser only ever sees the result.
+ * Two routes:
  *
  * GET /            -> { links: [{ url, text, clicks }], generated_at }
  *   ?limit=N       -> number of links (1..MAX_LIMIT, default DEFAULT_LIMIT)
- *   ?path=/p/       -> scope to clicks on one post page ($pathname); omit for site-wide
+ *   ?path=/p/      -> scope to il_link_clicked on one post page; omit for site-wide
+ *
+ * GET /views       -> { views, scope, generated_at }   (old-school hit counter)
+ *   ?path=/p/      -> $pageview count for that page; omit for the whole-site total
  *
  * Secret required:  POSTHOG_API_KEY  (a phx_ personal key with read access to
  *                   project PROJECT_ID).  Set with: wrangler secret put POSTHOG_API_KEY
@@ -37,14 +39,16 @@ function allowedOrigin(origin) {
   return "https://rmoff.net";
 }
 
-// Strip the Freedium-mirror prefix so e.g.
-//   https://freedium-mirror.cfd/https://medium.com/...  ->  https://medium.com/...
-// This also dedupes mirrored vs. original clicks, since they group to one URL.
-// No capture group / backreference needed: we match only the prefix and drop it.
-// `path` (optional) scopes results to clicks that happened on one post page,
-// via the $pathname captured on every event. It is whitelist-sanitized by the
-// caller to [A-Za-z0-9/_.-] only, so it cannot break out of the string literal.
-function buildQuery(limit, path) {
+// Whitelist to safe path chars so an interpolated value can't break out of the
+// single-quoted HogQL string literal.
+function sanitizePath(p) {
+  return (p || "").replace(/[^a-zA-Z0-9\/_.-]/g, "").slice(0, 256);
+}
+
+// Most-clicked Interesting Links. Strips the Freedium-mirror prefix (so
+// freedium-mirror.cfd/https://medium.com/... -> https://medium.com/...) which also
+// dedupes mirrored vs. original; label = most-frequent anchor text (topK).
+function linksQuery(limit, path) {
   const pathFilter = path ? `AND properties.$pathname = '${path}'` : "";
   return `
     SELECT
@@ -60,6 +64,12 @@ function buildQuery(limit, path) {
     LIMIT ${limit}`;
 }
 
+// Pageview count for the hit counter. With a path -> that page; without -> site total.
+function viewsQuery(path) {
+  const pathFilter = path ? `AND properties.$pathname = '${path}'` : "";
+  return `SELECT count() AS views FROM events WHERE event = '$pageview' ${pathFilter}`;
+}
+
 function corsHeaders(origin) {
   return { "Access-Control-Allow-Origin": allowedOrigin(origin), "Vary": "Origin" };
 }
@@ -69,6 +79,47 @@ function json(body, status, cors) {
     status,
     headers: { ...cors, "Content-Type": "application/json" },
   });
+}
+
+// Shared: serve a HogQL query through the edge cache. The cached copy omits the
+// per-origin CORS header; it is re-applied on every hit.
+async function runCachedQuery(cacheKey, hogql, transform, env, ctx, cors) {
+  const cache = caches.default;
+  const hit = await cache.match(cacheKey);
+  if (hit) {
+    const r = new Response(hit.body, hit);
+    Object.entries(cors).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
+  }
+
+  if (!env.POSTHOG_API_KEY) {
+    return json({ error: "Worker not configured (missing POSTHOG_API_KEY)" }, 500, cors);
+  }
+
+  let phRes;
+  try {
+    phRes = await fetch(`${POSTHOG_HOST}/api/projects/${PROJECT_ID}/query/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.POSTHOG_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: { kind: "HogQLQuery", query: hogql } }),
+    });
+  } catch (e) {
+    return json({ error: "Upstream fetch failed" }, 502, cors);
+  }
+
+  if (!phRes.ok) {
+    const detail = (await phRes.text()).slice(0, 500);
+    return json({ error: "PostHog query failed", status: phRes.status, detail }, 502, cors);
+  }
+
+  const data = await phRes.json();
+  const bodyStr = JSON.stringify(transform(data));
+  const cacheable = { "Content-Type": "application/json", "Cache-Control": `public, max-age=${CACHE_TTL}` };
+  ctx.waitUntil(cache.put(cacheKey, new Response(bodyStr, { headers: cacheable })));
+  return new Response(bodyStr, { headers: { ...cors, ...cacheable } });
 }
 
 export default {
@@ -89,61 +140,36 @@ export default {
     }
 
     const reqUrl = new URL(request.url);
+    const path = sanitizePath(reqUrl.searchParams.get("path"));
+
+    // --- Hit counter: /views ---
+    if (reqUrl.pathname === "/views") {
+      const cacheKey = new Request(`https://popular-links/views?path=${encodeURIComponent(path)}`);
+      return runCachedQuery(
+        cacheKey,
+        viewsQuery(path),
+        (data) => ({
+          views: (data.results && data.results[0] && Number(data.results[0][0])) || 0,
+          scope: path || "site",
+          generated_at: new Date().toISOString(),
+        }),
+        env, ctx, cors
+      );
+    }
+
+    // --- Most-clicked links: / (default) ---
     let limit = parseInt(reqUrl.searchParams.get("limit"), 10);
     if (!Number.isFinite(limit) || limit < 1) limit = DEFAULT_LIMIT;
     if (limit > MAX_LIMIT) limit = MAX_LIMIT;
-
-    // Optional per-post scope. Whitelist to safe path chars (no quotes possible).
-    const path = (reqUrl.searchParams.get("path") || "")
-      .replace(/[^a-zA-Z0-9\/_.-]/g, "")
-      .slice(0, 256);
-
-    // Edge cache, keyed by limit + path (origin-agnostic so all readers share it).
-    const cache = caches.default;
     const cacheKey = new Request(`https://popular-links/?limit=${limit}&path=${encodeURIComponent(path)}`);
-    const hit = await cache.match(cacheKey);
-    if (hit) {
-      // Re-apply per-request CORS on top of the cached body.
-      const r = new Response(hit.body, hit);
-      Object.entries(cors).forEach(([k, v]) => r.headers.set(k, v));
-      return r;
-    }
-
-    if (!env.POSTHOG_API_KEY) {
-      return json({ error: "Worker not configured (missing POSTHOG_API_KEY)" }, 500, cors);
-    }
-
-    let phRes;
-    try {
-      phRes = await fetch(`${POSTHOG_HOST}/api/projects/${PROJECT_ID}/query/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.POSTHOG_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: { kind: "HogQLQuery", query: buildQuery(limit, path) } }),
-      });
-    } catch (e) {
-      return json({ error: "Upstream fetch failed" }, 502, cors);
-    }
-
-    if (!phRes.ok) {
-      const detail = (await phRes.text()).slice(0, 500);
-      return json({ error: "PostHog query failed", status: phRes.status, detail }, 502, cors);
-    }
-
-    const data = await phRes.json();
-    const links = (data.results || []).map(([url, text, clicks]) => ({ url, text, clicks }));
-
-    const response = json({ links, generated_at: new Date().toISOString() }, 200, {
-      ...cors,
-      "Cache-Control": `public, max-age=${CACHE_TTL}`,
-    });
-    // Cache a copy without the per-origin CORS header (re-applied on hit above).
-    const toCache = new Response(JSON.stringify({ links, generated_at: new Date().toISOString() }), {
-      headers: { "Content-Type": "application/json", "Cache-Control": `public, max-age=${CACHE_TTL}` },
-    });
-    ctx.waitUntil(cache.put(cacheKey, toCache));
-    return response;
+    return runCachedQuery(
+      cacheKey,
+      linksQuery(limit, path),
+      (data) => ({
+        links: (data.results || []).map(([url, text, clicks]) => ({ url, text, clicks })),
+        generated_at: new Date().toISOString(),
+      }),
+      env, ctx, cors
+    );
   },
 };
