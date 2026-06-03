@@ -18,7 +18,6 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function comma(n) { return (Number(n) || 0).toLocaleString('en-US'); }
   function hide(el) { (el.closest('.sidebar-section') || el).style.display = 'none'; }
 
   widgets.forEach(function (el) {
@@ -30,20 +29,12 @@
       .then(function (data) {
         var posts = (data && data.posts) || [];
         if (!posts.length) { hide(el); return; }
-        var max = Number(posts[0].views) || 1;
-        var html = '<ol class="popular-links-list">';
-        posts.forEach(function (p, i) {
-          var pct = Math.max(2, Math.round((Number(p.views) || 0) / max * 100));
-          html +=
-            '<li class="popular-links-item">' +
-              '<span class="popular-links-bar" style="width:' + pct + '%"></span>' +
-              '<span class="popular-links-rank">' + (i + 1) + '</span>' +
-              '<a class="popular-links-link" href="' + escapeHtml(p.url) + '">' +
-                escapeHtml(p.title || p.url) + '</a>' +
-              '<span class="popular-links-clicks"><b>' + comma(p.views) + '</b> views</span>' +
-            '</li>';
+        var html = '<ul class="top-posts-list">';
+        posts.forEach(function (p) {
+          var t = escapeHtml(p.title || p.url);
+          html += '<li><a href="' + escapeHtml(p.url) + '" title="' + t + '">' + t + '</a></li>';
         });
-        html += '</ol><p class="top-posts-note">most-read since 13 Nov 2024</p>';
+        html += '</ul>';
         el.innerHTML = html;
       })
       .catch(function () { hide(el); });
