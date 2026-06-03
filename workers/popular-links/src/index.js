@@ -12,6 +12,9 @@
  * GET /views       -> { views, scope, generated_at }   (old-school hit counter)
  *   ?path=/p/      -> $pageview count for that page; omit for the whole-site total
  *
+ * GET /top-posts   -> { posts: [{ url, title, views }], generated_at }
+ *   ?limit=N       -> top N posts by $pageview (1..50, default 10)
+ *
  * Secret required:  POSTHOG_API_KEY  (a phx_ personal key with read access to
  *                   project PROJECT_ID).  Set with: wrangler secret put POSTHOG_API_KEY
  */
@@ -68,6 +71,22 @@ function linksQuery(limit, path) {
 function viewsQuery(path) {
   const pathFilter = path ? `AND properties.$pathname = '${path}'` : "";
   return `SELECT count() AS views FROM events WHERE event = '$pageview' ${pathFilter}`;
+}
+
+// Top posts by pageviews, site-wide. Restricted to post permalinks
+// (/:year/:month/:day/...) so it excludes the homepage, categories, tags, etc.
+// Title via topK (most-frequent) so a retitled page resolves to its usual title.
+function topPostsQuery(limit) {
+  return `
+    SELECT properties.$pathname AS url,
+           topK(1)(properties.title)[1] AS title,
+           count() AS views
+    FROM events
+    WHERE event = '$pageview'
+      AND match(properties.$pathname, '^/20[0-9][0-9]/[0-9][0-9]/[0-9][0-9]/')
+    GROUP BY url
+    ORDER BY views DESC
+    LIMIT ${limit}`;
 }
 
 function corsHeaders(origin) {
@@ -151,6 +170,23 @@ export default {
         (data) => ({
           views: (data.results && data.results[0] && Number(data.results[0][0])) || 0,
           scope: path || "site",
+          generated_at: new Date().toISOString(),
+        }),
+        env, ctx, cors
+      );
+    }
+
+    // --- Top posts by views: /top-posts ---
+    if (reqUrl.pathname === "/top-posts") {
+      let limit = parseInt(reqUrl.searchParams.get("limit"), 10);
+      if (!Number.isFinite(limit) || limit < 1) limit = 10;
+      if (limit > 50) limit = 50;
+      const cacheKey = new Request(`https://popular-links/top-posts?limit=${limit}`);
+      return runCachedQuery(
+        cacheKey,
+        topPostsQuery(limit),
+        (data) => ({
+          posts: (data.results || []).map(([url, title, views]) => ({ url, title, views })),
           generated_at: new Date().toISOString(),
         }),
         env, ctx, cors
