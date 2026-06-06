@@ -1,6 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const mobileViewport = { width: 375, height: 812 };
+
+// Viewports for the overflow checks. Tablet (768px) matters because the
+// `html, body { overflow-x: hidden }` safety net only kicks in at <=640px, so
+// above that any over-wide content produces a genuinely scrollable, broken page.
+const overflowViewports = [
+  { name: 'mobile', width: 375, height: 812 },
+  { name: 'tablet', width: 768, height: 1024 },
+];
 
 const pages = [
   { name: 'homepage', url: '/' },
@@ -10,26 +18,49 @@ const pages = [
   { name: 'category-term', url: '/categories/apache-kafka/' },
 ];
 
+// The Popular posts widget is injected asynchronously by top-posts.js. Its
+// titles are `white-space: nowrap`, so they are exactly the content that can
+// blow out the layout — the overflow checks are only meaningful once it has
+// rendered. If the widget is present on the page, fail loudly when it never
+// populates rather than silently testing an empty (and therefore narrow)
+// sidebar, which is how the mobile overflow regression slipped through.
+async function waitForPopularPosts(p: Page) {
+  const widgetCount = await p.locator('.top-posts').count();
+  if (widgetCount === 0) return;
+  await expect(
+    p.locator('.top-posts-list a').first(),
+    'Popular posts widget present but never populated — overflow check would be a false pass',
+  ).toBeVisible({ timeout: 10000 });
+}
+
 for (const page of pages) {
-  test(`mobile: no horizontal overflow on ${page.name}`, async ({ browser }) => {
-    const context = await browser.newContext({ viewport: mobileViewport });
-    const p = await context.newPage();
-    await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
-    await p.waitForTimeout(1000);
+  for (const vp of overflowViewports) {
+    test(`${vp.name}: no horizontal overflow on ${page.name}`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      const p = await context.newPage();
+      await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
+      await waitForPopularPosts(p);
 
-    // Check that body doesn't have horizontal overflow
-    const bodyScrollWidth = await p.evaluate(() => document.body.scrollWidth);
-    const windowWidth = await p.evaluate(() => window.innerWidth);
-    expect(bodyScrollWidth, `${page.name}: body scrollWidth (${bodyScrollWidth}) should not exceed viewport width (${windowWidth})`).toBeLessThanOrEqual(windowWidth + 1);
+      // Check that the page doesn't have horizontal overflow. We check the
+      // documentElement too: below 640px `body { overflow-x: hidden }` clamps
+      // body.scrollWidth, so body alone can mask real overflow.
+      const { bodyScrollWidth, docScrollWidth, windowWidth } = await p.evaluate(() => ({
+        bodyScrollWidth: document.body.scrollWidth,
+        docScrollWidth: document.documentElement.scrollWidth,
+        windowWidth: window.innerWidth,
+      }));
+      expect(bodyScrollWidth, `${page.name} @${vp.width}px: body scrollWidth (${bodyScrollWidth}) should not exceed viewport width (${windowWidth})`).toBeLessThanOrEqual(windowWidth + 1);
+      expect(docScrollWidth, `${page.name} @${vp.width}px: documentElement scrollWidth (${docScrollWidth}) should not exceed viewport width (${windowWidth})`).toBeLessThanOrEqual(windowWidth + 1);
 
-    await context.close();
-  });
+      await context.close();
+    });
+  }
 
   test(`mobile: text is readable on ${page.name}`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: mobileViewport });
     const p = await context.newPage();
     await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
-    await p.waitForTimeout(1000);
+    await waitForPopularPosts(p);
 
     // Check that the main content area doesn't have elements clipped off-screen
     // (skip elements inside scrollable containers - those are intentionally scrollable)
