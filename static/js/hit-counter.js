@@ -48,9 +48,14 @@
         cells(pad7(n), function (c) { return '<span>' + c + '</span>'; }) + '</span>';
     },
     // Self-contained: the banner shows the number and its own "since" line.
-    banner: function (n) {
-      return '<span class="hc-banner" aria-hidden="true">✦ ° ˖ You are visitor #<b>' +
-        comma(n) + '</b> ˖ ° ✦<small>~*~ ' + SINCE + ' ~*~</small></span>';
+    // Per-page counters can't honestly say "visitor #N" (that reads as site-wide),
+    // so the wording switches on scope.
+    banner: function (n, site) {
+      var msg = site
+        ? 'You are visitor #<b>' + comma(n) + '</b>'
+        : 'This page has been viewed <b>' + comma(n) + '</b> times';
+      return '<span class="hc-banner" aria-hidden="true">✦ ° ˖ ' + msg +
+        ' ˖ ° ✦<small>~*~ ' + SINCE + ' ~*~</small></span>';
     },
   };
 
@@ -74,9 +79,11 @@
         var n = (data && Number(data.views)) || 0;
         var label = site ? 'site views' : 'page views';
         var style = STYLES[Math.floor(Math.random() * STYLES.length)];
-        var html = RENDER[style](n);
+        var html = RENDER[style](n, site);
         if (showCap && style !== 'banner') {
-          var capText = (style === 'led') ? SINCE.toUpperCase() : SINCE;
+          // e.g. "page views · since 13 Nov 2024" (uppercased for the LED style)
+          var caption = label + ' · ' + SINCE;
+          var capText = (style === 'led') ? caption.toUpperCase() : caption;
           html += '<span class="hc-cap" aria-hidden="true">' + capText + '</span>';
         }
         el.innerHTML = html;
