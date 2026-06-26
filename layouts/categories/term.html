@@ -26,29 +26,39 @@
     {{ end }}
 
     {{- $ilPages := where .Pages ".Params.skip" "ne" "true" -}}
-    <div class="il-landing">
-        <div class="il-landing-card il-landing-latest">
+    <div class="il-page-grid">
+        <div class="il-landing-card il-landing-latest il-page-grid-latest">
             {{- with index (sort $ilPages "Date" "desc") 0 }}
-            <div class="il-landing-label">Latest issue</div>
-            <a class="il-landing-latest-link" href="{{ .RelPermalink }}">
-                <span class="il-landing-latest-title">{{ .Title }}</span>
-                <span class="il-landing-arrow" aria-hidden="true">&rarr;</span>
+            <a class="il-landing-latest-thumb" href="{{ .RelPermalink }}" aria-hidden="true" tabindex="-1">
+                {{ partial "thumbnail.html" (dict "page" . "variant" "featured-image") }}
             </a>
-            <div class="il-landing-date">{{ .Date.Format "02 Jan 2006" }}</div>
-            {{- end }}
-            <div class="il-landing-subscribe">
-                <p>📧 Get these every month by email:</p>
-                <a class="il-landing-sub-btn" href="https://interestinglinks.substack.com/subscribe">Subscribe on Substack ↗</a>
+            <div class="il-landing-latest-body">
+                <div class="il-landing-label">Latest issue</div>
+                <a class="il-landing-latest-link" href="{{ .RelPermalink }}">
+                    <span class="il-landing-latest-title">{{ .Title }}</span>
+                    <span class="il-landing-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+                <div class="il-landing-date">{{ .Date.Format "02 Jan 2006" }}</div>
+                <div class="il-landing-subscribe">
+                    <p>📧 Get these every month by email:</p>
+                    <a class="il-landing-sub-btn" href="https://interestinglinks.substack.com/subscribe">Subscribe on Substack ↗</a>
+                </div>
             </div>
+            {{- end }}
         </div>
-        <aside class="il-landing-card popular-links popular-links--landing" data-limit="10" data-heading="🔥 Most-clicked links" data-heading-note="since March 2026"></aside>
-    </div>
+        <aside class="il-landing-card popular-links popular-links--landing il-page-grid-rail" data-limit="10" data-heading="🔥 Most-clicked links" data-heading-note="since March 2026"></aside>
+        <div class="il-page-grid-archive">
     {{ end }}
 
     <div id="category-search-results" style="display: none;"></div>
 
     <div id="category-article-list">
         {{- $pages := where .Pages ".Params.skip" "ne" "true" -}}
+        {{- if eq .Title "Interesting Links" -}}
+            {{- /* The latest issue is featured in the card above, so drop it here */ -}}
+            {{- $pages = after 1 (sort $pages "Date" "desc") -}}
+        <h2 class="il-previous-heading">Previous issues</h2>
+        {{- end -}}
         {{- $.Scratch.Set "currentYear" "" -}}
         {{- $.Scratch.Set "articleCount" 0 -}}
         {{- $minVisible := 10 -}}
@@ -72,6 +82,10 @@
             </details>
         {{- end }}
     </div>
+    {{ if eq .Title "Interesting Links" }}
+        </div>
+    </div>
+    {{ end }}
 </div>
 
 <script>
