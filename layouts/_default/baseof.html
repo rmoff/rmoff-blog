@@ -25,7 +25,8 @@
 		{{- $hdrCheck := cond (or (in .Site.Params.classes "feature-nohdr") (in .Params.classes "feature-nohdr")) false true -}}
 		{{ if $hdrCheck }}
 		{{- $headerImg := default "img/default-header-img.webp" .Params.image -}}
-		<link rel="preload" as="image" href="{{ relURL $headerImg }}" {{ if not .Params.image }}type="image/webp"{{ end }}>
+		{{- /* Home banner is hidden at <=640px (redesign.css), so don't preload it there */}}
+		<link rel="preload" as="image" href="{{ relURL $headerImg }}" {{ if not .Params.image }}type="image/webp"{{ end }}{{ if .IsHome }} media="(min-width: 641px)"{{ end }}>
 		{{ end }}
 		<title>{{ block "title" . }}{{ .Site.Title }}{{ end }}</title>
 		<link rel="alternate" type="application/rss+xml" title="RSS" href="{{ "index.xml" | absURL }}">
@@ -40,6 +41,7 @@
 			html { background-color: #FAF8F5; color: #2D2926; color-scheme: light; }
 			body { opacity: 0; transition: opacity 0.1s ease; }
 			body.loaded { opacity: 1; }
+			@media (prefers-reduced-motion: reduce) { body { transition: none; } }
 			.site-header { height: 60px; background-color: #FAF8F5; border-bottom: 1px solid #E8421E; }
 			/* Dark theme copies of --color-bg / --color-text / --color-accent from redesign.css */
 			@media screen {
@@ -138,21 +140,15 @@
 		<script src="{{ $hitCounter.RelPermalink }}" defer></script>
 		{{ end }}
 
-		<!-- Cmd+K / Ctrl+K to open search -->
-		<script>
-		document.addEventListener('keydown', function(e) {
-			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-				e.preventDefault();
-				var searchInput = document.querySelector('.pagefind-ui__search-input');
-				if (searchInput) {
-					searchInput.focus();
-					searchInput.select();
-				} else {
-					window.location.href = '/search/';
-				}
-			}
-		});
-		</script>
+		<!-- ⌘K / Ctrl+K search palette. Its CSS, data and Pagefind load lazily on first open. -->
+		{{ $paletteCSS := resources.Get "css/search-palette.css" | minify | fingerprint }}
+		{{ $paletteJS := resources.Get "js/search-palette.js" | minify | fingerprint }}
+		{{- $paletteIndex := "" }}{{ with site.Home.OutputFormats.Get "SearchPalette" }}{{ $paletteIndex = .RelPermalink }}{{ end }}
+		<script src="{{ $paletteJS.RelPermalink }}" defer
+			data-css="{{ $paletteCSS.RelPermalink }}"
+			data-index="{{ $paletteIndex }}"
+			data-search-url="{{ "search/" | relURL }}"
+			data-top-posts="{{ .Site.Params.popularLinksEndpoint }}"></script>
 
 		{{ with .Site.Params.foot }}{{ range . }}
 		{{ . | safeHTML }}{{ end }}{{ end }}

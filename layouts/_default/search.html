@@ -1,16 +1,10 @@
 {{ define "title" }}Search &bullet; {{ .Site.Title }}{{ end }}
 
 {{ define "main" }}
-<div class="page-hero" style="background-image: url('/images/2023/05/h_IMG_2435.jpeg');">
-    <div class="page-hero-overlay">
-        <div class="page-hero-content">
-            <h1>Search</h1>
-        </div>
-    </div>
-</div>
-<div class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+<div class="container search-page" style="padding-bottom: 3rem;">
+    <h1 class="search-page-title">Search</h1>
 
-    <div class="search-wrapper">
+    <div class="search-wrapper" data-search-page>
         <div id="search"></div>
         <div id="category-results"></div>
         <div id="custom-results"></div>
@@ -46,10 +40,16 @@
         let currentSort = 'relevance';
         let currentQuery = '';
 
+        // Excerpt length in words; keep in sync with static/js/search-palette.js.
+        // PagefindUI imports the same pagefind.js module instance, so its
+        // excerptLength option also applies to our own results (it was 10).
+        const EXCERPT_WORDS = 25;
+
         // Import Pagefind JS API
         let pagefind;
         try {
             pagefind = await import('/pagefind/pagefind.js');
+            await pagefind.options({ excerptLength: EXCERPT_WORDS });
         } catch (e) {}
 
         // PagefindUI — only used for the search input
@@ -57,7 +57,7 @@
             element: "#search",
             showImages: true,
             showSubResults: false,
-            excerptLength: 10
+            excerptLength: EXCERPT_WORDS
         });
 
         // Hide PagefindUI's own results — we render our own
@@ -254,6 +254,14 @@
 </script>
 
 <style>
+.search-page-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 1.5rem 0 0.75rem;
+}
+
 .search-wrapper {
     max-width: 700px;
     margin-bottom: 2rem;
@@ -337,6 +345,13 @@
     border-radius: 0 !important;
 }
 
+/* Accent focus ring instead of the browser-default blue */
+.pagefind-ui .pagefind-ui__search-input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+    border-color: var(--color-accent);
+}
+
 /* Hide PagefindUI's filter drawer and results — we render our own */
 .pagefind-ui__drawer,
 .pagefind-ui__results-area {
@@ -417,8 +432,8 @@
 }
 
 .cr-result-excerpt mark {
-    background: var(--color-mark-bg);
-    color: var(--color-mark-text);
+    background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    color: inherit;
 }
 
 .cr-load-more {
@@ -480,6 +495,7 @@
 }
 
 @media (max-width: 768px) {
+    .search-page-title { font-size: 1.35rem; margin-top: 1rem; }
     .cr-result-thumb { width: 80px; height: 60px; }
     .cr-message { flex-wrap: wrap; gap: 0.5rem; }
 }

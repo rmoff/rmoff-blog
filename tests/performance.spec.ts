@@ -133,8 +133,8 @@ test.describe('Page Load - Search Page', () => {
     // Test a search
     await searchInput.fill('kafka');
 
-    // Results should appear
-    const results = page.locator('.pagefind-ui__result');
+    // Results should appear (custom renderer; PagefindUI's own results are hidden)
+    const results = page.locator('.cr-result');
     await expect(results.first()).toBeVisible({ timeout: 5000 });
   });
 });

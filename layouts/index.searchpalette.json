@@ -1,0 +1,26 @@
+{{- /*
+  /search-palette.json — fetched lazily by static/js/search-palette.js the first
+  time the ⌘K palette opens (never on ordinary page loads).
+
+  categories: [{n, s}, ...]       every category term; the palette maps Pagefind's
+              "category" filter values (raw front matter, any case) onto a title (n) +
+              /categories/<s>/ URL by lower-cased title.
+  top:        [{n, s}, ...]       the same recency-weighted ranking as the
+              /categories/ page (partials/popular-categories.html), first 8.
+  recent:     [{t, u, d}, ...]    the 5 newest posts, selected like the homepage.
+*/ -}}
+{{- $cats := slice -}}
+{{- range .Site.Taxonomies.categories -}}
+  {{- $cats = $cats | append (dict "n" .Page.Title "s" (.Page.RelPermalink | strings.TrimPrefix "/categories/" | strings.TrimSuffix "/")) -}}
+{{- end -}}
+{{- $top := slice -}}
+{{- range first 8 (partial "popular-categories" .) -}}
+  {{- /* name + URL exactly as layouts/categories/list.html renders them */ -}}
+  {{- $top = $top | append (dict "n" .name "s" (urlize .name)) -}}
+{{- end -}}
+{{- $recent := slice -}}
+{{- $posts := where (where .Site.RegularPages ".Section" "post") ".Params.skip" "ne" "true" -}}
+{{- range first 5 $posts -}}
+  {{- $recent = $recent | append (dict "t" (.Title | plainify | htmlUnescape) "u" .RelPermalink "d" (.Date.Format "2 January 2006")) -}}
+{{- end -}}
+{{- dict "categories" $cats "top" $top "recent" $recent | jsonify -}}
