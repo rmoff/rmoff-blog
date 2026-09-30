@@ -173,7 +173,7 @@ test.describe('Theme switch (mobile nav)', () => {
     await page.goto('/');
     await expect(menuButton(page)).toBeHidden();
     await page.locator('.nav-toggle').click();
-    const row = page.locator('.mobile-nav .theme-switch-row');
+    const row = page.locator('.mobile-nav .mobile-nav-theme');
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: /Dark/ }).click();
     expect((await theme(page)).theme).toBe('dark');
