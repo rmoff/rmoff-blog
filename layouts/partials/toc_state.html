@@ -1,0 +1,17 @@
+{{- /*
+  Single source of truth for the article "On this page" TOC, used by
+  toc_top.html (mobile <details>, header width) and toc_bottom.html (sidebar).
+
+  Returns a dict:
+    toc      - there is a non-empty TOC to show. Checking the rendered
+               .TableOfContents for list items (rather than .Fragments) means
+               we match what would actually be displayed, for both Goldmark
+               (renders an empty <nav id="TableOfContents"></nav>) and
+               AsciiDoc (renders an empty string) posts with no headings.
+    popular  - Interesting Links posts get the "most-clicked" aside in the sidebar.
+    sidebar  - render the .docs-toc sidebar container at all (TOC and/or aside).
+*/ -}}
+{{- $eligible := and (gt .WordCount 300) (ne .Params.toc false) (not (in .Params.tags "archive")) -}}
+{{- $toc := and $eligible (in .TableOfContents "<li") -}}
+{{- $popular := and $eligible (in .Params.categories "Interesting Links") (ge (.Date.Format "2006-01-02") "2026-03-01") -}}
+{{- return dict "toc" $toc "popular" $popular "sidebar" (or $toc $popular) -}}
