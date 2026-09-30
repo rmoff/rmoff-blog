@@ -1,7 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 
-// Dark theme follows the OS (prefers-color-scheme). Paths are relative to
-// baseURL in playwright.config.ts.
+// Dark theme with no saved choice ("system"), so it follows the OS
+// (prefers-color-scheme). The header switch is covered in theme-switch.spec.ts.
+// Paths are relative to baseURL in playwright.config.ts.
 const MD_POST = '/2022/09/16/data-engineering-in-2022-exploring-lakefs-with-jupyter-and-pyspark/';
 const ADOC_POST = '/2025/07/14/keeping-your-data-lakehouse-in-order-table-maintenance-in-apache-iceberg/';
 
@@ -74,10 +75,11 @@ test.describe('Dark mode', () => {
       expect(rule).not.toBe('rgb(0, 0, 0)');
     });
 
-    test('giscus comments follow the OS theme', async ({ page }) => {
+    test('giscus comments start on the resolved dark theme', async ({ page }) => {
+      await page.route('https://giscus.app/**', route => route.abort());
       await page.goto(MD_POST);
       await expect(page.locator('script[src="https://giscus.app/client.js"]'))
-        .toHaveAttribute('data-theme', 'preferred_color_scheme');
+        .toHaveAttribute('data-theme', 'dark');
     });
 
     test('print output stays on the light palette', async ({ page }) => {
