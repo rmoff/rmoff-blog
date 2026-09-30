@@ -34,7 +34,7 @@ test.describe('Header UI', () => {
   });
 
   test('talks link is present in social icons', async ({ page }) => {
-    const talksLink = page.locator('.nav-social a[title="talks"]');
+    const talksLink = page.locator('.nav-social a[title="Talks"]');
     await expect(talksLink).toBeVisible();
   });
 
