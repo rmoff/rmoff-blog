@@ -4,6 +4,20 @@
 		<meta http-equiv=X-Clacks-Overhead content="GNU Terry Pratchett">
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark">
+		<!-- Theme: resolve the visitor's choice (light / dark / system) before first
+		     paint. Sets data-theme (what CSS keys on) and data-theme-pref (what the
+		     switch shows). js/theme-switch.js handles changes. Keep the storage key in sync. -->
+		<script>
+		(function () {
+			var d = document.documentElement, p = 'system';
+			try { p = localStorage.getItem('theme') || 'system'; } catch (e) {}
+			if (p !== 'light' && p !== 'dark') p = 'system';
+			var dark = p === 'dark' || (p === 'system' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+			d.setAttribute('data-theme', dark ? 'dark' : 'light');
+			d.setAttribute('data-theme-pref', p);
+		})();
+		</script>
 		<!-- Preconnect -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,11 +38,16 @@
 
 		<!-- Critical CSS for FOUC prevention -->
 		<style>
-			html { background-color: #FAF8F5; color: #2D2926; }
+			html { background-color: #FAF8F5; color: #2D2926; color-scheme: light; }
 			body { opacity: 0; transition: opacity 0.1s ease; }
 			body.loaded { opacity: 1; }
 			@media (prefers-reduced-motion: reduce) { body { transition: none; } }
 			.site-header { height: 60px; background-color: #FAF8F5; border-bottom: 1px solid #E8421E; }
+			/* Dark theme copies of --color-bg / --color-text / --color-accent from redesign.css */
+			@media screen {
+				html[data-theme="dark"] { background-color: #1C1917; color: #EDE7E0; color-scheme: dark; }
+				html[data-theme="dark"] .site-header { background-color: #1C1917; border-bottom-color: #F0643C; }
+			}
 		</style>
 
 		{{ block "layout" . }}
@@ -87,6 +106,8 @@
 		<script src="{{ $mediumMirror.RelPermalink }}" data-mirror-base="{{ .Site.Params.mediumMirrorBase }}"></script>
 		{{ end }}
 		<script src="/js/lightbox.js" defer></script>
+		{{ $themeSwitch := resources.Get "js/theme-switch.js" | fingerprint }}
+		<script src="{{ $themeSwitch.RelPermalink }}" defer></script>
 	</head>
 	<body class="ma0 {{ with .Section }}section-{{ . }}{{ end }} page-kind-{{ .Kind }} is-page-{{ .IsPage }} {{ with .Site.Params.classes }}{{ range . }} {{ . }}{{ end }}{{ end }}{{ with .Params.classes }}{{ range . }} {{ . }}{{ end }}{{ end }}">
 		<script>document.body.classList.add('loaded');</script>
