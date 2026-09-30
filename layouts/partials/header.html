@@ -9,31 +9,35 @@
 			<a href="{{ "index.xml" | relURL }}">{{ partial "icon.html" "rss" }} RSS</a>
 			<div class="nav-social">
 				{{- range .Site.Menus.social }}
-				{{- $iconName := "" -}}
-				{{- if in .Title "linkedin" }}{{ $iconName = "linkedin" }}{{ end -}}
-				{{- if in .Title "x-twitter" }}{{ $iconName = "x-twitter" }}{{ end -}}
-				{{- if in .Title "bluesky" }}{{ $iconName = "bluesky" }}{{ end -}}
-				{{- if in .Title "youtube" }}{{ $iconName = "youtube" }}{{ end -}}
-				{{- if in .Title "github" }}{{ $iconName = "github" }}{{ end -}}
-				{{- if in .Title "chalkboard" }}{{ $iconName = "chalkboard" }}{{ end -}}
-				{{- if $iconName }}
-				<a href="{{ .URL }}" title="{{ .Name }}">{{ partial "icon.html" $iconName }}</a>
+				{{- $social := partial "social-link.html" . }}
+				{{- if $social.icon }}
+				<a href="{{ .URL }}" title="{{ $social.label }}" aria-label="{{ $social.label }}">{{ partial "icon.html" $social.icon }}</a>
 				{{- end -}}
 				{{- end }}
 			</div>
 		</nav>
-		<button class="nav-toggle" onclick="document.querySelector('.mobile-nav').classList.toggle('open')" aria-label="Menu">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+		<button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+			<svg class="nav-toggle-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+			<svg class="nav-toggle-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
 		</button>
 	</div>
-	<nav class="mobile-nav">
-		<a href="/">Home</a>
-		<a href="/categories/">Categories</a>
-		<a href="/categories/interesting-links/">Interesting Links</a>
-		<a href="{{ "search/" | relURL }}" data-search-palette>Search</a>
-		<a href="{{ "index.xml" | relURL }}">RSS</a>
-		{{- range .Site.Menus.social }}
-		<a href="{{ .URL }}">{{ .Name }}</a>
-		{{- end }}
+	{{- /* Drawer for <=1024px, opened by .nav-toggle (js/mobile-nav.js) */}}
+	<nav class="mobile-nav" id="mobile-nav" aria-label="Site menu">
+		<ul class="mobile-nav-primary">
+			<li><a href="/"{{ if .IsHome }} aria-current="page"{{ end }}>{{ partial "icon.html" "home" }}Home</a></li>
+			<li><a href="/categories/interesting-links/"{{ if eq .RelPermalink "/categories/interesting-links/" }} aria-current="page"{{ end }}>{{ partial "icon.html" "link" }}Interesting Links</a></li>
+			<li><a href="/categories/"{{ if eq .RelPermalink "/categories/" }} aria-current="page"{{ end }}>{{ partial "icon.html" "tag" }}Categories</a></li>
+			<li><a href="{{ "search/" | relURL }}" data-search-palette{{ if eq .RelPermalink ("search/" | relURL) }} aria-current="page"{{ end }}>{{ partial "icon.html" "search" }}Search</a></li>
+		</ul>
+		<p class="mobile-nav-heading" id="mobile-nav-follow">Follow</p>
+		<ul class="mobile-nav-social" aria-labelledby="mobile-nav-follow">
+			<li><a href="{{ "index.xml" | relURL }}">{{ partial "icon.html" "rss" }}RSS</a></li>
+			{{- range .Site.Menus.social }}
+			{{- $social := partial "social-link.html" . }}
+			{{- if $social.icon }}
+			<li><a href="{{ .URL }}">{{ partial "icon.html" $social.icon }}{{ $social.label }}</a></li>
+			{{- end }}
+			{{- end }}
+		</ul>
 	</nav>
 </header>
