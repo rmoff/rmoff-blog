@@ -2,8 +2,18 @@
 (function () {
   var overlay = null;
 
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
   function closeLightbox() {
     if (overlay) {
+      // No fade-out under reduced motion (CSS drops the transition), so remove at once
+      if (prefersReducedMotion()) {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        overlay = null;
+        return;
+      }
       overlay.style.opacity = '0';
       setTimeout(function () {
         if (overlay && overlay.parentNode) {
