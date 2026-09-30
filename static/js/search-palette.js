@@ -217,8 +217,11 @@
     if (opening || (dlg && dlg.open)) return;
     opening = true;
     lastFocus = document.activeElement;
-    var nav = document.querySelector('.mobile-nav.open');
-    if (nav) nav.classList.remove('open');
+    // Opened from the hamburger drawer: close it via its own toggle (keeps
+    // aria-expanded and the icon in step; js/mobile-nav.js) and return focus
+    // to the toggle afterwards, since the drawer link will be hidden.
+    var navToggle = document.querySelector('.nav-toggle[aria-expanded="true"]');
+    if (navToggle) { navToggle.click(); lastFocus = navToggle; }
     prewarm();
     await loadCSS();
     if (!dlg) build();

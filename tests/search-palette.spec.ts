@@ -255,4 +255,21 @@ test.describe('Search palette', () => {
     await page.locator('.sp-close').click();
     await expect(palette(page)).toBeHidden();
   });
+
+  test('mobile: opening from the drawer closes it cleanly and Esc returns focus to the menu button', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(ARTICLE);
+    const toggle = page.locator('.nav-toggle');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('#mobile-nav a[data-search-palette]').click();
+    await expect(palette(page)).toBeVisible();
+    // Drawer closed through its toggle, so its state and icon stay in step.
+    await expect(page.locator('#mobile-nav')).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle.locator('.nav-toggle-open')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(palette(page)).toBeHidden();
+    await expect(toggle).toBeFocused();
+  });
 });
