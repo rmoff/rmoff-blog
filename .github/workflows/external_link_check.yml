@@ -4,30 +4,67 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "00 8 * * *"
-    
+
 jobs:
   link-check:
     name: Check links
     runs-on: ubuntu-latest
     steps:
       # Check out so the .lycheeignore is available
-      - uses: actions/checkout@v3
-    
+      - uses: actions/checkout@v4
+
+      # Persist lychee's result cache between runs so each link is only
+      # re-requested about once a week (--max-cache-age below). The run_id in
+      # the key forces a fresh save every run; restore-keys picks up the latest.
+      - name: Restore lychee cache
+        uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: lychee-${{ github.run_id }}
+          restore-keys: lychee-
+
       - name: Check links
         id: lychee
-        uses: lycheeverse/lychee-action@v2.0.2
+        uses: lycheeverse/lychee-action@v2
+        # The action's own step goes red on any lychee error even with fail: false;
+        # continue-on-error lets the issue-creation step below still run.
+        continue-on-error: true
         with:
-          args: https://rmoff.net --no-progress --exclude https://www.reddit.com  --exclude https://www.linkedin.com --exclude https://old.reddit.com --exclude https://interestinglinks.substack.com
+          # Throttling + retries: rmoff.net itself intermittently returns 503
+          # when hit with lychee's default (very high) concurrency.
+          # Failed results are excluded from the cache so they are always rechecked.
+          args: >-
+            https://rmoff.net
+            --no-progress
+            --max-concurrency 16
+            --host-concurrency 4
+            --host-request-interval 100ms
+            --max-retries 3
+            --retry-wait-time 10
+            --timeout 30
+            --cache
+            --max-cache-age 7d
+            --cache-exclude-status '400..=599'
+            --exclude https://www.reddit.com
+            --exclude https://www.linkedin.com
+            --exclude https://old.reddit.com
+            --exclude https://interestinglinks.substack.com
           fail: false
           jobSummary: true
           format: markdown
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
+      # The action exposes its exit code as a step output (there is no
+      # env.lychee_exit_code), so the previous condition never matched.
       - name: Create Issue From File
-        if: env.lychee_exit_code != 0
+        if: steps.lychee.outputs.exit_code != 0
         uses: peter-evans/create-issue-from-file@v4
         with:
           title: Link Checker Report
           content-filepath: ./lychee/out.md
-          labels: report, automated issue          
+          labels: report, automated issue
+
+      - name: Fail job if broken links were found
+        if: steps.lychee.outputs.exit_code != 0
+        run: exit 1
