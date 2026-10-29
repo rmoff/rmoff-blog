@@ -16,21 +16,42 @@ disable-model-invocation: false
 
    **Medium links** (`medium.com`, `*.medium.com`) always return 403 to curl — even bogus URLs do, so a raw curl can't validate them. Instead, validate them through Freedium: `curl -sI -o /dev/null -w "%{http_code}\n" "https://freedium-mirror.cfd/<medium-url>"`. Freedium returns 200 for real articles and 404 for non-existent ones. If Freedium returns 200, treat the Medium link as clean.
 
-3. **Fetch fetchable links** to verify characterizations — use WebFetch and verify:
-   - Does my summary/characterization accurately reflect the linked content?
-   - Have I misrepresented the author's point?
+   **TLS errors are not broken links.** If curl fails with exit 60 / `000` and an SSL error ("unable to get local issuer certificate", "certificate has expired"), check the issuer with `echo | openssl s_client -connect <host>:443 -servername <host> 2>/dev/null | grep 'i:'`. If the issuer is Confluent's TLS-inspection CA, the problem is this machine's proxy, not the site: confirm the page via `curl -s "https://r.jina.ai/<url>"` (returns the page's text) and don't report it as broken.
+
+   **Bash here runs zsh:** `export -f` + `xargs` doesn't work (write the checker to a script file instead), and `$VAR[...]` is parsed as an array subscript (use `${VAR}` or write URLs literally).
+
+3. **Check characterizations** — does my summary/characterization reflect the linked content, and have I misrepresented the author's point?
+
+   **WebFetch is for gist only — it is never evidence.** WebFetch does not return the page; it returns a small model's answer *about* the page, which can drop, invent or misread details. Use it to skim whether a characterization is broadly right. Anything it flags is a *lead*, not a finding.
+
+   **Every correction must be confirmed against the raw page source before it is reported.** That means anything saying the post is wrong: names/bylines, affiliations, quotes, numbers, dates, release status, and above all "X isn't on the page". Download the HTML and grep it:
+
+   ```bash
+   UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+   curl -sL -m 30 -A "$UA" -o <scratchpad>/raw/page.html '<url>'
+   grep -o -i '.\{0,120\}<term>.\{0,120\}' <scratchpad>/raw/page.html
+   ```
+
+   - **Grep the whole raw HTML, not just the visible text.** Bylines, author bios and dates often live only in JSON-LD, `<meta>` tags or inline JSON — e.g. InfoQ's author bio is a `"minibio"` JSON field behind "Show more", so stripping `<script>` hides it.
+   - **Absence needs the original page.** Only say "X isn't on the page" if grepping the *original's* raw HTML finds nothing. A mirror cannot establish absence: Freedium re-renders Medium posts, and its `Author:` header is the Medium account's display name, which can differ from the article's byline.
+   - **No raw source, no correction.** If the original's raw HTML can't be fetched (Medium, bot walls such as lore.kernel.org's Anubis, the skipped domains below), the item goes under *Couldn't verify* — never under errors.
+   - **"Not on the linked page" ≠ "wrong".** I sometimes add context from elsewhere (e.g. when a company was acquired). If the linked page neither supports nor contradicts a claim, report it as *not supported by the link*, not as an error.
+
+   _Why: in the Oct 2026 run, WebFetch- and agent-sourced "errors" were reported as fact and several were false — a byline "missing" a middle name (judged from Freedium's header) and an employer "not on the page" (it was in the InfoQ author-bio JSON)._
 
    **Domain handling:**
-   - **Medium posts** (`medium.com`, `*.medium.com`): Rewrite the URL through `https://freedium-mirror.cfd/` (e.g. `https://freedium-mirror.cfd/https://medium.com/...`) to bypass the paywall/403
+   - **Medium posts** (`medium.com`, `*.medium.com`): for gist, rewrite the URL through `https://freedium-mirror.cfd/` (e.g. `https://freedium-mirror.cfd/https://medium.com/...`) to bypass the paywall/403. Mirror text can confirm something *is* in the article, but per the rules above it can't show something *isn't*.
    - **Skip these domains** — they block WebFetch and can only be checked via curl for HTTP status:
      - `linkedin.com`, `www.linkedin.com`
      - `x.com`, `twitter.com`
      - `old.reddit.com`, `www.reddit.com`
      - `youtube.com`, `www.youtube.com`
      - `notion.so`
-   - All other domains: fetch normally with WebFetch
+   - All other domains: WebFetch for gist; curl + grep for anything you'll report as wrong.
 
 4. **Parallelisation** — use 2-3 Task agents (Haiku model) to verify links in parallel, splitting the article into roughly equal chunks. Don't use more than 3 agents — the overhead outweighs the benefit.
+   - Give agents the step 3 rules, and require each finding to come back with the **verbatim source text** and **how it was obtained** (raw-HTML grep, mirror, or WebFetch summary).
+   - **Agent findings are leads.** Before anything an agent flags goes in the report, re-verify it yourself with a raw-HTML grep (step 3). Re-asking WebFetch does not count — it is the same summariser.
 
 5. **Typos** - Check the article for typos. I write in en-gb.
    - `automagically` is intentional
@@ -65,7 +86,11 @@ disable-model-invocation: false
 
 9. **Report format**:
    - List any broken links (from curl check)
-   - List any mischaracterized links with: what I said vs what it actually says
+   - Characterization problems, in three separate buckets:
+     - **Contradicted by the source** — what I said, the **verbatim source text** from the raw-HTML grep, and where it came from (original page or mirror). No verbatim quote, no entry here.
+     - **Not supported by the linked page** — the claim isn't on the page but may be true from elsewhere; let me decide.
+     - **Couldn't verify** — one line each, saying why (blocked, mirror only, skipped domain).
+   - Never present a WebFetch- or agent-summary-only finding as an error.
    - List any potentially miscategorised links with suggested section
    - List typos in text (offer to fix these)
    - List suspected typos in URLs (with validation status)
