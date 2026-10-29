@@ -122,6 +122,25 @@
         section.classList.remove('il-section-empty');
       }
 
+      // Hide subsections (=== / ====) whose items are all filtered out.
+      // Subsections with no list items (e.g. just a quote) are left alone.
+      var subsections = sectionBody.querySelectorAll('.sect2, .sect3');
+      for (var k = 0; k < subsections.length; k++) {
+        var subItems = 0;
+        var subVisible = 0;
+        for (var m = 0; m < items.length; m++) {
+          if (subsections[k].contains(items[m])) {
+            subItems++;
+            if (!items[m].classList.contains('il-hidden')) subVisible++;
+          }
+        }
+        if (fireOnly && subItems > 0 && subVisible === 0) {
+          subsections[k].classList.add('il-section-empty');
+        } else {
+          subsections[k].classList.remove('il-section-empty');
+        }
+      }
+
     });
 
     // Update count display
