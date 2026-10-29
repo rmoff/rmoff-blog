@@ -119,6 +119,42 @@ test.describe('IL Filter', () => {
     expect(await hiddenItems.count()).toBeGreaterThan(0);
   });
 
+  test('subsections with no visible items are hidden by fire filter', async ({ page }) => {
+    // October 2026 post has subsections with no 🔥 items (e.g. "It's a Kafka Streams
+    // Special!", "AI in Data") inside sections that do have 🔥 items. Look it up from the
+    // category page rather than hard-coding the date in its URL.
+    await page.goto('http://localhost:1313/categories/interesting-links/');
+    const octoberUrl = await page.locator('a[href*="interesting-links-october-2026"]').first().getAttribute('href');
+    await page.goto('http://localhost:1313' + octoberUrl);
+    await page.waitForSelector('.il-toolbar');
+
+    const subsectionState = () => page.$$eval(
+      '[data-il-section="true"] .sect2, [data-il-section="true"] .sect3',
+      (subs) => subs.map((s) => {
+        const items = [...s.querySelectorAll('li')].filter((li) => !li.closest('.admonitionblock, .quoteblock'));
+        const heading = s.querySelector('h3, h4') as HTMLElement;
+        return {
+          title: heading.textContent!.trim(),
+          items: items.length,
+          visible: items.filter((li) => !li.classList.contains('il-hidden')).length,
+          headingShown: heading.offsetParent !== null,
+        };
+      }),
+    );
+
+    await toggleFireFilter(page);
+
+    const filtered = await subsectionState();
+    const emptyFiltered = filtered.filter((s) => s.items > 0 && s.visible === 0);
+    expect(emptyFiltered.length).toBeGreaterThan(0);
+    expect(emptyFiltered.filter((s) => s.headingShown)).toEqual([]);
+
+    // Disabling the filter brings every subsection back
+    await toggleFireFilter(page);
+    const restored = await subsectionState();
+    expect(restored.filter((s) => !s.headingShown)).toEqual([]);
+  });
+
   test('toolbar is NOT rendered on non-IL pages', async ({ page }) => {
     await page.goto('http://localhost:1313/');
     const toolbar = page.locator('.il-toolbar');
