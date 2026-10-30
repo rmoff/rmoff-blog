@@ -1,5 +1,6 @@
 ---
 slug : "about-me"
+aliases: ["/about/"]
 title: "About Me"
 classes:
 - feature-nosubtitle
