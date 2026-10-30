@@ -44,9 +44,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // in Chroma's. The button belongs to the code.
     if (pre.parentElement.closest('pre') || pre.querySelector('.lnt')) return;
 
-    // Session transcripts (the ev-* blocks) stack tightly with no padding, so
-    // there is nowhere to put a button without covering their text.
-    if (pre.closest('[class^="ev-"], [class*=" ev-"]')) return;
+    // Session transcripts: the narration rows (ev-text and so on) are short,
+    // stacked tightly, and have no space for a button. Only ev-detail rows,
+    // which hold real file contents, commands and logs, get one.
+    var row = pre.closest('[class^="ev-"], [class*=" ev-"]');
+    if (row && !row.classList.contains('ev-detail')) return;
 
     var button = document.createElement('button');
     button.type = 'button';

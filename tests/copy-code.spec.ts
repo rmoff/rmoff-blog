@@ -6,6 +6,7 @@ const MD_POST = '/2018/08/02/kafka-listeners-explained/'; // plain <pre><code>, 
 const MD_CHROMA_POST = '/2022/09/16/data-engineering-in-2022-exploring-lakefs-with-jupyter-and-pyspark/';
 const ADOC_POST = '/2026/03/13/evaluating-claudes-dbt-skills-building-an-eval-from-scratch/';
 const ADOC_CALLOUT_POST = '/2026/03/11/claude-code-isnt-going-to-replace-data-engineers-yet/';
+const ADOC_TRANSCRIPT_POST = '/2026/03/11/claude-code-in-action-with-dbt/'; // 42 of its 43 blocks are ev-detail rows
 const ADOC_RESULTS_POST = '/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/';
 const MD_LINENOS_POST = '/2020/06/25/learning-golang-some-rough-notes-s01e02-slices/';
 const ADOC_LINENOS_POST = '/2024/12/11/disabling-vale-linting-selectively-in-asciidoc/';
@@ -50,10 +51,13 @@ test.describe('Every code block has a copy button', () => {
     });
   }
 
-  test('session transcript rows do not get one', async ({ page }) => {
+  test('transcript detail rows get one, narration rows do not', async ({ page }) => {
+    await page.goto(ADOC_TRANSCRIPT_POST);
+    await expect(page.locator(`.ev-detail ${COPY}`)).toHaveCount(42);
+
     await page.goto(ADOC_CALLOUT_POST);
     await expect(page.locator(COPY).first()).toBeAttached();
-    await expect(page.locator(`[class*="ev-"] ${COPY}`)).toHaveCount(0);
+    await expect(page.locator(`.ev-text ${COPY}, .ev-thinking ${COPY}, .ev-tool ${COPY}`)).toHaveCount(0);
   });
 
   test('line numbers do not get a button of their own', async ({ page }) => {
@@ -157,6 +161,18 @@ test.describe('Copying', () => {
     await expect(page.locator(STATUS)).toHaveText('Copied');
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(copied).toBe((await chroma.locator('code').textContent())!.replace(/\n+$/, ''));
+  });
+
+  test('a block inside a collapsed transcript row copies once opened', async ({ page }) => {
+    await page.goto(ADOC_TRANSCRIPT_POST);
+    const details = page.locator('details.ev-detail').first();
+    await details.evaluate((el: HTMLDetailsElement) => { el.open = true; });
+    const block = details.locator('.code-block').first();
+    await block.hover();
+    await block.locator('.copy-button').click();
+    await expect(page.locator(STATUS)).toHaveText('Copied');
+    const expected = (await block.locator('code').textContent())!.replace(/\n+$/, '');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
   });
 
   test('angle brackets in code survive the copy', async ({ page }) => {
@@ -284,10 +300,12 @@ test.describe('The button never covers code', () => {
     ['AsciiDoc, phone', ADOC_POST, 390],
     // Query results sit flush under the query, with tighter padding of their own.
     ['AsciiDoc query results', ADOC_RESULTS_POST, 1280],
+    ['Session transcript, opened', ADOC_TRANSCRIPT_POST, 1280],
   ] as const) {
     test(`${name}, even with the code scrolled sideways`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(url);
+      await page.evaluate(() => document.querySelectorAll('details').forEach((d) => { d.open = true; }));
       const total = await page.locator('.code-block').count();
       expect(total).toBeGreaterThan(0);
 
