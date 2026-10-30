@@ -49,7 +49,8 @@ test.describe('Popular categories', () => {
 
     for (const entry of entries) {
       const dest = await destination(page, entry.href);
-      expect.soft(entry.name, `${entry.href} name`).toBe(dest.title);
+      // The page title is Hugo's title-casing; the list keeps the spelling used in posts
+      expect.soft(entry.name.toLowerCase(), `${entry.href} name`).toBe(dest.title.toLowerCase());
       expect.soft(entry.count, `${entry.name} count against "N articles"`).toBe(dest.heroCount);
       expect.soft(entry.count, `${entry.name} count against posts listed`).toBe(dest.posts.length);
     }
@@ -62,11 +63,18 @@ test.describe('Popular categories', () => {
     expect(names).toEqual([...names].sort(collator.compare));
   });
 
-  test('a category written in two cases is counted once, under its page title', async ({ page }) => {
+  test('a category written in two cases is counted once, under its commonest spelling', async ({ page }) => {
     const names = (await popularEntries(page)).map(e => e.name);
     expect(names).toContain('Kafka Connect');
     expect(names).toContain('Apache Kafka');
     expect(names).not.toContain('kafka connect');
+  });
+
+  test("names keep the spelling used in posts, not Hugo's title-casing", async ({ page }) => {
+    const names = (await popularEntries(page)).map(e => e.name);
+    expect(names).toContain('ksqlDB');
+    expect(names).not.toContain('Ksqldb');
+    expect(names).not.toContain('Kcat (Kafkacat)');
   });
 
   test('ranking stays recency-weighted: old OBIEE posts do not put it on the list', async ({ page }) => {
@@ -121,14 +129,17 @@ test.describe('Other users of the Popular ranking', () => {
     test.setTimeout(120_000);
     const { top } = await (await request.get('/search-palette.json')).json();
     expect(top).toHaveLength(8);
-    const popular = (await popularEntries(page)).map(e => e.href);
+    const entries = await popularEntries(page);
+    const popular = entries.map(e => e.href);
+    expect(top.map(({ n }) => n)).toContain('ksqlDB');
 
     const recent: number[] = [];
     for (const { n, s } of top) {
       const href = `/categories/${s}/`;
       expect.soft(popular, `${n} should also be in the Popular list`).toContain(href);
+      expect.soft(n, `${href} name matches Popular`).toBe(entries.find(e => e.href === href)?.name);
       const dest = await destination(page, href);
-      expect.soft(dest.title).toBe(n);
+      expect.soft(dest.title.toLowerCase()).toBe(n.toLowerCase());
       recent.push(dest.recent);
     }
     expect(recent, 'most recent posts first').toEqual([...recent].sort((a, b) => b - a));

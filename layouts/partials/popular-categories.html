@@ -1,7 +1,7 @@
 {{/*
   Popular Categories — category pages ranked by their recent posts.
   Returns a slice of dicts, most popular first. Consumers use:
-    name, url, count  the category page's own title, link and total number of posts
+    name, url, count  the category's commonest spelling, its page link and total number of posts
   Ranking uses `recent`, the posts from 2017 on, so that OBIEE's back catalogue
   doesn't dominate. It's only for ranking: `count` is the number to show.
   Usage:  {{ $popular := partial "popular-categories" . }}
@@ -28,7 +28,35 @@
         {{- range .Pages -}}
             {{- $posts = $posts | append .RelPermalink -}}
         {{- end -}}
-        {{- $ranked = $ranked | append (dict "name" .Page.Title "url" .Page.RelPermalink "count" .Count "recent" $recent "posts" (delimit (sort $posts) " ")) -}}
+        {{- /* Hugo title-cases the page title (ksqlDB becomes Ksqldb), so show the commonest spelling from front matter */ -}}
+        {{- $title := .Page.Title -}}
+        {{- $written := slice -}}
+        {{- range .Pages -}}
+            {{- $categories := .Params.categories -}}
+            {{- if not (reflect.IsSlice $categories) -}}
+                {{- $categories = slice $categories -}}
+            {{- end -}}
+            {{- range $categories -}}
+                {{- if eq (lower .) (lower $title) -}}
+                    {{- $written = $written | append . -}}
+                {{- end -}}
+            {{- end -}}
+        {{- end -}}
+        {{- $name := $title -}}
+        {{- $most := 0 -}}
+        {{- range $spelling := uniq $written -}}
+            {{- $uses := 0 -}}
+            {{- range $written -}}
+                {{- if eq . $spelling -}}
+                    {{- $uses = add $uses 1 -}}
+                {{- end -}}
+            {{- end -}}
+            {{- if gt $uses $most -}}
+                {{- $name = $spelling -}}
+                {{- $most = $uses -}}
+            {{- end -}}
+        {{- end -}}
+        {{- $ranked = $ranked | append (dict "name" $name "url" .Page.RelPermalink "count" .Count "recent" $recent "posts" (delimit (sort $posts) " ")) -}}
     {{- end -}}
 {{- end -}}
 {{- $popular := slice -}}
