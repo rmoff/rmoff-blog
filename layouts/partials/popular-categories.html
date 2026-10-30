@@ -1,24 +1,42 @@
 {{/*
-  Popular Categories — recency-weighted (posts from 2017+).
-  Returns a slice of dicts sorted by count desc: [ {name, count}, ... ]
+  Popular Categories — category pages ranked by their recent posts.
+  Returns a slice of dicts, most popular first. Consumers use:
+    name, url, count  the category page's own title, link and total number of posts
+  Ranking uses `recent`, the posts from 2017 on, so that OBIEE's back catalogue
+  doesn't dominate. It's only for ranking: `count` is the number to show.
   Usage:  {{ $popular := partial "popular-categories" . }}
           {{ range sort (first 13 $popular) "name" }} ... {{ end }}
   Consumers: Use `first N` to pick top N by popularity,
   then `sort ... "name"` to display alphabetically.
-  Update the cutoff date or counting logic here — it's used by both
-  the homepage sidebar and the /categories/ page.
+  Update the cutoff date or ranking logic here — it's used by both the
+  /categories/ page and the ⌘K search palette (index.searchpalette.json).
+
+  Read .Site.Taxonomies rather than tallying .Params.categories in a dict.
+  Front matter spells some categories in more than one case ("Kafka Connect",
+  "kafka connect") and Hugo files them under one page, but `merge` matches keys
+  ignoring case while `index` doesn't, so the tally restarts at each change of spelling.
+
+  Categories holding exactly the same posts (Go and Golang) take one place on the
+  list: the higher ranked, or on a tie the first alphabetically.
 */}}
 {{- $cutoff := time "2017-01-01" -}}
-{{- $counts := dict -}}
-{{- range where .Site.RegularPages ".Date" ">=" $cutoff -}}
-    {{- range .Params.categories -}}
-        {{- $cat := . -}}
-        {{- $prev := index $counts $cat | default 0 -}}
-        {{- $counts = merge $counts (dict $cat (add $prev 1)) -}}
+{{- $ranked := slice -}}
+{{- range .Site.Taxonomies.categories -}}
+    {{- $recent := len (where .Pages ".Date" ">=" $cutoff) -}}
+    {{- if $recent -}}
+        {{- $posts := slice -}}
+        {{- range .Pages -}}
+            {{- $posts = $posts | append .RelPermalink -}}
+        {{- end -}}
+        {{- $ranked = $ranked | append (dict "name" .Page.Title "url" .Page.RelPermalink "count" .Count "recent" $recent "posts" (delimit (sort $posts) " ")) -}}
     {{- end -}}
 {{- end -}}
-{{- $sorted := slice -}}
-{{- range $name, $count := $counts -}}
-    {{- $sorted = $sorted | append (dict "name" $name "count" $count) -}}
+{{- $popular := slice -}}
+{{- $seen := slice -}}
+{{- range sort $ranked "recent" "desc" -}}
+    {{- if not (in $seen .posts) -}}
+        {{- $seen = $seen | append .posts -}}
+        {{- $popular = $popular | append . -}}
+    {{- end -}}
 {{- end -}}
-{{- return (sort $sorted "count" "desc") -}}
+{{- return $popular -}}
