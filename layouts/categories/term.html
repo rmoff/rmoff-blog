@@ -147,7 +147,16 @@
         console.error('Error loading filters:', e);
     }
 
+    const batchSize = 20;
     let debounceTimer;
+    let scrollObs;
+    // Bumped by every new search and by Clear, so results that arrive late are dropped
+    let searchRun = 0;
+
+    function cancelSearch() {
+        searchRun++;
+        if (scrollObs) scrollObs.disconnect();
+    }
 
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
@@ -157,6 +166,8 @@
     });
 
     clearBtn.addEventListener('click', () => {
+        clearTimeout(debounceTimer);
+        cancelSearch();
         searchInput.value = '';
         clearBtn.style.display = 'none';
         resultsContainer.style.display = 'none';
@@ -165,6 +176,9 @@
     });
 
     async function performSearch(query) {
+        cancelSearch();
+        const run = searchRun;
+
         if (!query || query.length < 2) {
             resultsContainer.style.display = 'none';
             articleList.style.display = '';
@@ -175,6 +189,7 @@
         const search = await pagefind.search(query, {
             filters: { category: categoryFilterValue }
         });
+        if (run !== searchRun) return;
 
         articleList.style.display = 'none';
         resultsContainer.style.display = 'block';
@@ -185,21 +200,71 @@
         }
 
         const results = await Promise.all(
-            search.results.slice(0, 20).map(r => r.data())
+            search.results.slice(0, batchSize).map(r => r.data())
         );
+        if (run !== searchRun) return;
 
         resultsContainer.innerHTML =
             '<p class="cat-search-count">' + search.results.length + ' result' + (search.results.length === 1 ? '' : 's') + '</p>' +
-            '<ul class="post-list">' +
-            results.map(r =>
-                '<li class="post-row">' +
-                (r.meta && r.meta.image ? '<a href="' + r.url + '" class="post-thumb-link"><img class="post-thumb" src="' + r.meta.image + '" alt="" loading="lazy"></a>' : '') +
-                '<div class="post-info">' +
-                '<a href="' + r.url + '" class="post-title-link">' + (r.meta && r.meta.title ? r.meta.title : r.url) + '</a>' +
-                '</div>' +
-                '</li>'
-            ).join('') +
-            '</ul>';
+            '<ul class="post-list">' + renderRows(results) + '</ul>';
+
+        if (search.results.length > batchSize) addLoadMore(search, run);
+    }
+
+    function addLoadMore(search, run) {
+        const list = resultsContainer.querySelector('.post-list');
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'cr-load-more';
+        loadMoreBtn.textContent = 'Load more';
+        resultsContainer.appendChild(loadMoreBtn);
+
+        let loaded = batchSize;
+        let loading = false;
+
+        loadMoreBtn.addEventListener('click', async () => {
+            if (loading) return;
+            loading = true;
+            try {
+                const nextBatch = await Promise.all(
+                    search.results.slice(loaded, loaded + batchSize).map(r => r.data())
+                );
+                if (run !== searchRun) return;
+
+                const firstNewRow = list.children.length;
+                list.insertAdjacentHTML('beforeend', renderRows(nextBatch));
+                loaded += nextBatch.length;
+
+                if (loaded >= search.results.length) {
+                    const hadFocus = document.activeElement === loadMoreBtn;
+                    scrollObs.disconnect();
+                    loadMoreBtn.remove();
+                    if (hadFocus) list.children[firstNewRow].querySelector('.post-title-link').focus();
+                } else {
+                    // Re-observing fires again if the button is still in view
+                    scrollObs.unobserve(loadMoreBtn);
+                    scrollObs.observe(loadMoreBtn);
+                }
+            } finally {
+                loading = false;
+            }
+        });
+
+        // Auto-load on scroll
+        scrollObs = new IntersectionObserver((entries) => {
+            if (entries.some(entry => entry.isIntersecting)) loadMoreBtn.click();
+        }, { rootMargin: '200px', threshold: 0 });
+        scrollObs.observe(loadMoreBtn);
+    }
+
+    function renderRows(results) {
+        return results.map(r =>
+            '<li class="post-row">' +
+            (r.meta && r.meta.image ? '<a href="' + r.url + '" class="post-thumb-link"><img class="post-thumb" src="' + r.meta.image + '" alt="" loading="lazy"></a>' : '') +
+            '<div class="post-info">' +
+            '<a href="' + r.url + '" class="post-title-link">' + (r.meta && r.meta.title ? r.meta.title : r.url) + '</a>' +
+            '</div>' +
+            '</li>'
+        ).join('');
     }
 })();
 </script>
