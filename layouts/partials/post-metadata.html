@@ -1,0 +1,31 @@
+{{- /* Author and date metadata for search engines and link previews. Posts only:
+       _default/single.html also renders About, the AI disclosure and so on.
+
+       headline matches the visible <h1>, including the titlecase setting. Titles
+       can hold Markdown, so render it, then strip the tags and entities. jsonify escapes quotes and encodes < > &
+       so a title can't close the script tag; safeJS stops the template escaping
+       the finished JSON a second time.
+
+       dateModified is left out unless the post sets a later lastmod. With no
+       lastmod Hugo reports .Date, which isn't a real modified date. */ -}}
+{{- if eq .Section "post" }}
+{{- $published := .Date.Format "2006-01-02T15:04:05Z07:00" }}
+{{- $title := cond (eq .Site.Params.titlecase true) (.Title | title | markdownify) (.Title | markdownify) }}
+		<meta name="author" content="{{ .Site.Params.AuthorName }}" />
+		<meta property="article:published_time" content="{{ $published }}" />
+{{- $post := dict
+	"@context" "https://schema.org"
+	"@type" "BlogPosting"
+	"headline" ($title | plainify | htmlUnescape)
+	"author" (dict "@type" "Person" "name" .Site.Params.AuthorName "url" ("about-me/" | absURL))
+	"datePublished" $published
+	"url" .Permalink
+}}
+{{- with default .Params.image .Params.socialimage }}
+{{- $post = merge $post (dict "image" (. | absURL)) }}
+{{- end }}
+{{- if .Lastmod.After .Date }}
+{{- $post = merge $post (dict "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00")) }}
+{{- end }}
+		<script type="application/ld+json">{{ $post | jsonify | safeJS }}</script>
+{{- end }}
