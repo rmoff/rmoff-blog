@@ -36,7 +36,7 @@ Production:   docker build + docker run  (GitHub Actions)
 **Docker image includes:**
 - Hugo Extended
 - AsciiDoctor + AsciiDoctor-Reveal.js
-- Rouge 3.30.0 (syntax highlighting) + custom `sql+jinja` lexer
+- Rouge 3.30.0 (syntax highlighting) + custom `sql+jinja` lexer and `monokai-contrast` theme
 - Alpine Linux base
 
 **Hugo version is defined in one place:** the `FROM` line in `Dockerfile`.
@@ -180,7 +180,7 @@ rmoff-blog/
 │   ├── post/                # Blog posts (Markdown & AsciiDoc)
 │   └── talk/                # Presentations (AsciiDoc -> Reveal.js)
 ├── layouts/                  # Hugo templates (overrides theme)
-├── lib/                      # Custom Rouge lexers (sql+jinja)
+├── lib/                      # Custom Rouge lexer (sql+jinja) and theme (monokai-contrast)
 ├── themes/story/             # Hugo theme (customized, unmaintained)
 ├── static/                   # Static assets (CSS, images, JS)
 ├── scripts/                  # Utility scripts (cross-posting, etc.)

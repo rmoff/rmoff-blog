@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     && apk del build-base ruby-dev
 
 COPY lib/rouge_sql_jinja.rb /usr/local/lib/site_ruby/3.4.0/rouge_sql_jinja.rb
+COPY lib/rouge_monokai_contrast.rb /usr/local/lib/site_ruby/3.4.0/rouge_monokai_contrast.rb
 
 WORKDIR /src
 

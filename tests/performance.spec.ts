@@ -224,13 +224,13 @@ test.describe('Syntax Highlighting', () => {
     // Page with known code blocks
     await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
 
-    // Check that code blocks have monokai styling (dark background #49483e)
+    // Check that code blocks have monokai styling (dark background #272822)
     const codeBlock = page.locator('pre.rouge.highlight').first();
     await expect(codeBlock).toBeVisible();
 
     const bgColor = await codeBlock.evaluate(el => getComputedStyle(el).backgroundColor);
-    // Monokai background is #49483e which is rgb(73, 72, 62)
-    expect(bgColor).toBe('rgb(73, 72, 62)');
+    // Monokai background is #272822 which is rgb(39, 40, 34)
+    expect(bgColor).toBe('rgb(39, 40, 34)');
   });
 
   test('admonition blocks use font icons', async ({ page }) => {
