@@ -8,10 +8,11 @@
 	       while Pagefind still reads the filters/meta inside it. */}}
 	<div data-pagefind-ignore style="display:none">
 		{{- range .Params.categories }}<span data-pagefind-filter="category">{{ . }}</span>{{ end }}
-		<img data-pagefind-meta="image[src]" src="{{ default "img/default-header-img.jpg" .Params.image | relURL }}" alt="">
+		{{- /* Hidden, but a browser still downloads a hidden image unless it's lazy */}}
+		<img data-pagefind-meta="image[src]" src="{{ default "img/default-header-img.jpg" .Params.image | relURL }}" alt="" loading="lazy">
 		<span data-pagefind-meta="date:{{ .Date.Format "2 January 2006" }}" data-pagefind-sort="date:{{ .Date.Format "2006-01-02" }}"></span>
 	</div>
-	{{ .Content | replaceRE "(<h[2-9] id=\"([^\"]+)\".+)(</h[2-9]+>)" "${1}<a class=\"headline-hash\" href=\"#${2}\" data-pagefind-ignore>&nbsp;🔗</a>${3}" | safeHTML }}
+	{{ partial "post-images.html" .Content | replaceRE "(<h[2-9] id=\"([^\"]+)\".+)(</h[2-9]+>)" "${1}<a class=\"headline-hash\" href=\"#${2}\" data-pagefind-ignore>&nbsp;🔗</a>${3}" | safeHTML }}
 	<hr>
 	<div id="comments" class="giscus-container">
 		<script>
@@ -43,6 +44,8 @@
 	</div>
 </article>
 {{ partial "toc_bottom" . }}
+{{ $printImages := resources.Get "js/print-images.js" | fingerprint }}
+<script src="{{ $printImages.RelPermalink }}" defer></script>
 {{ if in .Params.categories "Interesting Links" }}
 {{ $ilFilter := resources.Get "js/il-filter.js" | fingerprint }}
 <script src="{{ $ilFilter.RelPermalink }}"></script>
