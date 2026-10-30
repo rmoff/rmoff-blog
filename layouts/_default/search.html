@@ -72,24 +72,29 @@
         // --- Search & render ---
 
         let searchDebounce;
+        let searchRun = 0;  // Only the latest run may render; older ones drop out after each await
         async function doSearch(query, sort) {
+            clearTimeout(searchDebounce);
+            const run = ++searchRun;
+
             if (!pagefind || !query || query.length < 2) {
                 customResults.innerHTML = '';
                 return;
             }
 
-            clearTimeout(searchDebounce);
             searchDebounce = setTimeout(async () => {
                 const sortOpt = sort === 'newest' ? { sort: { date: 'desc' } }
                               : sort === 'oldest' ? { sort: { date: 'asc' } }
                               : {};
                 const search = await pagefind.search(query, sortOpt);
+                if (run !== searchRun) return;
 
                 // Render message + sort controls + results
                 const batchSize = 10;
                 const results = await Promise.all(
                     search.results.slice(0, batchSize).map(r => r.data())
                 );
+                if (run !== searchRun) return;
 
                 let html = '<div class="cr-message">' +
                     '<span>' + search.results.length + ' results for <strong>' + escapeHTML(query) + '</strong></span>' +
@@ -163,14 +168,19 @@
         // --- Category results ---
 
         let categoryDebounce;
+        let categoryRun = 0;  // As searchRun, for the category chips
         function updateCategoryResults(query) {
+            clearTimeout(categoryDebounce);
+            const run = ++categoryRun;
+
             if (!query || query.length < 2 || !pagefind) {
                 categoryResults.innerHTML = '';
                 return;
             }
-            clearTimeout(categoryDebounce);
+
             categoryDebounce = setTimeout(async () => {
                 const search = await pagefind.search(query);
+                if (run !== categoryRun) return;
                 if (!search.filters || !search.filters.category) {
                     categoryResults.innerHTML = '';
                     return;
@@ -229,18 +239,21 @@
 
             searchInput.focus();
 
-            searchInput.addEventListener('input', (e) => {
-                currentQuery = e.target.value.trim();
+            function onQueryChange(value) {
+                currentQuery = value.trim();
                 updateURL(currentQuery, currentSort);
                 updateCategoryResults(currentQuery.toLowerCase());
-                if (currentQuery.length > 0) {
-                    suggestions.classList.add('hidden');
-                    doSearch(currentQuery, currentSort);
-                } else {
-                    suggestions.classList.remove('hidden');
-                    customResults.innerHTML = '';
-                    categoryResults.innerHTML = '';
-                }
+                suggestions.classList.toggle('hidden', currentQuery.length > 0);
+                doSearch(currentQuery, currentSort);
+            }
+
+            searchInput.addEventListener('input', (e) => onQueryChange(e.target.value));
+
+            // PagefindUI's Clear empties the box and blurs it without firing an
+            // input event, so take the same path as deleting the text by hand.
+            document.querySelector('.pagefind-ui__search-clear').addEventListener('click', () => {
+                onQueryChange('');
+                searchInput.focus();
             });
 
             // Restore from URL
