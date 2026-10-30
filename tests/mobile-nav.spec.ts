@@ -57,7 +57,7 @@ test.describe('Mobile nav drawer', () => {
   test('primary links and labelled social links, in the UI font', async ({ page }) => {
     await page.goto('/');
     await toggle(page).click();
-    await expect(drawer(page).locator('.mobile-nav-primary a')).toHaveText(['Home', 'Interesting Links', 'Categories', 'Search']);
+    await expect(drawer(page).locator('.mobile-nav-primary a')).toHaveText(['Home', 'Interesting Links', 'Categories', 'About', 'Search']);
     await expect(drawer(page).locator('.mobile-nav-social a')).toHaveText(['RSS', 'LinkedIn', 'X', 'Bluesky', 'YouTube', 'Talks', 'GitHub']);
     // At tablet widths these used to fall back to the serif, link-blue article style.
     for (const link of await drawer(page).locator('a').all()) {
