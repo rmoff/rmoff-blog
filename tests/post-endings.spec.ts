@@ -113,6 +113,57 @@ test.describe('Post endings: where the section appears', () => {
   });
 });
 
+test.describe('Post endings: the flourish that ends the article', () => {
+  const SWIRL = 'article.article .post-end-swirl';
+
+  for (const path of [KAFKA_2018, '/about-me/']) {
+    test(`${path} ends its article with the flourish, not a plain rule`, async ({ page }) => {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator(SWIRL)).toHaveCount(1);
+      await expect(page.locator(`${SWIRL} svg`)).toBeVisible();
+      const last = await page.locator('article.article').evaluate(a => a.lastElementChild?.className);
+      expect(last).toBe('post-end-swirl');
+      // The template's old trailing rule mustn't come back just above the flourish
+      const before = await page.locator(SWIRL).evaluate(el => el.previousElementSibling?.tagName);
+      expect(before).not.toBe('HR');
+    });
+  }
+
+  test('screen readers and search skip it', async ({ page }) => {
+    await page.goto(KAFKA_2018, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator(SWIRL)).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator(SWIRL)).toHaveAttribute('data-pagefind-ignore', '');
+    await expect(page.locator(`${SWIRL} title`)).toHaveCount(0);
+  });
+
+  test('fits a phone screen', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto(KAFKA_2018, { waitUntil: 'domcontentloaded' });
+    const box = await page.locator(`${SWIRL} svg`).boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  });
+
+  test('no line sits between it and the first related post', async ({ page }) => {
+    await page.goto(KAFKA_2018, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator(`${SECTION} .post-row`).first()).toHaveCSS('border-top-width', '0px');
+  });
+
+  for (const [scheme, accent] of [['light', 'rgb(232, 66, 30)'], ['dark', 'rgb(240, 100, 60)']] as const) {
+    test.describe(`${scheme} theme`, () => {
+      test.use({ colorScheme: scheme });
+      test('is drawn in the accent colour', async ({ page }) => {
+        await page.goto(KAFKA_2018, { waitUntil: 'domcontentloaded' });
+        const fills = await page.locator(`${SWIRL} path`).evaluateAll(paths =>
+          paths.map(p => getComputedStyle(p).fill),
+        );
+        expect(fills.length).toBeGreaterThan(0);
+        for (const fill of fills) expect(fill).toBe(accent);
+      });
+    });
+  }
+});
+
 test.describe('Post endings: related posts', () => {
   for (const path of NORMAL_POSTS) {
     test(`${path} lists up to three posts that share a category`, async ({ page, request }) => {
