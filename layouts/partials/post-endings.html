@@ -1,0 +1,53 @@
+{{- /* What to read next, shown between a post and its comments. Related posts are
+       ranked by the `related` block in config.yaml. */ -}}
+{{- $pools := partialCached "post-pools.html" . "post-pools" -}}
+{{- $pool := $pools.articles -}}
+{{- if intersect (slice .) $pools.roundups -}}
+	{{- $pool = $pools.all -}}
+{{- end -}}
+{{- $related := first 3 ($pool.Related .) -}}
+{{- /* Next means "earlier in the collection", and `all` is newest first */ -}}
+{{- $older := $pools.all.Prev . -}}
+{{- $newer := $pools.all.Next . -}}
+<div class="post-endings hide-print">
+	{{- with $related }}
+	<section aria-labelledby="post-endings-related">
+		<h2 id="post-endings-related" class="post-endings-heading">Related posts</h2>
+		<ul class="post-list">
+			{{- range . }}
+			<li class="post-row">
+				<a href="{{ .RelPermalink }}" class="post-thumb-link" aria-hidden="true" tabindex="-1">
+					{{ partial "thumbnail.html" (dict "page" . "variant" "list") }}
+				</a>
+				<div class="post-info">
+					<span class="post-date">{{ .Date.Format "02 Jan 2006" }}</span>
+					<a href="{{ .RelPermalink }}" class="post-title-link">
+						{{- cond (eq .Site.Params.titlecase true) (.Title | title | markdownify) (.Title | markdownify) -}}
+					</a>
+				</div>
+			</li>
+			{{- end }}
+		</ul>
+	</section>
+	{{- end }}
+	{{- if or $older $newer }}
+	<nav class="post-older-newer" aria-label="Older and newer posts">
+		{{- with $older }}
+		<a href="{{ .RelPermalink }}" data-direction="older">
+			<span class="post-nav-label"><span aria-hidden="true">&larr;</span> Older post</span>
+			<span class="post-nav-title">
+				{{- cond (eq .Site.Params.titlecase true) (.Title | title | markdownify) (.Title | markdownify) -}}
+			</span>
+		</a>
+		{{- end }}
+		{{- with $newer }}
+		<a href="{{ .RelPermalink }}" data-direction="newer">
+			<span class="post-nav-label">Newer post <span aria-hidden="true">&rarr;</span></span>
+			<span class="post-nav-title">
+				{{- cond (eq .Site.Params.titlecase true) (.Title | title | markdownify) (.Title | markdownify) -}}
+			</span>
+		</a>
+		{{- end }}
+	</nav>
+	{{- end }}
+</div>
