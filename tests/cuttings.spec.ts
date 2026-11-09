@@ -77,7 +77,7 @@ test.describe('Searching with and without cuttings', () => {
   });
 
   test('All, Posts and Cuttings filter the results', async ({ page }) => {
-    await page.goto('/search/?q=slop');
+    await page.goto('/search/?q=snob');
     await expect(titles(page)).toHaveCount(2);
     await expect(page.locator('.cr-result-cutting .cr-result-type')).toHaveText('Cutting · charity.wtf');
 
@@ -91,17 +91,17 @@ test.describe('Searching with and without cuttings', () => {
   });
 
   test('the choice is remembered, and the ⌘K palette follows it', async ({ page }) => {
-    await page.goto('/search/?q=slop');
+    await page.goto('/search/?q=snob');
     await page.locator('.search-show [data-show="posts"]').click();
     await expect(titles(page)).toHaveCount(1);
 
-    await page.goto('/search/?q=slop');
+    await page.goto('/search/?q=snob');
     await expect(page.locator('.search-show [data-show="posts"]')).toHaveClass(/active/);
     await expect(titles(page)).toHaveCount(1);
 
     await page.goto('/about-me/');
     await page.keyboard.press('ControlOrMeta+k');
-    await page.locator('.sp-input').fill('slop');
+    await page.locator('.sp-input').fill('snob');
     await expect(page.locator('.sp-group-label').last()).toHaveText('Posts');
     await expect(page.locator('.sp-post-type')).toHaveCount(0);
     await expect(page.locator('.sp-all')).toHaveText(/posts only/);
@@ -111,7 +111,7 @@ test.describe('Searching with and without cuttings', () => {
   test('the palette labels cuttings when showing everything', async ({ page }) => {
     await page.goto('/about-me/');
     await page.keyboard.press('ControlOrMeta+k');
-    await page.locator('.sp-input').fill('slop');
+    await page.locator('.sp-input').fill('snob');
     await expect(page.locator('.sp-post-type')).toHaveText(['Cutting · charity.wtf']);
   });
 });

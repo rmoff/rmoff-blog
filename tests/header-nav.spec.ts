@@ -7,9 +7,9 @@ import { test, expect, Page } from '@playwright/test';
 
 async function sweep(page: Page) {
   const problems: string[] = [];
-  // Both sides of each breakpoint in redesign.css. 1121px and 1281px matter most:
+  // Both sides of each breakpoint in redesign.css. 1201px and 1281px matter most:
   // each is the narrowest width that still has the roomier rules above it.
-  const widths = [1120, 1121, 1280, 1281];
+  const widths = [1200, 1201, 1280, 1281];
   for (let width = 1025; width <= 1440; width += 15) widths.push(width);
   for (const width of widths) {
     await page.setViewportSize({ width, height: 800 });
@@ -68,7 +68,7 @@ test.describe('About page can be found', () => {
     await page.setViewportSize({ width: 1440, height: 800 });
     await page.goto('/');
     await expect(page.locator('.site-nav > a')).toHaveText([
-      /Interesting Links/, /Categories/, /About/, /Search/, /RSS/,
+      /Interesting Links/, /Cuttings/, /Categories/, /About/, /Search/, /RSS/,
     ]);
     await expect(page.locator('.site-nav > a', { hasText: 'About' })).toHaveAttribute('href', ABOUT);
   });
