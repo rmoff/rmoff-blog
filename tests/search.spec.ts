@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Needs a full build with a Pagefind index (the dev server has none), e.g.
 //   hugo --destination <dir> && npx pagefind@1.5.2 --site <dir>
@@ -6,6 +6,41 @@ import { test, expect } from '@playwright/test';
 //   BASE_URL=http://localhost:1331 npx playwright test tests/search.spec.ts
 
 const RUN_TOGETHER_CATEGORIES = /Kafka Connect(offsets|REST|JDBC|Docker)/;
+
+// The start of the 372-character SSH public key in the SampleApp v406 post, so it
+// finds that post alone. The tests below fail on their length check if this stops
+// being true: pick another query that highlights a long unbroken token, rather
+// than dropping the check.
+const LONG_TOKEN_QUERY = 'AAAAB3NzaC1yc2EAAAADAQABAAABAQDMvNjJ8y1a3';
+const LONG_TOKEN_MIN_LENGTH = 200;
+const WRAP_VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
+
+// body as well as html: at 640px and below the site sets overflow-x: hidden on
+// both, so documentElement.scrollWidth stays at the window width even while the
+// text runs off the edge and is cut off. body.scrollWidth still shows it.
+async function expectNoSidewaysOverflow(page: Page) {
+  const widths = await page.evaluate(() => ({
+    html: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+    window: document.documentElement.clientWidth,
+  }));
+  expect(widths.html).toBeLessThanOrEqual(widths.window);
+  expect(widths.body).toBeLessThanOrEqual(widths.window);
+}
+
+// Every highlighted <mark>, with the right-hand edge of the box it must stay in.
+async function measureMarks(page: Page, markSelector: string, boxSelector: string) {
+  const marks = await page.locator(markSelector).evaluateAll((els, box) => els.map(mark => ({
+    length: mark.textContent!.length,
+    lines: mark.getClientRects().length,
+    right: mark.getBoundingClientRect().right,
+    boxRight: mark.closest(box)!.getBoundingClientRect().right,
+  })), boxSelector);
+  const longest = marks.reduce((a, b) => (b.length > a.length ? b : a));
+  expect(longest.length).toBeGreaterThan(LONG_TOKEN_MIN_LENGTH);
+  expect(longest.lines).toBeGreaterThan(1);
+  for (const mark of marks) expect(mark.right).toBeLessThanOrEqual(mark.boxRight);
+}
 
 test.describe('Pagefind Search', () => {
   test('search page loads with Pagefind UI', async ({ page }) => {
@@ -98,6 +133,60 @@ test.describe('Pagefind Search', () => {
     }
   });
 
+  test('a long unbroken token in an excerpt wraps inside its result card', async ({ page }) => {
+    for (const viewport of WRAP_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/search/?q=${LONG_TOKEN_QUERY}`);
+      await expect(page.locator('.cr-result-excerpt mark').first()).toBeVisible({ timeout: 5000 });
+
+      await measureMarks(page, '.cr-result-excerpt mark', '.cr-result');
+      await expectNoSidewaysOverflow(page);
+    }
+  });
+
+  test('a long pasted query wraps in the results line and keeps the sort buttons whole', async ({ page }) => {
+    for (const viewport of WRAP_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/search/?q=${'zzq'.repeat(120)}`);
+      const message = page.locator('.cr-message');
+      await expect(message).toBeVisible({ timeout: 5000 });
+
+      const { queryRight, messageRight } = await message.evaluate(el => ({
+        queryRight: el.querySelector('strong')!.getBoundingClientRect().right,
+        messageRight: el.getBoundingClientRect().right,
+      }));
+      expect(queryRight).toBeLessThanOrEqual(messageRight);
+      await expectNoSidewaysOverflow(page);
+
+      // Wrapping must not reach the buttons: each label stays on one line
+      const lineCounts = await page.locator('.search-sort-btn').evaluateAll(buttons => buttons.map(button => {
+        const label = document.createRange();
+        label.selectNodeContents(button);
+        return label.getClientRects().length;
+      }));
+      expect(lineCounts).toEqual([1, 1, 1]);
+    }
+  });
+
+  test('a long unbroken token in a palette excerpt wraps inside the palette', async ({ page }) => {
+    for (const viewport of WRAP_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto('/');
+      await page.keyboard.press('ControlOrMeta+k');
+      await page.locator('.sp-input').fill(LONG_TOKEN_QUERY);
+      await expect(page.locator('.sp-post-excerpt mark').first()).toBeVisible({ timeout: 10000 });
+
+      await measureMarks(page, '.sp-post-excerpt mark', '.sp-panel');
+      const results = page.locator('.sp-body');
+      const { scrollWidth, clientWidth } = await results.evaluate(el => ({
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+      }));
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+      await expectNoSidewaysOverflow(page);
+    }
+  });
+
   test('?q= restores the query and sort buttons work', async ({ page }) => {
     await page.goto('/search/?q=flink');
     await expect(page.locator('.pagefind-ui__search-input')).toHaveValue('flink');
@@ -166,5 +255,146 @@ test.describe('Pagefind Search', () => {
     // Should find results (OBIEE articles mention Oracle)
     const resultRows = resultsContainer.locator('.post-row');
     expect(await resultRows.count()).toBeGreaterThan(0);
+  });
+
+  test.describe('category search with more than one batch of results', () => {
+    const rows = '#category-search-results .post-row';
+    const loadMore = '#category-search-results .cr-load-more';
+
+    async function searchKafkaConnect(page: Page) {
+      await page.goto('/categories/kafka-connect/');
+      await page.locator('#category-search-input').fill('kafka');
+      await expect(page.locator(rows)).toHaveCount(20, { timeout: 10000 });
+      const total = parseInt((await page.locator('.cat-search-count').textContent())!, 10);
+      expect(total).toBeGreaterThan(40); // so the last batch isn't also the second
+      return total;
+    }
+
+    // Holds Pagefind's result fragments until release(); stopHolding() lets later ones through
+    async function holdNextBatch(page: Page) {
+      let holding = true;
+      let release = () => {};
+      const held = new Promise<void>(resolve => { release = resolve; });
+      await page.route('**/pagefind/fragment/**', async route => {
+        if (holding) await held;
+        await route.continue();
+      });
+      return { release: () => release(), stopHolding: () => { holding = false; } };
+    }
+
+    test('every counted result can be reached, then Load more goes away', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+
+      while (await page.locator(loadMore).isVisible()) {
+        const before = await page.locator(rows).count();
+        await page.locator(loadMore).click();
+        await expect(page.locator(rows)).not.toHaveCount(before);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      const urls = await page.locator(`${rows} .post-title-link`).evaluateAll(
+        links => links.map(a => a.getAttribute('href'))
+      );
+      expect(new Set(urls).size).toBe(total);
+    });
+
+    test('scrolling near the end of the list loads the next batch', async ({ page }) => {
+      await searchKafkaConnect(page);
+
+      await page.locator(loadMore).evaluate(el => el.scrollIntoView());
+
+      await expect(page.locator(rows)).toHaveCount(40);
+    });
+
+    test('a search that finishes after a newer one does not replace it', async ({ page }) => {
+      await page.goto('/categories/kafka-connect/');
+      await page.waitForLoadState('networkidle');
+      let heldRequests = 0;
+      page.on('request', r => { if (r.url().includes('/pagefind/fragment/')) heldRequests++; });
+      const { release, stopHolding } = await holdNextBatch(page);
+      const input = page.locator('#category-search-input');
+
+      await input.fill('kafka');
+      await expect.poll(() => heldRequests).toBeGreaterThan(0);
+      stopHolding();
+
+      // Quoted, as Pagefind matches unquoted nonsense loosely
+      await input.fill('"zzzqqxnomatch"');
+      await expect(page.locator('.cat-search-no-results')).toBeVisible({ timeout: 10000 });
+
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator('.cat-search-no-results')).toBeVisible();
+      await expect(page.locator(rows)).toHaveCount(0);
+    });
+
+    test('a batch that arrives after a new search is ignored', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+      let heldRequests = 0;
+      page.on('request', r => { if (r.url().includes('/pagefind/fragment/')) heldRequests++; });
+      const { release, stopHolding } = await holdNextBatch(page);
+      await page.locator(loadMore).click();
+      await expect.poll(() => heldRequests).toBeGreaterThan(0);
+      stopHolding();
+
+      // Narrow query, so its own fragments aren't the ones being held
+      await page.locator('#category-search-input').fill('snowflake');
+      const count = page.locator('.cat-search-count');
+      await expect(count).not.toHaveText(`${total} results`, { timeout: 10000 });
+      const expected = parseInt((await count.textContent())!, 10);
+      await expect(page.locator(rows)).toHaveCount(expected);
+
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator(rows)).toHaveCount(expected);
+    });
+
+    test('a batch that arrives after Clear does not come back', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await searchKafkaConnect(page);
+      const { release } = await holdNextBatch(page);
+      await page.locator(loadMore).click();
+
+      await page.locator('#category-search-clear').click();
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator('#category-search-results')).toBeHidden();
+      await expect(page.locator(rows)).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+
+    test('finishing with the keyboard keeps focus on the results', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+
+      // Focusing the button scrolls it into view, so auto-load runs alongside Enter
+      await page.locator(loadMore).focus();
+      for (let i = 0; i < 10 && await page.locator(loadMore).count(); i++) {
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      await expect(page.locator(loadMore)).toHaveCount(0);
+      const firstOfLastBatch = page.locator(rows).nth(Math.floor((total - 1) / 20) * 20);
+      await expect(firstOfLastBatch.locator('.post-title-link')).toBeFocused();
+    });
+
+    test('auto-loading the last batch does not move focus', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+      const input = page.locator('#category-search-input');
+      await input.focus();
+
+      for (let i = 0; i < 5 && await page.locator(loadMore).count(); i++) {
+        await page.locator(loadMore).evaluate(el => el.scrollIntoView());
+        await page.waitForTimeout(300);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      await expect(input).toBeFocused();
+    });
   });
 });
