@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Needs a full build with a Pagefind index (the dev server has none), e.g.
 //   hugo --destination <dir> && npx pagefind@1.5.2 --site <dir>
@@ -166,5 +166,146 @@ test.describe('Pagefind Search', () => {
     // Should find results (OBIEE articles mention Oracle)
     const resultRows = resultsContainer.locator('.post-row');
     expect(await resultRows.count()).toBeGreaterThan(0);
+  });
+
+  test.describe('category search with more than one batch of results', () => {
+    const rows = '#category-search-results .post-row';
+    const loadMore = '#category-search-results .cr-load-more';
+
+    async function searchKafkaConnect(page: Page) {
+      await page.goto('/categories/kafka-connect/');
+      await page.locator('#category-search-input').fill('kafka');
+      await expect(page.locator(rows)).toHaveCount(20, { timeout: 10000 });
+      const total = parseInt((await page.locator('.cat-search-count').textContent())!, 10);
+      expect(total).toBeGreaterThan(40); // so the last batch isn't also the second
+      return total;
+    }
+
+    // Holds Pagefind's result fragments until release(); stopHolding() lets later ones through
+    async function holdNextBatch(page: Page) {
+      let holding = true;
+      let release = () => {};
+      const held = new Promise<void>(resolve => { release = resolve; });
+      await page.route('**/pagefind/fragment/**', async route => {
+        if (holding) await held;
+        await route.continue();
+      });
+      return { release: () => release(), stopHolding: () => { holding = false; } };
+    }
+
+    test('every counted result can be reached, then Load more goes away', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+
+      while (await page.locator(loadMore).isVisible()) {
+        const before = await page.locator(rows).count();
+        await page.locator(loadMore).click();
+        await expect(page.locator(rows)).not.toHaveCount(before);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      const urls = await page.locator(`${rows} .post-title-link`).evaluateAll(
+        links => links.map(a => a.getAttribute('href'))
+      );
+      expect(new Set(urls).size).toBe(total);
+    });
+
+    test('scrolling near the end of the list loads the next batch', async ({ page }) => {
+      await searchKafkaConnect(page);
+
+      await page.locator(loadMore).evaluate(el => el.scrollIntoView());
+
+      await expect(page.locator(rows)).toHaveCount(40);
+    });
+
+    test('a search that finishes after a newer one does not replace it', async ({ page }) => {
+      await page.goto('/categories/kafka-connect/');
+      await page.waitForLoadState('networkidle');
+      let heldRequests = 0;
+      page.on('request', r => { if (r.url().includes('/pagefind/fragment/')) heldRequests++; });
+      const { release, stopHolding } = await holdNextBatch(page);
+      const input = page.locator('#category-search-input');
+
+      await input.fill('kafka');
+      await expect.poll(() => heldRequests).toBeGreaterThan(0);
+      stopHolding();
+
+      // Quoted, as Pagefind matches unquoted nonsense loosely
+      await input.fill('"zzzqqxnomatch"');
+      await expect(page.locator('.cat-search-no-results')).toBeVisible({ timeout: 10000 });
+
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator('.cat-search-no-results')).toBeVisible();
+      await expect(page.locator(rows)).toHaveCount(0);
+    });
+
+    test('a batch that arrives after a new search is ignored', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+      let heldRequests = 0;
+      page.on('request', r => { if (r.url().includes('/pagefind/fragment/')) heldRequests++; });
+      const { release, stopHolding } = await holdNextBatch(page);
+      await page.locator(loadMore).click();
+      await expect.poll(() => heldRequests).toBeGreaterThan(0);
+      stopHolding();
+
+      // Narrow query, so its own fragments aren't the ones being held
+      await page.locator('#category-search-input').fill('snowflake');
+      const count = page.locator('.cat-search-count');
+      await expect(count).not.toHaveText(`${total} results`, { timeout: 10000 });
+      const expected = parseInt((await count.textContent())!, 10);
+      await expect(page.locator(rows)).toHaveCount(expected);
+
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator(rows)).toHaveCount(expected);
+    });
+
+    test('a batch that arrives after Clear does not come back', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await searchKafkaConnect(page);
+      const { release } = await holdNextBatch(page);
+      await page.locator(loadMore).click();
+
+      await page.locator('#category-search-clear').click();
+      release();
+      await page.waitForTimeout(500);
+
+      await expect(page.locator('#category-search-results')).toBeHidden();
+      await expect(page.locator(rows)).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+
+    test('finishing with the keyboard keeps focus on the results', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+
+      // Focusing the button scrolls it into view, so auto-load runs alongside Enter
+      await page.locator(loadMore).focus();
+      for (let i = 0; i < 10 && await page.locator(loadMore).count(); i++) {
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      await expect(page.locator(loadMore)).toHaveCount(0);
+      const firstOfLastBatch = page.locator(rows).nth(Math.floor((total - 1) / 20) * 20);
+      await expect(firstOfLastBatch.locator('.post-title-link')).toBeFocused();
+    });
+
+    test('auto-loading the last batch does not move focus', async ({ page }) => {
+      const total = await searchKafkaConnect(page);
+      const input = page.locator('#category-search-input');
+      await input.focus();
+
+      for (let i = 0; i < 5 && await page.locator(loadMore).count(); i++) {
+        await page.locator(loadMore).evaluate(el => el.scrollIntoView());
+        await page.waitForTimeout(300);
+      }
+
+      await expect(page.locator(rows)).toHaveCount(total);
+      await expect(input).toBeFocused();
+    });
   });
 });
