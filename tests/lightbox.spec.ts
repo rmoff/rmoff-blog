@@ -34,6 +34,8 @@ async function touchDrag(page: Page, from: number[][], to: number[][]) {
 
 async function openPost(page: Page) {
   await page.goto(POST, { waitUntil: 'load' });
+  // Post images are lazy, and the viewer sets each one up once it has loaded
+  await diagram(page).scrollIntoViewIfNeeded();
   await expect(diagram(page)).toHaveClass(/lightbox-zoom/);
 }
 
@@ -347,6 +349,7 @@ test('images are wired up as each one loads, without waiting for the slowest', a
   // Hold one image back for the whole test; the rest must still work
   await page.route('**/watermarks09.excalidraw.svg', () => { /* never answered */ });
   await page.goto(POST, { waitUntil: 'domcontentloaded' });
+  await diagram(page).scrollIntoViewIfNeeded();
   await expect(diagram(page)).toHaveClass(/lightbox-zoom/);
   await page.unrouteAll({ behavior: 'ignoreErrors' });
 });

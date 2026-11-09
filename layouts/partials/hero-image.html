@@ -1,0 +1,19 @@
+{{- /* The header photo for a page: .full is the file as published, .phone a smaller
+       copy for phones, or "" when there's nothing to gain (the photo is already small,
+       can't be resized, or is hosted elsewhere).
+
+       A phone's header is about 390x300 CSS pixels and background-size: cover crops the
+       photo to fit, so what matters is that the copy still covers that box. 800x600 is
+       enough at the usual 2x screens and a little soft at 3x, under the dark overlay. */ -}}
+{{- $path := default "img/default-header-img.webp" .Params.image -}}
+{{- $phone := "" -}}
+{{- if in (slice ".jpg" ".jpeg" ".png" ".webp") (path.Ext $path | lower) -}}
+	{{- with resources.Get (strings.TrimPrefix "/" $path) -}}
+		{{- if and (gt .Width 800) (gt .Height 600) -}}
+			{{- /* Keep the copy at least 800x600 whichever way round the photo is */ -}}
+			{{- $size := cond (ge (mul .Width 3) (mul .Height 4)) "x600" "800x" -}}
+			{{- $phone = (.Resize (printf "%s webp q70" $size)).RelPermalink -}}
+		{{- end -}}
+	{{- end -}}
+{{- end -}}
+{{- return dict "full" (relURL $path) "phone" $phone -}}

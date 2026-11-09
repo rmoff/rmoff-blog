@@ -1,0 +1,70 @@
+{{- /* Takes a post's rendered .Content and returns it with its images made cheap to load.
+       Works on the final HTML, so AsciiDoc and Markdown posts are treated the same.
+
+       - loading="lazy" + decoding="async": an image downloads as the reader nears it.
+       - width + height, read from the file: the browser keeps the right space for an
+         image before it has downloaded. Without them a lazy image has no height until
+         it loads, which pushes the page down under the reader and moves the landing
+         spot of table of contents links. CSS (height: auto on img[width][height]) keeps
+         them to scale when max-width shrinks them.
+
+       Images hosted elsewhere get the lazy attributes but no size: reading it would
+       mean fetching them during every build. So do SVGs with no width and height of
+       their own, which fill the column at a size only the browser knows. A percentage
+       width has no height to match so it is left alone, and any width/height that
+       isn't a number (a comma in AsciiDoc alt text ends up there) is replaced. */ -}}
+{{- $html := . -}}
+{{- range uniq (findRE `<img\s[^>]*>` $html) -}}
+	{{- $tag := . -}}
+	{{- $new := $tag -}}
+
+	{{- /* The file behind a site-local src, if there is one */ -}}
+	{{- $file := "" -}}
+	{{- with findRESubmatch `\ssrc="(/[^/"?#][^"?#]*)` $tag 1 -}}
+		{{- with try (urls.PathUnescape (index . 0 1)) -}}
+			{{- with .Value -}}{{- $file = path.Join "static" . -}}{{- end -}}
+		{{- end -}}
+	{{- end -}}
+
+	{{- /* Its size in pixels. images.Config can't read SVG, so use the root element's attributes */ -}}
+	{{- $natW := 0 -}}
+	{{- $natH := 0 -}}
+	{{- if and $file (fileExists $file) -}}
+		{{- if eq (path.Ext $file | lower) ".svg" -}}
+			{{- $root := index (findRE `<svg[^>]*>` (readFile $file) 1) 0 | default "" -}}
+			{{- with findRESubmatch `\swidth="([0-9.]+)(?:px)?"` $root 1 -}}{{- $natW = index . 0 1 | float -}}{{- end -}}
+			{{- with findRESubmatch `\sheight="([0-9.]+)(?:px)?"` $root 1 -}}{{- $natH = index . 0 1 | float -}}{{- end -}}
+		{{- else -}}
+			{{- with try (images.Config $file) -}}
+				{{- with .Value -}}
+					{{- $natW = .Width | float -}}
+					{{- $natH = .Height | float -}}
+				{{- end -}}
+			{{- end -}}
+		{{- end -}}
+	{{- end -}}
+
+	{{- /* Sizes already on the tag (AsciiDoc width=/height=), which win over the file's */ -}}
+	{{- $setW := 0.0 -}}
+	{{- $setH := 0.0 -}}
+	{{- with findRESubmatch `\swidth="([0-9.]+)(?:px)?"` $tag 1 -}}{{- $setW = index . 0 1 | float -}}{{- end -}}
+	{{- with findRESubmatch `\sheight="([0-9.]+)(?:px)?"` $tag 1 -}}{{- $setH = index . 0 1 | float -}}{{- end -}}
+
+	{{- $percent := findRE `\s(?:width|height)="[0-9.]+%"` $tag 1 -}}
+	{{- if and (gt $natW 0.0) (gt $natH 0.0) (not $percent) -}}
+		{{- $w := cond (gt $setW 0.0) $setW (cond (gt $setH 0.0) (mul $setH (div $natW $natH)) $natW) -}}
+		{{- $h := cond (gt $setH 0.0) $setH (mul $w (div $natH $natW)) -}}
+		{{- $new = $new | replaceRE `\s(?:width|height)="[^"]*"` "" -}}
+		{{- $new = replaceRE `^<img\s` (printf `<img width="%d" height="%d" ` (int (math.Round $w)) (int (math.Round $h))) $new -}}
+	{{- end -}}
+
+	{{- if not (findRE `\sloading=` $new 1) -}}
+		{{- $new = replaceRE `^<img\s` `<img loading="lazy" ` $new -}}
+	{{- end -}}
+	{{- if not (findRE `\sdecoding=` $new 1) -}}
+		{{- $new = replaceRE `^<img\s` `<img decoding="async" ` $new -}}
+	{{- end -}}
+
+	{{- $html = replace $html $tag $new -}}
+{{- end -}}
+{{- return $html -}}
