@@ -114,7 +114,7 @@ test.describe('Search palette', () => {
     await openWithShortcut(page);
     await search(page, 'kafka connect');
 
-    await expect(page.locator('.sp-group-label')).toHaveText(['Categories', 'Posts']);
+    await expect(page.locator('.sp-group-label')).toHaveText(['Categories', 'Results']);
     await expect(page.locator('.sp-group-cats .sp-chip').first()).toContainText('Kafka Connect');
     await expect(page.locator('.sp-group-cats .sp-chip').first()).toHaveAttribute('href', '/categories/kafka-connect/');
     const posts = page.locator('.sp-post');

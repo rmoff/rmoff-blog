@@ -1,0 +1,35 @@
+{{ define "title" }}{{ .Title }} &bull; Cuttings &bull; {{ .Site.Title }}{{ end }}
+
+{{ define "main" }}
+<div class="container cutting-page">
+	<a class="cutting-back" href="{{ .CurrentSection.RelPermalink }}">All cuttings</a>
+	<div data-pagefind-body>
+		<div data-pagefind-ignore style="display:none">
+			<span data-pagefind-filter="type">Cutting</span>
+			{{- with .Params.domain }}<span data-pagefind-meta="domain">{{ . }}</span>{{ end }}
+			<span data-pagefind-meta="date:{{ .Date.Format "2 January 2006" }}" data-pagefind-sort="date:{{ .Date.Format "2006-01-02" }}"></span>
+		</div>
+		{{ partial "cutting.html" (dict "page" . "level" 1) }}
+	</div>
+	<nav class="cutting-pager" aria-label="More cuttings">
+		{{- with .NextInSection }}<a class="cutting-pager-newer" href="{{ .RelPermalink }}"><span>Newer</span>{{ .Title }}</a>{{ end }}
+		{{- with .PrevInSection }}<a class="cutting-pager-older" href="{{ .RelPermalink }}"><span>Older</span>{{ .Title }}</a>{{ end }}
+	</nav>
+</div>
+{{ end }}
+
+{{ define "social" }}
+		<meta property="og:title" content="{{ .Title }}" />
+		<meta property="og:type" content="article" />
+		<meta property="og:description" content="{{ (or .Params.quote .Summary) | plainify | truncate 200 }}" />
+		<meta property="og:url" content="{{ .Permalink }}" />
+		<meta property="og:site_name" content="{{ .Site.Title }}" />
+		{{- $image := "" }}
+		{{- range first 1 (.Params.media | default slice) }}{{ with $.Resources.Get .src }}{{ $image = .Permalink }}{{ end }}{{ end }}
+		{{- with $image }}
+		<meta property="og:image" content="{{ . }}" />
+		<meta name="twitter:card" content="summary_large_image" />
+		{{- else }}
+		<meta name="twitter:card" content="summary" />
+		{{- end }}
+{{ end }}

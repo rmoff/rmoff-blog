@@ -1,0 +1,41 @@
+{{- /* One cutting. Used by the Cuttings list, a cutting's own page and the Cuttings feed.
+       dict: page, level (1 for an h1 title, else h2), list (true on the list page: the date links to the cutting's page),
+       feed (true in the RSS feed: image URLs are absolute) */ -}}
+{{- $p := .page -}}
+<article class="cutting">
+	<div class="cutting-meta" data-pagefind-ignore>
+		{{- if .list }}<a href="{{ $p.RelPermalink }}" class="cutting-date"><time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time></a>
+		{{- else }}<time class="cutting-date" datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time>{{ end -}}
+	</div>
+	{{- $title := $p.Title }}
+	{{- with $p.Params.link }}{{ $title = printf "<a href=\"%s\">%s</a>" (htmlEscape .) (htmlEscape $p.Title) | safeHTML }}{{ end }}
+	{{- if eq .level 1 }}
+	<h1 class="cutting-title">{{ $title }}</h1>
+	{{- else }}
+	<h2 class="cutting-title">{{ $title }}</h2>
+	{{- end }}
+	{{- $source := slice }}
+	{{- with $p.Params.author }}{{ $source = $source | append (htmlEscape .) }}{{ end }}
+	{{- with $p.Params.domain }}{{ $source = $source | append (htmlEscape .) }}{{ end }}
+	{{- with $p.Params.source }}{{ $source = $source | append (printf "<a href=\"%s\">On %s</a>" (htmlEscape .) (htmlEscape ($p.Params.source_name | default "the original site"))) }}{{ end }}
+	{{- with $source }}
+	<p class="cutting-source">{{ delimit . " · " | safeHTML }}</p>
+	{{- end }}
+	{{- with $p.Content }}
+	<div class="cutting-comment">{{ . }}</div>
+	{{- end }}
+	{{- range $p.Params.media }}
+	{{- $alt := .alt }}
+	{{- with $p.Resources.Get .src }}
+	<figure class="cutting-media"><img src="{{ cond $.feed .Permalink .RelPermalink }}" alt="{{ $alt }}" width="{{ .Width }}" height="{{ .Height }}" loading="lazy"></figure>
+	{{- end }}
+	{{- end }}
+	{{- with $p.Params.quote }}
+	<figure class="cutting-quote">
+		<blockquote{{ with $p.Params.link }} cite="{{ . }}"{{ end }}>{{ $p.RenderString (dict "display" "block") . }}</blockquote>
+		{{- with $p.Params.quote_author }}
+		<figcaption>— {{ . }}</figcaption>
+		{{- end }}
+	</figure>
+	{{- end }}
+</article>
