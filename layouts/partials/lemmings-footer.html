@@ -1,0 +1,33 @@
+{{- /* Footer lemmings: when the footer comes within 800px of the view, the script loads and two lemmings drop onto
+       the footer rule (readers who never get near the footer load nothing). They stay in the footer (data-scope) with
+       the floor at the page bottom, so they never walk over a post unless a reader picks one up and drops or throws
+       it there. Any that walk into the door go home. Pages with their own lemmings (the 404) skip the footer pair.
+       The door's art comes with the script. Nothing at all with reduced motion. */ -}}
+{{- $lemmings := resources.Get "js/lemmings.js" | fingerprint -}}
+<span class="lemming-door" data-lemming-exit data-src="{{ $lemmings.RelPermalink }}" hidden aria-hidden="true"></span>
+<script>
+(() => {
+	const still = matchMedia('(prefers-reduced-motion: reduce)');
+	if (still.matches) return;
+	const footer = document.currentScript.closest('footer'), door = footer.querySelector('.lemming-door');
+	if (document.querySelector('script[data-lemmings-page]')) return;   // the 404 brings its own
+	const io = new IntersectionObserver(entries => {
+		if (!entries.some(e => e.isIntersecting)) return;
+		io.disconnect();
+		if (still.matches || window.lemmings) return;
+		const s = document.createElement('script');
+		s.src = door.dataset.src;
+		Object.assign(s.dataset, { floor: 'page', scope: '.site-footer' });
+		s.onload = () => {
+			if (!window.lemmings) return;   // reduced motion: the script does nothing
+			door.innerHTML = window.lemmings.doorSVG;
+			door.hidden = false;
+			const f = footer.getBoundingClientRect(), y = f.top + scrollY - 48;
+			for (const k of [0.25, 0.5]) window.lemmings.add({ x: f.left + scrollX + f.width * k, y });
+		};
+		document.head.append(s);
+	}, { rootMargin: '800px 0px' });
+	io.observe(footer);
+	still.addEventListener('change', e => { if (e.matches) io.disconnect(); });
+})();
+</script>
