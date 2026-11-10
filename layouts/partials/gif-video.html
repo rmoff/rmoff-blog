@@ -1,0 +1,31 @@
+{{- /* Large GIFs in posts are now short looping videos (<video class="gif-video">), a fifth of the size. Each is
+       written with a poster (its first frame, a small .webp, which is also what prints), controls and
+       preload="none", so with no script, or with reduced motion, the reader sees that still and a play button and
+       chooses. Otherwise this drops the controls and plays each one while it is on screen (pausing it when it
+       scrolls away), so a clip downloads only when the reader gets near it, like the lazy images; only the posters
+       load up front. If the browser refuses to play (data saver, low-power mode) the controls come back.
+       static/js/lightbox.js enlarges one shown smaller than its real size, as it does images. */ -}}
+<script>
+(() => {
+	const vids = document.querySelectorAll('video.gif-video');
+	if (!vids.length) return;
+	const still = matchMedia('(prefers-reduced-motion: reduce)');
+	if (still.matches) return;
+	// Showing controls tells lightbox.js, which stops offering to enlarge that clip
+	const showControls = v => { v.controls = true; v.dispatchEvent(new Event('gif-video-controls', { bubbles: true })); };
+	// A play that pause() cut short (scrolled away first) is not a failure
+	const play = v => v.play().catch(err => { if (err.name !== 'AbortError') showControls(v); });
+	const io = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+		for (const e of entries) e.isIntersecting ? play(e.target) : e.target.pause();
+	}, { rootMargin: '200px 0px' }) : null;
+	for (const v of vids) {
+		v.muted = true;
+		v.controls = false;
+		io ? io.observe(v) : play(v);
+	}
+	still.addEventListener('change', e => {
+		if (!e.matches) return;
+		for (const v of vids) { io && io.unobserve(v); v.pause(); showControls(v); }
+	});
+})();
+</script>
