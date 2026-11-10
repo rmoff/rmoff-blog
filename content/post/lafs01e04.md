@@ -367,7 +367,7 @@ mv /tmp/data.csv /tmp/firewall/3.csv
 
 Look at that! A streaming query! 👀 😄
 
-<video autoplay="true" loop="false" width=800 src="/images/2023/10/CleanShot_2023-10-10_at_16.34.14.mp4"></video>
+<video class="gif-video" src="/images/2023/10/CleanShot_2023-10-10_at_16.34.14.mp4" poster="/images/2023/10/CleanShot_2023-10-10_at_16.34.14-poster.webp" width="800" height="601" muted playsinline controls preload="none"></video>
 
 ### More errors 😑
 
