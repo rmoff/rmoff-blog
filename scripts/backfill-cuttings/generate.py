@@ -180,6 +180,49 @@ def build(share):
     }
 
 
+OWN = re.compile(r"(github\.com/rmoff|gist\.github\.com/rmoff|strava\.com|strava\.app\.link)(/|$)")
+
+# Hand calls on top of the 10-word rule (2026-11-10). Dropped: the title reworded,
+# "good post from X", a pointer to a thread or talk list, a reply to someone, a duplicate.
+DROP = {
+    "sql-workbench.com",
+    "lists.apache.org/thread/kjbhht6hzp66w4f7s2df1flpnd3jgf7n",
+    "lobste.rs/s/0sf074/why_i_m_no_longer_talking_architects_about",
+    "andrew-jones.com/newsletter/2025-03-07-wrapping-legacy-applications-with-data-contracts",
+    "engineering.grab.com/building-a-spark-observability",
+    "old.reddit.com/r/apachekafka/comments/1jmsshi/kafka_schema_registry_when_is_it_really_necessary",
+    "github.com/vinimdocarmo/quackfs",
+    "mysql.com",
+    "pca.st/1sd2g8ts",
+    "youtube.com/watch?v=TsmhRZElPvM",
+    "blog.picnic.nl/building-a-real-time-analytics-platform-for-picnic-fefc094807ec",
+    "careers.confluent.io/jobs/16193833-senior-software-engineer-ii",
+    "klaviyo.tech/building-a-resilient-event-publisher-with-dual-failure-capture-518749cb5600",
+    "writethat.blog",
+    "p99conf.io/session/apache-flink-at-scale-7x-cost-reduction-in-real-time-deduplication",
+    "p99conf.io/session/8x-better-than-protobuf-rethinking-serialization-for-data-pipelines",
+    "skey.uk/post/kafka-connectors-more-than-just-configs",
+    "medium.com/fresha-data-engineering/shrinking-me-softly-7836fdd1db76",
+    "uber.com/blog/genie-ubers-gen-ai-on-call-copilot",
+    "developer.confluent.io/blog/all-about-flink-watermarks-1",
+    "x.com/karpathy/status/2015883857489522876",
+    "lobste.rs",
+}
+KEEP = {"jmspae.se/write-ups/kebabs-train-stations"}
+
+
+def says_something(c):
+    """A quote, or at least 10 words of Robin's own that aren't the link's title, author or domain."""
+    key = normalise(c["link"])
+    if key in DROP or key in KEEP:
+        return key in KEEP
+    if c["quote"]:
+        return True
+    body = re.sub(r"<https?://[^>]*>|\[@[^\]]*\]\([^)]*\)", " ", c["comment"])
+    meta = set(words(" ".join(filter(None, (c["title"], c["author"], c["domain"], c["link"])))).split())
+    return len([w for w in words(body).split() if w not in meta]) >= 10
+
+
 def render(c):
     fm = ["---", f"title: {yaml_str(c['title'])}", f"date: {c['date'][:19]}Z", f"link: {yaml_str(c['link'])}", f"domain: {c['domain']}"]
     if c["author"]:
@@ -203,11 +246,14 @@ def main():
             (blog / rel).unlink(missing_ok=True)
     seen = set()
     review = ["date\ttitle\tauthor\tdomain\tcomment\tfile"]
-    skipped = 0
+    skipped = quiet = 0
     for share in shares:
         c = build(share)
-        if (c["author"] or "").lower() == "robin moffatt" or re.match(r"(github\.com/rmoff|strava\.com|strava\.app\.link)(/|$)", normalise(c["link"])):
+        if (c["author"] or "").lower() == "robin moffatt" or OWN.match(normalise(c["link"])):
             skipped += 1
+            continue
+        if not says_something(c):
+            quiet += 1
             continue
         d = c["date"][:10].replace("-", "/")
         slug = slugify(c["title"])
@@ -223,7 +269,7 @@ def main():
         review.append("\t".join([c["date"][:10], c["title"], c["author"] or "", c["domain"], c["comment"].replace("\n", " ⏎ ")[:200], path]))
     manifest.write_text("\n".join(sorted(seen)) + "\n")
     (HERE / "review.tsv").write_text("\n".join(review) + "\n")
-    print(f"wrote {len(seen)} cuttings; skipped {skipped} of your own")
+    print(f"wrote {len(seen)} cuttings; skipped {skipped} of your own and {quiet} with nothing said")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,6 @@ One-off scripts that made the cuttings in `content/cuttings/2025` and `content/c
    ```
 
 2. `python3 -I collect.py` writes `shares.json`. It fetches every linked page, so it takes a few minutes.
-3. `python3 -I generate.py <rmoff-blog checkout>` writes the cuttings, `review.tsv` and `written.txt`.
+3. `python3 -I generate.py <rmoff-blog checkout>` writes the cuttings, `review.tsv` and `written.txt`. It only writes a cutting for a share with a quote or at least 10 words of your own comment, apart from the hand calls in `DROP` and `KEEP`.
 
 `generate.py` overwrites a cutting with the same file name, so hand edits to it are lost. Before writing, it deletes the files listed in `written.txt` from the last run.
