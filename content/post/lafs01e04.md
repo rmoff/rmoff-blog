@@ -417,7 +417,7 @@ Via this you can get to the Job Manager and Task Manager logs (just as I did fro
 
 ## Time out
 
-![](/images/2023/10/timeout.gif)
+<video class="gif-video" src="/images/2023/10/timeout.mp4" poster="/images/2023/10/timeout-poster.webp" width="498" height="412" muted loop playsinline controls preload="none"></video>
 
 At this point I've got the basics of a query running, I've learnt something about tables and connectors - and I'm stuck! 
 

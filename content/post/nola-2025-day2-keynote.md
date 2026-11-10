@@ -291,7 +291,7 @@ current-2025-demo.maestro_gcp.rmoff_claude45_completion_01_AI_COMPLETE(arg0 => S
 Caused by: Invalid argument type at position 1. Data type STRING expected but ARRAY<STRING> passed.
 ```
 
-![](/images/2025/11/nola25/a-close-up-of-a-man-s-face-with-schitts-creek-on-the-bottom.gif)
+<video class="gif-video" src="/images/2025/11/nola25/a-close-up-of-a-man-s-face-with-schitts-creek-on-the-bottom.mp4" poster="/images/2025/11/nola25/a-close-up-of-a-man-s-face-with-schitts-creek-on-the-bottom-poster.webp" width="498" height="498" muted loop playsinline controls preload="none"></video>
 
 In a nutshell: I passed in an array of messages, but the model expects a string—hence `Data type STRING expected but ARRAY<STRING> passed`.
 

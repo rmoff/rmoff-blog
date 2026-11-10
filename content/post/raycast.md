@@ -139,4 +139,4 @@ Think of all the tasks that you do on your computer each day. Many of those will
 
 It *is* you, not me. Raycast does everything Alfred did, but better.
 
-![](/images/2023/03/Kapture%202023-02-27%20at%2022.04.04%201.gif)
+<video class="gif-video" src="/images/2023/03/Kapture%202023-02-27%20at%2022.04.04%201.mp4" poster="/images/2023/03/Kapture%202023-02-27%20at%2022.04.04%201-poster.webp" width="434" height="376" muted loop playsinline controls preload="none"></video>

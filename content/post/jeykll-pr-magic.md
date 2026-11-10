@@ -23,7 +23,7 @@ There were two points of friction that I wanted to fix to make it easily and qui
 
 1. The local build process for docs was not instantaneous, meaning that *contributors* would either just not test their changes ("*it's just a small docs change"*, amiright?), or would diligently test them and wasting literally minutes between each build (if you've any tips to fix this [let me know](https://github.com/treeverse/lakeFS/issues/5404)!). On top of this, reviewers of PRs would need to clone the repo and build the docs site to be able to review the changes properly…so very tedious 
 
-   ![BORING](/images/2023/04/zzzzzzz-gif.gif)
+   <video class="gif-video" src="/images/2023/04/zzzzzzz-gif.mp4" poster="/images/2023/04/zzzzzzz-gif-poster.webp" width="498" height="330" muted loop playsinline controls preload="none" aria-label="BORING"></video>
 2. There were broken links, and no automated checking on incoming Pull Requests (PRs) that a change didn't break things further.
 
 ## GitHub Actions are MAGIC

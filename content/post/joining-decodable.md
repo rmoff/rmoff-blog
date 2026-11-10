@@ -17,7 +17,7 @@ This week I joined [Decodable](https://decodable.co). I'm grateful to my former 
 
 I spent several years previously at Confluent bringing my data engineer's view of the world to help [advocate](https://rmoff.net/categories/kafka-connect/) [for](http://youtube.com/rmoff) what was being built within Confluent as [ksqlDB](https://ksqldb.io/)—and the broader Apache Kafka community in [Kafka Connect](https://kafka.apache.org/documentation.html#connect)—as a coherent platform on which analytics and data integration solutions could be built. 
 
-![Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather](/images/2023/09/just-when-i-thought-i-was-out-they-pull-me-back-in.gif)
+<video class="gif-video" src="/images/2023/09/just-when-i-thought-i-was-out-they-pull-me-back-in.mp4" poster="/images/2023/09/just-when-i-thought-i-was-out-they-pull-me-back-in-poster.webp" width="640" height="344" muted loop playsinline controls preload="none" aria-label="Just when I thought I was out / They Pull Me Back In - Al Pacino - The Godfather"></video>
 
 Turns out, stream processing was only really just getting started. In the last 12-18 months a veritable plethora of stream processing projects and companies have shown up, demonstrating that there is not only demand for it but also different approaches to take too. 
 

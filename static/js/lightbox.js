@@ -1,4 +1,5 @@
-// Lightbox for article images displayed smaller than their natural size.
+// Lightbox for article images displayed smaller than their natural size, and for the looping
+// clips that replaced large GIFs (video.gif-video, layouts/partials/gif-video.html).
 // A native <dialog> (like the search palette), so the browser keeps Tab inside it
 // and makes the page behind inert. Size is CSS: fitted to the screen on desktop,
 // natural size with panning on touch screens and narrow windows.
@@ -6,6 +7,8 @@
   var overlay = null;  // the open viewer, still set while it fades out
   var opener = null;   // the image that opened it, which gets focus back
   var stopTrackingZoom = null;
+  var stopWatchingMotion = null;
+  var ZOOMABLE = 'article.article img, article.article video.gif-video';
 
   function prefersReducedMotion() {
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -21,6 +24,8 @@
     root.style.paddingRight = '';
     if (stopTrackingZoom) stopTrackingZoom();
     stopTrackingZoom = null;
+    if (stopWatchingMotion) stopWatchingMotion();
+    stopWatchingMotion = null;
     if (opener && document.contains(opener)) opener.focus({ preventScroll: true });
     opener = null;
   }
@@ -74,9 +79,36 @@
     close.setAttribute('aria-label', 'Close image viewer');
     close.textContent = '×';
 
-    var img = document.createElement('img');
-    img.src = source.src;
-    img.alt = source.alt;
+    var img;
+    if (source.tagName === 'VIDEO') {
+      // The same clip at full size, playing (with controls instead, under reduced motion)
+      img = document.createElement('video');
+      img.src = source.currentSrc || source.src;
+      img.poster = source.poster;
+      img.width = Number(source.getAttribute('width'));  // its size before the clip loads
+      img.height = Number(source.getAttribute('height'));
+      img.muted = true;
+      img.loop = true;
+      img.playsInline = true;
+      if (source.dataset.label) img.setAttribute('aria-label', source.dataset.label);
+      if (prefersReducedMotion()) img.controls = true;
+      else img.autoplay = true;
+      // Reduced motion turned on while it's open: stop it and hand over the controls
+      var motion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (motion && motion.addEventListener) {
+        var still = function (e) {
+          if (!e.matches) return;
+          img.pause();
+          img.controls = true;
+        };
+        motion.addEventListener('change', still);
+        stopWatchingMotion = function () { motion.removeEventListener('change', still); };
+      }
+    } else {
+      img = document.createElement('img');
+      img.src = source.src;
+      img.alt = source.alt;
+    }
     img.className = 'lightbox-img';
 
     el.appendChild(close);
@@ -123,37 +155,44 @@
   }
 
   function updateImage(img) {
-    // An image inside a link keeps that link as its one job
-    if (img.naturalWidth > img.clientWidth && !img.closest('a')) {
+    var video = img.tagName === 'VIDEO';
+    // A clip's own label (the post's alt text) is kept, to wrap and to put back
+    if (video && img.dataset.label === undefined) img.dataset.label = img.getAttribute('aria-label') || '';
+    var text = video ? img.dataset.label : img.alt;
+    var natural = video ? Number(img.getAttribute('width')) : img.naturalWidth;
+    // An image inside a link keeps that link as its one job. A clip showing its own
+    // controls (reduced motion, or it couldn't play) has the browser's full screen button
+    if (natural > img.clientWidth && !img.closest('a') && !(video && img.controls)) {
       img.classList.add('lightbox-zoom');
       img.setAttribute('tabindex', '0');
       img.setAttribute('role', 'button');
       img.setAttribute('aria-haspopup', 'dialog');
       // Wraps the post's own alt text, which is left as it is
-      img.setAttribute('aria-label', img.alt ? 'Enlarge image: ' + img.alt : 'Enlarge image');
+      img.setAttribute('aria-label', text ? 'Enlarge image: ' + text : 'Enlarge image');
     } else {
       img.classList.remove('lightbox-zoom');
       img.removeAttribute('tabindex');
       img.removeAttribute('role');
       img.removeAttribute('aria-haspopup');
-      img.removeAttribute('aria-label');
+      if (video && img.dataset.label) img.setAttribute('aria-label', img.dataset.label);
+      else img.removeAttribute('aria-label');
     }
   }
 
   function updateImages() {
-    var imgs = document.querySelectorAll('article.article img');
+    var imgs = document.querySelectorAll(ZOOMABLE);
     for (var i = 0; i < imgs.length; i++) updateImage(imgs[i]);
   }
 
   function isZoomable(el) {
-    return !!(el && el.classList && el.classList.contains('lightbox-zoom'));
+    return !!(el && el.classList && el.classList.contains('lightbox-zoom') && !(el.tagName === 'VIDEO' && el.controls));
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    // Each image is ready once loaded, so naturalWidth is available
-    var imgs = document.querySelectorAll('article.article img');
+    // Each image is ready once loaded, so naturalWidth is available. A clip's size is on its tag
+    var imgs = document.querySelectorAll(ZOOMABLE);
     for (var i = 0; i < imgs.length; i++) {
-      if (imgs[i].complete) {
+      if (imgs[i].tagName === 'VIDEO' || imgs[i].complete) {
         updateImage(imgs[i]);
       } else {
         imgs[i].addEventListener('load', function (e) {
@@ -164,6 +203,8 @@
   });
 
   window.addEventListener('resize', updateImages);
+  // A clip that starts showing its own controls stops being a lightbox button straight away
+  document.addEventListener('gif-video-controls', function (e) { updateImage(e.target); });
 
   document.addEventListener('click', function (e) {
     if (isZoomable(e.target)) openLightbox(e.target);
