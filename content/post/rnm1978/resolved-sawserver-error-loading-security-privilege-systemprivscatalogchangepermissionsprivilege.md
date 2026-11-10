@@ -5,6 +5,8 @@ url: "/2009/11/17/resolved-sawserver-error-loading-security-privilege-systempriv
 categories: 
   - "config"
   - "sawserver"
+aliases:
+- "/2009/11/17/resolved-sawserver-error-loading-security-privilege-/system/privs/catalog/changepermissionsprivilege/"
 ---
 
 Whilst installing OBIA 7.9.6.1 I hit this problem when firing up Presentation Services (sawserver):

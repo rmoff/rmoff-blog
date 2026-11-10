@@ -12,6 +12,8 @@ categories:
   - "sawping"
   - "sawserver"
   - "unix"
+aliases:
+- "/2009/07/21/obiee-admin-tools-amp-hacks/"
 ---
 
 As a kid I loved the idea of lego where you can disassemble and reassemble something from the ground up. As soon as I got my hands on a computer it was the same. You can have your Acorn Archimedes with its games, where do I find the sprites and sound files behind it? Likewise Microsoft Word, let me at the VBA underneath to hack it around and see what else it can do.

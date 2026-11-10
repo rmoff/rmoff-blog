@@ -6,6 +6,8 @@ url: "/2010/02/23/oracle-support-blog-back-online-kinda/"
 categories: 
   - "oracle"
   - "rant"
+aliases:
+- "/2010/02/23/oracle-support-blog-back-online-kinda./"
 ---
 
 After it was [ripped down last week](/2010/02/15/oracle-support-blog-no-more/), Chris Warticki's blog is [back online](http://blogs.oracle.com/Support/2010/02/support_blog_moved_to_my_oracl.html), albeit with the last posting redirecting visitors to a [new location on Oracle Communities](https://communities.oracle.com/portal/server.pt/community/using_my_oracle_support/221).

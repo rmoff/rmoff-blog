@@ -7,6 +7,7 @@ image = "/images/2018/02/IMG_8617.JPG"
 slug = "howto-oracle-goldengate-apache-kafka-schema-registry-swingbench"
 tag = ["apache kafka", "schema registry", "swingbench", "goldengate", "oracle"]
 title = "HOWTO: Oracle GoldenGate + Apache Kafka + Schema Registry + Swingbench"
+aliases = ["/2018/02/01/howto-oracle-goldengate-apache-kafka-schema-registry-swingbench/"]
 
 +++
 

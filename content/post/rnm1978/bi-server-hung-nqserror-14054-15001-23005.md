@@ -4,6 +4,8 @@ date: "2009-10-16"
 url: "/2009/10/16/bi-server-hung-nqserror-14054-15001-23005/"
 categories: 
   - "OBIEE"
+aliases:
+- "/2009/10/16/bi-server-hung-nqserror-14054-/-15001-/-23005/"
 ---
 
 Watch out if you are using init blocks in your RPD. We hit a bug (#9019374) recently that caused BI Server (10.1.3.4) to hang.

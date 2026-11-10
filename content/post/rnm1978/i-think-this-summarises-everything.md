@@ -6,6 +6,8 @@ url: "/2009/11/27/i-think-this-summarises-everything/"
 categories: 
   - "obia"
   - "silly"
+aliases:
+- "/2009/11/27/i-think-this-summarises-everything./"
 ---
 
 Why did this make me think of the OBIA upgrade documentation?? ;-)

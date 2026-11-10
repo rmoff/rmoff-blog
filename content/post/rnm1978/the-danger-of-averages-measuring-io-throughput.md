@@ -5,6 +5,8 @@ url: "/2010/09/14/the-danger-of-averages-measuring-io-throughput/"
 categories: 
   - "io"
   - "oracle"
+aliases:
+- "/2010/09/14/the-danger-of-averages-measuring-i/o-throughput/"
 ---
 
 [This query](http://www.jameskoopmann.com/scripts/wrh_sysstat_ioworkload_ALL.sql), based on AWR snapshots on sys.wrh$\_sysstat, includes in its metrics the I/O read throughput for a given snapshot duration.

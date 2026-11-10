@@ -7,6 +7,8 @@ categories:
   - "hack"
   - "OBIEE"
   - "windows"
+aliases:
+- "/2009/09/08/admintool.exe-/command/"
 ---
 
 There's an undocumented feature in AdminTool.exe that you can use the /command switch with a text file containing scripted commands to make changes to an RPD file (or create a new one).

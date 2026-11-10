@@ -9,6 +9,8 @@ categories:
 - LAF
 - Apache Flink
 - Flink SQL
+aliases:
+- "/2023/10/10/a-partial-exploration-of-the-flink-sql-client/"
 ---
 
 So far I've plotted out a bit of a [map for my exploration](/2023/09/29/learning-apache-flink-s01e01-where-do-i-start/) of Apache Flink, looked at [what  Flink _is_](/2023/10/02/learning-apache-flink-s01e02-what-is-flink/), and [run my first Flink application](/2023/10/05/learning-apache-flink-s01e03-running-my-first-flink-cluster-and-application/). Being an absolutely abysmal coder—but knowing a thing or two about SQL—I figure that Flink SQL is where my focus is going to lie (_I'm also intrigued by PyFlink, but that's for another day…_). 

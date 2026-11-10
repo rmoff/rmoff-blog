@@ -6,6 +6,8 @@ categories:
   - "dac"
   - "ora-01017"
   - "oracle"
+aliases:
+- "/2010/05/06/what-am-i-missing-here-ora-01017-invalid-username/password-logon-denied/"
 ---
 
 What's going on here? The username/password is definitely valid, proved by the sqlplus connection.

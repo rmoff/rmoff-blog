@@ -6,6 +6,8 @@ categories:
   - "jmx"
   - "mbeans"
   - "performance"
+aliases:
+- "/2009/07/22/oracle-bi-management-/-systems-management-mbeans/"
 ---
 
 Part of [looking at the various gubbins inside OBIEE](/2009/07/21/obiee-admin-tools-hacks/) led me to realise that the Oracle BI Management application drives quite a few things. It exposes MBeans (Management Beans, a java term), accessible through [jmx](http://en.wikipedia.org/wiki/JMX). In the installation of OBIEE this component is referred to as "Systems Management".

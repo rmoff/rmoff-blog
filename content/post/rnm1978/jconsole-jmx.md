@@ -8,6 +8,8 @@ categories:
   - "OBIEE"
   - "performance"
   - "unix"
+aliases:
+- "/2009/07/16/jconsole-/-jmx/"
 ---
 
 \[edit\] See [this post](/2009/07/21/jconsole-jmx-followup/) too \[/edit\] On an OBIEE server run 

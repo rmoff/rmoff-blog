@@ -8,6 +8,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - DuckDB
 - Parquet
+aliases:
+- "/2023/03/03/aligning-mis-matched-parquet-schemas-in-duckdb/"
 ---
 
 What do you do when you want to query over multiple parquet files but the schemas don't quite line up? Let's find out 👇🏻

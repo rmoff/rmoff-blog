@@ -8,6 +8,8 @@ categories:
   - "dwh"
   - "oracle"
   - "statistics"
+aliases:
+- "/2011/06/15/global-statistics-high/low-values-when-using-dbms_stats.copy_table_stats/"
 ---
 
 There is a well-documented problem relating to DBMS\_STATS.COPY\_TABLE\_STATS between partitions where high/low values of the partitioning key column were just copied verbatim from the source partition. This particular problem has now been patched (see [8318020.8](https://supporthtml.oracle.com/ep/faces/secure/km/DocumentDisplay.jspx?id=8318020.8)). For background, see Doug Burns' [blog](http://oracledoug.com/serendipity/) and his [excellent paper](http://oracledoug.com/serendipity/index.php?/archives/1632-Symposium-2011-My-Presentation.html) which covers the whole topic of statistics on partitioned tables.

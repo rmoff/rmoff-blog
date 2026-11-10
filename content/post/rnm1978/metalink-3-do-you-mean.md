@@ -7,6 +7,8 @@ categories:
   - "metalink"
   - "silly"
   - "support"
+aliases:
+- "/2009/07/24/metalink-3-do-you-mean-.../"
 ---
 
 One of my little gripes with Metalink is its purporting to be helpful when it's blatantly not. Here's one: ![](/images/rnm1978/image_lost.png)
