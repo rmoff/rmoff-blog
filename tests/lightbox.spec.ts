@@ -333,6 +333,21 @@ test.describe('background and leftovers', () => {
     await expect(page.locator('.lightbox-overlay')).toHaveCount(0);
   });
 
+  test('an image shown at exactly its own width, inside its border, is not offered for enlarging', async ({ page }) => {
+    await openPost(page);
+    await expect(diagram(page)).toHaveAttribute('tabindex', '0');
+
+    // Box exactly its real width (box-sizing: border-box), so the 1px border leaves it 2px short inside
+    await diagram(page).evaluate((i: HTMLImageElement) => {
+      i.style.maxWidth = 'none';
+      i.style.width = i.naturalWidth + 'px';
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(await diagram(page).evaluate((i: HTMLImageElement) => i.naturalWidth - i.clientWidth)).toBe(2);
+    await expect(diagram(page)).not.toHaveClass(/lightbox-zoom/);
+    await expect(diagram(page)).not.toHaveAttribute('role', 'button');
+  });
+
   test('an image inside a link stays a plain link', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(LINKED_IMAGE_POST, { waitUntil: 'load' });

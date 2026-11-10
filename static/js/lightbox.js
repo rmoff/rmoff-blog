@@ -160,9 +160,12 @@
     if (video && img.dataset.label === undefined) img.dataset.label = img.getAttribute('aria-label') || '';
     var text = video ? img.dataset.label : img.alt;
     var natural = video ? Number(img.getAttribute('width')) : img.naturalWidth;
+    // Shown smaller than its real size? offsetWidth is the whole box, border included: an
+    // image at full size inside a 1px border has a clientWidth 2px short of its real width,
+    // and used to be offered for enlarging when there was nothing to gain.
     // An image inside a link keeps that link as its one job. A clip showing its own
     // controls (reduced motion, or it couldn't play) has the browser's full screen button
-    if (natural > img.clientWidth && !img.closest('a') && !(video && img.controls)) {
+    if (natural > img.offsetWidth && !img.closest('a') && !(video && img.controls)) {
       img.classList.add('lightbox-zoom');
       img.setAttribute('tabindex', '0');
       img.setAttribute('role', 'button');
