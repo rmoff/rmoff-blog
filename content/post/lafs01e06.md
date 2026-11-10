@@ -342,7 +342,7 @@ Just like with sqlline, you can run Flink SQL statements to create and query tab
 
 as well as unbounded: 
 
-<video class="gif-video" src="/images/2023/11/dbeaver_streaming_flink.mp4" poster="/images/2023/11/dbeaver_streaming_flink-poster.webp" width="800" height="600" muted loop playsinline controls preload="none"></video>
+<video class="gif-video" src="/images/2023/11/dbeaver_streaming_flink.mp4" poster="/images/2023/11/dbeaver_streaming_flink-poster.webp" width="800" height="600" data-real-width="930" muted loop playsinline controls preload="none"></video>
 
 In the case of the unbounded table, it's hard to tell because of the random nature of datagen's data whether what I'm seeing is results from _one_ query paged into 200-row chunks, or if each time it goes to get more data it's the _first_ 200 rows of a new result set that's shown.
 
