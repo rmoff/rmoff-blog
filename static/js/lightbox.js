@@ -88,7 +88,7 @@
       img.width = Number(source.getAttribute('width'));  // its size before the clip loads
       img.height = Number(source.getAttribute('height'));
       img.muted = true;
-      img.loop = true;
+      img.loop = source.loop;  // a clip written to play once stays that way
       img.playsInline = true;
       if (source.dataset.label) img.setAttribute('aria-label', source.dataset.label);
       if (prefersReducedMotion()) img.controls = true;
