@@ -6,6 +6,8 @@ categories:
   - "OBIEE"
   - "sawping"
   - "sawserver"
+aliases:
+- "/2009/12/09/troubleshooting-presentation-services-/-analytics-connectivity/"
 ---
 
 Short but sweet this one - a way of troubleshooting connectivity problems between _analytics_ (the Presentation Services Plug-in, either j2ee servlet or ISAPI, a.k.a. SAWBridge) and _sawserver_ (Presentation Services).

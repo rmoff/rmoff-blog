@@ -7,6 +7,8 @@ categories:
   - "monitoring"
   - "OBIEE"
   - "systemsmanagement"
+aliases:
+- "/2010/11/04/a-poor-mans-obiee-em/bi-management-pack/"
 ---
 
 Folk from Yorkshire are tight, so the stereotype goes. So here's a cheap-ass way to monitor OBIEE 10g using nothing but the OBIEE built-in systemsmanagement component, the jmx agent, and jconsole (which is part of the standard Java distribution):

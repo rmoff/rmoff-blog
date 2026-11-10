@@ -8,6 +8,8 @@ categories:
   - "hack"
   - "log"
   - "sawserver"
+aliases:
+- "/2009/07/23/sawserver-logging-configuration-logconfig.xml/"
 ---
 
 The configuration of how Presentation Services (sawserver) does its logging is in the file web/config/logconfig.xml (same directory as instanceconfig.xml).  

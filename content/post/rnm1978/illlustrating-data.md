@@ -5,6 +5,8 @@ url: "/2010/02/08/illlustrating-data/"
 categories: 
   - "bi"
   - "visualisation"
+aliases:
+- "/2010/02/08/illustrating-data/"
 ---
 
 In the following list, which two [mind-mapping programs](http://lifehacker.com/5188833/hive-five-five-best-mind-mapping-applications) are rated best?

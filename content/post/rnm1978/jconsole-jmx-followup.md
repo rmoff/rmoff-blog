@@ -7,6 +7,8 @@ categories:
   - "OBIEE"
   - "performance"
   - "sawserver"
+aliases:
+- "/2009/07/21/jconsole-/-jmx-followup/"
 ---
 
 A few points to add to my [previous posting on JConsole](/2009/07/16/jconsole-jmx/):  

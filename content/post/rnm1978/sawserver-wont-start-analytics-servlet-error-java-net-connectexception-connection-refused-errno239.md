@@ -7,6 +7,8 @@ categories:
   - "OBIEE"
   - "sawserver"
   - "unix"
+aliases:
+- "/2009/03/30/sawserver-wont-start-analytics-servlet-error-java.net.connectexception-connection-refused-errno239/"
 ---
 
 We're getting this error in the Presentation Services plug-in \[analytics\].  

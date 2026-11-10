@@ -8,6 +8,8 @@ categories:
   - "oracle"
   - "performance"
   - "visualisation"
+aliases:
+- "/2011/03/11/getting-good-quality-i/o-throughput-data/"
 ---
 
 This post expands on one I made last year [here](/2010/09/14/the-danger-of-averages-measuring-io-throughput/) about sampling frequency (of I/O throughput, but it's a generic concept). The background to this is my analysis of the performance and capacity of our data warehouse on Oracle 11g.

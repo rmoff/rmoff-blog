@@ -9,6 +9,8 @@ categories:
   - "OBIEE"
   - "performance"
   - "systemsmanagement"
+aliases:
+- "/2009/07/29/obiee-performance-monitoring-and-alerting-with-jmanage/"
 ---
 
 [OBIEE's Systems Management](/2009/07/22/oracle-bi-management-systems-management-mbeans/) component exposes configuration and performance data through [Java MBeans](http://java.sun.com/j2se/1.5.0/docs/guide/management/overview.html#mbeans). As discussed in other posts these can be be accessed through several different ways:

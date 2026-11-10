@@ -6,6 +6,8 @@ categories:
   - "OBIEE"
   - "oracle"
   - "support"
+aliases:
+- "/2009/08/24/obiee-error/message-code-reference/"
 ---
 
 For some reason Oracle haven't put out a 10.x version of the error & message codes reference guide for OBIEE, but the previous version for Siebel Analytics is still useful:

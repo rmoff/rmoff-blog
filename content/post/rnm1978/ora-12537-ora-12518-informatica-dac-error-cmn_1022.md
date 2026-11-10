@@ -7,6 +7,8 @@ categories:
   - "informatica"
   - "obia"
   - "oracle"
+aliases:
+- "/2009/03/25/ora-12537-/-ora-12518-informatica-dac-error-cmn_1022/"
 ---
 
 We're getting problems with an instance of Informatica / out-of-the-box OBIA on a new set of servers. When we run the execution plan we get this error soon after starting:  
