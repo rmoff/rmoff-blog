@@ -30,8 +30,10 @@ test.describe('Cuttings section', () => {
     await page.goto(FIXTURE);
     await expect(page.locator('h1.cutting-title')).toHaveText('Fixture: a cutting with a comment and an attributed quote');
     await expect(page.locator('.cutting-back')).toHaveAttribute('href', '/cuttings/');
-    await expect(page.locator('.cutting-pager-newer')).toHaveCount(0);
-    await expect(page.locator('.cutting-pager-older')).toContainText('AI Is Already In Dangerous Hands');
+    await expect(page.locator('.post-end-swirl')).toBeVisible();
+    await expect(page.locator('.post-older-newer [data-direction="newer"]')).toHaveCount(0);
+    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('Older cutting');
+    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('AI Is Already In Dangerous Hands');
   });
 
   test('a post of mine with no link shows its image and where it was posted', async ({ page }) => {
