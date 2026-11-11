@@ -63,6 +63,11 @@
     place();
   }
 
+  // A clip's real width: data-real-width when the post shows it smaller, else its width attribute
+  function realWidth(video) {
+    return Number(video.dataset.realWidth || video.getAttribute('width'));
+  }
+
   function canPan(el) {
     return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
   }
@@ -85,10 +90,13 @@
       img = document.createElement('video');
       img.src = source.currentSrc || source.src;
       img.poster = source.poster;
-      img.width = Number(source.getAttribute('width'));  // its size before the clip loads
-      img.height = Number(source.getAttribute('height'));
+      // Its real size (a post can show a clip smaller with width=; data-real-width then holds the
+      // file's own width), set before the clip loads
+      var shownW = Number(source.getAttribute('width'));
+      img.width = realWidth(source);
+      img.height = Math.round(Number(source.getAttribute('height')) * img.width / shownW);
       img.muted = true;
-      img.loop = true;
+      img.loop = source.loop;  // a clip written to play once stays that way
       img.playsInline = true;
       if (source.dataset.label) img.setAttribute('aria-label', source.dataset.label);
       if (prefersReducedMotion()) img.controls = true;
@@ -159,7 +167,7 @@
     // A clip's own label (the post's alt text) is kept, to wrap and to put back
     if (video && img.dataset.label === undefined) img.dataset.label = img.getAttribute('aria-label') || '';
     var text = video ? img.dataset.label : img.alt;
-    var natural = video ? Number(img.getAttribute('width')) : img.naturalWidth;
+    var natural = video ? realWidth(img) : img.naturalWidth;
     // Shown smaller than its real size? offsetWidth is the whole box, border included: an
     // image at full size inside a 1px border has a clientWidth 2px short of its real width,
     // and used to be offered for enlarging when there was nothing to gain.

@@ -92,7 +92,7 @@ You get your text, obviously, but also your images. You get the metadata for eac
 ![](/images/2023/03/Pasted%20image%2020230303225558.png)
 You can drag and drop from the clipboard history onto a file prompt or into an application.
 
-<video autoplay="true" loop="true" width=800 src="/images/2023/03/Kapture 2023-03-03 at 22.57.46.mp4"></video>
+<video class="gif-video" src="/images/2023/03/Kapture 2023-03-03 at 22.57.46.mp4" poster="/images/2023/03/Kapture 2023-03-03 at 22.57.46-poster.webp" width="800" height="440" data-real-width="2872" muted loop playsinline controls preload="none"></video>
 
 ## Emojis
 
@@ -133,7 +133,7 @@ Along with clipboard history, _snippets_ are a fantastic productivity tool. Whet
 
 Think of all the tasks that you do on your computer each day. Many of those will have a Raycast extension that you can use to make it quicker and easier to get things done. Here's an example with the GitHub extension to merge [the PR](https://github.com/rmoff/rmoff-blog/pull/34) to publish this blog :)
 
-<video autoplay="true" loop="true" width=800 src="/images/2023/03/gh.mp4"></video>
+<video class="gif-video" src="/images/2023/03/gh.mp4" poster="/images/2023/03/gh-poster.webp" width="800" height="514" data-real-width="1516" muted loop playsinline controls preload="none"></video>
 
 ## Sorry, but the time has come.
 
