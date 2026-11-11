@@ -74,6 +74,11 @@ async function pickUp(page: Page, which = 0) {
   throw new Error('could not pick up a lemming');
 }
 
+// The post's live giscus comments load late and can push the footer thousands of px down mid-test
+test.beforeEach(async ({ page }) => {
+  await page.route('https://giscus.app/**', route => route.abort());
+});
+
 test.describe('footer lemmings', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
