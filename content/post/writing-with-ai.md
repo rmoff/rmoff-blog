@@ -1,20 +1,17 @@
 ---
-title: "Is it OK to write blog posts with AI?"
-# what's wrong with using AI to write blog posts
-# writing with AI - ok or not?
-# rules for writing blog posts with AI
-# is it OK yet to write blog posts with AI?
+title: "Is it OK to write blog posts with AI yet?"
+description: "LLM writing has moved from 'bloody awful' to 'vaguely plausible'. In this post I'll explain where I think LLM writing has a role to play - and where it absolutely shouldn't."
 date: 2026-11-12T16:58:33Z
 draft: false
-image: "/images/2026/11/h_IMG_9012.jpeg"
-thumbnail: "/images/2026/11/t_IMG_8841.jpeg"
+image: "/images/2026/11/h_IMG_9012.webp"
+thumbnail: "/images/2026/11/t_IMG_8841.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - AI
 - Blogging
 ---
 
-> *Is it OK to write blog posts with AI?*
+> *Is it ever OK to write blog posts with AI?*
 
 **NO!** was my strident cry until just a week or two ago (it was, actually, a much less polite version of that).
 Now, I'm wondering if I need to refine that view.
@@ -44,7 +41,7 @@ And yet.
 If you enjoy this article, and at the end of it I tell you I wrote it with AI, *does that make it a worse article*?
 
 I compile [a monthly newsletter of content that's been written in the data and AI space](/categories/interesting-links/), and in researching it read dozens and dozens of articles every month.
-(It's in doing this that prompted me previously to write a [couple](/2025/11/25/ai-smells-on-medium/) of [rants](/2026/05/01/its-the-smell/) about LLM slop).
+(It's in doing this that I was prompted to write a [couple](/2025/11/25/ai-smells-on-medium/) of [rants](/2026/05/01/its-the-smell/) about LLM slop).
 Doing this month on month has triggered a feeling recently that LLM capabilities at writing have moved beyond '_bloody awful_' to '_vaguely plausible_', which is causing me to take another look at the whole issue.
 
 Whilst there are still a plethora of egregious offences committed against the written form on a daily basis by someone mindlessly cranking the LLM handle, there are also some articles that have given me pause.
@@ -188,7 +185,7 @@ Take the edits and suggestions and _work them into your writing yourself_.
 
 A note of caution to the above rule. LLMs are people-pleasers. *You're absolutely right. That's very insightful.*
 Just as no-one's gonna tell you that your baby's ugly, an LLM is not going to tell you that your post stinks and is full of logical fallacies and technical errors.
-They're getting better (worse?) at this, and can be a lot more critical. But I still see a tendency for them to both over-compliment, as well as sometimes get obsessed over the weirdest arguments.
+They're getting better (worse?) at this, and can be a lot more critical. But I still see a tendency for them to over-compliment, as well as sometimes get obsessed over the weirdest arguments.
 
 So spell checking, yes (please!). Grammar, yes (but don’t let it strip your voice. Sometimes it’s ok to end a sentence with a preposition; this is a blog, not something the New York Times would put its name to). But beyond that, definitely use it for _review_, but engage your brain when reading that review and don't let it bounce you into changing something that's perfectly fine. If in doubt get a—gasp—human to review your post too.
 
@@ -196,7 +193,7 @@ So spell checking, yes (please!). Grammar, yes (but don’t let it strip your vo
 
 Bryan Cantrill rightly calls out the anti-pattern of [LLM shaming](https://rfd.shared.oxide.computer/rfd/0576#_llm_shaming). That's not what I'm seeking to do here.
 In Charity Majors' [article](https://charity.wtf/p/confessions-of-an-unrepentant-slop) she identifies the tension between treating AI as any other tool (thus judging its results on output alone), and the cognitive dissonance of _instinctively_ rejecting its output when reading it.
-AI _is_ just a tool. But whilst other tools will generally fail from the outset if you use them for the wrong job—say, if we try to cut the lawn with a typewriter—AI doesn't give us this feedback. In fact, it calls to us like the sirens and lures us in with seeming to be the right tool for _any_ job.
+AI _is_ just a tool. But whilst other tools will generally fail from the outset if you use them for the wrong job—say, if we try to cut the lawn with a typewriter—AI doesn't give us this feedback. In fact, it calls to us like the sirens and lures us in by seeming to be the right tool for _any_ job.
 
 Instead of descending into a torpor of mindless prompting, we should always be challenging the use of AI and deciding whether it's the right tool for the job. And for *writing* blog posts, AI is the wrong tool.
 
