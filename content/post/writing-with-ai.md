@@ -5,6 +5,12 @@ title: "Is it OK to write blog posts with AI?"
 # rules for writing blog posts with AI
 date: 2026-11-11T16:58:33Z
 draft: false
+image: "/images/2026/11/"
+thumbnail: "/images/2026/11/"
+credit: "https://bsky.app/profile/rmoff.net"
+categories:
+- AI
+- Blogging
 ---
 
 <!-- > *Is it OK to write blog posts with AI?*
@@ -16,7 +22,7 @@ Let me explain. -->
 <!-- You see, -->
 I have a particularly vitriolic feeling when presented with LLM-generated text.
 Articles written with AI give me the ick, I don't trust them, and I lose respect for the author.
-I'm not the only one to whom this applies; consider this finding from [a survey by Cynthia Dunlop](https://writethatblog.substack.com/p/dev-reaction-to-ai-blog-posts):
+I'm not the only one who feels this way; consider this finding from [a survey by Cynthia Dunlop](https://writethatblog.substack.com/p/dev-reaction-to-ai-blog-posts):
 
 > * 98% of readers prefer imperfect-yet-authentic human writing
 > * most will stop reading, block you, and downvote you if they suspect AI
@@ -109,7 +115,7 @@ Some of these are easy to spot literally (`Honestly`) whilst others just…smell
 Look at a passage of LLM text and you'll soon spot the rhythms and structures that LLMs write in.
 Like a chimpanzee sweeping its cage with a stick because it saw its keeper do it, LLMs are just repeating patterns that they've learnt. I say "just" with great respect for what LLMs _can_ do; but writing authentically and naturally is just not one of them yet.
 
-### Am I just scared of being replaced?
+## Am I just scared of being replaced?
 
 As someone whose career is in part built around writing, I've been going through similar existential soul-searching and navel gazing that my software-engineering brethren have with the advent of LLMs getting seriously good at generating code.
 Am I just being some stick in the mud who needs to get used to the new way of doing things?
