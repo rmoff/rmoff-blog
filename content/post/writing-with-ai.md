@@ -1,6 +1,6 @@
 ---
 title: "Is it OK to write blog posts with AI yet?"
-description: "LLM writing has moved from 'bloody awful' to 'vaguely plausible'. In this post I'll explain where I think LLM writing has a role to play - and where it absolutely shouldn't."
+description: "LLM writing has moved from 'bloody awful' to 'vaguely plausible'. Here's where I think it has a role to play - and where it absolutely doesn't."
 date: 2026-11-12T16:58:33Z
 draft: false
 image: "/images/2026/11/h_IMG_9012.webp"
