@@ -6,8 +6,8 @@ title: "Is it OK to write blog posts with AI?"
 # is it OK yet to write blog posts with AI?
 date: 2026-11-12T16:58:33Z
 draft: false
-image: "/images/2026/11/"
-thumbnail: "/images/2026/11/"
+image: "/images/2026/11/h_IMG_9012.jpeg"
+thumbnail: "/images/2026/11/t_IMG_8841.jpeg"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - AI
@@ -16,7 +16,7 @@ categories:
 
 > *Is it OK to write blog posts with AI?*
 
-**NO!** Was my strident cry until just a week or two ago (it was, actually, a much less polite version of that).
+**NO!** was my strident cry until just a week or two ago (it was, actually, a much less polite version of that).
 Now, I'm wondering if I need to refine that view.
 Let me explain.
 
@@ -35,7 +35,7 @@ Charity Majors [articulates the reaction](https://charity.wtf/p/confessions-of-a
 >
 > If I’m on social media, I unfollow or unfriend.
 
-Bryan Cantrill puts it [delightfully thus](https://bcantrill.dtrace.org/2025/12/05/your-intellectual-fly-is-open/):
+Bryan Cantrill puts it [delightfully thus](https://rfd.shared.oxide.computer/rfd/0576#_llms_as_writers):
 
 > \[It is\] as if the writer is walking around with their intellectual fly open.
 
@@ -43,8 +43,8 @@ And yet.
 
 If you enjoy this article, and at the end of it I tell you I wrote it with AI, *does that make it a worse article*?
 
-I compile [a monthly newsletter of content that's been written in the data and AI space](https://rmoff.net/categories/interesting-links/), and in researching it read dozens and dozens of articles every month.
-(It's in doing this that prompted me previously to write [previous](https://rmoff.net/2025/11/25/ai-smells-on-medium/) [rants](https://rmoff.net/2026/05/01/its-the-smell/) about LLM slop).
+I compile [a monthly newsletter of content that's been written in the data and AI space](/categories/interesting-links/), and in researching it read dozens and dozens of articles every month.
+(It's in doing this that prompted me previously to write a [couple](/2025/11/25/ai-smells-on-medium/) of [rants](/2026/05/01/its-the-smell/) about LLM slop).
 Doing this month on month has triggered a feeling recently that LLM capabilities at writing have moved beyond '_bloody awful_' to '_vaguely plausible_', which is causing me to take another look at the whole issue.
 
 Whilst there are still a plethora of egregious offences committed against the written form on a daily basis by someone mindlessly cranking the LLM handle, there are also some articles that have given me pause.
@@ -56,7 +56,7 @@ In this article I will examine some of my instincts when dealing with LLM-genera
 
 ## Defining "written with AI"
 
-I'm not just talking here about "*hey Claude, write me a blog post about how Kafka works*", or "*Hi Codex, here are my notes, please write it into a blog post kthxbai*" and ship it with nary a moment's thought.
+I'm not just talking here about "*hey Claude, write me a blog post about how Kafka works*", or "*Hi Codex, here are my notes, please write it into a blog post kthxbai*" and shipping it with nary a moment's thought.
 
 I also include what comes from trying to _revise_ the output of prompting an LLM. It's still written with AI, and it'll read like it.
 Some people will swear by having taught the LLM to write "in their style" or use skills to "de-LLM" the voice.
@@ -71,7 +71,7 @@ Ultimately none of these really get rid of the LLM taint, nor address the main i
 I've had some fascinating conversations in recent weeks with various folk across the blogging and writing community - those who write, and those who read.
 In all of these, I've been trying to put my finger on quite what it is that I, and others, find objectionable in LLM writing.
 
-Above all else, it's trust that bothers me most.
+Above all else, it's the trust issue that bothers me most.
 
 ### Trust
 
@@ -82,9 +82,9 @@ Bryan Cantrill nails it [here](https://rfd.shared.oxide.computer/rfd/0576#_llms_
 
 > \[Absent\] LLMs, it is presumed that of the reader and the writer, it is the writer that has undertaken the greater intellectual exertion. (That is, it is more work to write than to read!) For the reader, this is important: should they struggle with an idea, they can reasonably assume that the writer themselves understands it — and it is the least a reader can do to labor to make sense of it.
 > \[…\]
-> \[Our\] writing is an important vessel for building trust — and that trust can be quickly eroded if we are not speaking with our own voice
+> \[Our\] writing is an important vessel for building trust — and that trust can be quickly eroded if we are not speaking with our own voice.
 
-Perhaps entangled with the matter of trust is the feeling that I cannot shake that someone who's prompted their LLM to write an article has not really _written_ the post, and to claim otherwise is somehow dishonest. I appreciated when I read [Joshua Buss](https://chicagobuss.dev/blog/)' blog recently that he actually tags posts as "Human" or "AI generated".
+Perhaps entangled with the matter of trust is the feeling that I cannot shake that someone who's prompted their LLM to write an article has not really _written_ the post, and to claim otherwise is somehow dishonest. I appreciated when I read [Joshua Buss](https://chicagobuss.dev/blog/)' blog recently that he actually tags posts as "Human" or "AI Generated".
 
 ### Think, FFS
 
@@ -105,14 +105,14 @@ Asking readers to wade through LLM writing also breaches the social contract (as
 
 ### Wading through the smelly slop swamp
 
-_Previously: [(AI) Smells on Medium](https://rmoff.net/2025/11/25/ai-smells-on-medium/) / [It’s the Smell](https://rmoff.net/2026/05/01/its-the-smell/)._
+_Previously: [(AI) Smells on Medium](/2025/11/25/ai-smells-on-medium/) / [It’s the Smell](/2026/05/01/its-the-smell/)._
 
-There are some aspects that I think are impossible to address mechanically (discussed above, such as trust and thinking), but I wonder if this is one will perhaps improve over time.
+There are some aspects that I think are impossible to address mechanically (discussed above, such as trust and thinking), but I wonder if this is one that will perhaps improve over time.
 
-Here at the tail end of 2026, LLM written text is often just…weirdly difficult to read. You're not only asking your reader for their time to read it, you're asking _more_ of their time to read it because like using your eyes in ways they aren't meant to be to view those 3D stereoscopic posters of the 1990s, the brain has to do something weird to itself to read LLM material.
+Here at the tail end of 2026, LLM-written text is often just…weirdly difficult to read. You're not only asking your reader for their time to read it, you're asking _more_ of their time. The way the brain has to do something weird to itself to read LLM material reminds me of getting your eyes to focus in a strange way to view those 3D stereoscopic posters of the 1990s.
 
 LLM-generated material quite often has that daunting feel of a slickly-presented, oh-so-clearly structured, wall of text.
-It's moved on from the em-dash. The LLMs figured out not to do that, and the LLM smell _du jour_ became the throat clearing `Honestly,` at the beginning of a response, or the `it's not X, it's Y` construction.
+It's moved on from the em-dash. The LLMs figured out not to do that, and the LLM smell _du jour_ became the throat-clearing `Honestly,` at the beginning of a response, or the `it's not X, it's Y` construction.
 Some of these are easy to spot literally (`Honestly`) whilst others just…smell bad.
 Look at a passage of LLM text and you'll soon spot the rhythms and structures that LLMs write in.
 Like a chimpanzee sweeping its cage with a stick because it saw its keeper do it, LLMs are just repeating patterns that they've learnt. I say "just" with great respect for what LLMs _can_ do; but writing authentically and naturally is just not one of them yet.
@@ -136,21 +136,21 @@ If I am wanting to communicate an _argument_, to impart with emotion a viewpoint
 At the other end of the spectrum is material such as a project's README (c'mon, you're telling me you've _not_ open sourced your vibe-coded itch that Claude scratched yet?!) or a runbook.
 As Bryan Cantrill [puts it](https://rfd.shared.oxide.computer/rfd/0576#_llms_in_operational_writing) (so eloquently, I might add; when was the last time you positively _enjoyed_ reading LLM prose?):
 
->  This is _operational writing_: it is neither highfalutin prose nor quotidian correspondence[…]
+> This is _operational writing_: it is neither highfalutin prose nor quotidian correspondence[…]
 
 If I'm the reader of one of these and it stinks of LLM, I'm gonna be mildly ick'd and possibly annoyed, but it's a purely mechanical artefact. So long as it's accurate (and LLMs are _so_ much better at not hallucinating these days) then I am content to cede this ground. READMEs and runbooks are the classic example of artefacts that often don't get written anyway and languish at the bottom of a Jira list, forever being bumped to the next sprint. In this case, LLM-generated is better than nothing at all. Chances are I'd be pointing my LLM at your LLM output anyway cos I'm not going to actually _read_ the README, sheesh!
 
-Both these (argument/thought piece, and README/runbook) are types of writing, and the use of LLM is just horrifying in one and fairly understandable in the other. So we can't just say "no LLM in writing". What we can say is "_why are you writing this thing?_" to qualify the use of LLM in doing so.
+Both these (argument/thought piece, and README/runbook) are types of writing, and the use of an LLM is just horrifying in one and fairly understandable in the other. So we can't just say "no LLM in writing". What we can say is "_why are you writing this thing?_" to qualify the use of an LLM in doing so.
 
 What about writing that lies between these two poles? There are many technical articles whose purpose is more than to simply document a process or project, but are not seeking to change the world, or opinions, either. These are the kinds of pieces that I am coming across much more often when I'm pausing on the close-tab icon, having detected LLM signs but still curious about the content.
 
-Charity Majors articulates a similar (and more nuanced) break down of communication types and where AI can help and where it can breach trust in the [Four types of communication](https://www.honeycomb.io/blog/ai-norms-values-part-3-things-we-hold-true#four-types-of-communication) section of [this article on the Honeycomb blog](https://www.honeycomb.io/blog/ai-norms-values-part-3-things-we-hold-true), and expands on it in her excellent post [Confessions of an Unrepentant Slop Snob](https://charity.wtf/p/confessions-of-an-unrepentant-slop).
+Charity Majors articulates a similar (and more nuanced) breakdown of communication types and where AI can help and where it can breach trust in the [Four types of communication](https://www.honeycomb.io/blog/ai-norms-values-part-3-things-we-hold-true#four-types-of-communication) section of [this article on the Honeycomb blog](https://www.honeycomb.io/blog/ai-norms-values-part-3-things-we-hold-true), and expands on it in her excellent post [Confessions of an Unrepentant Slop Snob](https://charity.wtf/p/confessions-of-an-unrepentant-slop).
 
-I wrote an article in 2023 (pre mass-adoption of AI!) about [writing for developers](https://rmoff.net/2023/07/19/blog-writing-for-developers/), and I illustrated how I think of how informal/formal and freeform/standard the writing has to be depending on its target:
+I wrote an article in 2023 (pre mass-adoption of AI!) about [writing for developers](/2023/07/19/blog-writing-for-developers/), and I illustrated how I think of the level of formality and structure the writing needs depending on its target:
 
 ![Diagram placing Reddit, Twitter, personal blogs, LinkedIn, company blogs and documentation on a spectrum from personality and voice to uniformity and standardisation, with clarity needed throughout](/images/2023/07/02.svg)
 
-To this, I would overlay acceptable LLM use roughly like this, where at the far end of the spectrum - technical writing, and perhaps very uniform, straight-laced company blog posts, I can see that LLM use will help (or in the case of company blog posts of _that style_ not hinder).
+To this, I would overlay acceptable LLM use roughly like this, where at the far end of the spectrum—technical writing, and perhaps very uniform, straight-laced company blog posts—I can see that LLM use will help (or in the case of company blog posts of _that style_ not hinder).
 
 ![The same spectrum with a shaded band at the documentation end, covering the edge of company blogs, labelled "Non-gross LLM use might fit here"](/images/2026/11/llms-in-writing.excalidraw.svg)
 
@@ -159,7 +159,7 @@ If you're an author using LLMs, or a company publishing blog posts that do, you 
 
 ## My rules for writing blog posts with AI
 
-I've been talking about LLM use overall in writing, but it was blog posts that prompted this article and it's on those that I'll conclude with how I suggest blog authors who are looking to build (or retain) credibility and trust with their audience use LLMs.
+I've been talking about LLM use overall in writing, but it was blog posts that prompted this article, and it's on those that I'll conclude. Here are my recommendations for how blog authors who are looking to build (or retain) credibility and trust with their audience should use LLMs.
 
 ### Rule 1: Do not let LLMs write for you
 
@@ -169,9 +169,9 @@ If you value your readers, write your content yourself.
 Cynthia Dunlop (of the excellent [Write that blog!](https://writethatblog.substack.com/) Substack and co-author of [Writing for Developers](https://github.com/scynthiadunlop/WritingForDevelopersBook)) has [great advice](https://writethatblog.substack.com/p/dev-reaction-to-ai-blog-posts):
 
 > If you share interesting insights and your target reader can understand what you’re trying to communicate, some rough edges shouldn’t be an issue.
-> A natural human voice is way more readable than perfectly predictable LLM prose
+> A natural human voice is way more readable than perfectly predictable LLM prose.
 
-There are lots of resources to help with writing blog posts, including [my own](https://rmoff.net/2023/07/19/blog-writing-for-developers/) (available [as a talk](https://rmoff.net/talk/blog-writing-for-developers/) too), and [many](https://www.seangoedecke.com/tags/writing/) [others](https://writethatblog.substack.com/p/advice-for-new-tech-bloggers).
+There are lots of resources to help with writing blog posts, including [my own](/2023/07/19/blog-writing-for-developers/) (available [as a talk](/talk/blog-writing-for-developers/) too), and [many](https://www.seangoedecke.com/tags/writing/) [others](https://writethatblog.substack.com/p/advice-for-new-tech-bloggers).
 
 
 ### Rule 2: DO NOT let LLMs write for you
@@ -187,7 +187,7 @@ Take the edits and suggestions and _work them into your writing yourself_.
 ### Rule 3: Don't trust the weirdo sycophant
 
 A note of caution to the above rule. LLMs are people-pleasers. *You're absolutely right. That's very insightful.*
-Just as no-one's gonna tell you that your baby's ugly, an LLM is not going to tell you that you post stinks and is full of logical fallacies and technical errors.
+Just as no-one's gonna tell you that your baby's ugly, an LLM is not going to tell you that your post stinks and is full of logical fallacies and technical errors.
 They're getting better (worse?) at this, and can be a lot more critical. But I still see a tendency for them to both over-compliment, as well as sometimes get obsessed over the weirdest arguments.
 
 So spell checking, yes (please!). Grammar, yes (but don’t let it strip your voice. Sometimes it’s ok to end a sentence with a preposition; this is a blog, not something the New York Times would put its name to). But beyond that, definitely use it for _review_, but engage your brain when reading that review and don't let it bounce you into changing something that's perfectly fine. If in doubt get a—gasp—human to review your post too.
@@ -195,9 +195,10 @@ So spell checking, yes (please!). Grammar, yes (but don’t let it strip your vo
 ## No shame, but use the tool correctly
 
 Bryan Cantrill rightly calls out the anti-pattern of [LLM shaming](https://rfd.shared.oxide.computer/rfd/0576#_llm_shaming). That's not what I'm seeking to do here.
-In Charity Majors' [article](https://charity.wtf/p/confessions-of-an-unrepentant-slop) she identifies the tension between 'AI is just a tool' and the cognitive dissonance of instinctively rejecting its output when reading it.
-AI _is_ just a tool, but unlike the immediate feedback that we get when we use a tool for the wrong job, if we try to cut the lawn with a typewriter, AI calls to us like the sirens and promises us riches and _of course_ it can do whatever task you ask of it.
-Instead of descending into a torpor of mindless prompting, we should always be challenging its use and deciding whether it's the right one. And for *writing* blog posts, AI is the wrong tool.
+In Charity Majors' [article](https://charity.wtf/p/confessions-of-an-unrepentant-slop) she identifies the tension between treating AI as any other tool (thus judging its results on output alone), and the cognitive dissonance of _instinctively_ rejecting its output when reading it.
+AI _is_ just a tool. But whilst other tools will generally fail from the outset if you use them for the wrong job—say, if we try to cut the lawn with a typewriter—AI doesn't give us this feedback. In fact, it calls to us like the sirens and lures us in with seeming to be the right tool for _any_ job.
+
+Instead of descending into a torpor of mindless prompting, we should always be challenging the use of AI and deciding whether it's the right tool for the job. And for *writing* blog posts, AI is the wrong tool.
 
 ## References & Further Reading
 
