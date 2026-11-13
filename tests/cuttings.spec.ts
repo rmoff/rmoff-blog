@@ -26,22 +26,42 @@ test.describe('Cuttings section', () => {
     await expect(first.locator('figcaption')).toHaveCSS('text-align', 'right');
   });
 
-  test('a cutting page links back to the list and to its neighbours', async ({ page }) => {
+  test('a post of mine has my name and picture; a share says so and puts the link in a card', async ({ page }) => {
+    await page.goto('/cuttings/');
+    const mine = page.locator('.cuttings-list .cutting').filter({ hasText: 'Fixture: a post of mine with an image' });
+    await expect(mine.locator('.cutting-by')).toHaveText('Robin Moffatt');
+    await expect(mine.locator('.cutting-avatar')).toBeVisible();
+    await expect(mine.locator('.cutting-kind, .cutting-card')).toHaveCount(0);
+    const shared = page.locator('.cuttings-list .cutting').first();
+    await expect(shared.locator('.cutting-kind')).toHaveText('Shared');
+    await expect(shared.locator('.cutting-by, .cutting-avatar')).toHaveCount(0);
+    await expect(shared.locator('.cutting-card .cutting-title a')).toHaveAttribute('href', 'https://example.com/fixture-cutting');
+    await expect(shared.locator('.cutting-card blockquote')).toBeVisible();
+    await expect(shared.locator('.cutting-card .cutting-comment')).toHaveCount(0);
+    await expect(shared.locator('.cutting-comment')).toContainText('A line of commentary from me');
+  });
+
+  test('a cutting page is just the cutting, in a card, with Cuttings marked in the toolbar', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/cuttings/');
+    await expect(page.locator('.site-nav [aria-current]')).toHaveCount(1);
+    await expect(page.locator('.site-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'page');
     await page.goto(FIXTURE);
     await expect(page.locator('h1.cutting-title')).toHaveText('Fixture: a cutting with a comment and an attributed quote');
-    await expect(page.locator('.cutting-back')).toHaveAttribute('href', '/cuttings/');
-    await expect(page.locator('.post-end-swirl')).toBeVisible();
-    await expect(page.locator('.post-older-newer [data-direction="newer"]')).toHaveCount(0);
-    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('Older cutting');
-    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('AI Is Already In Dangerous Hands');
+    await expect(page.locator('.site-nav [aria-current]')).toHaveCount(1);
+    await expect(page.locator('.site-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('#mobile-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('.cutting-page .cutting')).toHaveCSS('border-top-style', 'solid');
+    await expect(page.locator('main a[href="/cuttings/"], .post-end-swirl, .post-older-newer')).toHaveCount(0);
   });
 
   test('a post of mine with no link shows its image and where it was posted', async ({ page }) => {
     await page.goto('/cuttings/2026/10/12/fixture-a-post-of-mine-with-an-image/');
     await expect(page.locator('h1.cutting-title')).toHaveText('Fixture: a post of mine with an image');
     await expect(page.locator('h1.cutting-title a')).toHaveCount(0);
-    await expect(page.locator('.cutting-source a')).toHaveText('On Bluesky');
-    await expect(page.locator('.cutting-source a')).toHaveAttribute('href', 'https://bsky.app/profile/rmoff.net/post/fixture');
+    await expect(page.locator('.cutting-meta .cutting-by')).toHaveText('Robin Moffatt');
+    await expect(page.locator('.cutting-meta a')).toHaveText('Bluesky');
+    await expect(page.locator('.cutting-meta a')).toHaveAttribute('href', 'https://bsky.app/profile/rmoff.net/post/fixture');
     const img = page.locator('.cutting-media img');
     await expect(img).toHaveAttribute('alt', 'A plain grey rectangle');
     await expect(img).toHaveAttribute('width', '400');

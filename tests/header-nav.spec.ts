@@ -78,6 +78,7 @@ test.describe('About page can be found', () => {
     await page.goto('/');
     await page.locator('.site-nav > a', { hasText: 'About' }).click();
     await expect(page).toHaveURL(ABOUT);
+    await expect(page.locator('.site-nav > a', { hasText: 'About' })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('main a[href^="mailto:"]')).toBeVisible();
   });
 

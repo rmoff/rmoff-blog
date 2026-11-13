@@ -1,28 +1,42 @@
 {{- /* One cutting. Used by the Cuttings list, a cutting's own page and the Cuttings feed.
+       With a link it shares someone else's thing: "Shared", my comment, then their title, byline and quote in a card.
+       Without a link it is a post of mine: my picture and name, then the text, with no card.
        dict: page, level (1 for an h1 title, else h2), list (true on the list page: the date links to the cutting's page),
-       feed (true in the RSS feed: image URLs are absolute) */ -}}
+       feed (true in the RSS feed: image URLs are absolute, and no picture) */ -}}
 {{- $p := .page -}}
-<article class="cutting">
+{{- $h := cond (eq .level 1) "h1" "h2" -}}
+{{- $own := not $p.Params.link -}}
+<article class="cutting {{ cond $own "cutting-own" "cutting-shared" }}">
 	<div class="cutting-meta" data-pagefind-ignore>
-		{{- if .list }}<a href="{{ $p.RelPermalink }}" class="cutting-date"><time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time></a>
-		{{- else }}<time class="cutting-date" datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time>{{ end -}}
+		{{- if $own }}
+		{{- if not .feed }}
+		{{- with resources.Get "img/headshot.jpg" }}
+		{{- $face := ((.Crop "385x230 TopLeft").Crop "200x200 BottomRight").Resize "96x96 webp" }}
+		<img class="cutting-avatar" src="{{ $face.RelPermalink }}" alt="" width="28" height="28">
+		{{- end }}
+		{{- end }}
+		<span class="cutting-by">{{ site.Params.AuthorName }}</span>
+		{{- else }}
+		<span class="cutting-kind">{{ partial "icon.html" "link" }}Shared</span>
+		{{- end }}
+		{{- with $p.Params.source }} on <a href="{{ . }}">{{ $p.Params.source_name | default "the original site" }}</a>{{ end }}
+		<span aria-hidden="true">·</span>
+		{{- if .list }} <a href="{{ $p.RelPermalink }}" class="cutting-date"><time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time></a>
+		{{- else }} <time class="cutting-date" datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time>{{ end }}
 	</div>
-	{{- $title := $p.Title }}
-	{{- with $p.Params.link }}{{ $title = printf "<a href=\"%s\">%s</a>" (htmlEscape .) (htmlEscape $p.Title) | safeHTML }}{{ end }}
-	{{- if eq .level 1 }}
-	<h1 class="cutting-title">{{ $title }}</h1>
+	{{- if $own }}
+	{{- with $p.Content }}
+	{{- if not $.feed }}
+	{{ printf "<%s class=\"cutting-title visually-hidden\">%s</%s>" $h (htmlEscape $p.Title) $h | safeHTML }}
+	{{- end }}
+	<div class="cutting-text">{{ . }}</div>
 	{{- else }}
-	<h2 class="cutting-title">{{ $title }}</h2>
+	{{ printf "<%s class=\"cutting-title cutting-text\">%s</%s>" $h (htmlEscape $p.Title) $h | safeHTML }}
 	{{- end }}
-	{{- $source := slice }}
-	{{- with $p.Params.author }}{{ $source = $source | append (htmlEscape .) }}{{ end }}
-	{{- with $p.Params.domain }}{{ $source = $source | append (htmlEscape .) }}{{ end }}
-	{{- with $p.Params.source }}{{ $source = $source | append (printf "<a href=\"%s\">On %s</a>" (htmlEscape .) (htmlEscape ($p.Params.source_name | default "the original site"))) }}{{ end }}
-	{{- with $source }}
-	<p class="cutting-source">{{ delimit . " · " | safeHTML }}</p>
-	{{- end }}
+	{{- else }}
 	{{- with $p.Content }}
 	<div class="cutting-comment">{{ . }}</div>
+	{{- end }}
 	{{- end }}
 	{{- range $p.Params.media }}
 	{{- $alt := .alt }}
@@ -30,12 +44,23 @@
 	<figure class="cutting-media"><img src="{{ cond $.feed .Permalink .RelPermalink }}" alt="{{ $alt }}" width="{{ .Width }}" height="{{ .Height }}" loading="lazy"></figure>
 	{{- end }}
 	{{- end }}
-	{{- with $p.Params.quote }}
-	<figure class="cutting-quote">
-		<blockquote{{ with $p.Params.link }} cite="{{ . }}"{{ end }}>{{ $p.RenderString (dict "display" "block") . }}</blockquote>
-		{{- with $p.Params.quote_author }}
-		<figcaption>— {{ . }}</figcaption>
+	{{- if not $own }}
+	<div class="cutting-card">
+		{{ printf "<%s class=\"cutting-title\"><a href=\"%s\">%s</a></%s>" $h (htmlEscape $p.Params.link) (htmlEscape $p.Title) $h | safeHTML }}
+		{{- $by := slice }}
+		{{- with $p.Params.author }}{{ $by = $by | append . }}{{ end }}
+		{{- with $p.Params.domain }}{{ $by = $by | append . }}{{ end }}
+		{{- with $by }}
+		<p class="cutting-source">{{ delimit . " · " }}</p>
 		{{- end }}
-	</figure>
+		{{- with $p.Params.quote }}
+		<figure class="cutting-quote">
+			<blockquote cite="{{ $p.Params.link }}">{{ $p.RenderString (dict "display" "block") . }}</blockquote>
+			{{- with $p.Params.quote_author }}
+			<figcaption>— {{ . }}</figcaption>
+			{{- end }}
+		</figure>
+		{{- end }}
+	</div>
 	{{- end }}
 </article>
