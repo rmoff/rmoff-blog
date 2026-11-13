@@ -1,5 +1,5 @@
 ---
-title: "LF git repositories"
+title: "Linus Torvalds on AI use in coding"
 date: 2026-10-26T16:05:18Z
 link: "https://lore.kernel.org/lkml/CAHk-=whTs09_ozN+e09GU68N1wPP56MUzDjrg9rnKxQUa0A_4Q@mail.gmail.com/"
 domain: lore.kernel.org
