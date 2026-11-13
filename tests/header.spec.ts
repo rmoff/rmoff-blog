@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
 test.describe('Header UI', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
   });
 
   test('site title is visible and links to homepage', async ({ page }) => {
@@ -16,7 +18,7 @@ test.describe('Header UI', () => {
     const nav = page.locator('.site-nav');
     await expect(nav.locator('a', { hasText: 'Categories' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Search' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'RSS' })).toBeVisible();
+    await expect(nav.locator('a[aria-label="RSS"]')).toBeVisible();
   });
 
   test('social icons are present in nav', async ({ page }) => {
@@ -40,7 +42,7 @@ test.describe('Header UI', () => {
 
   test('header is width-constrained and centered on wide viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     const headerInner = page.locator('.site-header-inner');
     const box = await headerInner.boundingBox();
@@ -57,7 +59,7 @@ test.describe('Header UI', () => {
 
   test('mobile nav toggle is hidden on desktop', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     const toggle = page.locator('.nav-toggle');
     await expect(toggle).toBeHidden();

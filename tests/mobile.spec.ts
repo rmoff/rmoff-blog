@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
 const mobileViewport = { width: 375, height: 812 };
 
 // Viewports for the overflow checks. Tablet (768px) matters because the
@@ -38,7 +40,7 @@ for (const page of pages) {
     test(`${vp.name}: no horizontal overflow on ${page.name}`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
       const p = await context.newPage();
-      await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
+      await p.goto(`${BASE_URL}${page.url}`, { waitUntil: 'networkidle' });
       await waitForPopularPosts(p);
 
       // Check that the page doesn't have horizontal overflow. We check the
@@ -59,7 +61,7 @@ for (const page of pages) {
   test(`mobile: text is readable on ${page.name}`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: mobileViewport });
     const p = await context.newPage();
-    await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE_URL}${page.url}`, { waitUntil: 'networkidle' });
     await waitForPopularPosts(p);
 
     // Check that the main content area doesn't have elements clipped off-screen
@@ -105,7 +107,7 @@ for (const page of pages) {
 test('mobile: hamburger menu opens and shows links', async ({ browser }) => {
   const context = await browser.newContext({ viewport: mobileViewport });
   const p = await context.newPage();
-  await p.goto('http://localhost:1313/', { waitUntil: 'networkidle' });
+  await p.goto(BASE_URL + '/', { waitUntil: 'networkidle' });
 
   // Desktop nav should be hidden
   const desktopNav = p.locator('.site-nav');
@@ -132,7 +134,7 @@ test('mobile: hamburger menu opens and shows links', async ({ browser }) => {
 test('mobile: featured post stacks vertically', async ({ browser }) => {
   const context = await browser.newContext({ viewport: mobileViewport });
   const p = await context.newPage();
-  await p.goto('http://localhost:1313/', { waitUntil: 'networkidle' });
+  await p.goto(BASE_URL + '/', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1000);
 
   const featured = p.locator('.featured-post');
@@ -154,7 +156,7 @@ test('mobile: featured post stacks vertically', async ({ browser }) => {
 test('mobile: post rows have adequate touch targets', async ({ browser }) => {
   const context = await browser.newContext({ viewport: mobileViewport });
   const p = await context.newPage();
-  await p.goto('http://localhost:1313/', { waitUntil: 'networkidle' });
+  await p.goto(BASE_URL + '/', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1000);
 
   const rows = p.locator('.post-row');
@@ -176,7 +178,7 @@ test('mobile: post rows have adequate touch targets', async ({ browser }) => {
 test('mobile: article content fits viewport', async ({ browser }) => {
   const context = await browser.newContext({ viewport: mobileViewport });
   const p = await context.newPage();
-  await p.goto('http://localhost:1313/2026/01/14/alternatives-to-minio-for-single-node-local-s3/', { waitUntil: 'networkidle' });
+  await p.goto(BASE_URL + '/2026/01/14/alternatives-to-minio-for-single-node-local-s3/', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1000);
 
   // Code blocks should have overflow-x auto and not push page wider
@@ -196,7 +198,7 @@ test('mobile: article content fits viewport', async ({ browser }) => {
 test('mobile: mobile TOC is shown on article pages', async ({ browser }) => {
   const context = await browser.newContext({ viewport: mobileViewport });
   const p = await context.newPage();
-  await p.goto('http://localhost:1313/2026/01/14/alternatives-to-minio-for-single-node-local-s3/', { waitUntil: 'networkidle' });
+  await p.goto(BASE_URL + '/2026/01/14/alternatives-to-minio-for-single-node-local-s3/', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1000);
 
   // Desktop TOC should be hidden

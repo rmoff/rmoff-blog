@@ -57,8 +57,8 @@ test.describe('Mobile nav drawer', () => {
   test('primary links and labelled social links, in the UI font', async ({ page }) => {
     await page.goto('/');
     await toggle(page).click();
-    await expect(drawer(page).locator('.mobile-nav-primary a')).toHaveText(['Home', 'Interesting Links', 'Categories', 'About', 'Search']);
-    await expect(drawer(page).locator('.mobile-nav-social a')).toHaveText(['RSS', 'LinkedIn', 'X', 'Bluesky', 'YouTube', 'Talks', 'GitHub']);
+    await expect(drawer(page).locator('.mobile-nav-primary a')).toHaveText(['Home', 'Interesting Links', 'Cuttings', 'Categories', 'About', 'Search']);
+    await expect(drawer(page).locator('.mobile-nav-social a')).toHaveText(['RSS: posts', 'RSS: cuttings', 'LinkedIn', 'X', 'Bluesky', 'YouTube', 'Talks', 'GitHub']);
     // At tablet widths these used to fall back to the serif, link-blue article style.
     for (const link of await drawer(page).locator('a').all()) {
       const { font, color } = await link.evaluate(el => ({ font: getComputedStyle(el).fontFamily, color: getComputedStyle(el).color }));
@@ -97,7 +97,9 @@ test('desktop social icons keep their links and gain readable labels', async ({ 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const links = page.locator('.site-nav .nav-social a');
-  await expect(links).toHaveCount(6);
-  await expect(links.first()).toHaveAttribute('aria-label', 'LinkedIn');
-  await expect(links.first()).toHaveAttribute('href', 'https://www.linkedin.com/in/robinmoffatt/');
+  await expect(links).toHaveCount(7);
+  await expect(links.first()).toHaveAttribute('aria-label', 'RSS');
+  await expect(links.first()).toHaveAttribute('href', '/index.xml');
+  await expect(links.nth(1)).toHaveAttribute('aria-label', 'LinkedIn');
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://www.linkedin.com/in/robinmoffatt/');
 });

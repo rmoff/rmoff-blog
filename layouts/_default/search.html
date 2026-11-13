@@ -39,6 +39,15 @@
         const suggestions = document.getElementById('search-suggestions');
         let currentSort = 'relevance';
         let currentQuery = '';
+        // All / Posts / Cuttings. The ⌘K palette (static/js/search-palette.js) reads the same storage key.
+        const SHOW_KEY = 'searchShow';
+        const SHOW_TYPES = { posts: 'Post', cuttings: 'Cutting' };
+        let currentShow = 'all';
+        // Cuttings are short pages and Pagefind ranks short pages high, so in the mixed
+        // list they came above the posts on the same subject. There they rank at this
+        // fraction of their score; one that is by far the best match still comes first.
+        // Keep in sync with static/js/search-palette.js.
+        const CUTTING_RANK = 0.5;
 
         // Excerpt length in words; keep in sync with static/js/search-palette.js.
         // PagefindUI imports the same pagefind.js module instance, so its
@@ -86,8 +95,19 @@
                 const sortOpt = sort === 'newest' ? { sort: { date: 'desc' } }
                               : sort === 'oldest' ? { sort: { date: 'asc' } }
                               : {};
-                const search = await pagefind.search(query, sortOpt);
+                const showOpt = SHOW_TYPES[currentShow] ? { filters: { type: SHOW_TYPES[currentShow] } } : {};
+                const search = await pagefind.search(query, { ...sortOpt, ...showOpt });
                 if (run !== searchRun) return;
+                if (!showOpt.filters && !sortOpt.sort) {
+                    const cuttings = await pagefind.search(query, { filters: { type: 'Cutting' } });
+                    if (run !== searchRun) return;
+                    const ids = new Set(cuttings.results.map(r => r.id));
+                    const rank = r => ids.has(r.id) ? r.score * CUTTING_RANK : r.score;
+                    search.results.sort((a, b) => rank(b) - rank(a));
+                }
+                const typeCounts = (search.totalFilters && search.totalFilters.type) || {};
+                const showCount = { posts: typeCounts.Post || 0, cuttings: typeCounts.Cutting || 0 };
+                showCount.all = showCount.posts + showCount.cuttings;
 
                 // Render message + sort controls + results
                 const batchSize = 10;
@@ -98,6 +118,13 @@
 
                 let html = '<div class="cr-message">' +
                     '<span>' + search.results.length + ' results for <strong>' + escapeHTML(query) + '</strong></span>' +
+                    '<span class="search-show" role="group" aria-label="Show">' +
+                    '<span class="search-sort-label">Show:</span>' +
+                    [['all', 'All'], ['posts', 'Posts'], ['cuttings', 'Cuttings']].map(([value, label]) =>
+                        '<button class="search-sort-btn' + (currentShow === value ? ' active' : '') + '" data-show="' + value + '" aria-pressed="' + (currentShow === value) + '">' +
+                        label + ' <span class="cat-count">' + showCount[value] + '</span></button>'
+                    ).join('') +
+                    '</span>' +
                     '<span class="search-sort">' +
                     '<span class="search-sort-label">Sort:</span>' +
                     '<button class="search-sort-btn' + (sort === 'relevance' ? ' active' : '') + '" data-sort="relevance">Relevance</button>' +
@@ -114,6 +141,14 @@
                     const btn = e.target.closest('.search-sort-btn');
                     if (!btn || btn.dataset.sort === currentSort) return;
                     currentSort = btn.dataset.sort;
+                    updateURL(currentQuery, currentSort);
+                    doSearch(currentQuery, currentSort);
+                });
+                customResults.querySelector('.search-show').addEventListener('click', (e) => {
+                    const btn = e.target.closest('.search-sort-btn');
+                    if (!btn || btn.dataset.show === currentShow) return;
+                    currentShow = btn.dataset.show;
+                    try { localStorage.setItem(SHOW_KEY, currentShow); } catch (err) {}
                     updateURL(currentQuery, currentSort);
                     doSearch(currentQuery, currentSort);
                 });
@@ -151,10 +186,13 @@
                 const rawDate = (r.meta && r.meta.date) || '';
                 const date = (rawDate && !rawDate.startsWith('1 January 0001')) ? rawDate : '';
                 const excerpt = r.excerpt || '';
-                return '<li class="cr-result">' +
+                const isCutting = !!(r.filters && r.filters.type && r.filters.type.includes('Cutting'));
+                const cuttingTag = isCutting ? '<span class="cr-result-type">Cutting' + (r.meta && r.meta.domain ? ' · ' + escapeHTML(r.meta.domain) : '') + '</span>' : '';
+                return '<li class="cr-result' + (isCutting ? ' cr-result-cutting' : '') + '">' +
                     (imgSrc ? '<a href="' + r.url + '" class="cr-result-thumb" aria-hidden="true" tabindex="-1"><img src="' + imgSrc + '" alt="" loading="lazy"></a>' : '') +
                     '<div class="cr-result-body">' +
                     '<a href="' + r.url + '" class="cr-result-title">' + title + '</a>' +
+                    cuttingTag +
                     (date ? '<span class="cr-result-date">' + date + '</span>' : '') +
                     '<p class="cr-result-excerpt">' + excerpt + '</p>' +
                     '</div></li>';
@@ -218,10 +256,16 @@
         function getSortFromURL() {
             return new URLSearchParams(window.location.search).get('sort') || 'relevance';
         }
+        function getShow() {
+            let show = new URLSearchParams(window.location.search).get('show');
+            if (!show) { try { show = localStorage.getItem(SHOW_KEY); } catch (err) {} }
+            return show === 'posts' || show === 'cuttings' ? show : 'all';
+        }
         function updateURL(query, sort) {
             const url = new URL(window.location);
             query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
             sort && sort !== 'relevance' ? url.searchParams.set('sort', sort) : url.searchParams.delete('sort');
+            currentShow !== 'all' ? url.searchParams.set('show', currentShow) : url.searchParams.delete('show');
             window.history.replaceState({}, '', url);
         }
 
@@ -231,6 +275,7 @@
         const initialSort = getSortFromURL();
         if (initialQuery) currentQuery = initialQuery;
         if (initialSort !== 'relevance') currentSort = initialSort;
+        currentShow = getShow();
 
         const checkForInput = setInterval(() => {
             const searchInput = document.querySelector('.pagefind-ui__search-input');
@@ -453,7 +498,38 @@
     color: inherit;
 }
 
-/* Sort controls */
+/* Show (All / Posts / Cuttings) and sort controls */
+.cr-message {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
+.cr-message > span:first-child {
+    margin-right: auto;
+}
+
+.search-show {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.search-show .cat-count {
+    margin-left: 0.15rem;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+}
+
+.cr-result-type {
+    display: inline-block;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    background: var(--color-pill-bg);
+    padding: 0.05rem 0.4rem;
+    margin-top: 0.2rem;
+}
+
 .search-sort {
     display: inline-flex;
     align-items: center;

@@ -162,9 +162,9 @@ test.describe('Pagefind Search', () => {
       const lineCounts = await page.locator('.search-sort-btn').evaluateAll(buttons => buttons.map(button => {
         const label = document.createRange();
         label.selectNodeContents(button);
-        return label.getClientRects().length;
+        return new Set([...label.getClientRects()].map(r => Math.round(r.top))).size;
       }));
-      expect(lineCounts).toEqual([1, 1, 1]);
+      expect(lineCounts).toEqual([1, 1, 1, 1, 1, 1]);
     }
   });
 

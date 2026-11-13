@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
 const screenshotDir = path.resolve(__dirname, '..', 'static', 'prototypes', 'screenshots');
 
 const pages = [
@@ -28,7 +30,7 @@ for (const page of pages) {
       const errors: string[] = [];
       p.on('pageerror', (err) => errors.push(err.message));
 
-      const response = await p.goto(`http://localhost:1313${page.url}`, { waitUntil: 'networkidle' });
+      const response = await p.goto(`${BASE_URL}${page.url}`, { waitUntil: 'networkidle' });
       expect(response?.status()).toBeLessThan(400);
 
       await p.waitForTimeout(1500); // fonts

@@ -30,6 +30,21 @@
   var MAX_RECENT = 5;
   var MIN_QUERY = 2;
   var DEBOUNCE_MS = 120;
+  // All / Posts / Cuttings, chosen on the search page (layouts/_default/search.html, same key).
+  var SHOW_KEY = 'searchShow';
+  var SHOW_TYPES = { posts: 'Post', cuttings: 'Cutting' };
+  var SHOW_NOTE = { posts: ', posts only', cuttings: ', cuttings only' };
+  // Cuttings are short pages and Pagefind ranks short pages high, so in the mixed
+  // list they came above the posts on the same subject. There they rank at this
+  // fraction of their score; one that is by far the best match still comes first.
+  // Keep in sync with layouts/_default/search.html.
+  var CUTTING_RANK = 0.5;
+
+  function getShow() {
+    var show = null;
+    try { show = localStorage.getItem(SHOW_KEY); } catch (e) {}
+    return SHOW_TYPES[show] ? show : 'all';
+  }
 
   var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
   var isApple = /mac|iphone|ipad|ipod/i.test(platform);
@@ -113,7 +128,11 @@
 
   function catURL(slug) { return '/categories/' + slug + '/'; }
 
-  function allResultsURL(q) { return SEARCH_URL + (q ? '?q=' + encodeURIComponent(q) : ''); }
+  function allResultsURL(q) {
+    var show = getShow();
+    var params = (q ? '&q=' + encodeURIComponent(q) : '') + (show !== 'all' ? '&show=' + show : '');
+    return SEARCH_URL + params.replace('&', '?');
+  }
 
   // Categories of the matching posts (Pagefind filter counts), merged
   // case-insensitively ("obiee" + "OBIEE") and mapped to the Hugo term page.
@@ -293,6 +312,7 @@
   function postRow(p) {
     return '<a class="sp-opt sp-post" role="option" aria-selected="false" tabindex="-1" href="' + esc(p.url) + '">' +
       '<span class="sp-post-title">' + esc(p.title) + '</span>' +
+      (p.cutting ? '<span class="sp-post-type">Cutting' + (p.domain ? ' · ' + esc(p.domain) : '') + '</span>' : '') +
       (p.date ? '<span class="sp-post-date">' + esc(p.date) + '</span>' : '') +
       (p.excerpt ? '<span class="sp-post-excerpt">' + p.excerpt + '</span>' : '') + // Pagefind excerpts are HTML-safe (with <mark>)
       '</a>';
@@ -313,7 +333,7 @@
 
   function setFooter(q, total) {
     allLink.href = allResultsURL(q);
-    allLink.textContent = q && total ? 'See all ' + total + ' result' + (total === 1 ? '' : 's') + ' →'
+    allLink.textContent = q && total ? 'See all ' + total + ' result' + (total === 1 ? '' : 's') + (SHOW_NOTE[getShow()] || '') + ' →'
                                      : 'Open the search page →';
     allLink.hidden = !!q && !total;
   }
@@ -363,7 +383,14 @@
     }
     var search, posts, data;
     try {
-      search = await pf.search(q);
+      var show = getShow();
+      search = await pf.search(q, SHOW_TYPES[show] ? { filters: { type: SHOW_TYPES[show] } } : {});
+      if (!SHOW_TYPES[show]) {
+        var cuttings = await pf.search(q, { filters: { type: 'Cutting' } });
+        var ids = new Set(cuttings.results.map(function (r) { return r.id; }));
+        var rank = function (r) { return ids.has(r.id) ? r.score * CUTTING_RANK : r.score; };
+        search.results.sort(function (a, b) { return rank(b) - rank(a); });
+      }
       posts = await Promise.all(search.results.slice(0, MAX_POSTS).map(function (r) { return r.data(); }));
       data = await loadData();
     } catch (err) {
@@ -385,10 +412,11 @@
     var cats = matchCategories(search.filters, data, q);
     var html = '';
     if (cats.length) html += group('cats', 'Categories', chips(cats, true), 'sp-group-cats');
-    html += group('posts', 'Posts', posts.map(function (r) {
+    html += group('posts', show === 'cuttings' ? 'Cuttings' : show === 'posts' ? 'Posts' : 'Results', posts.map(function (r) {
       var meta = r.meta || {};
       var date = meta.date && meta.date.indexOf('0001') === -1 ? meta.date : '';
-      return postRow({ url: r.url, title: meta.title || r.url, date: date, excerpt: r.excerpt });
+      var cutting = !!(r.filters && r.filters.type && r.filters.type.indexOf('Cutting') !== -1);
+      return postRow({ url: r.url, title: meta.title || r.url, date: date, excerpt: r.excerpt, cutting: cutting, domain: meta.domain });
     }).join(''));
     // Default to the top post, not the first category chip: Enter after typing
     // should open the best-matching article. ArrowUp reaches the categories.

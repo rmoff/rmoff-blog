@@ -39,7 +39,7 @@ test.describe('Search palette', () => {
 
   test('opens with ⌘K and with Ctrl+K; Esc closes and restores focus', async ({ page }) => {
     await page.goto(ARTICLE);
-    const rss = page.locator('.site-nav a', { hasText: 'RSS' });
+    const rss = page.locator('.site-nav a[aria-label="RSS"]');
     await rss.focus();
 
     await openWithShortcut(page, 'Meta+k');
@@ -114,7 +114,7 @@ test.describe('Search palette', () => {
     await openWithShortcut(page);
     await search(page, 'kafka connect');
 
-    await expect(page.locator('.sp-group-label')).toHaveText(['Categories', 'Posts']);
+    await expect(page.locator('.sp-group-label')).toHaveText(['Categories', 'Results']);
     await expect(page.locator('.sp-group-cats .sp-chip').first()).toContainText('Kafka Connect');
     await expect(page.locator('.sp-group-cats .sp-chip').first()).toHaveAttribute('href', '/categories/kafka-connect/');
     const posts = page.locator('.sp-post');

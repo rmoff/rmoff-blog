@@ -74,10 +74,15 @@ async function pickUp(page: Page, which = 0) {
   throw new Error('could not pick up a lemming');
 }
 
+// The post's live giscus comments load late and can push the footer thousands of px down mid-test
+test.beforeEach(async ({ page }) => {
+  await page.route('https://giscus.app/**', route => route.abort());
+});
+
 test.describe('footer lemmings', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test('nothing loads at the top of a post; two lemmings and the door appear near the footer', async ({ page }) => {
+  test('nothing loads at the top of a post; two lemmings appear near the footer, with no door', async ({ page }) => {
     const requests: string[] = [];
     page.on('request', r => requests.push(r.url()));
     await page.goto(ARTICLE_URL);
@@ -85,10 +90,9 @@ test.describe('footer lemmings', () => {
     await page.waitForTimeout(500);
     expect(requests.some(u => u.includes('/js/lemmings.'))).toBe(false);
     expect(await page.evaluate(() => 'lemmings' in window)).toBe(false);
-    await expect(page.locator('.lemming-door')).toBeHidden();
     await page.locator('.site-footer').scrollIntoViewIfNeeded();
     await expect.poll(async () => (await walkers(page)).length).toBe(2);
-    await expect(page.locator('.lemming-door')).toBeVisible();
+    await expect(page.locator('.site-footer [data-lemming-exit]')).toHaveCount(0);
   });
 
   test('the footer has no lemming button, icon or count', async ({ page }) => {
@@ -99,8 +103,7 @@ test.describe('footer lemmings', () => {
 
   test('they land on the footer rule and stay there when the reader scrolls up', async ({ page }) => {
     await toFooter(page);
-    // with the footer in view (late images can push it down), every lemming still out (one may have reached the
-    // door) is walking on the footer rule
+    // with the footer in view (late images can push it down), every lemming is walking on the footer rule
     await expect.poll(async () => {
       await page.locator('.site-footer').scrollIntoViewIfNeeded();
       const top = await footerTop(page), ws = await walkers(page);
@@ -253,20 +256,6 @@ test.describe('footer lemmings', () => {
     }
   });
 
-  test('a lemming that walks into the door goes home', async ({ page }) => {
-    await toFooter(page);
-    const door = await page.locator('.lemming-door').evaluate(d => {
-      const r = d.getBoundingClientRect();
-      return { x: r.left + scrollX + r.width / 2, y: r.top + scrollY - 20 };
-    });
-    await add(page, door);
-    // keep the footer in view: late images can push it off-screen, where its lemmings pause
-    await expect.poll(async () => {
-      await page.locator('.site-footer').scrollIntoViewIfNeeded();
-      return page.evaluate(() => (window as any).lemmings.home);
-    }, { timeout: 10000 }).toBeGreaterThan(0);
-  });
-
   test('tapping a falling lemming opens its umbrella and it floats down', async ({ page }) => {
     await toFooter(page);
     const top = await footerTop(page);
@@ -288,7 +277,7 @@ test.describe('footer lemmings', () => {
     expect(requests.some(u => u.includes('/js/lemmings.'))).toBe(false);
   });
 
-  test('with reduced motion: nothing loads, no door, no lemmings', async ({ browser }) => {
+  test('with reduced motion: nothing loads, no lemmings', async ({ browser }) => {
     const ctx = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await ctx.newPage();
     const requests: string[] = [];
@@ -298,7 +287,6 @@ test.describe('footer lemmings', () => {
     await page.waitForTimeout(1500);
     expect(requests.some(u => u.includes('/js/lemmings.'))).toBe(false);
     expect(await page.evaluate(() => !!document.getElementById('lemmings'))).toBe(false);
-    await expect(page.locator('.lemming-door')).toBeHidden();
     await ctx.close();
   });
 });
@@ -320,6 +308,23 @@ test.describe('footer lemmings on a phone', () => {
 
   test('two start in the footer', async ({ page }) => {
     await toFooter(page);
-    await expect(page.locator('.lemming-door')).toBeVisible();
+  });
+});
+
+test.describe('no footer lemmings on Cuttings', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('neither the list nor a cutting loads them', async ({ page }) => {
+    const requests: string[] = [];
+    page.on('request', r => requests.push(r.url()));
+    await page.goto('/cuttings/');
+    const cutting = await page.locator('.cuttings-list .cutting-meta a').first().getAttribute('href');
+    for (const url of ['/cuttings/', cutting!]) {
+      await page.goto(url);
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(1500);
+      expect(await page.evaluate(() => 'lemmings' in window)).toBe(false);
+    }
+    expect(requests.some(u => u.includes('/js/lemmings.'))).toBe(false);
   });
 });

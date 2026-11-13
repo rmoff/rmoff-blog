@@ -23,13 +23,15 @@ async function sweep(page: Page) {
       return {
         wrapped,
         gap: nav.getBoundingClientRect().left - title.getBoundingClientRect().right,
+        linkGap: parseFloat(getComputedStyle(nav).columnGap),
         headerHeight: document.querySelector('.site-header')!.getBoundingClientRect().height,
         overflow: document.documentElement.scrollWidth > window.innerWidth,
         about: [...nav.querySelectorAll('a')].filter(a => a.textContent!.trim() === 'About' && a.getBoundingClientRect().width > 0).length,
       };
     });
     if (r.wrapped.length) problems.push(`${width}px: wrapped ${r.wrapped.join(', ')}`);
-    if (r.gap < 16) problems.push(`${width}px: only ${Math.round(r.gap)}px between title and nav`);
+    // The title has to read as the site's name, not as the first item in the row of links
+    if (r.gap < Math.max(16, 2 * r.linkGap)) problems.push(`${width}px: only ${Math.round(r.gap)}px between title and nav (links are ${r.linkGap}px apart)`);
     if (r.headerHeight !== 60) problems.push(`${width}px: header is ${r.headerHeight}px tall`);
     if (r.overflow) problems.push(`${width}px: horizontal overflow`);
     if (r.about !== 1) problems.push(`${width}px: ${r.about} visible About links`);
@@ -68,8 +70,11 @@ test.describe('About page can be found', () => {
     await page.setViewportSize({ width: 1440, height: 800 });
     await page.goto('/');
     await expect(page.locator('.site-nav > a')).toHaveText([
-      /Interesting Links/, /Categories/, /About/, /Search/, /RSS/,
+      /Interesting Links/, /Cuttings/, /Categories/, /About/, /Search/,
     ]);
+    // Words only; Search keeps its magnifier, and RSS is an icon with the follow links
+    await expect(page.locator('.site-nav > a:not(.nav-search-link) svg')).toHaveCount(0);
+    await expect(page.locator('.site-nav .nav-social a').first()).toHaveAttribute('aria-label', 'RSS');
     await expect(page.locator('.site-nav > a', { hasText: 'About' })).toHaveAttribute('href', ABOUT);
   });
 
@@ -78,6 +83,7 @@ test.describe('About page can be found', () => {
     await page.goto('/');
     await page.locator('.site-nav > a', { hasText: 'About' }).click();
     await expect(page).toHaveURL(ABOUT);
+    await expect(page.locator('.site-nav > a', { hasText: 'About' })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('main a[href^="mailto:"]')).toBeVisible();
   });
 

@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
 test.describe('Page Load - Homepage', () => {
   test('homepage loads correctly', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     // Header elements visible
     await expect(page.locator('.site-header')).toBeVisible();
@@ -15,7 +17,7 @@ test.describe('Page Load - Homepage', () => {
   });
 
   test('homepage fonts render correctly', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     // Wait for fonts to load
     await page.waitForLoadState('networkidle');
@@ -27,7 +29,7 @@ test.describe('Page Load - Homepage', () => {
   });
 
   test('homepage icons are functional', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     // Social icons should be visible
     const icons = page.locator('.nav-social a');
@@ -38,7 +40,7 @@ test.describe('Page Load - Homepage', () => {
 test.describe('Page Load - Article Page', () => {
   test('article page loads correctly', async ({ page }) => {
     // Navigate to an article from homepage
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
     const firstLink = page.locator('.post-row .post-title-link').first();
     const href = await firstLink.getAttribute('href');
 
@@ -56,7 +58,7 @@ test.describe('Page Load - Article Page', () => {
     await page.setViewportSize({ width: 1400, height: 900 });
 
     // Go to an article with TOC
-    await page.goto('http://localhost:1313/2026/01/27/reflections-of-a-developer-on-llms-in-january-2026/');
+    await page.goto(BASE_URL + '/2026/01/27/reflections-of-a-developer-on-llms-in-january-2026/');
 
     // TOC should be visible
     const toc = page.locator('.docs-toc');
@@ -76,7 +78,7 @@ test.describe('Page Load - Article Page', () => {
   });
 
   test('article page has readable content', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
     const firstLink = page.locator('.post-row .post-title-link').first();
     const href = await firstLink.getAttribute('href');
 
@@ -92,7 +94,7 @@ test.describe('Page Load - Article Page', () => {
   });
 
   test('article page footer visible', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
     const firstLink = page.locator('.post-row .post-title-link').first();
     const href = await firstLink.getAttribute('href');
 
@@ -105,7 +107,7 @@ test.describe('Page Load - Article Page', () => {
 
 test.describe('Page Load - Category Page', () => {
   test('category page loads correctly', async ({ page }) => {
-    await page.goto('http://localhost:1313/categories/');
+    await page.goto(BASE_URL + '/categories/');
 
     // Page should have category links
     const categoryLinks = page.locator('a[href*="/categories/"]');
@@ -114,7 +116,7 @@ test.describe('Page Load - Category Page', () => {
 
   test('individual category page lists articles', async ({ page }) => {
     // Go directly to a known category
-    await page.goto('http://localhost:1313/categories/kafka/');
+    await page.goto(BASE_URL + '/categories/kafka/');
 
     // Should have post rows
     const posts = page.locator('.post-row');
@@ -124,7 +126,7 @@ test.describe('Page Load - Category Page', () => {
 
 test.describe('Page Load - Search Page', () => {
   test('search page loads and is functional', async ({ page }) => {
-    await page.goto('http://localhost:1313/search/');
+    await page.goto(BASE_URL + '/search/');
 
     // Search input should be visible
     const searchInput = page.locator('.pagefind-ui__search-input');
@@ -141,7 +143,7 @@ test.describe('Page Load - Search Page', () => {
 
 test.describe('Navigation Consistency', () => {
   test('can navigate from homepage to article and back', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     // Click an article title link
     const firstLink = page.locator('.post-row .post-title-link').first();
@@ -159,10 +161,10 @@ test.describe('Navigation Consistency', () => {
   });
 
   test('can navigate from homepage to category', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
 
     // Navigate directly to categories page then to a specific category
-    await page.goto('http://localhost:1313/categories/kafka/');
+    await page.goto(BASE_URL + '/categories/kafka/');
 
     // Should show category page with post rows
     await expect(page.locator('.post-row').first()).toBeVisible({ timeout: 5000 });
@@ -171,7 +173,7 @@ test.describe('Navigation Consistency', () => {
 
 test.describe('404 Page', () => {
   test('404 page has black background throughout', async ({ page }) => {
-    await page.goto('http://localhost:1313/nonexistent-page-test');
+    await page.goto(BASE_URL + '/nonexistent-page-test');
 
     // Terminal content should be visible
     await expect(page.locator('.terminal-page')).toBeVisible();
@@ -187,7 +189,7 @@ test.describe('404 Page', () => {
 
   test('404 page footer is at bottom of viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('http://localhost:1313/nonexistent-page-test');
+    await page.goto(BASE_URL + '/nonexistent-page-test');
 
     // Footer should be visible
     const footer = page.locator('footer');
@@ -203,7 +205,7 @@ test.describe('404 Page', () => {
   });
 
   test('404 page shows terminal content', async ({ page }) => {
-    await page.goto('http://localhost:1313/nonexistent-page-test');
+    await page.goto(BASE_URL + '/nonexistent-page-test');
 
     // ASCII art visible
     await expect(page.locator('.terminal-404-text')).toBeVisible();
@@ -222,7 +224,7 @@ test.describe('404 Page', () => {
 test.describe('Syntax Highlighting', () => {
   test('code blocks use monokai theme', async ({ page }) => {
     // Page with known code blocks
-    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+    await page.goto(BASE_URL + '/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
 
     // Check that code blocks have monokai styling (dark background #272822)
     const codeBlock = page.locator('pre.rouge.highlight').first();
@@ -234,7 +236,7 @@ test.describe('Syntax Highlighting', () => {
   });
 
   test('admonition blocks use font icons', async ({ page }) => {
-    await page.goto('http://localhost:1313/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
+    await page.goto(BASE_URL + '/2025/03/25/confluent-cloud-for-apache-flink-exploring-the-api/');
 
     // Check for admonition with font icon
     const admonition = page.locator('.admonitionblock.tip').first();

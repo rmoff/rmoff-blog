@@ -261,7 +261,7 @@ h1, h2, h3, h4, h5, h6 {
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .site-nav a {
@@ -276,7 +276,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .site-nav a:hover,
-.site-nav a.active {
+.site-nav a[aria-current] {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
 }
@@ -323,8 +323,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-left: 1rem;
-  padding-left: 1rem;
+  margin-left: 0.75rem;
+  padding-left: 0.75rem;
   border-left: 1px solid var(--color-border);
 }
 
@@ -558,12 +558,12 @@ html[data-theme-pref="system"] .theme-menu-icon[data-theme-icon="system"] {
   color: var(--color-text);
 }
 
-.mobile-nav-primary a[aria-current="page"],
-.mobile-nav-primary a[aria-current="page"] svg {
+.mobile-nav-primary a[aria-current],
+.mobile-nav-primary a[aria-current] svg {
   color: var(--color-accent);
 }
 
-.mobile-nav-primary a[aria-current="page"] {
+.mobile-nav-primary a[aria-current] {
   border-left-color: var(--color-accent);
 }
 
@@ -2278,38 +2278,6 @@ video.gif-video {
   color: var(--color-border);
 }
 
-/* Footer lemmings' door (layouts/partials/lemmings-footer.html) */
-.site-footer {
-  position: relative;
-}
-
-/* Sits on the footer's top rule, near the right edge of the page */
-.lemming-door {
-  position: absolute;
-  bottom: 100%;
-  right: max(1rem, 10%);
-  line-height: 0;
-  pointer-events: none;
-}
-
-.lemming-door svg {
-  display: block;
-}
-
-.lemming-door .lemming-door-b {
-  animation: lemming-door-glow 1.3s step-end infinite;
-}
-
-@keyframes lemming-door-glow {
-  50% { opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lemming-door {
-    display: none;
-  }
-}
-
 /* --- About the Author section (in articles) --- */
 .about-the-author {
   font-family: var(--font-body);
@@ -2423,51 +2391,48 @@ video.gif-video {
   background: var(--color-surface);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* --- Pagination --- */
 .pagination {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
+  margin: 0;
   padding: 2rem 0;
   font-family: var(--font-ui);
-  font-size: 0.85rem;
   list-style: none;
 }
 
-.pagination a,
-.pagination span {
-  display: inline-block;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.pagination a:hover {
-  background: var(--color-border-light);
-  color: var(--color-text);
-}
-
-.pagination .active span {
-  background: var(--color-text);
-  color: var(--color-bg);
-  border-color: var(--color-text);
-}
-
-/* Hugo internal pagination template compatibility */
 .page-item .page-link {
-  display: inline-block;
-  padding: 0.4rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0 0.75rem;
   border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1;
   text-decoration: none;
-  font-family: var(--font-ui);
-  font-size: 0.85rem;
 }
 
-.page-item .page-link:hover {
+.page-item .page-link > span {
+  font-size: 1.25rem;
+}
+
+.page-item .page-link[href]:hover {
   background: var(--color-border-light);
-  color: var(--color-text);
 }
 
 .page-item.active .page-link {
@@ -2477,8 +2442,8 @@ video.gif-video {
 }
 
 .page-item.disabled .page-link {
-  opacity: 0.4;
-  pointer-events: none;
+  color: var(--color-text-muted);
+  border-color: var(--color-border-light);
 }
 
 /* --- Pagefind Search --- */
@@ -3166,14 +3131,26 @@ video.gif-video {
     border-right: none;
   }
 
-  /* Pagination: wrap on mobile */
+  /* Pagination: page numbers on one row, arrows below */
+  .pagination::after {
+    content: "";
+    flex-basis: 100%;
+    order: 1;
+  }
+
   .pagination {
-    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  .page-item:nth-child(-n+2),
+  .page-item:nth-last-child(-n+2) {
+    order: 2;
   }
 
   .page-item .page-link {
-    padding: 0.35rem 0.5rem;
-    font-size: 0.75rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
   }
 
 }
@@ -4493,6 +4470,219 @@ html.lightbox-open {
 }
 .top-posts-list li:last-child a { border-bottom: none; }
 .top-posts-list a:hover { color: var(--color-link); }
+
+/* Latest cuttings (home sidebar) — same rhythm as Popular posts, with the domain underneath. */
+.latest-cuttings { list-style: none; margin: 0; padding: 0; }
+.latest-cuttings a {
+  display: block;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.latest-cuttings li:last-child a { border-bottom: none; }
+.latest-cuttings-title {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.latest-cuttings-domain {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.latest-cuttings a:hover .latest-cuttings-title { color: var(--color-link); }
+.latest-cuttings-more {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--color-link);
+}
+
+/* --- Cuttings --- */
+.cuttings-header { margin-bottom: 1.5rem; }
+.cuttings-heading {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.cuttings-intro {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 38rem;
+}
+.cuttings-intro p { margin: 0 0 0.5rem; }
+.cuttings-intro a,
+.cutting-comment a,
+.cutting-text a {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-decoration-color: var(--color-link-underline);
+  text-underline-offset: 2px;
+}
+.cuttings-feed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.cuttings-feed svg { width: 14px; height: 14px; }
+.cuttings-feed:hover { color: var(--color-accent); }
+.cuttings-list {
+  max-width: 40rem;
+  display: grid;
+  /* minmax(0, …): a card never grows past the column to fit what's in it */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+.cuttings-list .cutting-meta {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  margin-bottom: 0.4rem;
+}
+.cuttings-empty {
+  font-family: var(--font-body);
+  color: var(--color-text-muted);
+  padding-top: 1rem;
+  border-top: 2px solid var(--color-rule);
+}
+
+.cutting-meta {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+.cutting-meta a { color: inherit; text-decoration: none; }
+.cutting-meta a:hover { color: var(--color-accent); }
+.cutting-title {
+  font-family: var(--font-body);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+}
+h1.cutting-title {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.2;
+}
+.cutting-title a { color: var(--color-text); text-decoration: none; }
+.cutting-title a:hover { color: var(--color-link); }
+.cutting-source {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0;
+}
+.cutting-comment {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  margin-top: 0.5rem;
+}
+.cutting .cutting-text {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.65;
+  margin-top: 0.5rem;
+}
+.cutting-comment p,
+.cutting-text p { margin: 0 0 0.75rem; }
+.cutting-comment p:last-child,
+.cutting-text p:last-child { margin-bottom: 0; }
+.cutting-card {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+}
+.cutting-card .cutting-title { font-size: 1.05rem; }
+.cutting-card .cutting-quote blockquote {
+  padding: 0 0 0 1rem;
+  border-left-width: 2px;
+  background: none;
+}
+.cutting-media { margin: 1rem 0 0; }
+.cutting-media img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+/* On the list a picture shouldn't push the next cutting a screen away; its own page shows it whole */
+.cuttings-list .cutting-media img {
+  width: auto;
+  max-height: 22rem;
+}
+.cutting-quote { margin: 1rem 0 0; }
+.cutting-quote blockquote {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-code-bg);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-style: italic;
+  line-height: 1.7;
+}
+.cutting-quote blockquote p { margin: 0 0 0.75rem; }
+.cutting-quote blockquote p:last-child { margin-bottom: 0; }
+/* A post's line breaks are part of the post */
+.cutting-comment p,
+.cutting-text p,
+.cutting-quote blockquote p { white-space: pre-line; }
+/* Bare links in posts (a tweet's URL, say) break rather than run off the card */
+.cutting-comment,
+.cutting-text,
+.cutting-card { overflow-wrap: anywhere; }
+.cutting-quote code { font-family: var(--font-code); font-style: normal; font-size: 0.85em; }
+.cutting-quote figcaption {
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
+}
+
+.cutting-page {
+  max-width: 44rem;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+/* Every cutting is a card, on the list and on its own page */
+.cuttings-list .cutting,
+.cutting-page .cutting {
+  padding: 1.5rem 1.75rem 1.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+.cutting-page .cutting-meta { margin-bottom: 0.5rem; }
+.cutting-card h1.cutting-title {
+  font-family: var(--font-body);
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+@media (max-width: 640px) {
+  .cuttings-list .cutting,
+  .cutting-page .cutting { padding: 1rem 1rem 1.25rem; }
+  .cutting-card { padding: 0.9rem 1rem 1rem; }
+}
 
 /* ==========================================================================
    Reduced motion (prefers-reduced-motion: reduce)

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
-const articleUrl = '/2026/02/18/building-a-data-pipeline-with-dbt-and-duckdb/';
+const articleUrl = '/2026/02/19/ten-years-late-to-the-dbt-party-duckdb-edition/';
 const screenshotDir = path.resolve(__dirname, '..', 'test-results');
 
 test.describe('AsciiDoc code callout lists', () => {
