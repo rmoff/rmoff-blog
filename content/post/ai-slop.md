@@ -8,6 +8,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - Blogging
 - Rant
+topics:
+- ai-slop
 ---
 
 As part of compiling the monthly [interesting links](/categories/interesting-links/) posts, I go through a ton of RSS feeds, sourced from specific blogs that I follow as well as general aggregators.
