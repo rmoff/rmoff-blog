@@ -205,3 +205,5 @@ Instead of descending into a torpor of mindless prompting, we should always be c
 * Bryan Cantrill - Oxide RFD 576: [LLMs as writers](https://rfd.shared.oxide.computer/rfd/0576#_llms_as_writers)
 * Martin Fowler - [LLM Voice](https://martinfowler.com/bliki/LLM-Voice.html)
 * Marc Brooker - [Is this blog written by AI?](https://brooker.co.za/blog/2026/06/18/my-blog-and-ai.html)
+* Murat Demirbas - [Writing as a thinking tool](https://muratbuffalo.blogspot.com/2026/11/writing-as-thinking-tool.html)
+* Bryan Cantrill and Adam Leventhal - [Oxide and Friends podcast episode about the use of AI in writing](https://oxide-and-friends.transistor.fm/episodes/ai-detection-with-max-spero)
