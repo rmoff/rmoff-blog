@@ -39,7 +39,7 @@ test.describe('Search palette', () => {
 
   test('opens with ⌘K and with Ctrl+K; Esc closes and restores focus', async ({ page }) => {
     await page.goto(ARTICLE);
-    const rss = page.locator('.site-nav a', { hasText: 'RSS' });
+    const rss = page.locator('.site-nav a[aria-label="RSS"]');
     await rss.focus();
 
     await openWithShortcut(page, 'Meta+k');

@@ -97,7 +97,9 @@ test('desktop social icons keep their links and gain readable labels', async ({ 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const links = page.locator('.site-nav .nav-social a');
-  await expect(links).toHaveCount(6);
-  await expect(links.first()).toHaveAttribute('aria-label', 'LinkedIn');
-  await expect(links.first()).toHaveAttribute('href', 'https://www.linkedin.com/in/robinmoffatt/');
+  await expect(links).toHaveCount(7);
+  await expect(links.first()).toHaveAttribute('aria-label', 'RSS');
+  await expect(links.first()).toHaveAttribute('href', '/index.xml');
+  await expect(links.nth(1)).toHaveAttribute('aria-label', 'LinkedIn');
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://www.linkedin.com/in/robinmoffatt/');
 });

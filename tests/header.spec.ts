@@ -18,7 +18,7 @@ test.describe('Header UI', () => {
     const nav = page.locator('.site-nav');
     await expect(nav.locator('a', { hasText: 'Categories' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Search' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'RSS' })).toBeVisible();
+    await expect(nav.locator('a[aria-label="RSS"]')).toBeVisible();
   });
 
   test('social icons are present in nav', async ({ page }) => {
