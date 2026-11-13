@@ -138,6 +138,20 @@ test.describe('Searching with and without cuttings', () => {
     await expect(page.locator('.sp-all')).toHaveAttribute('href', /show=posts/);
   });
 
+  test('showing everything, a post on the subject comes before a cutting, unless the cutting is the best match', async ({ page }) => {
+    // Unweighted, the short cutting page ranks first for "dangerous"
+    await page.goto('/search/?q=dangerous');
+    await expect(titles(page).first()).toHaveText(/^The danger of averages/);
+    await expect(page.locator('.cr-result').nth(1)).toHaveClass(/cr-result-cutting/);
+    await page.goto('/search/?q=kingmakers');
+    await expect(titles(page).first()).toHaveText('Agents: The new, New Kingmakers');
+
+    await page.goto('/about-me/');
+    await page.keyboard.press('ControlOrMeta+k');
+    await page.locator('.sp-input').fill('dangerous');
+    await expect(page.locator('.sp-post-title').first()).toHaveText(/^The danger of averages/);
+  });
+
   test('the palette labels cuttings when showing everything', async ({ page }) => {
     await page.goto('/about-me/');
     await page.keyboard.press('ControlOrMeta+k');

@@ -43,6 +43,11 @@
         const SHOW_KEY = 'searchShow';
         const SHOW_TYPES = { posts: 'Post', cuttings: 'Cutting' };
         let currentShow = 'all';
+        // Cuttings are short pages and Pagefind ranks short pages high, so in the mixed
+        // list they came above the posts on the same subject. There they rank at this
+        // fraction of their score; one that is by far the best match still comes first.
+        // Keep in sync with static/js/search-palette.js.
+        const CUTTING_RANK = 0.5;
 
         // Excerpt length in words; keep in sync with static/js/search-palette.js.
         // PagefindUI imports the same pagefind.js module instance, so its
@@ -93,6 +98,13 @@
                 const showOpt = SHOW_TYPES[currentShow] ? { filters: { type: SHOW_TYPES[currentShow] } } : {};
                 const search = await pagefind.search(query, { ...sortOpt, ...showOpt });
                 if (run !== searchRun) return;
+                if (!showOpt.filters && !sortOpt.sort) {
+                    const cuttings = await pagefind.search(query, { filters: { type: 'Cutting' } });
+                    if (run !== searchRun) return;
+                    const ids = new Set(cuttings.results.map(r => r.id));
+                    const rank = r => ids.has(r.id) ? r.score * CUTTING_RANK : r.score;
+                    search.results.sort((a, b) => rank(b) - rank(a));
+                }
                 const typeCounts = (search.totalFilters && search.totalFilters.type) || {};
                 const showCount = { posts: typeCounts.Post || 0, cuttings: typeCounts.Cutting || 0 };
                 showCount.all = showCount.posts + showCount.cuttings;

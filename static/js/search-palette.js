@@ -34,6 +34,11 @@
   var SHOW_KEY = 'searchShow';
   var SHOW_TYPES = { posts: 'Post', cuttings: 'Cutting' };
   var SHOW_NOTE = { posts: ', posts only', cuttings: ', cuttings only' };
+  // Cuttings are short pages and Pagefind ranks short pages high, so in the mixed
+  // list they came above the posts on the same subject. There they rank at this
+  // fraction of their score; one that is by far the best match still comes first.
+  // Keep in sync with layouts/_default/search.html.
+  var CUTTING_RANK = 0.5;
 
   function getShow() {
     var show = null;
@@ -380,6 +385,12 @@
     try {
       var show = getShow();
       search = await pf.search(q, SHOW_TYPES[show] ? { filters: { type: SHOW_TYPES[show] } } : {});
+      if (!SHOW_TYPES[show]) {
+        var cuttings = await pf.search(q, { filters: { type: 'Cutting' } });
+        var ids = new Set(cuttings.results.map(function (r) { return r.id; }));
+        var rank = function (r) { return ids.has(r.id) ? r.score * CUTTING_RANK : r.score; };
+        search.results.sort(function (a, b) { return rank(b) - rank(a); });
+      }
       posts = await Promise.all(search.results.slice(0, MAX_POSTS).map(function (r) { return r.data(); }));
       data = await loadData();
     } catch (err) {
