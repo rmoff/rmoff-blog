@@ -1,8 +1,8 @@
 ---
 title: Cuttings
-description: Things I've read and shared, with a quote and sometimes a line from me.
+description: Things I've read and shared.
 cascade:
   classes:
   - feature-nohdr
 ---
-Things I've read and shared, with a quote and sometimes a line from me. The monthly round-ups are in [Interesting Links](/categories/interesting-links/).
+Stuff I've shared on the socials. Some of it's my shitposting, some of it's good posts from other people that have caught my eye.
