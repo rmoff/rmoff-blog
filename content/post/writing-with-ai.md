@@ -1,7 +1,7 @@
 ---
 title: "Is it OK to write blog posts with AI yet?"
 description: "LLM writing has moved from 'bloody awful' to 'vaguely plausible'. Here's where I think it has a role to play - and where it absolutely doesn't."
-date: 2026-11-12T16:58:33Z
+date: 2026-11-13T10:58:33Z
 draft: false
 image: "/images/2026/11/h_IMG_9012.webp"
 thumbnail: "/images/2026/11/t_IMG_8841.webp"
@@ -147,7 +147,8 @@ I wrote an article in 2023 (pre mass-adoption of AI!) about [writing for develop
 
 ![Diagram placing Reddit, Twitter, personal blogs, LinkedIn, company blogs and documentation on a spectrum from personality and voice to uniformity and standardisation, with clarity needed throughout](/images/2023/07/02.svg)
 
-To this, I would overlay acceptable LLM use roughly like this, where at the far end of the spectrum—technical writing, and perhaps very uniform, straight-laced company blog posts—I can see that LLM use will help (or in the case of company blog posts of _that style_ not hinder).
+To this, I would overlay _possibly_ acceptable LLM use as follows, where at the far end of the spectrum—technical writing, and perhaps very uniform, straight-laced company blog posts—I can see that LLM use may help (or in the case of company blog posts of _that style_ not hinder).
+Even then, I don't know if I would go so far as to _recommend_ using LLMs for this; I would just object less :)
 
 ![The same spectrum with a shaded band at the documentation end, covering the edge of company blogs, labelled "Non-gross LLM use might fit here"](/images/2026/11/llms-in-writing.excalidraw.svg)
 
