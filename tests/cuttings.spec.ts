@@ -41,12 +41,17 @@ test.describe('Cuttings section', () => {
     await expect(shared.locator('.cutting-comment')).toContainText('A line of commentary from me');
   });
 
-  test('on the list, a post of mine is set like my comments and its pictures are kept short', async ({ page }) => {
+  test('a post of mine is set like my comments, on the list and on its own page; on the list its pictures are kept short', async ({ page }) => {
     await page.goto('/cuttings/');
     const comment = await page.locator('.cuttings-list .cutting-comment').first().evaluate(el => getComputedStyle(el).fontSize);
     const mine = page.locator('.cuttings-list .cutting').filter({ hasText: 'Fixture: a post of mine with an image' });
     await expect(mine.locator('.cutting-title.cutting-text')).toHaveCSS('font-size', comment);
     await expect(mine.locator('.cutting-media img')).toHaveCSS('max-height', '352px');
+
+    await page.goto('/cuttings/2026/10/12/fixture-a-post-of-mine-with-an-image/');
+    await expect(page.locator('.cutting-text')).toHaveCSS('font-size', comment);
+    await page.goto(FIXTURE);
+    await expect(page.locator('.cutting-comment')).toHaveCSS('font-size', comment);
   });
 
   test('a cutting page is the cutting in a card, under a link to Cuttings, with older and newer after it', async ({ page }) => {
