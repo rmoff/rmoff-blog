@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
 test('clicking date area in post row navigates to article', async ({ page }) => {
-  await page.goto('http://localhost:1313/');
+  await page.goto(BASE_URL + '/');
   await page.waitForLoadState('networkidle');
 
   // Get the URL the first post row's title link points to

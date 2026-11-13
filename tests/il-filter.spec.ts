@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const IL_URL = 'http://localhost:1313/2026/01/20/interesting-links-january-2026/';
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:1313';
+
+const IL_URL = BASE_URL + '/2026/01/20/interesting-links-january-2026/';
 
 // The checkbox is visually hidden behind a custom toggle switch,
 // so we click the label instead of calling .check() on the input.
@@ -99,7 +101,7 @@ test.describe('IL Filter', () => {
 
   test('admonition/quote list items are not hidden by fire filter', async ({ page }) => {
     // March 2026 post has a TIP admonition with a list inside "Big Picture & Culture"
-    const MARCH_URL = 'http://localhost:1313/2026/03/25/interesting-links-march-2026/';
+    const MARCH_URL = BASE_URL + '/2026/03/25/interesting-links-march-2026/';
     await page.goto(MARCH_URL);
     await page.waitForSelector('.il-toolbar');
 
@@ -123,9 +125,9 @@ test.describe('IL Filter', () => {
     // October 2026 post has subsections with no 🔥 items (e.g. "It's a Kafka Streams
     // Special!", "AI in Data") inside sections that do have 🔥 items. Look it up from the
     // category page rather than hard-coding the date in its URL.
-    await page.goto('http://localhost:1313/categories/interesting-links/');
+    await page.goto(BASE_URL + '/categories/interesting-links/');
     const octoberUrl = await page.locator('a[href*="interesting-links-october-2026"]').first().getAttribute('href');
-    await page.goto('http://localhost:1313' + octoberUrl);
+    await page.goto(BASE_URL + octoberUrl);
     await page.waitForSelector('.il-toolbar');
 
     const subsectionState = () => page.$$eval(
@@ -156,7 +158,7 @@ test.describe('IL Filter', () => {
   });
 
   test('toolbar is NOT rendered on non-IL pages', async ({ page }) => {
-    await page.goto('http://localhost:1313/');
+    await page.goto(BASE_URL + '/');
     const toolbar = page.locator('.il-toolbar');
     await expect(toolbar).not.toBeAttached();
   });

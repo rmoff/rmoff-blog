@@ -72,6 +72,9 @@ const contrast = (a: number[], b: number[]) => {
 // The colours actually painted behind the byline: hide its text, screenshot
 // the box and return the lightest and darkest pixels.
 async function backgroundExtremes(page: Page) {
+  // Measure once the web fonts are in: the box is narrower in the fallback font,
+  // and the next word would then show up inside the screenshot.
+  await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({
     content: `main a[rel="author"], .post-byline { color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; }`,
   });
@@ -218,6 +221,8 @@ test.describe('Post byline in print', () => {
   for (const [name, path] of [['hero', HERO_PHOTO_POST], ['no hero', NO_HERO_POST]]) {
     test(`${name}: dark text on the white page, no URL after the name`, async ({ page }) => {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
+      // Links fade their colour; read the print colour, not one mid-fade from the screen's.
+      await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; }' });
       await page.emulateMedia({ media: 'print' });
       await expect(byline(page)).toBeVisible();
 
