@@ -7,7 +7,6 @@ thumbnail: "/images/2023/12/pyflink.webp"
 credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - AI
-- Blogging
 - Productivity Tools
 ---
 
