@@ -56,6 +56,14 @@ test.describe('Cuttings section', () => {
     await expect(page.locator('.post-list a[href^="/cuttings/"]')).toHaveCount(0);
   });
 
+  test('a line break in a post or a quote shows as a line break', async ({ page }) => {
+    await page.goto(FIXTURE);
+    const text = page.locator('.cutting :is(.cutting-comment, .cutting-text) p').first();
+    expect(await text.innerText()).toBe('A line of commentary from me, with a link in it.\nA second line, straight after it.');
+    expect(await page.locator('.cutting-quote blockquote p').first().innerText()).toBe(
+      'The first paragraph of a quote, with bold and italic and code,\nand a line break.');
+  });
+
   test('both feeds are advertised, and the main feed has posts only', async ({ page, request }) => {
     await page.goto('/');
     await expect(page.locator('link[rel="alternate"][type="application/rss+xml"]')).toHaveCount(2);
