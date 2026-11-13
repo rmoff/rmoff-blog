@@ -9,6 +9,8 @@ credit: "https://bsky.app/profile/rmoff.net"
 categories:
 - AI
 - Blogging
+topics:
+- ai-slop
 ---
 
 > *Is it ever OK to write blog posts with AI?*
