@@ -1,26 +1,14 @@
 {{- /* One cutting. Used by the Cuttings list, a cutting's own page and the Cuttings feed.
-       With a link it shares someone else's thing: "Shared", my comment, then their title, byline and quote in a card.
-       Without a link it is a post of mine: my picture and name, then the text, with no card.
+       With a link it shares someone else's thing: my comment, then their title, byline and quote in a card.
+       Without a link it is a post of mine: where I posted it, then the text, with no card.
        dict: page, level (1 for an h1 title, else h2), list (true on the list page: the date links to the cutting's page),
-       feed (true in the RSS feed: image URLs are absolute, and no picture) */ -}}
+       feed (true in the RSS feed: image URLs are absolute) */ -}}
 {{- $p := .page -}}
 {{- $h := cond (eq .level 1) "h1" "h2" -}}
 {{- $own := not $p.Params.link -}}
 <article class="cutting {{ cond $own "cutting-own" "cutting-shared" }}">
 	<div class="cutting-meta" data-pagefind-ignore>
-		{{- if $own }}
-		{{- if not .feed }}
-		{{- with resources.Get "img/headshot.jpg" }}
-		{{- $face := ((.Crop "385x230 TopLeft").Crop "200x200 BottomRight").Resize "96x96 webp" }}
-		<img class="cutting-avatar" src="{{ $face.RelPermalink }}" alt="" width="28" height="28">
-		{{- end }}
-		{{- end }}
-		<span class="cutting-by">{{ site.Params.AuthorName }}</span>
-		{{- else }}
-		<span class="cutting-kind">{{ partial "icon.html" "link" }}Shared</span>
-		{{- end }}
-		{{- with $p.Params.source }} on <a href="{{ . }}">{{ $p.Params.source_name | default "the original site" }}</a>{{ end }}
-		<span aria-hidden="true">·</span>
+		{{- with $p.Params.source }}{{ cond $own "Posted" "Shared" }} on <a href="{{ . }}">{{ $p.Params.source_name | default "the original site" }}</a> <span aria-hidden="true">·</span>{{ end }}
 		{{- if .list }} <a href="{{ $p.RelPermalink }}" class="cutting-date"><time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time></a>
 		{{- else }} <time class="cutting-date" datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date.Format "02 Jan 2006" }}</time>{{ end }}
 	</div>
@@ -50,7 +38,7 @@
 		{{ printf "<%s class=\"cutting-title\"><a href=\"%s\">%s</a></%s>" $h (htmlEscape $p.Params.link) (htmlEscape $p.Title) $h | safeHTML }}
 		{{- $by := slice }}
 		{{- with $p.Params.author }}{{ $by = $by | append . }}{{ end }}
-		{{- with $p.Params.domain }}{{ $by = $by | append . }}{{ end }}
+		{{- with $p.Params.domain }}{{ if ne . $p.Title }}{{ $by = $by | append . }}{{ end }}{{ end }}
 		{{- with $by }}
 		<p class="cutting-source">{{ delimit . " · " }}</p>
 		{{- end }}
