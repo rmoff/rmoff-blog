@@ -54,7 +54,38 @@ test.describe('Cuttings section', () => {
     await expect(page.locator('.cutting-comment')).toHaveCSS('font-size', comment);
   });
 
-  test('a cutting page is the cutting in a card, under a link to Cuttings, with older and newer after it', async ({ page }) => {
+  test('each cutting on the list is a card, drawn the same as on its own page', async ({ page }) => {
+    const card = (sel: string) => page.locator(sel).first().evaluate(el => {
+      const s = getComputedStyle(el);
+      return [s.borderTopStyle, s.borderTopWidth, s.borderTopColor, s.borderBottomWidth, s.borderRadius, s.backgroundColor, s.padding].join(' | ');
+    });
+    await page.goto('/cuttings/');
+    const onList = await card('.cuttings-list .cutting');
+    await page.goto(FIXTURE);
+    expect(onList).toBe(await card('.cutting-page .cutting'));
+    expect(onList).toMatch(/^solid \| 1px/);
+  });
+
+  test('on a phone every card, and everything in it, fits the column, long links included', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const url of ['/cuttings/', FIXTURE]) {
+      await page.goto(url);
+      const r = await page.evaluate(() => {
+        const box = (document.querySelector('.cuttings-list') || document.querySelector('.cutting-page'))!.getBoundingClientRect();
+        const cards = [...document.querySelectorAll('.cutting')];
+        return {
+          cards: cards.filter(c => c.getBoundingClientRect().right > box.right + 0.5).length,
+          spills: cards.flatMap(c => [...c.querySelectorAll('*')])
+            .filter(el => !el.closest('.visually-hidden') && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+            .map(el => el.tagName.toLowerCase() + ': ' + el.textContent!.trim().slice(0, 40)),
+        };
+      });
+      expect(r.cards, `${url}: cards wider than the column`).toBe(0);
+      expect(r.spills, `${url}: content wider than its card`).toEqual([]);
+    }
+  });
+
+  test('a cutting page is the cutting in a card, with older and newer after it', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/cuttings/');
     await expect(page.locator('.site-nav [aria-current]')).toHaveCount(1);
@@ -65,8 +96,8 @@ test.describe('Cuttings section', () => {
     await expect(page.locator('.site-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
     await expect(page.locator('#mobile-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
     await expect(page.locator('.cutting-page .cutting')).toHaveCSS('border-top-style', 'solid');
-    await expect(page.locator('.cutting-page > a.cutting-section')).toHaveText('Cuttings');
-    await expect(page.locator('.cutting-page > a.cutting-section')).toHaveAttribute('href', '/cuttings/');
+    // The toolbar already says Cuttings; the page doesn't repeat it
+    await expect(page.locator('.cutting-section')).toHaveCount(0);
     await expect(page.locator('.post-end-swirl')).toHaveCount(0);
     await expect(page.locator('.post-older-newer [data-direction="newer"]')).toHaveCount(0);
     await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('Older cutting');

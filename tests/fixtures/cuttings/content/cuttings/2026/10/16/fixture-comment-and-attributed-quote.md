@@ -13,3 +13,5 @@ quote_author: Someone Quoted
 ---
 A line of commentary from me, with [a link](https://example.com/other) in it.
 A second line, straight after it.
+
+And a long bare link: <https://example.com/status/1999426776037044224/with/a/path/too/long/to/fit/on/a/phone>
