@@ -41,14 +41,18 @@ test.describe('Cuttings section', () => {
     await expect(shared.locator('.cutting-comment')).toContainText('A line of commentary from me');
   });
 
-  test('a cutting page links back to the list and to its neighbours', async ({ page }) => {
+  test('a cutting page is just the cutting, in a card, with Cuttings marked in the toolbar', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/cuttings/');
+    await expect(page.locator('.site-nav [aria-current]')).toHaveCount(1);
+    await expect(page.locator('.site-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'page');
     await page.goto(FIXTURE);
     await expect(page.locator('h1.cutting-title')).toHaveText('Fixture: a cutting with a comment and an attributed quote');
-    await expect(page.locator('.cutting-back')).toHaveAttribute('href', '/cuttings/');
-    await expect(page.locator('.post-end-swirl')).toBeVisible();
-    await expect(page.locator('.post-older-newer [data-direction="newer"]')).toHaveCount(0);
-    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('Older cutting');
-    await expect(page.locator('.post-older-newer [data-direction="older"]')).toContainText('AI Is Already In Dangerous Hands');
+    await expect(page.locator('.site-nav [aria-current]')).toHaveCount(1);
+    await expect(page.locator('.site-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('#mobile-nav a[href="/cuttings/"]')).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('.cutting-page .cutting')).toHaveCSS('border-top-style', 'solid');
+    await expect(page.locator('main a[href="/cuttings/"], .post-end-swirl, .post-older-newer')).toHaveCount(0);
   });
 
   test('a post of mine with no link shows its image and where it was posted', async ({ page }) => {
