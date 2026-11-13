@@ -5,4 +5,4 @@ link: "https://www.brentozar.com/archive/2026/03/im-not-gonna-waste-time-debunki
 domain: brentozar.com
 author: "Brent Ozar"
 ---
-This rant from @Brent Ozar is *my* kind of rant. Love it. Is it ironic posting it on LI? Don't care. People should read it.
+This rant from Brent Ozar is *my* kind of rant. Love it. Is it ironic posting it on LI? Don't care. People should read it.

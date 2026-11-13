@@ -7,6 +7,6 @@ domain: flink-watermarks.wtf
 Have you ever found yourself thinking…Flink Watermarks…WTF?
 🔥 This new tool might be for you :)
 
-It's a hands-on, scrollytelling walkthrough of what watermarks in ApacheFlink are, why they matter, and how to use them.
+It's a hands-on, scrollytelling walkthrough of what watermarks in #ApacheFlink are, why they matter, and how to use them.
 
-Try it out
+[Try it out](https://flink-watermarks.wtf/)
