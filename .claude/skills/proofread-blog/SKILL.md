@@ -89,3 +89,8 @@ Report any hardcoded links to rmoff.net; prefer relative links.
    - Compare the current post's categories against that list
    - Flag categories that have never been used before — ask if intentional or a typo
    - Flag categories that look like near-duplicates of existing ones (e.g., "Claude" vs "Claude Code", "kafka" vs "Kafka", "VisiData" vs "visidata")
+
+10. **Description** - ALWAYS remind me about the frontmatter `description:` (used for the meta description, search results and link previews), even if everything else is fine:
+   - If it is missing or empty, say so at the top of the report, not buried at the end.
+   - If it is present, check it for typos, and that it still matches what the post says.
+   - Don't write a description for me (see the AI disclosure page). If I ask for options, offer sentences lifted word for word from the post and let me pick.
