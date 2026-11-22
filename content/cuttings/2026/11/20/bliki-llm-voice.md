@@ -7,4 +7,3 @@ quote: |
   I strongly recommend that authors should not fall into the trap of getting the LLM to write a draft. Even if it's edited by a human, it's very hard to expel the LLM-Voice - thus causing the uncanny valley reaction
 quote_author: "Martin Fowler"
 ---
-Martin Fowler - LLM Voice
