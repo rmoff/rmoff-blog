@@ -1,5 +1,5 @@
 ---
-title: "bliki: LLM Voice"
+title: "Martin Fowler: LLM Voice"
 date: 2026-11-20T16:27:04Z
 link: "https://martinfowler.com/bliki/LLM-Voice.html"
 domain: "martinfowler.com"
